@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Repo:** `cbruyndoncx/obsidian-bob-workspace` · **Local:** `/home/cb/projects/github/obsidian-bob-workspace`
+
 ---
 
 ## Project Overview
