@@ -229,15 +229,51 @@ const ENTITIES = {
 
 const DEAL_STAGES = ['Lead', 'Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'];
 
+/* Deal field accessors — read entity definition overrides with safe defaults */
+function dealStageField(def)    { return def.stageField    || 'stage'; }
+function dealValueField(def)    { return def.valueField    || 'value'; }
+function dealCloseByField(def)  { return def.closeByField  || 'closeBy'; }
+function dealWonStages(def)     { return def.wonStages     || ['Won']; }
+function dealLostStages(def)    { return def.lostStages    || ['Lost']; }
+function dealTerminalStages(def){ return [...dealWonStages(def), ...dealLostStages(def)]; }
+/* Activity field accessors — configurable with mtime fallback for dateField */
+function activityDate(entity, def) {
+  const field = def.dateField || 'when';
+  const val = entity.frontmatter?.[field];
+  if (val) return String(val);
+  return entity.file?.stat?.mtime ? new Date(entity.file.stat.mtime).toISOString().slice(0, 10) : '';
+}
+function activityTitle(entity, def) {
+  const field = def.titleField || 'subject';
+  return entity.frontmatter?.[field] || entity.basename || '';
+}
+
+function getDealStages(def) {
+  const sf = dealStageField(def);
+  return def.fields?.find((f) => f.key === sf)?.options || DEAL_STAGES;
+}
+
 /* Resolve which entity an arbitrary file belongs to, by frontmatter `type`
    first, then path-prefix fallback. Returns null if not a Cadence entity. */
 function entityKeyFromFile(app, file) {
   if (!file) return null;
   const cache = app.metadataCache.getFileCache(file);
   const t = cache && cache.frontmatter && cache.frontmatter.type;
-  if (t && ENTITIES[t]) return t;
-  for (const [key, def] of Object.entries(ENTITIES)) {
-    if (file.path.startsWith(def.folder + '/')) return key;
+  if (t) {
+    if (ENTITIES[t]) return t;
+    for (const [key, def] of Object.entries(ENTITIES)) {
+      if (def.typeFilter && def.typeFilter === t) return key;
+      if (def.typeFilters) {
+        const cache2 = app.metadataCache.getFileCache(file);
+        const fm2 = (cache2 && cache2.frontmatter) || {};
+        if (Object.entries(def.typeFilters).every(([k, v]) => fm2[k] === v)) return key;
+      }
+    }
+  }
+  for (const key of Object.keys(ENTITIES)) {
+    const def = ENTITIES[key];
+    if (!def.typeFilter && !def.typeFilters && !Array.isArray(def.typesFilter) &&
+        !Array.isArray(def.folders) && file.path.startsWith(entityFolder(key) + '/')) return key;
   }
   return null;
 }
@@ -266,15 +302,176 @@ const DEFAULT_SETTINGS = {
   cadenceAppDark: false,
   taskProjectLinks: {}, // { "dailyPath::taskText": "Cadence/Projects/X.md" }
   modules: { crm: true, prm: true, planner: true },
+  disabledSurfaces: [],    // surface IDs hidden from nav regardless of module toggle
   desktopNotifications: false,
   reminders: [], // [{ id, text, when (ISO|null), repeat ('none'|'daily'|'weekly'), notified, done, createdAt }]
   cadenceApiUrl: '',
   cadenceApiToken: '',
+  // Task mode
+  taskMode: 'checkbox',              // 'checkbox' | 'tasknotes' | 'hybrid'
+  taskNotesFolder: '00-CORE/TaskNotes/Tasks',
+  // Entity folder locations (all configurable)
+  folderContacts: 'Cadence/Contacts',
+  folderCompanies: 'Cadence/Companies',
+  folderPipeline: 'Cadence/Pipeline',
+  folderPartners: 'Cadence/Partners',
+  folderRegistrations: 'Cadence/Registrations',
+  folderCommissions: 'Cadence/Commissions',
+  folderLeads: 'Cadence/Leads',
+  folderCertifications: 'Cadence/Certifications',
+  folderActivities: 'Cadence/Activities',
+  folderSequences: 'Cadence/Sequences',
+  folderProjects: 'Cadence/Projects',
 };
 
-/* Module-level — kept in sync by the plugin so the standalone fmtValue helper
-   can format currency without each caller threading settings through. */
+/* Module-level — kept in sync by the plugin so helpers can resolve folders
+   without threading settings through every call. */
 let CURRENT_CURRENCY = 'USD';
+let ENTITY_FOLDERS = {
+  contact: 'Cadence/Contacts',
+  company: 'Cadence/Companies',
+  deal: 'Cadence/Pipeline',
+  partner: 'Cadence/Partners',
+  registration: 'Cadence/Registrations',
+  commission: 'Cadence/Commissions',
+  lead: 'Cadence/Leads',
+  certification: 'Cadence/Certifications',
+  activity: 'Cadence/Activities',
+  sequence: 'Cadence/Sequences',
+  project: 'Cadence/Projects',
+};
+
+function syncEntityFolders(settings) {
+  ENTITY_FOLDERS.contact      = (settings.folderContacts      || '').trim() || 'Cadence/Contacts';
+  ENTITY_FOLDERS.company      = (settings.folderCompanies     || '').trim() || 'Cadence/Companies';
+  ENTITY_FOLDERS.deal         = (settings.folderPipeline      || '').trim() || 'Cadence/Pipeline';
+  ENTITY_FOLDERS.partner      = (settings.folderPartners      || '').trim() || 'Cadence/Partners';
+  ENTITY_FOLDERS.registration = (settings.folderRegistrations || '').trim() || 'Cadence/Registrations';
+  ENTITY_FOLDERS.commission   = (settings.folderCommissions   || '').trim() || 'Cadence/Commissions';
+  ENTITY_FOLDERS.lead         = (settings.folderLeads         || '').trim() || 'Cadence/Leads';
+  ENTITY_FOLDERS.certification= (settings.folderCertifications|| '').trim() || 'Cadence/Certifications';
+  ENTITY_FOLDERS.activity     = (settings.folderActivities    || '').trim() || 'Cadence/Activities';
+  ENTITY_FOLDERS.sequence     = (settings.folderSequences     || '').trim() || 'Cadence/Sequences';
+  ENTITY_FOLDERS.project      = (settings.folderProjects      || '').trim() || 'Cadence/Projects';
+}
+
+function entityFolder(entityKey) {
+  return ENTITY_FOLDERS[entityKey] || ENTITIES[entityKey]?.folder || '';
+}
+
+/* ─────────── Custom entity loader ───────────
+   Reads Cadence/entities.json from the vault and merges definitions into
+   ENTITIES at runtime. New keys get a nav item; existing keys get field/column
+   overrides. Call applyCustomEntities() on load and on file-change. */
+const ENTITIES_CONFIG_PATH = 'Cadence/entities.json';
+let CUSTOM_ENTITY_KEYS = new Set();
+
+function clearCustomEntities() {
+  for (const key of CUSTOM_ENTITY_KEYS) {
+    delete ENTITIES[key];
+    delete ENTITY_FOLDERS[key];
+    BUILT_SURFACES.delete(`custom.${key}`);
+  }
+  CUSTOM_ENTITY_KEYS.clear();
+  const grp = NAV_GROUPS.find((g) => g.id === 'custom');
+  if (grp) grp.items = [];
+}
+
+async function applyCustomEntities(app) {
+  clearCustomEntities();
+  if (!await app.vault.adapter.exists(ENTITIES_CONFIG_PATH)) return;
+
+  let config;
+  try {
+    const raw = await app.vault.adapter.read(ENTITIES_CONFIG_PATH);
+    config = JSON.parse(raw);
+  } catch (e) {
+    new obsidian.Notice(`Cadence: entities.json error — ${e.message}`);
+    return;
+  }
+  if (typeof config !== 'object' || Array.isArray(config)) {
+    new obsidian.Notice('Cadence: entities.json must be a JSON object keyed by entity type');
+    return;
+  }
+
+  for (const [key, def] of Object.entries(config)) {
+    if (!def || typeof def !== 'object') continue;
+    // New entities require label + fields; existing entities accept partial overrides
+    if (!ENTITIES[key] && (!def.label || !Array.isArray(def.fields))) continue;
+
+    const folder = (def.folder || `Cadence/${def.plural || `${def.label}s`}`).trim();
+    const isNew = !ENTITIES[key];
+
+    if (isNew) {
+      ENTITIES[key] = {
+        folder,
+        label: def.label,
+        plural: def.plural || `${def.label}s`,
+        fields: def.fields,
+        columns: def.columns || def.fields.slice(0, 5).map((f) => f.key),
+      };
+      ENTITY_FOLDERS[key] = folder;
+      CUSTOM_ENTITY_KEYS.add(key);
+
+      const surfaceId = `custom.${key}`;
+      BUILT_SURFACES.add(surfaceId);
+
+      // Inject nav item — into named module group if specified, else "Custom"
+      let targetGroup = def.module ? NAV_GROUPS.find((g) => g.id === def.module) : null;
+      if (!targetGroup) {
+        targetGroup = NAV_GROUPS.find((g) => g.id === 'custom');
+        if (!targetGroup) {
+          targetGroup = { id: 'custom', label: 'Custom', items: [] };
+          const miscIdx = NAV_GROUPS.findIndex((g) => g.id === 'misc');
+          NAV_GROUPS.splice(miscIdx >= 0 ? miscIdx : NAV_GROUPS.length, 0, targetGroup);
+        }
+      }
+      targetGroup.items.push({
+        id: surfaceId,
+        label: def.plural || `${def.label}s`,
+        icon: def.icon || 'file-text',
+        module: def.module,
+        desc: def.desc || `${def.plural || `${def.label}s`} — custom entity`,
+      });
+    } else {
+      // Override fields/columns on an existing built-in entity type
+      if (def.fields)       ENTITIES[key].fields       = def.fields;
+      if (def.columns)      ENTITIES[key].columns      = def.columns;
+      if (def.label)        ENTITIES[key].label        = def.label;
+      if (def.plural)       ENTITIES[key].plural       = def.plural;
+      if (def.folder)       ENTITY_FOLDERS[key]        = folder;
+      if (def.typeFilter)   ENTITIES[key].typeFilter   = def.typeFilter;
+      else                  delete ENTITIES[key].typeFilter;
+      if (def.typeFilters)  ENTITIES[key].typeFilters  = def.typeFilters;
+      else                  delete ENTITIES[key].typeFilters;
+      // Per-entity config overrides
+      ['stageField','valueField','closeByField','wonStages','lostStages',
+       'detailMetaFields','detailSections','terminalStatuses','stageConfidence',
+       'folders','typesFilter','dateField','titleField'].forEach((k) => {
+        if (def[k] != null) ENTITIES[key][k] = def[k];
+        else delete ENTITIES[key][k];
+      });
+    }
+  }
+}
+
+const ENTITIES_JSON_TEMPLATE = JSON.stringify({
+  _comment: "Add new entity types or override fields on existing ones. Remove this _comment key before saving.",
+  order: {
+    label: "Order",
+    plural: "Orders",
+    folder: "Cadence/Orders",
+    icon: "shopping-cart",
+    fields: [
+      { key: "title",    label: "Title",    primary: true },
+      { key: "customer", label: "Customer" },
+      { key: "value",    label: "Value",    type: "currency" },
+      { key: "status",   label: "Status",   type: "enum", options: ["Draft", "Pending", "Fulfilled", "Cancelled"] },
+      { key: "due",      label: "Due",      type: "date" }
+    ],
+    columns: ["title", "customer", "status", "value", "due"]
+  }
+}, null, 2);
 
 const CURRENCY_OPTIONS = [
   { code: 'USD', label: 'USD — US Dollar' },
@@ -356,8 +553,31 @@ function ensureFolderSync(app, path) {
 function listEntityFiles(app, entityKey) {
   const def = ENTITIES[entityKey];
   if (!def) return [];
-  const folder = def.folder;
-  return app.vault.getMarkdownFiles().filter((f) => f.path.startsWith(folder + '/'));
+
+  const hasTypeFilter  = def.typeFilter || def.typeFilters || Array.isArray(def.typesFilter);
+  const hasPathFilter  = Array.isArray(def.folders);
+  const useDefaultPath = !hasTypeFilter && !hasPathFilter;
+  const typesSet       = Array.isArray(def.typesFilter) ? new Set(def.typesFilter) : null;
+  const tfEntries      = def.typeFilters ? Object.entries(def.typeFilters) : null;
+
+  return app.vault.getMarkdownFiles().filter((f) => {
+    let fm = null;
+    const getFm = () => fm || (fm = (app.metadataCache.getFileCache(f) || {}).frontmatter || {});
+
+    // Path conditions (OR within folders array; AND with type conditions)
+    if (hasPathFilter) {
+      if (!def.folders.some((d) => f.path.startsWith(d.replace(/\/$/, '') + '/'))) return false;
+    } else if (useDefaultPath) {
+      if (!f.path.startsWith(entityFolder(entityKey) + '/')) return false;
+    }
+
+    // Type conditions (all that are defined are AND-combined)
+    if (tfEntries  && !tfEntries.every(([k, v]) => getFm()[k] === v)) return false;
+    if (def.typeFilter  && getFm().type !== def.typeFilter)             return false;
+    if (typesSet        && !typesSet.has(getFm().type))                 return false;
+
+    return true;
+  });
 }
 
 function readEntity(app, file) {
@@ -411,7 +631,14 @@ function entityTemplate(entityKey, name) {
   // define a `type` field of its own (e.g. Activity has type=Call/Email/...).
   // Otherwise we'd emit duplicate YAML keys and the file fails to parse.
   const hasTypeField = def.fields.some((f) => f.key === 'type');
-  if (!hasTypeField) lines.push(`type: ${entityKey}`);
+  if (!hasTypeField) {
+    const typeVal = def.typeFilter || (def.typeFilters && def.typeFilters.type) || entityKey;
+    lines.push(`type: ${typeVal}`);
+    // For typeFilters, write extra discriminator fields (e.g. profile_type: company_overview)
+    if (def.typeFilters) {
+      Object.entries(def.typeFilters).forEach(([k, v]) => { if (k !== 'type') lines.push(`${k}: ${v}`); });
+    }
+  }
 
   def.fields.forEach((f) => {
     if (f.key === def.fields[0].key) lines.push(`${f.key}: ${name}`);
@@ -563,6 +790,68 @@ function stringifyTasks(items) {
   return items.map((t) => `${t.done ? '- [x] ' : '- [ ] '}${t.title || ''}`).join('\n');
 }
 
+/* ─── TaskNote helpers (used when taskMode !== 'checkbox') ─── */
+function taskNoteTemplate(title) {
+  const now = ymd();
+  return [
+    '---',
+    `title: ${title}`,
+    'type: task',
+    'status: open',
+    'priority: normal',
+    'size: M',
+    'due:',
+    'scheduled:',
+    `dateCreated: ${now}`,
+    `dateModified: ${now}`,
+    'tags: []',
+    'assignee: []',
+    'cluster:',
+    '---',
+    '',
+    `# ${title}`,
+    '',
+    '## Scope',
+    '',
+    '## Notes',
+    '',
+  ].join('\n');
+}
+
+async function createTaskNote(app, settings, title) {
+  const folder = (settings.taskNotesFolder || '00-CORE/TaskNotes/Tasks').replace(/\/$/, '');
+  await ensureFolderSync(app, folder);
+  const safe = title.replace(/[\\/:*?"<>|]/g, '-').trim() || 'Untitled Task';
+  let path = `${folder}/${safe}.md`;
+  let n = 2;
+  while (app.vault.getAbstractFileByPath(path)) { path = `${folder}/${safe} ${n++}.md`; }
+  return app.vault.create(path, taskNoteTemplate(title));
+}
+
+function listTodayTaskNotes(app, settings) {
+  const folder = (settings.taskNotesFolder || '00-CORE/TaskNotes/Tasks').replace(/\/$/, '');
+  const todayStr = ymd();
+  return app.vault.getMarkdownFiles()
+    .filter((f) => f.path.startsWith(folder + '/'))
+    .map((f) => {
+      const fm = (app.metadataCache.getFileCache(f) || {}).frontmatter || {};
+      return { file: f, fm };
+    })
+    .filter(({ fm }) => {
+      if (fm.status === 'done') return false;
+      const due   = fm.due       ? String(fm.due).slice(0, 10)       : null;
+      const sched = fm.scheduled ? String(fm.scheduled).slice(0, 10) : null;
+      return due === todayStr || sched === todayStr;
+    });
+}
+
+async function toggleTaskNoteStatus(app, file, done) {
+  await app.fileManager.processFrontMatter(file, (fm) => {
+    fm.status = done ? 'done' : 'open';
+    fm.dateModified = new Date().toISOString().slice(0, 10);
+  });
+}
+
 async function readProjectMeta(app, file) {
   const content = await app.vault.read(file);
   const sections = parseH2Sections(content);
@@ -580,12 +869,13 @@ async function readProjectMeta(app, file) {
 
 async function createEntity(app, entityKey, rawName) {
   const def = ENTITIES[entityKey];
-  await ensureFolderSync(app, def.folder);
+  const folder = entityFolder(entityKey);
+  await ensureFolderSync(app, folder);
   const safeName = (rawName || `Untitled ${def.label}`).replace(/[\\/:*?"<>|]/g, '-').trim() || 'Untitled';
-  let path = `${def.folder}/${safeName}.md`;
+  let path = `${folder}/${safeName}.md`;
   let n = 2;
   while (app.vault.getAbstractFileByPath(path)) {
-    path = `${def.folder}/${safeName} ${n}.md`;
+    path = `${folder}/${safeName} ${n}.md`;
     n++;
   }
   return await app.vault.create(path, entityTemplate(entityKey, safeName));
@@ -1020,7 +1310,7 @@ class CadenceReminderEditModal extends obsidian.Modal {
 
   _openReminderProjectPicker(rerender) {
     const projectFiles = (this.app.vault.getMarkdownFiles ? this.app.vault.getMarkdownFiles() : [])
-      .filter((f) => f.path.startsWith(ENTITIES.project.folder + '/'));
+      .filter((f) => f.path.startsWith(entityFolder('project') + '/'));
     if (!projectFiles.length) {
       new obsidian.Notice('No projects yet. Create one in Planner → Projects first.');
       return;
@@ -1285,7 +1575,7 @@ class CadenceImportModal extends obsidian.Modal {
       if (this.importBtn) this.importBtn.disabled = true;
     } else {
       const mappedCount = Object.values(this.mapping).filter(Boolean).length;
-      summary.setText(`Will create ${this.rows.length} ${this.rows.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${def.folder}/  ·  ${mappedCount} column${mappedCount === 1 ? '' : 's'} mapped`);
+      summary.setText(`Will create ${this.rows.length} ${this.rows.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${entityFolder(this.entityKey)}/  ·  ${mappedCount} column${mappedCount === 1 ? '' : 's'} mapped`);
       if (this.importBtn) this.importBtn.disabled = false;
     }
   }
@@ -1606,10 +1896,13 @@ class CadenceAppView extends obsidian.ItemView {
 
   _visibleNavGroups() {
     const mods = this.plugin.settings.modules || { crm: true, prm: true, planner: true };
+    const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
     return NAV_GROUPS
       .map((g) => {
         if (g.module && mods[g.module] === false) return null;
-        const items = g.items.filter((it) => !it.module || mods[it.module] !== false);
+        const items = g.items.filter((it) =>
+          (!it.module || mods[it.module] !== false) && !disabled.has(it.id)
+        );
         if (!items.length) return null;
         return Object.assign({}, g, { items });
       })
@@ -1828,7 +2121,7 @@ class CadenceAppView extends obsidian.ItemView {
       'planner.calendar':    () => this.renderPlannerPane(content),
       'planner.projects':    () => this.renderProjectsView(content),
       'crm.dashboard':       () => this.renderDashboard(content),
-      'crm.pipeline':        () => this.renderEntityKanban(content, 'deal', 'stage', DEAL_STAGES),
+      'crm.pipeline':        () => this.renderEntityKanban(content, 'deal', dealStageField(ENTITIES.deal), getDealStages(ENTITIES.deal)),
       'crm.contacts':        () => this.renderEntityList(content, 'contact'),
       'crm.companies':       () => this.renderEntityList(content, 'company'),
       'crm.activities':      () => this.renderEntityList(content, 'activity'),
@@ -1849,6 +2142,10 @@ class CadenceAppView extends obsidian.ItemView {
     };
     if (route[this.mode]) {
       await route[this.mode]();
+    } else if (this.mode && this.mode.startsWith('custom.')) {
+      const entityKey = this.mode.slice('custom.'.length);
+      if (ENTITIES[entityKey]) await this.renderEntityList(content, entityKey);
+      else this.renderComingSoon(content, active);
     } else {
       this.renderComingSoon(content, active);
     }
@@ -1889,7 +2186,7 @@ class CadenceAppView extends obsidian.ItemView {
     const entities = listEntities(this.app, entityKey);
     const filtered = opts.filter ? entities.filter(opts.filter) : entities;
 
-    this._renderPageHeader(root, opts.title || def.plural, `${filtered.length} ${filtered.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${def.folder}`, (right) => {
+    this._renderPageHeader(root, opts.title || def.plural, `${filtered.length} ${filtered.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${entityFolder(entityKey)}`, (right) => {
       const importBtn = right.createEl('button', { cls: 'cad-btn', text: 'Import CSV' });
       importBtn.addEventListener('click', () => new CadenceImportModal(this.app, { entityKey }).open());
       const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
@@ -1899,7 +2196,7 @@ class CadenceAppView extends obsidian.ItemView {
     if (!filtered.length) {
       const empty = root.createDiv({ cls: 'cad-empty-state' });
       empty.createDiv({ cls: 'cad-empty-state-title', text: `No ${def.plural.toLowerCase()} yet` });
-      empty.createDiv({ cls: 'cad-empty-state-desc', text: `Drop a markdown note in ${def.folder}/ with frontmatter, or hit "+ New" above.` });
+      empty.createDiv({ cls: 'cad-empty-state-desc', text: `Drop a markdown note in ${entityFolder(entityKey)}/ with frontmatter, or hit "+ New" above.` });
       return;
     }
 
@@ -2080,13 +2377,11 @@ class CadenceAppView extends obsidian.ItemView {
     const cache = this.app.metadataCache.getFileCache(file) || {};
     const fm = Object.assign({}, cache.frontmatter || {});
     const meta = await readProjectMeta(this.app, file);
-    const titleVal = fm.name || file.basename;
+    const primaryKey = def.fields?.find((f) => f.primary)?.key || 'name';
+    const titleVal = fm[primaryKey] || fm.name || fm.title || file.basename;
 
     const status = String(fm.status || 'active');
     const priority = String(fm.priority || '');
-    const owner = fm.owner || '';
-    const due = fm.due || '';
-    const started = fm.started || '';
 
     /* Header */
     const head = root.createDiv({ cls: 'cad-detail-header' });
@@ -2133,11 +2428,13 @@ class CadenceAppView extends obsidian.ItemView {
       sel.addEventListener('change', () => onChange(sel.value));
       return sel;
     };
+    const statusOptions   = def.fields?.find((f) => f.key === 'status')?.options   || ['active', 'on_hold', 'backlog', 'done', 'cancelled'];
+    const priorityOptions = def.fields?.find((f) => f.key === 'priority')?.options || ['low', 'medium', 'high'];
     mkSelect('cad-pill cad-pill-' + status.toLowerCase().replace(/\s+/g, '-'),
-      ['active', 'on_hold', 'backlog', 'done', 'cancelled'], status,
+      statusOptions, status,
       (v) => this._writeProjectFrontmatter(file, { status: v }, flashSaved));
-    mkSelect('cad-pill cad-pill-prio-' + (priority || 'medium').toLowerCase(),
-      ['low', 'medium', 'high'], priority || 'medium',
+    mkSelect('cad-pill cad-pill-prio-' + (priority || priorityOptions[1] || 'medium').toLowerCase(),
+      priorityOptions, priority || priorityOptions[1] || 'medium',
       (v) => this._writeProjectFrontmatter(file, { priority: v }, flashSaved));
 
     const metaRow = hero.createDiv({ cls: 'cad-pd-meta' });
@@ -2157,9 +2454,12 @@ class CadenceAppView extends obsidian.ItemView {
       inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(commit, 350); });
       inp.addEventListener('blur', commit);
     };
-    mkMeta('OWNER',   'owner');
-    mkMeta('STARTED', 'started', 'date');
-    mkMeta('DUE',     'due',     'date');
+    const defaultMetaFields = [
+      { key: 'owner',   label: 'OWNER' },
+      { key: 'started', label: 'STARTED', type: 'date' },
+      { key: 'due',     label: 'DUE',     type: 'date' },
+    ];
+    (def.detailMetaFields || defaultMetaFields).forEach((mf) => mkMeta(mf.label, mf.key, mf.type));
 
     const progWrap = hero.createDiv({ cls: 'cad-proj-progress-wrap cad-pd-progress' });
     progWrap.dataset.pctBand = pctBand(meta.percent);
@@ -2183,13 +2483,14 @@ class CadenceAppView extends obsidian.ItemView {
     this._renderTaskSection(left, file, taskList, flashSaved);
 
     /* ── Body sections (right column) ── */
-    const bodySections = [
+    const defaultBodySections = [
       { key: 'Brief',        label: 'BRIEF',        rows: 4, placeholder: 'The outcome we want, why now.' },
       { key: 'Scope',        label: 'SCOPE',        rows: 5, placeholder: 'In scope / out of scope.' },
       { key: 'Risks',        label: 'RISKS',        rows: 4, placeholder: 'What could go wrong.' },
       { key: 'Stakeholders', label: 'STAKEHOLDERS', rows: 3, placeholder: 'Who cares about this project.' },
       { key: 'Notes',        label: 'NOTES',        rows: 5, placeholder: 'Anything else.' },
     ];
+    const bodySections = def.detailSections || defaultBodySections;
     bodySections.forEach((s) => this._renderProjectTextSection(right, file, meta.sections, s, flashSaved));
   }
 
@@ -2444,7 +2745,7 @@ class CadenceAppView extends obsidian.ItemView {
     const def = ENTITIES.project;
     const files = listEntityFiles(this.app, 'project');
 
-    this._renderPageHeader(root, 'Projects', `${files.length} ${files.length === 1 ? 'project' : 'projects'} in ${def.folder}`, (right) => {
+    this._renderPageHeader(root, 'Projects', `${files.length} ${files.length === 1 ? 'project' : 'projects'} in ${entityFolder('project')}`, (right) => {
       const importBtn = right.createEl('button', { cls: 'cad-btn', text: 'Import CSV' });
       importBtn.addEventListener('click', () => new CadenceImportModal(this.app, { entityKey: 'project' }).open());
       const btn = right.createEl('button', { cls: 'cad-btn primary', text: '+ New Project' });
@@ -2464,11 +2765,13 @@ class CadenceAppView extends obsidian.ItemView {
       return { entity: e, meta };
     }));
 
-    // Group by status
-    const groups = { active: [], on_hold: [], backlog: [], done: [], cancelled: [] };
+    // Group by status — keys derived from entity definition
+    const statusOpts = def.fields?.find((f) => f.key === 'status')?.options || ['active', 'on_hold', 'backlog', 'done', 'cancelled'];
+    const groups = Object.fromEntries(statusOpts.map((s) => [s, []]));
+    const fallbackStatus = statusOpts[0] || 'active';
     projects.forEach((p) => {
-      const status = String(entityValue(p.entity, 'status', def) || 'active').toLowerCase().replace(/\s+/g, '_');
-      const key = groups[status] ? status : 'active';
+      const status = String(entityValue(p.entity, 'status', def) || fallbackStatus).toLowerCase().replace(/[-\s]+/g, '_');
+      const key = groups[status] !== undefined ? status : fallbackStatus;
       groups[key].push(p);
     });
 
@@ -2844,8 +3147,9 @@ class CadenceAppView extends obsidian.ItemView {
     }
     const projects = await Promise.all(files.map(async (f) => {
       const e = readEntity(this.app, f);
-      const status = String(entityValue(e, 'status', def) || 'active').toLowerCase();
-      if (!['active', 'on_hold', 'in_progress'].includes(status.replace(/\s+/g, '_'))) return null;
+      const status = String(entityValue(e, 'status', def) || 'active').toLowerCase().replace(/[-\s]+/g, '_');
+      const terminalStatuses = def.terminalStatuses || ['done', 'cancelled', 'completed', 'archived'];
+      if (terminalStatuses.map((s) => s.replace(/[-\s]+/g, '_')).includes(status)) return null;
       const meta = await readProjectMeta(this.app, f);
       return { entity: e, meta };
     }));
@@ -2873,8 +3177,8 @@ class CadenceAppView extends obsidian.ItemView {
   async _homePipelineCard(parent) {
     const def = ENTITIES.deal;
     const deals = listEntities(this.app, 'deal');
-    const open = deals.filter((e) => !['Won', 'Lost'].includes(String(entityValue(e, 'stage', def))));
-    const value = open.reduce((s, e) => s + (Number(entityValue(e, 'value', def)) || 0), 0);
+    const open = deals.filter((e) => !dealTerminalStages(def).includes(String(entityValue(e, dealStageField(def), def))));
+    const value = open.reduce((s, e) => s + (Number(entityValue(e, dealValueField(def), def)) || 0), 0);
 
     const body = this._homeCard(parent, `PIPELINE — ${open.length} open · ${fmtValue(value, 'currency')}`, (head) => {
       const link = head.createEl('a', { cls: 'cad-home-card-link', text: 'Open Pipeline →' });
@@ -2884,13 +3188,13 @@ class CadenceAppView extends obsidian.ItemView {
       body.createDiv({ cls: 'cad-empty', text: 'No open deals — hit + Deal above.' });
       return;
     }
-    const top = [...open].sort((a, b) => (Number(entityValue(b, 'value', def)) || 0) - (Number(entityValue(a, 'value', def)) || 0)).slice(0, 4);
+    const top = [...open].sort((a, b) => (Number(entityValue(b, dealValueField(def), def)) || 0) - (Number(entityValue(a, dealValueField(def), def)) || 0)).slice(0, 4);
     top.forEach((e) => {
       const row = body.createDiv({ cls: 'cad-home-row' });
       const main = row.createDiv({ cls: 'cad-home-row-main' });
       main.createDiv({ cls: 'cad-home-row-title', text: entityValue(e, 'title', def) || e.basename });
-      const stage = entityValue(e, 'stage', def);
-      main.createDiv({ cls: 'cad-home-row-meta', text: `${stage || '—'} · ${fmtValue(entityValue(e, 'value', def), 'currency')}` });
+      const stage = entityValue(e, dealStageField(def), def);
+      main.createDiv({ cls: 'cad-home-row-meta', text: `${stage || '—'} · ${fmtValue(entityValue(e, dealValueField(def), def), 'currency')}` });
       row.addEventListener('click', () => this.openEntityDetailFromFile(e.file));
     });
   }
@@ -2907,15 +3211,15 @@ class CadenceAppView extends obsidian.ItemView {
       return;
     }
     const sorted = [...acts].sort((a, b) => {
-      const da = new Date(entityValue(a, 'when', def) || 0).getTime();
-      const db = new Date(entityValue(b, 'when', def) || 0).getTime();
+      const da = new Date(activityDate(a, def) || 0).getTime();
+      const db = new Date(activityDate(b, def) || 0).getTime();
       return db - da;
     }).slice(0, 5);
     sorted.forEach((e) => {
       const row = body.createDiv({ cls: 'cad-home-row' });
       const main = row.createDiv({ cls: 'cad-home-row-main' });
       main.createDiv({ cls: 'cad-home-row-title', text: entityValue(e, 'subject', def) || e.basename });
-      main.createDiv({ cls: 'cad-home-row-meta', text: `${entityValue(e, 'type', def) || '—'} · ${fmtValue(entityValue(e, 'when', def), 'date')}` });
+      main.createDiv({ cls: 'cad-home-row-meta', text: `${entityValue(e, 'type', def) || '—'} · ${fmtValue(activityDate(e, def), 'date')}` });
       row.addEventListener('click', () => this.openEntityDetailFromFile(e.file));
     });
   }
@@ -3131,7 +3435,7 @@ class CadenceAppView extends obsidian.ItemView {
     root.addClass('cadence-kanban');
     const def = ENTITIES[entityKey];
     const entities = listEntities(this.app, entityKey);
-    const totalValue = entities.reduce((sum, e) => sum + (Number(entityValue(e, 'value', def)) || 0), 0);
+    const totalValue = entities.reduce((sum, e) => sum + (Number(entityValue(e, dealValueField(def), def)) || 0), 0);
 
     this._renderPageHeader(root, def.plural, `${entities.length} ${entities.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} · ${fmtValue(totalValue, 'currency')} total`, (right) => {
       const importBtn = right.createEl('button', { cls: 'cad-btn', text: 'Import CSV' });
@@ -3143,7 +3447,7 @@ class CadenceAppView extends obsidian.ItemView {
     const board = root.createDiv({ cls: 'cad-kanban-board' });
     groups.forEach((stage) => {
       const items = entities.filter((e) => String(entityValue(e, groupBy, def) || '') === stage);
-      const stageValue = items.reduce((s, e) => s + (Number(entityValue(e, 'value', def)) || 0), 0);
+      const stageValue = items.reduce((s, e) => s + (Number(entityValue(e, dealValueField(def), def)) || 0), 0);
 
       const col = board.createDiv({ cls: 'cad-kanban-col' });
       col.dataset.stage = stage;
@@ -3189,7 +3493,7 @@ class CadenceAppView extends obsidian.ItemView {
           card.dataset.path = e.file.path;
           card.createDiv({ cls: 'cad-kanban-card-title', text: entityValue(e, 'title', def) || e.basename });
           const meta = card.createDiv({ cls: 'cad-kanban-card-meta' });
-          const v = entityValue(e, 'value', def);
+          const v = entityValue(e, dealValueField(def), def);
           if (v) meta.createSpan({ cls: 'cad-kanban-card-value', text: fmtValue(v, 'currency') });
           const co = entityValue(e, 'company', def);
           if (co) meta.createSpan({ cls: 'cad-kanban-card-company', text: ' · ' + co });
@@ -3218,10 +3522,10 @@ class CadenceAppView extends obsidian.ItemView {
     // ─── Read all the relevant data ────────────────────
     const dealDef = ENTITIES.deal;
     const allDeals = listEntities(this.app, 'deal');
-    const open = allDeals.filter((e) => !['Won', 'Lost'].includes(String(entityValue(e, 'stage', dealDef))));
-    const won  = allDeals.filter((e) => String(entityValue(e, 'stage', dealDef)) === 'Won');
-    const lost = allDeals.filter((e) => String(entityValue(e, 'stage', dealDef)) === 'Lost');
-    const dealValue = (e) => Number(entityValue(e, 'value', dealDef)) || 0;
+    const open = allDeals.filter((e) => !dealTerminalStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
+    const won  = allDeals.filter((e) => dealWonStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
+    const lost = allDeals.filter((e) => dealLostStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
+    const dealValue = (e) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
     const sumVal = (arr) => arr.reduce((s, e) => s + dealValue(e), 0);
     const winRate = won.length + lost.length === 0 ? 0 : Math.round((won.length / (won.length + lost.length)) * 100);
     const avgDeal = won.length === 0 ? 0 : sumVal(won) / won.length;
@@ -3254,8 +3558,8 @@ class CadenceAppView extends obsidian.ItemView {
 
     // ─── Pipeline by stage ─────────────────────────────
     root.createDiv({ cls: 'cad-section-label-lg', text: 'PIPELINE BY STAGE' });
-    const stageData = DEAL_STAGES.map((stage) => {
-      const items = allDeals.filter((e) => String(entityValue(e, 'stage', dealDef)) === stage);
+    const stageData = getDealStages(dealDef).map((stage) => {
+      const items = allDeals.filter((e) => String(entityValue(e, dealStageField(dealDef), dealDef)) === stage);
       return { stage, items, value: sumVal(items) };
     });
     const maxStageVal = Math.max(1, ...stageData.map((s) => s.value));
@@ -3283,7 +3587,7 @@ class CadenceAppView extends obsidian.ItemView {
       .slice(0, 5)
       .map((e) => ({
         title: entityValue(e, 'title', dealDef) || e.basename,
-        meta: `${entityValue(e, 'stage', dealDef) || '—'} · ${fmtValue(dealValue(e), 'currency')}`,
+        meta: `${entityValue(e, dealStageField(dealDef), dealDef) || '—'} · ${fmtValue(dealValue(e), 'currency')}`,
         file: e.file,
       }));
     this._dashCardSection(left, 'HOT DEALS · top 5 by value', topHot, 'No open deals yet — hit + New Deal above.');
@@ -3298,7 +3602,7 @@ class CadenceAppView extends obsidian.ItemView {
         const days = Math.round((Date.now() - e.file.stat.mtime) / 86400000);
         return {
           title: entityValue(e, 'title', dealDef) || e.basename,
-          meta: `${entityValue(e, 'stage', dealDef) || '—'} · ${days}d quiet · ${fmtValue(dealValue(e), 'currency')}`,
+          meta: `${entityValue(e, dealStageField(dealDef), dealDef) || '—'} · ${days}d quiet · ${fmtValue(dealValue(e), 'currency')}`,
           file: e.file,
         };
       });
@@ -3307,14 +3611,14 @@ class CadenceAppView extends obsidian.ItemView {
     // Recent activity
     const recentAct = [...activities]
       .sort((a, b) => {
-        const da = new Date(entityValue(a, 'when', ENTITIES.activity) || 0).getTime();
-        const db = new Date(entityValue(b, 'when', ENTITIES.activity) || 0).getTime();
+        const da = new Date(activityDate(a, ENTITIES.activity) || 0).getTime();
+        const db = new Date(activityDate(b, ENTITIES.activity) || 0).getTime();
         return db - da;
       })
       .slice(0, 6)
       .map((e) => ({
-        title: entityValue(e, 'subject', ENTITIES.activity) || e.basename,
-        meta: `${entityValue(e, 'type', ENTITIES.activity) || '—'} · ${entityValue(e, 'with', ENTITIES.activity) || '—'} · ${fmtValue(entityValue(e, 'when', ENTITIES.activity), 'date')}`,
+        title: activityTitle(e, ENTITIES.activity),
+        meta: `${entityValue(e, 'type', ENTITIES.activity) || '—'} · ${fmtValue(activityDate(e, ENTITIES.activity), 'date')}`,
         file: e.file,
       }));
     this._dashCardSection(right, `RECENT ACTIVITY · ${activities.length} total`, recentAct, 'No activity logged yet. Capture a call or meeting under CRM > Activities.');
@@ -3488,16 +3792,17 @@ class CadenceAppView extends obsidian.ItemView {
     root.addClass('cadence-report');
     const def = ENTITIES.deal;
     const deals = listEntities(this.app, 'deal');
-    const open = deals.filter((e) => !['Won', 'Lost'].includes(String(entityValue(e, 'stage', def))));
-    const won  = deals.filter((e) => String(entityValue(e, 'stage', def)) === 'Won');
-    const lost = deals.filter((e) => String(entityValue(e, 'stage', def)) === 'Lost');
-    const dealValue = (e) => Number(entityValue(e, 'value', def)) || 0;
+    const open = deals.filter((e) => !dealTerminalStages(def).includes(String(entityValue(e, dealStageField(def), def))));
+    const won  = deals.filter((e) => dealWonStages(def).includes(String(entityValue(e, dealStageField(def), def))));
+    const lost = deals.filter((e) => dealLostStages(def).includes(String(entityValue(e, dealStageField(def), def))));
+    const dealValue = (e) => Number(entityValue(e, dealValueField(def), def)) || 0;
     const sumVal = (arr) => arr.reduce((s, e) => s + dealValue(e), 0);
     const winRate = won.length + lost.length === 0 ? 0 : Math.round((won.length / (won.length + lost.length)) * 100);
 
     // Weighted forecast — confidence per stage applied to open deal value.
-    const stageConfidence = { 'Lead': 0.10, 'Qualified': 0.25, 'Proposal': 0.50, 'Negotiation': 0.75 };
-    const weighted = open.reduce((s, e) => s + dealValue(e) * (stageConfidence[String(entityValue(e, 'stage', def))] || 0), 0);
+    const stageConfidenceRaw = def.stageConfidence || { 'lead': 0.10, 'qualified': 0.25, 'proposal': 0.50, 'negotiation': 0.75 };
+    const stageConfidence = Object.fromEntries(Object.entries(stageConfidenceRaw).map(([k, v]) => [k.toLowerCase(), v]));
+    const weighted = open.reduce((s, e) => s + dealValue(e) * (stageConfidence[String(entityValue(e, dealStageField(def), def)).toLowerCase()] || 0), 0);
 
     this._renderPageHeader(root, 'Pipeline report', 'Coverage, forecast and aging across all deals');
 
@@ -3522,8 +3827,8 @@ class CadenceAppView extends obsidian.ItemView {
     const trh = table.createEl('thead').createEl('tr');
     ['Stage', 'Count', 'Value'].forEach((h) => trh.createEl('th', { text: h }));
     const tbody = table.createEl('tbody');
-    DEAL_STAGES.forEach((stage) => {
-      const items = deals.filter((e) => String(entityValue(e, 'stage', def)) === stage);
+    getDealStages(def).forEach((stage) => {
+      const items = deals.filter((e) => String(entityValue(e, dealStageField(def), def)) === stage);
       const tr = tbody.createEl('tr');
       tr.createEl('td', { text: stage });
       tr.createEl('td', { text: String(items.length) });
@@ -3588,7 +3893,7 @@ class CadenceAppView extends obsidian.ItemView {
       .slice(0, 5)
       .map((e) => ({
         title: entityValue(e, 'title', def) || e.basename,
-        meta: `${entityValue(e, 'stage', def) || '—'} · ${Math.round((now - e.file.stat.mtime) / 86400000)}d quiet · ${fmtValue(dealValue(e), 'currency')}`,
+        meta: `${entityValue(e, dealStageField(def), def) || '—'} · ${Math.round((now - e.file.stat.mtime) / 86400000)}d quiet · ${fmtValue(dealValue(e), 'currency')}`,
         file: e.file,
       }));
     this._dashCardSection(right, 'STALE · 30+ DAYS NO EDITS', stale, 'No deals over 30 days quiet — nice.');
@@ -3599,9 +3904,9 @@ class CadenceAppView extends obsidian.ItemView {
     root.addClass('cadence-report');
     const def = ENTITIES.deal;
     const deals = listEntities(this.app, 'deal');
-    const won  = deals.filter((e) => String(entityValue(e, 'stage', def)) === 'Won');
-    const lost = deals.filter((e) => String(entityValue(e, 'stage', def)) === 'Lost');
-    const dealValue = (e) => Number(entityValue(e, 'value', def)) || 0;
+    const won  = deals.filter((e) => dealWonStages(def).includes(String(entityValue(e, dealStageField(def), def))));
+    const lost = deals.filter((e) => dealLostStages(def).includes(String(entityValue(e, dealStageField(def), def))));
+    const dealValue = (e) => Number(entityValue(e, dealValueField(def), def)) || 0;
     const sumVal = (arr) => arr.reduce((s, e) => s + dealValue(e), 0);
 
     this._renderPageHeader(root, 'Sales report', 'Closed-won and lost · performance over time');
@@ -3696,7 +4001,7 @@ class CadenceAppView extends obsidian.ItemView {
     const deals = listEntities(this.app, 'deal');
     const partners = listEntities(this.app, 'partner');
     const certs = listEntities(this.app, 'certification');
-    const dealValue = (e) => Number(entityValue(e, 'value', dealDef)) || 0;
+    const dealValue = (e) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
 
     this._renderPageHeader(root, 'Partners report', 'Partner-sourced revenue, tier mix, certification health');
 
@@ -3708,7 +4013,7 @@ class CadenceAppView extends obsidian.ItemView {
       byPartner.get(p).push(e);
     });
     const partnerSourced = deals.filter((e) => entityValue(e, 'partner', dealDef));
-    const partnerWon = partnerSourced.filter((e) => String(entityValue(e, 'stage', dealDef)) === 'Won');
+    const partnerWon = partnerSourced.filter((e) => dealWonStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
 
     const grid = root.createDiv({ cls: 'cad-stat-grid' });
     const stat = (label, value, sub, accent) => {
@@ -3826,7 +4131,7 @@ class CadenceAppView extends obsidian.ItemView {
       weeks.push({ start: ws, end: we, count: 0, label: ws.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) });
     }
     acts.forEach((e) => {
-      const when = entityValue(e, 'when', def);
+      const when = activityDate(e, def);
       if (!when) return;
       const t = new Date(when).getTime();
       if (isNaN(t)) return;
@@ -3890,10 +4195,10 @@ class CadenceAppView extends obsidian.ItemView {
     const dealDef = ENTITIES.deal;
     const partners = listEntities(this.app, 'partner');
     const deals = listEntities(this.app, 'deal');
-    const dealValue = (e) => Number(entityValue(e, 'value', dealDef)) || 0;
+    const dealValue = (e) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
     const sumVal = (arr) => arr.reduce((s, e) => s + dealValue(e), 0);
     const partnerSourced = deals.filter((e) => entityValue(e, 'partner', dealDef));
-    const partnerWon = partnerSourced.filter((e) => String(entityValue(e, 'stage', dealDef)) === 'Won');
+    const partnerWon = partnerSourced.filter((e) => dealWonStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
 
     this._renderPageHeader(root, 'PRM analytics', 'Partner programme health, tier mix and revenue contribution');
 
@@ -3976,8 +4281,8 @@ class CadenceAppView extends obsidian.ItemView {
     this._dashCardSection(left, 'TOP PARTNERS · by won revenue', topPartnerRows, 'No partner-attributed wins yet.');
 
     // Funnel: Sourced → Open → Won
-    const sourcedOpen = partnerSourced.filter((e) => !['Won', 'Lost'].includes(String(entityValue(e, 'stage', dealDef))));
-    const sourcedLost = partnerSourced.filter((e) => String(entityValue(e, 'stage', dealDef)) === 'Lost');
+    const sourcedOpen = partnerSourced.filter((e) => !dealTerminalStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
+    const sourcedLost = partnerSourced.filter((e) => dealLostStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
     const conv = partnerSourced.length === 0 ? 0 : Math.round((partnerWon.length / partnerSourced.length) * 100);
     const funnelCard = right.createDiv({ cls: 'cad-dash-card' });
     funnelCard.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'PARTNER FUNNEL' });
@@ -4201,59 +4506,105 @@ class CadenceAppView extends obsidian.ItemView {
     });
 
     /* Tasks */
+    const taskMode = this.plugin.settings.taskMode || 'checkbox';
     const taskSection = root.createDiv({ cls: 'cad-section' });
     const taskLabel = taskSection.createDiv({ cls: 'cad-section-label' });
     taskLabel.createSpan({ text: 'TODAY' });
-    const total = this.todayParsed.tasks.length;
-    const open = this.todayParsed.tasks.filter((l) => / \[ \] /.test(l)).length;
-    taskLabel.createSpan({ cls: 'cad-count', text: `${open} open · ${total - open} done` });
 
-    if (!this.todayParsed.tasks.length) {
-      taskSection.createDiv({ cls: 'cad-empty', text: 'No tasks in today\'s note yet.' });
-    } else {
-      const dailyPath = this.todayFile.path;
-      this.todayParsed.tasks.forEach((rawLine, idx) => {
-        const checked = / \[(x|X)\] /.test(rawLine);
-        const text = rawLine.replace(/^\s*-\s\[(x|X| )\]\s/, '');
-        const row = taskSection.createDiv({ cls: 'cad-task-row' + (checked ? ' done' : '') });
-        const cb = row.createEl('input', { type: 'checkbox' });
-        cb.checked = checked;
-        cb.addEventListener('change', () => this.toggleTodayTask(idx, cb.checked));
-        row.createSpan({ cls: 'cad-task-text', text });
+    /* ── Checkbox tasks (checkbox + hybrid) ── */
+    if (taskMode === 'checkbox' || taskMode === 'hybrid') {
+      const total = this.todayParsed.tasks.length;
+      const open  = this.todayParsed.tasks.filter((l) => / \[ \] /.test(l)).length;
+      taskLabel.createSpan({ cls: 'cad-count', text: `${open} open · ${total - open} done` });
 
-        /* Project link — chip if linked, then a button */
-        const linkedProject = this._getTaskProjectLink(dailyPath, text);
-        if (linkedProject) {
-          const chip = row.createEl('a', { cls: 'cad-task-proj-chip', text: '📁 ' + (projectNameFromPath(this.app, linkedProject) || 'Project') });
-          chip.title = 'Open linked project';
-          chip.addEventListener('click', (ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            const file = this.app.vault.getAbstractFileByPath(linkedProject);
-            if (file && file instanceof obsidian.TFile) this.openEntityDetail('project', file);
-          });
-        }
-        const linkBtn = row.createEl('button', { cls: 'cad-task-link-btn' + (linkedProject ? ' linked' : ''), text: linkedProject ? '✎' : '📁' });
-        linkBtn.title = linkedProject ? 'Change linked project' : 'Link to a project';
-        linkBtn.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          this._openTaskProjectPicker(dailyPath, text, linkedProject);
+      if (!this.todayParsed.tasks.length) {
+        taskSection.createDiv({ cls: 'cad-empty', text: 'No tasks in today\'s note yet.' });
+      } else {
+        const dailyPath = this.todayFile.path;
+        this.todayParsed.tasks.forEach((rawLine, idx) => {
+          const checked = / \[(x|X)\] /.test(rawLine);
+          const text    = rawLine.replace(/^\s*-\s\[(x|X| )\]\s/, '');
+          const row = taskSection.createDiv({ cls: 'cad-task-row' + (checked ? ' done' : '') });
+          const cb = row.createEl('input', { type: 'checkbox' });
+          cb.checked = checked;
+          cb.addEventListener('change', () => this.toggleTodayTask(idx, cb.checked));
+          row.createSpan({ cls: 'cad-task-text', text });
+
+          /* Project link */
+          const linkedProject = this._getTaskProjectLink(dailyPath, text);
+          if (linkedProject) {
+            const chip = row.createEl('a', { cls: 'cad-task-proj-chip', text: '📁 ' + (projectNameFromPath(this.app, linkedProject) || 'Project') });
+            chip.title = 'Open linked project';
+            chip.addEventListener('click', (ev) => {
+              ev.preventDefault(); ev.stopPropagation();
+              const f = this.app.vault.getAbstractFileByPath(linkedProject);
+              if (f instanceof obsidian.TFile) this.openEntityDetail('project', f);
+            });
+          }
+          const linkBtn = row.createEl('button', { cls: 'cad-task-link-btn' + (linkedProject ? ' linked' : ''), text: linkedProject ? '✎' : '📁' });
+          linkBtn.title = linkedProject ? 'Change linked project' : 'Link to a project';
+          linkBtn.addEventListener('click', (ev) => { ev.stopPropagation(); this._openTaskProjectPicker(dailyPath, text, linkedProject); });
+
+          /* Promote button (hybrid only) */
+          if (taskMode === 'hybrid') {
+            const promBtn = row.createEl('button', { cls: 'cad-task-link-btn', text: '↑', title: 'Promote to TaskNote' });
+            promBtn.addEventListener('click', async (ev) => {
+              ev.stopPropagation();
+              await createTaskNote(this.app, this.plugin.settings, text);
+              new obsidian.Notice(`TaskNote created: ${text}`);
+            });
+          }
         });
-      });
+      }
+    }
+
+    /* ── TaskNotes (tasknotes + hybrid) ── */
+    if (taskMode === 'tasknotes' || taskMode === 'hybrid') {
+      if (taskMode === 'hybrid') taskSection.createDiv({ cls: 'cad-section-label', text: 'TASKNOTES TODAY' });
+      const notes = listTodayTaskNotes(this.app, this.plugin.settings);
+      if (!notes.length) {
+        taskSection.createDiv({ cls: 'cad-empty', text: 'No TaskNotes due today.' });
+      } else {
+        if (taskMode === 'tasknotes') {
+          taskLabel.createSpan({ cls: 'cad-count', text: `${notes.length} due today` });
+        }
+        notes.forEach(({ file, fm }) => {
+          const done = fm.status === 'done';
+          const row  = taskSection.createDiv({ cls: 'cad-task-row' + (done ? ' done' : '') });
+          const cb   = row.createEl('input', { type: 'checkbox' });
+          cb.checked = done;
+          cb.addEventListener('change', async () => {
+            await toggleTaskNoteStatus(this.app, file, cb.checked);
+            this.render();
+          });
+          const lbl = row.createEl('a', { cls: 'cad-task-text', text: fm.title || file.basename });
+          lbl.title = 'Open TaskNote';
+          lbl.addEventListener('click', (ev) => { ev.preventDefault(); this.app.workspace.openLinkText(file.path, '', false); });
+          if (fm.priority && fm.priority !== 'normal') {
+            row.createSpan({ cls: 'cad-count', text: fm.priority });
+          }
+        });
+      }
     }
 
     const quickWrap = taskSection.createDiv();
     quickWrap.style.marginTop = '8px';
     const quick = quickWrap.createEl('input', {
       type: 'text',
-      placeholder: 'Quick add a task — Enter to save',
+      placeholder: taskMode === 'checkbox' ? 'Quick add a task — Enter to save' : 'New TaskNote — Enter to create',
     });
     quick.style.width = '100%';
-    quick.addEventListener('keydown', (e) => {
+    quick.addEventListener('keydown', async (e) => {
       if (e.key === 'Enter' && quick.value.trim()) {
         const v = quick.value.trim();
         quick.value = '';
-        this.appendTodayTask(v);
+        if (taskMode === 'checkbox') {
+          this.appendTodayTask(v);
+        } else {
+          await createTaskNote(this.app, this.plugin.settings, v);
+          new obsidian.Notice(`TaskNote created: ${v}`);
+          this.render();
+        }
       }
     });
 
@@ -4473,6 +4824,32 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     });
 
     /* ─── Reminders ─── */
+    /* ─── Surface visibility ─── */
+    containerEl.createEl('h3', { text: 'Surface visibility' });
+    containerEl.createEl('p', {
+      text: 'Hide individual nav items. Module toggles above hide entire sections; these hide specific surfaces within enabled modules.',
+      cls: 'setting-item-description',
+    });
+    const surfaceToggles = ALL_SURFACES.filter((s) =>
+      !['home', 'team', 'settings'].includes(s.id)
+    );
+    const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
+    surfaceToggles.forEach((s) => {
+      new obsidian.Setting(containerEl)
+        .setName(s.label)
+        .setDesc(s.id)
+        .addToggle((t) => t
+          .setValue(!disabled.has(s.id))
+          .onChange(async (v) => {
+            const arr = this.plugin.settings.disabledSurfaces || [];
+            if (!v) { if (!arr.includes(s.id)) arr.push(s.id); }
+            else { const i = arr.indexOf(s.id); if (i >= 0) arr.splice(i, 1); }
+            this.plugin.settings.disabledSurfaces = arr;
+            await this.plugin.saveSettings();
+            this.plugin.refreshOpenViews();
+          }));
+    });
+
     containerEl.createEl('h3', { text: 'Reminders' });
     new obsidian.Setting(containerEl)
       .setName('Desktop notifications')
@@ -4517,6 +4894,35 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         .setPlaceholder('daily')
         .setValue(this.plugin.settings.dailyNoteFolder)
         .onChange(async (v) => { this.plugin.settings.dailyNoteFolder = v; await this.plugin.saveSettings(); }));
+
+    /* ── Task mode ── */
+    const taskModeEl = new obsidian.Setting(containerEl)
+      .setName('Task mode')
+      .setDesc('How tasks are stored and displayed in the Planner.')
+      .addDropdown((d) => d
+        .addOption('checkbox',  'Checkbox only — inline checkboxes in daily notes')
+        .addOption('tasknotes', 'TaskNotes only — full markdown note per task')
+        .addOption('hybrid',    'Hybrid — checkboxes with Promote ↑ to TaskNote')
+        .setValue(this.plugin.settings.taskMode || 'checkbox')
+        .onChange(async (v) => {
+          this.plugin.settings.taskMode = v;
+          await this.plugin.saveSettings();
+          this.plugin.refreshOpenViews();
+          this.display(); // re-render settings to show/hide folder field
+        }));
+
+    if ((this.plugin.settings.taskMode || 'checkbox') !== 'checkbox') {
+      new obsidian.Setting(containerEl)
+        .setName('TaskNotes folder')
+        .setDesc('Vault path where TaskNote files are stored.')
+        .addText((t) => t
+          .setPlaceholder('00-CORE/TaskNotes/Tasks')
+          .setValue(this.plugin.settings.taskNotesFolder || '00-CORE/TaskNotes/Tasks')
+          .onChange(async (v) => {
+            this.plugin.settings.taskNotesFolder = v.trim() || '00-CORE/TaskNotes/Tasks';
+            await this.plugin.saveSettings();
+          }));
+    }
 
     new obsidian.Setting(containerEl)
       .setName('Tasks heading')
@@ -4581,6 +4987,49 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       d.onChange(async (v) => { this.plugin.settings.defaultTab = v; await this.plugin.saveSettings(); });
     });
 
+    /* ─── Folders ─── */
+    containerEl.createEl('h3', { text: 'Folders' });
+    containerEl.createEl('p', {
+      text: 'Vault paths where Cadence stores each entity type. Change these if you want to keep Cadence data in a different location. Existing files are not moved — rename the folder in your vault first, then update the path here.',
+      cls: 'setting-item-description',
+    });
+
+    const folderSettings = [
+      { key: 'folderContacts',      label: 'Contacts',        entityKey: 'contact',       def: 'Cadence/Contacts' },
+      { key: 'folderCompanies',     label: 'Companies',       entityKey: 'company',       def: 'Cadence/Companies' },
+      { key: 'folderPipeline',      label: 'Pipeline (Deals)',entityKey: 'deal',          def: 'Cadence/Pipeline' },
+      { key: 'folderActivities',    label: 'Activities',      entityKey: 'activity',      def: 'Cadence/Activities' },
+      { key: 'folderProjects',      label: 'Projects',        entityKey: 'project',       def: 'Cadence/Projects' },
+      { key: 'folderPartners',      label: 'Partners',        entityKey: 'partner',       def: 'Cadence/Partners' },
+      { key: 'folderRegistrations', label: 'Registrations',   entityKey: 'registration',  def: 'Cadence/Registrations' },
+      { key: 'folderCommissions',   label: 'Commissions',     entityKey: 'commission',    def: 'Cadence/Commissions' },
+      { key: 'folderLeads',         label: 'Leads',           entityKey: 'lead',          def: 'Cadence/Leads' },
+      { key: 'folderCertifications',label: 'Certifications',  entityKey: 'certification', def: 'Cadence/Certifications' },
+      { key: 'folderSequences',     label: 'Sequences',       entityKey: 'sequence',      def: 'Cadence/Sequences' },
+    ];
+    folderSettings.forEach(({ key, label, entityKey, def }) => {
+      const eDef = ENTITIES[entityKey] || {};
+      const overridden = eDef.typeFilter || eDef.typeFilters || Array.isArray(eDef.folders) || Array.isArray(eDef.typesFilter);
+      const s = new obsidian.Setting(containerEl).setName(label);
+      if (overridden) {
+        const parts = [];
+        if (eDef.typeFilter)                parts.push(`typeFilter: "${eDef.typeFilter}"`);
+        if (eDef.typeFilters)               parts.push(`typeFilters: ${JSON.stringify(eDef.typeFilters)}`);
+        if (Array.isArray(eDef.folders))    parts.push(`folders: [${eDef.folders.join(', ')}]`);
+        if (Array.isArray(eDef.typesFilter))parts.push(`typesFilter: [${eDef.typesFilter.join(', ')}]`);
+        s.setDesc('Managed via entities.json — ' + parts.join(' · '));
+      } else {
+        s.addText((t) => t
+          .setPlaceholder(def)
+          .setValue(this.plugin.settings[key] || def)
+          .onChange(async (v) => {
+            this.plugin.settings[key] = v.trim() || def;
+            await this.plugin.saveSettings();
+            this.plugin.refreshOpenViews();
+          }));
+      }
+    });
+
     containerEl.createEl('h3', { text: 'Cloud sync — coming soon' });
     const cloudDesc = containerEl.createEl('p', { cls: 'setting-item-description' });
     cloudDesc.appendText('Future option to two-way sync your vault with a live Cadence instance, so contacts, deals and partners stay aligned across desktop and mobile. ');
@@ -4611,6 +5060,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
 class CadencePlugin extends obsidian.Plugin {
   async onload() {
     await this.loadSettings();
+    await applyCustomEntities(this.app);
 
     this.registerView(
       VIEW_TYPE_CADENCE_APP,
@@ -4692,6 +5142,36 @@ class CadencePlugin extends obsidian.Plugin {
           else if (m === 'planner.projects') entityKey = 'project';
         }
         new CadenceImportModal(this.app, { entityKey }).open();
+      },
+    });
+
+    // ─── Custom entities — watch for changes ───
+    this.registerEvent(this.app.vault.on('modify', async (file) => {
+      if (file.path === ENTITIES_CONFIG_PATH) {
+        await applyCustomEntities(this.app);
+        this.refreshOpenViews();
+      }
+    }));
+    this.registerEvent(this.app.vault.on('create', async (file) => {
+      if (file.path === ENTITIES_CONFIG_PATH) {
+        await applyCustomEntities(this.app);
+        this.refreshOpenViews();
+      }
+    }));
+
+    this.addCommand({
+      id: 'create-entities-config',
+      name: 'Create entities.json template',
+      callback: async () => {
+        if (await this.app.vault.adapter.exists(ENTITIES_CONFIG_PATH)) {
+          new obsidian.Notice(`entities.json already exists at ${ENTITIES_CONFIG_PATH}`);
+          this.app.workspace.openLinkText(ENTITIES_CONFIG_PATH, '', false);
+          return;
+        }
+        await ensureFolderSync(this.app, 'Cadence');
+        await this.app.vault.create(ENTITIES_CONFIG_PATH, ENTITIES_JSON_TEMPLATE);
+        this.app.workspace.openLinkText(ENTITIES_CONFIG_PATH, '', false);
+        new obsidian.Notice('Created Cadence/entities.json — edit it to add custom entity types.');
       },
     });
 
@@ -4867,10 +5347,12 @@ class CadencePlugin extends obsidian.Plugin {
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     CURRENT_CURRENCY = this.settings.currency || 'USD';
+    syncEntityFolders(this.settings);
   }
   async saveSettings() {
     await this.saveData(this.settings);
     CURRENT_CURRENCY = this.settings.currency || 'USD';
+    syncEntityFolders(this.settings);
   }
 }
 
