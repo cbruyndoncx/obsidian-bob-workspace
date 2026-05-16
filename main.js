@@ -27,34 +27,41 @@ const NAV_GROUPS = [
       { id: 'planner.inbox',    label: 'Inbox',    icon: 'inbox',         module: 'planner', desc: 'Universal capture + reminders. Anything you toss in here surfaces at the right time.' },
       { id: 'planner.today',    label: 'Today',    icon: 'sun',           module: 'planner', desc: 'Diary view of today\'s daily note.' },
       { id: 'planner.calendar', label: 'Calendar', icon: 'calendar-days', module: 'planner', desc: 'Week view across daily notes.' },
-      { id: 'planner.projects', label: 'Projects', icon: 'folder-kanban', module: 'planner', desc: 'Active projects with milestones, owners, statuses — kanban over project notes.' },
+      { id: 'planner.projects', label: 'Projects', icon: 'folder-kanban', module: 'planner', entityKey: 'project', folderKey: 'folderProjects', desc: 'Active projects with milestones, owners, statuses — kanban over project notes.' },
     ],
   },
   {
     id: 'crm', label: 'CRM', module: 'crm',
     items: [
       { id: 'crm.dashboard',  label: 'Dashboard',  icon: 'layout-grid',     module: 'crm', desc: 'Overview cards — today\'s tasks, deal momentum, recent contacts, week stats.' },
-      { id: 'crm.pipeline',   label: 'Pipeline',   icon: 'trending-up',     module: 'crm', desc: 'Sales pipeline. Deals as markdown notes with stage, value and contact frontmatter.' },
-      { id: 'crm.contacts',   label: 'Contacts',   icon: 'users',           module: 'crm', desc: 'People as markdown notes — name, email, company, last-talked-to cadence, tags.' },
-      { id: 'crm.companies',  label: 'Companies',  icon: 'building-2',      module: 'crm', desc: 'Companies as markdown notes — domain, size, industry, related contacts and deals.' },
-      { id: 'crm.activities', label: 'Activities', icon: 'calendar',        module: 'crm', desc: 'Cross-cutting activity timeline — calls, meetings, notes against any contact or deal.' },
+      { id: 'crm.pipeline',   label: 'Pipeline',   icon: 'trending-up',     module: 'crm', entityKey: 'deal',     folderKey: 'folderPipeline',     desc: 'Sales pipeline. Deals as markdown notes with stage, value and contact frontmatter.' },
+      { id: 'crm.contacts',   label: 'Contacts',   icon: 'users',           module: 'crm', entityKey: 'contact',  folderKey: 'folderContacts',     desc: 'People as markdown notes — name, email, company, last-talked-to cadence, tags.' },
+      { id: 'crm.clients',    label: 'Clients',    icon: 'briefcase',       module: 'crm', entityKey: 'client',   folderKey: 'folderClients',      desc: 'Client company profiles — status, regions, contact details, related deals and projects.' },
+      { id: 'crm.companies',  label: 'My Companies', icon: 'building-2',    module: 'crm', entityKey: 'company',  folderKey: 'folderCompanies',    desc: 'Your own company profiles (can be multiple) — regions, status, branding.' },
+      { id: 'crm.activities', label: 'Activities', icon: 'calendar',        module: 'crm', entityKey: 'activity', folderKey: 'folderActivities',   desc: 'Cross-cutting activity timeline — calls, meetings, telegram/whatsapp/email logs.' },
+    ],
+  },
+  {
+    id: 'srm', label: 'SRM', module: 'srm',
+    items: [
+      { id: 'srm.suppliers', label: 'Suppliers', icon: 'truck', module: 'srm', entityKey: 'supplier', folderKey: 'folderSuppliers', desc: 'Supplier profiles — services, contracts, contacts, spend.' },
     ],
   },
   {
     id: 'prm', label: 'PRM', module: 'prm',
     items: [
-      { id: 'prm.partners',       label: 'Partners',       icon: 'handshake',        module: 'prm', desc: 'Partner organisations — relationship status, named contacts, joint pipeline.' },
-      { id: 'prm.registrations',  label: 'Registrations',  icon: 'clipboard-check',  module: 'prm', desc: 'Deal registrations submitted by partners — status, expiry, attached deals.' },
-      { id: 'prm.commissions',    label: 'Commissions',    icon: 'wallet',           module: 'prm', desc: 'Commission ledger across partners — earned, pending, paid, by quarter.' },
-      { id: 'prm.leads',          label: 'Leads',          icon: 'target',           module: 'prm', desc: 'Lead distribution — round-robin/queue assignment to partners or reps.' },
-      { id: 'prm.certifications', label: 'Certifications', icon: 'award',            module: 'prm', desc: 'Partner certifications — track expiries, renewals, training completion.' },
+      { id: 'prm.partners',       label: 'Partners',       icon: 'handshake',        module: 'prm', entityKey: 'partner',       folderKey: 'folderPartners',       desc: 'Partner organisations — relationship status, named contacts, joint pipeline.' },
+      { id: 'prm.registrations',  label: 'Registrations',  icon: 'clipboard-check',  module: 'prm', entityKey: 'registration',  folderKey: 'folderRegistrations',  desc: 'Deal registrations submitted by partners — status, expiry, attached deals.' },
+      { id: 'prm.commissions',    label: 'Commissions',    icon: 'wallet',           module: 'prm', entityKey: 'commission',    folderKey: 'folderCommissions',    desc: 'Commission ledger across partners — earned, pending, paid, by quarter.' },
+      { id: 'prm.leads',          label: 'Leads',          icon: 'target',           module: 'prm', entityKey: 'lead',          folderKey: 'folderLeads',          desc: 'Lead distribution — round-robin/queue assignment to partners or reps.' },
+      { id: 'prm.certifications', label: 'Certifications', icon: 'award',            module: 'prm', entityKey: 'certification', folderKey: 'folderCertifications', desc: 'Partner certifications — track expiries, renewals, training completion.' },
       { id: 'prm.analytics',      label: 'Analytics',      icon: 'bar-chart-3',      module: 'prm', desc: 'PRM analytics — partner-sourced revenue, top performers, lifecycle funnel.' },
     ],
   },
   {
     id: 'workflow', label: 'Workflow',
     items: [
-      { id: 'workflow.sequences', label: 'Sequences', icon: 'zap', desc: 'Multi-step outreach sequences — templates, cadence steps, who\'s in which step.' },
+      { id: 'workflow.sequences', label: 'Sequences', icon: 'zap', entityKey: 'sequence', folderKey: 'folderSequences', desc: 'Multi-step outreach sequences — templates, cadence steps, who\'s in which step.' },
     ],
   },
   {
@@ -99,17 +106,43 @@ const ENTITIES = {
     columns: ['name', 'company', 'email', 'role', 'lastContact'],
   },
   company: {
-    folder: 'Cadence/Companies',
+    folder: '20-COMPANY/00-PROFILE',
+    typeFilter: 'company',
     label: 'Company', plural: 'Companies',
     fields: [
-      { key: 'name',     label: 'Name',     primary: true },
-      { key: 'domain',   label: 'Domain' },
-      { key: 'industry', label: 'Industry' },
-      { key: 'size',     label: 'Size' },
-      { key: 'owner',    label: 'Owner' },
-      { key: 'tags',     label: 'Tags',     type: 'tags' },
+      { key: 'title',     label: 'Name',     primary: true },
+      { key: 'entity_id', label: 'Entity ID' },
+      { key: 'status',    label: 'Status',   type: 'enum', options: ['active', 'inactive', 'archived'] },
+      { key: 'regions',   label: 'Regions',  type: 'tags' },
+      { key: 'tags',      label: 'Tags',     type: 'tags' },
     ],
-    columns: ['name', 'domain', 'industry', 'size', 'owner'],
+    columns: ['title', 'entity_id', 'status', 'regions'],
+  },
+  client: {
+    folder: '30-CLIENTS',
+    typeFilter: 'client',
+    label: 'Client', plural: 'Clients',
+    fields: [
+      { key: 'client_name', label: 'Name', primary: true },
+      { key: 'client_id',   label: 'Client ID' },
+      { key: 'status',      label: 'Status', type: 'enum', options: ['prospect', 'active', 'inactive', 'on-hold', 'completed', 'archived'] },
+      { key: 'location',    label: 'Location' },
+      { key: 'tags',        label: 'Tags', type: 'tags' },
+    ],
+    columns: ['client_name', 'client_id', 'status', 'location'],
+  },
+  supplier: {
+    folder: '20-COMPANY/30-SUPPLIERS',
+    typeFilter: 'supplier',
+    label: 'Supplier', plural: 'Suppliers',
+    fields: [
+      { key: 'supplier_name', label: 'Name', primary: true },
+      { key: 'supplier_id',   label: 'Supplier ID' },
+      { key: 'status',        label: 'Status', type: 'enum', options: ['active', 'inactive', 'archived'] },
+      { key: 'category',      label: 'Category' },
+      { key: 'tags',          label: 'Tags', type: 'tags' },
+    ],
+    columns: ['supplier_name', 'supplier_id', 'status', 'category'],
   },
   partner: {
     folder: 'Cadence/Partners',
@@ -263,17 +296,12 @@ function entityKeyFromFile(app, file) {
     if (ENTITIES[t]) return t;
     for (const [key, def] of Object.entries(ENTITIES)) {
       if (def.typeFilter && def.typeFilter === t) return key;
-      if (def.typeFilters) {
-        const cache2 = app.metadataCache.getFileCache(file);
-        const fm2 = (cache2 && cache2.frontmatter) || {};
-        if (Object.entries(def.typeFilters).every(([k, v]) => fm2[k] === v)) return key;
-      }
     }
   }
   for (const key of Object.keys(ENTITIES)) {
     const def = ENTITIES[key];
-    if (!def.typeFilter && !def.typeFilters && !Array.isArray(def.typesFilter) &&
-        !Array.isArray(def.folders) && file.path.startsWith(entityFolder(key) + '/')) return key;
+    if (!def.typeFilter && !Array.isArray(def.folders) &&
+        file.path.startsWith(entityFolder(key) + '/')) return key;
   }
   return null;
 }
@@ -281,7 +309,8 @@ function entityKeyFromFile(app, file) {
 const BUILT_SURFACES = new Set([
   'home',
   'planner.inbox', 'planner.today', 'planner.calendar', 'planner.projects',
-  'crm.dashboard', 'crm.pipeline', 'crm.contacts', 'crm.companies', 'crm.activities',
+  'crm.dashboard', 'crm.pipeline', 'crm.contacts', 'crm.clients', 'crm.companies', 'crm.activities',
+  'srm.suppliers',
   'prm.partners', 'prm.registrations', 'prm.commissions', 'prm.leads', 'prm.certifications', 'prm.analytics',
   'workflow.sequences',
   'reports.pipeline', 'reports.sales', 'reports.partners', 'reports.activity', 'reports.productivity',
@@ -301,7 +330,7 @@ const DEFAULT_SETTINGS = {
   currency: 'USD',
   cadenceAppDark: false,
   taskProjectLinks: {}, // { "dailyPath::taskText": "Cadence/Projects/X.md" }
-  modules: { crm: true, prm: true, planner: true },
+  modules: { crm: true, prm: true, srm: true, planner: true },
   disabledSurfaces: [],    // surface IDs hidden from nav regardless of module toggle
   desktopNotifications: false,
   reminders: [], // [{ id, text, when (ISO|null), repeat ('none'|'daily'|'weekly'), notified, done, createdAt }]
@@ -312,7 +341,9 @@ const DEFAULT_SETTINGS = {
   taskNotesFolder: '00-CORE/TaskNotes/Tasks',
   // Entity folder locations (all configurable)
   folderContacts: 'Cadence/Contacts',
-  folderCompanies: 'Cadence/Companies',
+  folderCompanies: '20-COMPANY/00-PROFILE',
+  folderClients: '30-CLIENTS',
+  folderSuppliers: '20-COMPANY/30-SUPPLIERS',
   folderPipeline: 'Cadence/Pipeline',
   folderPartners: 'Cadence/Partners',
   folderRegistrations: 'Cadence/Registrations',
@@ -322,6 +353,10 @@ const DEFAULT_SETTINGS = {
   folderActivities: 'Cadence/Activities',
   folderSequences: 'Cadence/Sequences',
   folderProjects: 'Cadence/Projects',
+  projectFolders: [],   // extra folders to scan; first non-empty = default for new projects
+  baseFiles: {},  // { [entityKey]: 'path/to/entity.base' }
+  schemasFolder: '00-CORE/Schemas/source',  // Metadata Menu schema source folder
+  useSchemas: false,    // toggle: read entity defs from schema YAML files
 };
 
 /* Module-level — kept in sync by the plugin so helpers can resolve folders
@@ -329,7 +364,9 @@ const DEFAULT_SETTINGS = {
 let CURRENT_CURRENCY = 'USD';
 let ENTITY_FOLDERS = {
   contact: 'Cadence/Contacts',
-  company: 'Cadence/Companies',
+  company: '20-COMPANY/00-PROFILE',
+  client: '30-CLIENTS',
+  supplier: '20-COMPANY/30-SUPPLIERS',
   deal: 'Cadence/Pipeline',
   partner: 'Cadence/Partners',
   registration: 'Cadence/Registrations',
@@ -343,7 +380,9 @@ let ENTITY_FOLDERS = {
 
 function syncEntityFolders(settings) {
   ENTITY_FOLDERS.contact      = (settings.folderContacts      || '').trim() || 'Cadence/Contacts';
-  ENTITY_FOLDERS.company      = (settings.folderCompanies     || '').trim() || 'Cadence/Companies';
+  ENTITY_FOLDERS.company      = (settings.folderCompanies     || '').trim() || '20-COMPANY/00-PROFILE';
+  ENTITY_FOLDERS.client       = (settings.folderClients       || '').trim() || '30-CLIENTS';
+  ENTITY_FOLDERS.supplier     = (settings.folderSuppliers     || '').trim() || '20-COMPANY/30-SUPPLIERS';
   ENTITY_FOLDERS.deal         = (settings.folderPipeline      || '').trim() || 'Cadence/Pipeline';
   ENTITY_FOLDERS.partner      = (settings.folderPartners      || '').trim() || 'Cadence/Partners';
   ENTITY_FOLDERS.registration = (settings.folderRegistrations || '').trim() || 'Cadence/Registrations';
@@ -352,10 +391,19 @@ function syncEntityFolders(settings) {
   ENTITY_FOLDERS.certification= (settings.folderCertifications|| '').trim() || 'Cadence/Certifications';
   ENTITY_FOLDERS.activity     = (settings.folderActivities    || '').trim() || 'Cadence/Activities';
   ENTITY_FOLDERS.sequence     = (settings.folderSequences     || '').trim() || 'Cadence/Sequences';
-  ENTITY_FOLDERS.project      = (settings.folderProjects      || '').trim() || 'Cadence/Projects';
+  const extraProjectFolders = (settings.projectFolders || []).filter(f => f && f.trim());
+  const allProjectFolders = [
+    (settings.folderProjects || '').trim() || 'Cadence/Projects',
+    ...extraProjectFolders,
+  ];
+  ENTITY_FOLDERS.project = allProjectFolders[0];
+  ENTITIES.project.folders = allProjectFolders.length > 1 ? allProjectFolders : undefined;
+  if (!ENTITIES.project.folders) delete ENTITIES.project.folders;
 }
 
 function entityFolder(entityKey) {
+  // Schema/entities.json `folders` array wins (first entry = default for new files)
+  if (ENTITIES[entityKey]?.folders?.[0]) return ENTITIES[entityKey].folders[0];
   return ENTITY_FOLDERS[entityKey] || ENTITIES[entityKey]?.folder || '';
 }
 
@@ -377,7 +425,7 @@ function clearCustomEntities() {
   if (grp) grp.items = [];
 }
 
-async function applyCustomEntities(app) {
+async function applyCustomEntities(app, settings = {}) {
   clearCustomEntities();
   if (!await app.vault.adapter.exists(ENTITIES_CONFIG_PATH)) return;
 
@@ -394,8 +442,27 @@ async function applyCustomEntities(app) {
     return;
   }
 
-  for (const [key, def] of Object.entries(config)) {
+  for (let [key, def] of Object.entries(config)) {
     if (!def || typeof def !== 'object') continue;
+
+    // Base file: settings UI takes priority, then entities.json def.base
+    const basePath = (settings.baseFiles || {})[key] || def.base;
+    if (basePath) {
+      const baseConfig = await parseBaseFile(app, basePath, def.baseView);
+      if (baseConfig) {
+        // Field-level merge: base provides structure, def augments with type/options/primary
+        let mergedFields = baseConfig.fields;
+        if (mergedFields && def.fields) {
+          const overrides = new Map(def.fields.map(f => [f.key, f]));
+          mergedFields = mergedFields.map(f => overrides.has(f.key) ? Object.assign({}, f, overrides.get(f.key)) : f);
+          // Append any def.fields keys not in base (e.g. extra custom fields)
+          def.fields.forEach(f => { if (!mergedFields.find(b => b.key === f.key)) mergedFields.push(f); });
+        }
+        def = Object.assign({}, baseConfig, def);
+        if (mergedFields) def.fields = mergedFields;
+      }
+    }
+
     // New entities require label + fields; existing entities accept partial overrides
     if (!ENTITIES[key] && (!def.label || !Array.isArray(def.fields))) continue;
 
@@ -434,25 +501,190 @@ async function applyCustomEntities(app) {
         desc: def.desc || `${def.plural || `${def.label}s`} — custom entity`,
       });
     } else {
-      // Override fields/columns on an existing built-in entity type
-      if (def.fields)       ENTITIES[key].fields       = def.fields;
+      // Merge fields by key (preserves schema-derived enum/options, adds entities.json type/primary)
+      if (def.fields) {
+        const existing = ENTITIES[key].fields || [];
+        const overrides = new Map(def.fields.map(f => [f.key, f]));
+        const merged = existing.map(f => overrides.has(f.key) ? Object.assign({}, f, overrides.get(f.key)) : f);
+        // Append any def.fields keys not yet present
+        def.fields.forEach(f => { if (!merged.find(b => b.key === f.key)) merged.push(f); });
+        ENTITIES[key].fields = merged;
+      }
       if (def.columns)      ENTITIES[key].columns      = def.columns;
       if (def.label)        ENTITIES[key].label        = def.label;
       if (def.plural)       ENTITIES[key].plural       = def.plural;
       if (def.folder)       ENTITY_FOLDERS[key]        = folder;
       if (def.typeFilter)   ENTITIES[key].typeFilter   = def.typeFilter;
       else                  delete ENTITIES[key].typeFilter;
-      if (def.typeFilters)  ENTITIES[key].typeFilters  = def.typeFilters;
-      else                  delete ENTITIES[key].typeFilters;
       // Per-entity config overrides
       ['stageField','valueField','closeByField','wonStages','lostStages',
        'detailMetaFields','detailSections','terminalStatuses','stageConfidence',
-       'folders','typesFilter','dateField','titleField'].forEach((k) => {
+       'folders','dateField','titleField'].forEach((k) => {
         if (def[k] != null) ENTITIES[key][k] = def[k];
         else delete ENTITIES[key][k];
       });
     }
   }
+}
+
+/* ─── Schema YAML config loader ─────────────────────────────────────────────
+   Reads 00-CORE/Schemas/source/*.yaml files (Metadata Menu schema source) and
+   derives entity config from them. Each schema YAML has:
+     entity, label, type_value, location_pattern, key_fields, fields,
+     status_lifecycle (enum values for status/stage)
+
+   Schema entity names don't always match plugin entity keys (person→contact,
+   client→company). The mapping below handles the differences.
+*/
+const SCHEMA_FOLDER_DEFAULT = '00-CORE/Schemas/source';
+const SCHEMA_TO_ENTITY_KEY = {
+  person: 'contact',
+};
+
+function _schemaTypeToFieldType(schemaType) {
+  switch ((schemaType || '').toLowerCase()) {
+    case 'number':  return 'number';
+    case 'date':    return 'date';
+    case 'boolean': return null;
+    default:        return null;   // string → text (default)
+  }
+}
+
+async function applySchemas(app, settings = {}) {
+  const folder = (settings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
+  if (!await app.vault.adapter.exists(folder)) return;
+
+  const list = await app.vault.adapter.list(folder);
+  const yamlFiles = (list.files || []).filter(f => f.endsWith('.yaml') || f.endsWith('.yml'));
+
+  for (const filePath of yamlFiles) {
+    let schema;
+    try {
+      const raw = await app.vault.adapter.read(filePath);
+      schema = obsidian.parseYaml(raw);
+    } catch (e) {
+      continue;   // skip invalid schemas silently
+    }
+    if (!schema || typeof schema !== 'object' || !schema.entity) continue;
+
+    const entityKey = SCHEMA_TO_ENTITY_KEY[schema.entity] || schema.entity;
+    if (!ENTITIES[entityKey]) continue;   // only enrich built-in entities; skip unknown
+
+    // Derive folders from location_pattern (strip placeholder onwards)
+    if (schema.location_pattern) {
+      const folderPrefix = schema.location_pattern.split('{')[0].replace(/\/$/, '');
+      if (folderPrefix && folderPrefix.includes('/')) {
+        ENTITIES[entityKey].folders = [folderPrefix];
+      }
+    }
+
+    // typeFilter from type_value
+    if (schema.type_value) ENTITIES[entityKey].typeFilter = schema.type_value;
+
+    // Enrich field types from schema.fields (preserve existing labels/options)
+    if (Array.isArray(schema.fields) && ENTITIES[entityKey].fields) {
+      const schemaFieldMap = new Map(schema.fields.map(f => [f.name, f]));
+      ENTITIES[entityKey].fields = ENTITIES[entityKey].fields.map(f => {
+        const sf = schemaFieldMap.get(f.key);
+        if (!sf) return f;
+        const enriched = Object.assign({}, f);
+        // Schema enum on field → plugin enum + options
+        if (Array.isArray(sf.enum) && sf.enum.length) {
+          enriched.type = 'enum';
+          enriched.options = sf.enum;
+          return enriched;
+        }
+        const fieldType = _schemaTypeToFieldType(sf.type);
+        return fieldType ? Object.assign(enriched, { type: fieldType }) : f;
+      });
+    }
+
+    // status_lifecycle → enum options on status/stage field
+    if (Array.isArray(schema.status_lifecycle) && schema.status_lifecycle.length) {
+      const targetKey = ENTITIES[entityKey].fields?.find(f => f.key === 'status') ? 'status'
+                      : ENTITIES[entityKey].fields?.find(f => f.key === 'stage') ? 'stage' : null;
+      if (targetKey && ENTITIES[entityKey].fields) {
+        ENTITIES[entityKey].fields = ENTITIES[entityKey].fields.map(f =>
+          f.key === targetKey ? Object.assign({}, f, { type: 'enum', options: schema.status_lifecycle }) : f
+        );
+      }
+    }
+  }
+}
+
+/* ─── Base file config parser ───────────────────────────────────────────────
+   Reads a .base file and translates its filters/properties into an entity
+   config fragment compatible with applyCustomEntities().
+
+   Supported filter translations:
+     note.type == "x"                → typeFilter: "x"
+     file.path.startsWith("path/")   → folders: ["path"]
+*/
+async function parseBaseFile(app, basePath, viewName) {
+  if (!await app.vault.adapter.exists(basePath)) return null;
+  let yaml;
+  try {
+    const raw = await app.vault.adapter.read(basePath);
+    yaml = obsidian.parseYaml(raw);
+  } catch (e) {
+    new obsidian.Notice(`Cadence: failed to parse ${basePath} — ${e.message}`);
+    return null;
+  }
+  if (!yaml || typeof yaml !== 'object') return null;
+
+  const result = {};
+
+  // ── Translate filters ──────────────────────────────────────────────────
+  const conditions = yaml.filters?.and || (yaml.filters ? [yaml.filters] : []);
+  const noteFilters = {};   // key → value for note.* == "..." conditions
+  const folders = [];
+
+  for (const cond of conditions) {
+    if (typeof cond !== 'string') continue;
+
+    // file.path.startsWith("some/path/")
+    const pathMatch = cond.match(/^file\.path\.startsWith\(["'](.+?)["']\)/);
+    if (pathMatch) {
+      folders.push(pathMatch[1].replace(/\/$/, ''));
+      continue;
+    }
+
+    // note.<key> == "value"
+    const noteEq = cond.match(/^note\.(\w+)\s*==\s*["'](.+?)["']/);
+    if (noteEq) {
+      noteFilters[noteEq[1]] = noteEq[2];
+      continue;
+    }
+
+  }
+
+  if (folders.length)             result.folders = folders;
+  if (noteFilters.type)           result.typeFilter = noteFilters.type;
+
+  // ── Translate properties + view order → fields + columns ──────────────
+  const props = yaml.properties || {};
+  const views = Array.isArray(yaml.views) ? yaml.views : [];
+  const targetView = viewName
+    ? views.find(v => v.name === viewName)
+    : null;
+  // Default: use properties order (all fields), not first view (which may be filtered)
+  const orderKeys = targetView?.order || Object.keys(props);
+
+  const fields = orderKeys
+    .filter(k => k !== 'formula.open')   // skip formula columns
+    .map(k => {
+      const propKey = k.startsWith('note.') ? k.slice(5) : k === 'file.name' ? 'name' : k;
+      const label = props[k]?.displayName || propKey;
+      return { key: propKey, label };
+    });
+
+  if (fields.length) result.fields = fields;
+  result.columns = fields.slice(0, 5).map(f => f.key);
+
+  // ── Named views → pass through for future use ──────────────────────────
+  if (yaml.views?.length > 1) result._baseViews = yaml.views.map(v => v.name);
+
+  return result;
 }
 
 const ENTITIES_JSON_TEMPLATE = JSON.stringify({
@@ -554,28 +786,21 @@ function listEntityFiles(app, entityKey) {
   const def = ENTITIES[entityKey];
   if (!def) return [];
 
-  const hasTypeFilter  = def.typeFilter || def.typeFilters || Array.isArray(def.typesFilter);
-  const hasPathFilter  = Array.isArray(def.folders);
-  const useDefaultPath = !hasTypeFilter && !hasPathFilter;
-  const typesSet       = Array.isArray(def.typesFilter) ? new Set(def.typesFilter) : null;
-  const tfEntries      = def.typeFilters ? Object.entries(def.typeFilters) : null;
+  const hasPathFilter = Array.isArray(def.folders);
+  const useDefaultPath = !def.typeFilter && !hasPathFilter;
 
   return app.vault.getMarkdownFiles().filter((f) => {
-    let fm = null;
-    const getFm = () => fm || (fm = (app.metadataCache.getFileCache(f) || {}).frontmatter || {});
-
-    // Path conditions (OR within folders array; AND with type conditions)
+    // Path filter (OR within folders array; AND with type)
     if (hasPathFilter) {
       if (!def.folders.some((d) => f.path.startsWith(d.replace(/\/$/, '') + '/'))) return false;
     } else if (useDefaultPath) {
       if (!f.path.startsWith(entityFolder(entityKey) + '/')) return false;
     }
-
-    // Type conditions (all that are defined are AND-combined)
-    if (tfEntries  && !tfEntries.every(([k, v]) => getFm()[k] === v)) return false;
-    if (def.typeFilter  && getFm().type !== def.typeFilter)             return false;
-    if (typesSet        && !typesSet.has(getFm().type))                 return false;
-
+    // Single type filter
+    if (def.typeFilter) {
+      const fm = (app.metadataCache.getFileCache(f) || {}).frontmatter || {};
+      if (fm.type !== def.typeFilter) return false;
+    }
     return true;
   });
 }
@@ -632,12 +857,7 @@ function entityTemplate(entityKey, name) {
   // Otherwise we'd emit duplicate YAML keys and the file fails to parse.
   const hasTypeField = def.fields.some((f) => f.key === 'type');
   if (!hasTypeField) {
-    const typeVal = def.typeFilter || (def.typeFilters && def.typeFilters.type) || entityKey;
-    lines.push(`type: ${typeVal}`);
-    // For typeFilters, write extra discriminator fields (e.g. profile_type: company_overview)
-    if (def.typeFilters) {
-      Object.entries(def.typeFilters).forEach(([k, v]) => { if (k !== 'type') lines.push(`${k}: ${v}`); });
-    }
+    lines.push(`type: ${def.typeFilter || entityKey}`);
   }
 
   def.fields.forEach((f) => {
@@ -890,12 +1110,24 @@ async function ensureDailyNote(app, settings, date = new Date()) {
   if (folder && !app.vault.getAbstractFileByPath(folder)) {
     try { await app.vault.createFolder(folder); } catch (_) {}
   }
-  const template = [
-    `# ${ymd(date)}`, '',
-    settings.tasksHeading, '- [ ] ', '',
-    settings.journalHeading, '', '',
-  ].join('\n');
-  file = await app.vault.create(path, template);
+  const templater = app.plugins?.plugins?.['templater-obsidian'];
+  const folderTemplates = templater?.settings?.folder_templates || [];
+  const dailyFolder = (settings.dailyNoteFolder || '').replace(/\/$/, '');
+  const match = folderTemplates.find(ft => ft.folder.replace(/\/$/, '') === dailyFolder || ft.folder === '/');
+  const templateFile = match ? app.vault.getAbstractFileByPath(match.template) : null;
+
+  if (templater?.templater && templateFile) {
+    const filename = path.split('/').pop().replace('.md', '');
+    const folderObj = app.vault.getAbstractFileByPath(dailyFolder) || undefined;
+    file = await templater.templater.create_new_note_from_template(templateFile, folderObj, filename, false);
+  } else {
+    const template = [
+      `# ${ymd(date)}`, '',
+      settings.tasksHeading, '- [ ] ', '',
+      settings.journalHeading, '', '',
+    ].join('\n');
+    file = await app.vault.create(path, template);
+  }
   return file;
 }
 
@@ -991,6 +1223,29 @@ function reminderTimeStr(when) {
     return d.toLocaleDateString(undefined, { weekday: 'short' }) + ' ' + time;
   }
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + time;
+}
+
+/* ─── Generic required-field validation helper ───────────────────────────
+   Disables the submit button until every required input has a non-empty value.
+   Wires `input` and `change` listeners so the state updates live as the user types.
+*/
+function attachRequiredValidation(submitBtn, requiredInputs) {
+  if (!submitBtn || !requiredInputs?.length) return;
+  const check = () => {
+    const allFilled = requiredInputs.every(inp => {
+      if (!inp) return true;
+      if (inp.type === 'checkbox' || inp.type === 'radio') return inp.checked;
+      return (inp.value || '').trim().length > 0;
+    });
+    submitBtn.disabled = !allFilled;
+    submitBtn.classList.toggle('cad-btn-disabled', !allFilled);
+  };
+  requiredInputs.forEach(inp => {
+    if (!inp) return;
+    inp.addEventListener('input', check);
+    inp.addEventListener('change', check);
+  });
+  check();
 }
 
 /* ─────────── Quick-capture modal ─────────── */
@@ -1099,6 +1354,7 @@ class CadenceCaptureModal extends obsidian.Modal {
     cancel.addEventListener('click', () => this.close());
     const ok = row.createEl('button', { cls: 'cad-btn primary', text: 'Capture' });
     ok.type = 'button';
+    attachRequiredValidation(ok, [textInput]);
 
     const submit = () => {
       const text = textInput.value.trim();
@@ -1260,6 +1516,7 @@ class CadenceReminderEditModal extends obsidian.Modal {
     cancel.addEventListener('click', () => this.close());
     const save = actions.createEl('button', { cls: 'cad-btn primary', text: this.isNew ? 'Create reminder' : 'Save' });
     save.type = 'button';
+    attachRequiredValidation(save, [textInput]);
 
     const submit = async () => {
       const text = textInput.value.trim();
@@ -1309,8 +1566,7 @@ class CadenceReminderEditModal extends obsidian.Modal {
   onClose() { this.contentEl.empty(); }
 
   _openReminderProjectPicker(rerender) {
-    const projectFiles = (this.app.vault.getMarkdownFiles ? this.app.vault.getMarkdownFiles() : [])
-      .filter((f) => f.path.startsWith(entityFolder('project') + '/'));
+    const projectFiles = listEntityFiles(this.app, 'project');
     if (!projectFiles.length) {
       new obsidian.Notice('No projects yet. Create one in Planner → Projects first.');
       return;
@@ -1526,7 +1782,7 @@ class CadenceImportModal extends obsidian.Modal {
     this.previewEl.empty();
     if (!this.headers.length) {
       this.previewEl.createDiv({ cls: 'cad-empty', text: 'Paste or pick a CSV to preview…' });
-      if (this.importBtn) this.importBtn.disabled = true;
+      if (this.importBtn) { this.importBtn.disabled = true; this.importBtn.classList.add('cad-btn-disabled'); }
       return;
     }
 
@@ -1567,16 +1823,24 @@ class CadenceImportModal extends obsidian.Modal {
 
     /* Summary */
     const summary = this.previewEl.createDiv({ cls: 'cad-import-summary' });
-    const primaryKey = def.fields[0].key;
-    const primaryMapped = Object.values(this.mapping).includes(primaryKey);
-    if (!primaryMapped) {
+    // Required = primary (first field) + any field with required: true
+    const requiredFields = def.fields.filter((f, i) => i === 0 || f.required === true);
+    const mappedKeys = new Set(Object.values(this.mapping).filter(Boolean));
+    const missing = requiredFields.filter(f => !mappedKeys.has(f.key));
+    if (missing.length) {
       summary.addClass('cad-import-summary-warn');
-      summary.setText(`No CSV column maps to "${def.fields[0].label}" — required to name the file. Pick a column above.`);
-      if (this.importBtn) this.importBtn.disabled = true;
+      summary.setText(`Missing required column${missing.length === 1 ? '' : 's'}: ${missing.map(f => `"${f.label}"`).join(', ')}. Map ${missing.length === 1 ? 'it' : 'them'} above to enable import.`);
+      if (this.importBtn) {
+        this.importBtn.disabled = true;
+        this.importBtn.classList.add('cad-btn-disabled');
+      }
     } else {
-      const mappedCount = Object.values(this.mapping).filter(Boolean).length;
+      const mappedCount = mappedKeys.size;
       summary.setText(`Will create ${this.rows.length} ${this.rows.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${entityFolder(this.entityKey)}/  ·  ${mappedCount} column${mappedCount === 1 ? '' : 's'} mapped`);
-      if (this.importBtn) this.importBtn.disabled = false;
+      if (this.importBtn) {
+        this.importBtn.disabled = false;
+        this.importBtn.classList.remove('cad-btn-disabled');
+      }
     }
   }
 
@@ -1667,11 +1931,14 @@ class CadenceEntityCreateModal extends obsidian.Modal {
     const form = contentEl.createDiv({ cls: 'cad-create-form' });
     const inputs = [];
 
+    const requiredInputs = [];
+
     this.def.fields.forEach((f, idx) => {
       const isPrimary = idx === 0;
+      const isRequired = isPrimary || f.required === true;
       const row = form.createDiv({ cls: 'cad-create-row' });
       const label = row.createDiv({ cls: 'cad-create-label' });
-      label.setText(f.label.toUpperCase() + (isPrimary ? ' *' : ''));
+      label.setText(f.label.toUpperCase() + (isRequired ? ' *' : ''));
 
       let input;
       const fieldType = f.type || 'text';
@@ -1705,7 +1972,10 @@ class CadenceEntityCreateModal extends obsidian.Modal {
       }
       input.dataset.fieldKey = f.key;
       input.dataset.fieldType = fieldType;
-      if (isPrimary) input.required = true;
+      if (isRequired) {
+        input.required = true;
+        requiredInputs.push(input);
+      }
       inputs.push(input);
     });
 
@@ -1717,6 +1987,7 @@ class CadenceEntityCreateModal extends obsidian.Modal {
 
     const submitBtn = actions.createEl('button', { cls: 'cad-btn primary', text: `Create ${this.def.label}` });
     submitBtn.type = 'button';
+    attachRequiredValidation(submitBtn, requiredInputs);
 
     const submit = () => {
       const values = {};
@@ -1895,7 +2166,7 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   _visibleNavGroups() {
-    const mods = this.plugin.settings.modules || { crm: true, prm: true, planner: true };
+    const mods = this.plugin.settings.modules || { crm: true, prm: true, srm: true, planner: true };
     const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
     return NAV_GROUPS
       .map((g) => {
@@ -2123,7 +2394,9 @@ class CadenceAppView extends obsidian.ItemView {
       'crm.dashboard':       () => this.renderDashboard(content),
       'crm.pipeline':        () => this.renderEntityKanban(content, 'deal', dealStageField(ENTITIES.deal), getDealStages(ENTITIES.deal)),
       'crm.contacts':        () => this.renderEntityList(content, 'contact'),
+      'crm.clients':         () => this.renderEntityList(content, 'client'),
       'crm.companies':       () => this.renderEntityList(content, 'company'),
+      'srm.suppliers':       () => this.renderEntityList(content, 'supplier'),
       'crm.activities':      () => this.renderEntityList(content, 'activity'),
       'prm.partners':        () => this.renderEntityList(content, 'partner'),
       'prm.registrations':   () => this.renderEntityList(content, 'registration'),
@@ -2745,7 +3018,8 @@ class CadenceAppView extends obsidian.ItemView {
     const def = ENTITIES.project;
     const files = listEntityFiles(this.app, 'project');
 
-    this._renderPageHeader(root, 'Projects', `${files.length} ${files.length === 1 ? 'project' : 'projects'} in ${entityFolder('project')}`, (right) => {
+    const projectFolderLabel = ENTITIES.project.folders ? ENTITIES.project.folders.join(', ') : entityFolder('project');
+    this._renderPageHeader(root, 'Projects', `${files.length} ${files.length === 1 ? 'project' : 'projects'} in ${projectFolderLabel}`, (right) => {
       const importBtn = right.createEl('button', { cls: 'cad-btn', text: 'Import CSV' });
       importBtn.addEventListener('click', () => new CadenceImportModal(this.app, { entityKey: 'project' }).open());
       const btn = right.createEl('button', { cls: 'cad-btn primary', text: '+ New Project' });
@@ -2901,6 +3175,68 @@ class CadenceAppView extends obsidian.ItemView {
     await this._homeProjectsCard(right);
     await this._homePipelineCard(right);
     await this._homeActivitiesCard(right);
+
+  }
+
+  async _getBaseResults(basePath, ttlMs = 60000) {
+    // In-memory cache: instant on subsequent renders within the TTL
+    if (!this._basesCache) this._basesCache = new Map();
+    const cached = this._basesCache.get(basePath);
+    if (cached && Date.now() - cached.ts < ttlMs) return cached.results;
+
+    // Reuse an already-open leaf if available
+    const existing = this.app.workspace.getLeavesOfType('bases')
+      .find(l => l.view?.file?.path === basePath);
+    if (existing?.view?.controller?.results) {
+      const results = existing.view.controller.results;
+      this._basesCache.set(basePath, { results, ts: Date.now() });
+      return results;
+    }
+
+    const baseFile = this.app.vault.getAbstractFileByPath(basePath);
+    if (!baseFile) return null;
+
+    const previousLeaf = this.app.workspace.getLeaf(false);
+    const leaf = this.app.workspace.getRightLeaf(false);
+    await leaf.openFile(baseFile);
+    if (previousLeaf) this.app.workspace.setActiveLeaf(previousLeaf, { focus: false });
+
+    await new Promise(r => setTimeout(r, 1500));
+    const results = leaf.view?.controller?.results ?? null;
+    if (results) this._basesCache.set(basePath, { results, ts: Date.now() });
+    return results;
+  }
+
+  async _homeBasesDemoCard(parent) {
+    const BASE_PATH = '00-CORE/Bases/Clients.base';
+    const body = this._homeCard(parent, 'BASES DEMO — Clients.base', null, 'sky');
+
+    const baseFile = this.app.vault.getAbstractFileByPath(BASE_PATH);
+    if (!baseFile) {
+      body.createDiv({ cls: 'cad-empty', text: `Base not found: ${BASE_PATH}` });
+      return;
+    }
+
+    try {
+      const results = await this._getBaseResults(BASE_PATH);
+      if (!results) {
+        body.createDiv({ cls: 'cad-empty', text: 'No results — base may not have rendered yet.' });
+        return;
+      }
+
+      body.createDiv({ cls: 'cad-empty', text: `✓ ${results.size} rows from Bases engine` });
+
+      [...results.keys()].slice(0, 8).forEach(file => {
+        const row = body.createDiv({ cls: 'cad-home-row' });
+        const entry = results.get(file);
+        const name = entry?.frontmatter?.client_name || file.basename;
+        const status = entry?.frontmatter?.status || '';
+        row.createDiv({ cls: 'cad-home-row-date', text: status });
+        row.createDiv({ cls: 'cad-home-row-main', text: name });
+      });
+    } catch (e) {
+      body.createDiv({ cls: 'cad-empty', text: `Error: ${e.message}` });
+    }
   }
 
   _homeCard(parent, title, action, tone) {
@@ -4794,60 +5130,171 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     containerEl.empty();
     containerEl.createEl('h2', { text: 'Cadence' });
 
-    /* ─── Modules ─── */
+    /* ─── Modules (consolidated: toggle + surfaces + folders + base files) ─── */
     containerEl.createEl('h3', { text: 'Modules' });
     containerEl.createEl('p', {
-      text: 'Toggle entire sections of the app. Disabled modules disappear from the left nav and from Reports that depend on them.',
+      text: 'Each module groups its toggle, the surfaces it contains, and the folders/.base files that back them. Disable a module to hide its whole section; disable an individual surface to hide just that nav item.',
       cls: 'setting-item-description',
     });
+
     const ensureMods = () => {
       if (!this.plugin.settings.modules) {
-        this.plugin.settings.modules = { crm: true, prm: true, planner: true };
+        this.plugin.settings.modules = { crm: true, prm: true, srm: true, planner: true };
       }
       return this.plugin.settings.modules;
     };
-    [
-      { key: 'planner', label: 'Planner', desc: 'Inbox, Today, Calendar, Projects.' },
-      { key: 'crm',     label: 'CRM',     desc: 'Dashboard, Pipeline, Contacts, Companies, Activities + CRM-driven Reports.' },
-      { key: 'prm',     label: 'PRM',     desc: 'Partners, Registrations, Commissions, Leads, Certifications, Analytics + Partner reports.' },
-    ].forEach((m) => {
-      new obsidian.Setting(containerEl)
-        .setName(m.label)
-        .setDesc(m.desc)
-        .addToggle((t) => t
-          .setValue(ensureMods()[m.key] !== false)
-          .onChange(async (v) => {
-            ensureMods()[m.key] = v;
-            await this.plugin.saveSettings();
-            this.plugin.refreshOpenViews();
-          }));
-    });
+    const moduleLabels = {
+      planner: 'Customer Relationship Management is for daily planning, projects and capture.',
+      crm:     'Customer Relationship Management — Contacts, Clients, My Companies, Pipeline, Activities.',
+      srm:     'Supplier Relationship Management — Suppliers, contracts, spend.',
+      prm:     'Partner Relationship Management — Partners, Registrations, Commissions, Leads, Certifications, Analytics.',
+    };
 
-    /* ─── Reminders ─── */
-    /* ─── Surface visibility ─── */
-    containerEl.createEl('h3', { text: 'Surface visibility' });
-    containerEl.createEl('p', {
-      text: 'Hide individual nav items. Module toggles above hide entire sections; these hide specific surfaces within enabled modules.',
-      cls: 'setting-item-description',
-    });
-    const surfaceToggles = ALL_SURFACES.filter((s) =>
-      !['home', 'team', 'settings'].includes(s.id)
-    );
-    const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
-    surfaceToggles.forEach((s) => {
-      new obsidian.Setting(containerEl)
-        .setName(s.label)
-        .setDesc(s.id)
-        .addToggle((t) => t
-          .setValue(!disabled.has(s.id))
+    const baseFiles = this.plugin.app.vault.getFiles()
+      .filter(f => f.extension === 'base')
+      .map(f => f.path)
+      .sort();
+
+    NAV_GROUPS.forEach((group) => {
+      const items = group.items.filter((s) => !['home', 'team', 'settings'].includes(s.id));
+      if (!items.length) return;
+      // Skip the empty-id 'misc' group and Reports/Workflow without a module
+      const isModuleGroup = !!group.module;
+      const headingText = group.label || (isModuleGroup ? group.id.toUpperCase() : '');
+      if (!headingText) return;
+
+      containerEl.createEl('h4', { text: headingText, cls: 'cad-settings-module-heading' });
+
+      // Module enable/disable toggle (only for groups with a module ID)
+      if (isModuleGroup) {
+        new obsidian.Setting(containerEl)
+          .setName(`Enable ${headingText}`)
+          .setDesc(moduleLabels[group.module] || '')
+          .addToggle((t) => t
+            .setValue(ensureMods()[group.module] !== false)
+            .onChange(async (v) => {
+              ensureMods()[group.module] = v;
+              await this.plugin.saveSettings();
+              this.plugin.refreshOpenViews();
+            }));
+      }
+
+      // One row per surface: visibility toggle + folder text input + base file dropdown
+      const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
+      items.forEach((surface) => {
+        const eDef = surface.entityKey ? ENTITIES[surface.entityKey] : null;
+        const overridden = eDef && (eDef.typeFilter || Array.isArray(eDef.folders));
+        const desc = [];
+        if (overridden) {
+          if (eDef.typeFilter)            desc.push(`type: "${eDef.typeFilter}"`);
+          if (Array.isArray(eDef.folders))desc.push(`folders: [${eDef.folders.join(', ')}]`);
+        } else {
+          desc.push(surface.id);
+        }
+        const s = new obsidian.Setting(containerEl)
+          .setName(surface.label)
+          .setDesc(desc.join(' · '));
+
+        // Visibility toggle
+        s.addToggle((t) => t
+          .setValue(!disabled.has(surface.id))
           .onChange(async (v) => {
             const arr = this.plugin.settings.disabledSurfaces || [];
-            if (!v) { if (!arr.includes(s.id)) arr.push(s.id); }
-            else { const i = arr.indexOf(s.id); if (i >= 0) arr.splice(i, 1); }
+            if (!v) { if (!arr.includes(surface.id)) arr.push(surface.id); }
+            else { const i = arr.indexOf(surface.id); if (i >= 0) arr.splice(i, 1); }
             this.plugin.settings.disabledSurfaces = arr;
             await this.plugin.saveSettings();
             this.plugin.refreshOpenViews();
           }));
+
+        // Folder text input (if this surface has a folderKey and isn't overridden by schema/.base/entities.json)
+        if (surface.folderKey && !overridden) {
+          const placeholder = eDef?.folders?.[0] || DEFAULT_SETTINGS[surface.folderKey] || '';
+          s.addText((t) => t
+            .setPlaceholder(placeholder)
+            .setValue(this.plugin.settings[surface.folderKey] || '')
+            .onChange(async (v) => {
+              const trimmed = v.trim();
+              if (trimmed) this.plugin.settings[surface.folderKey] = trimmed;
+              else delete this.plugin.settings[surface.folderKey];
+              await this.plugin.saveSettings();
+              syncEntityFolders(this.plugin.settings);
+              this.plugin.refreshOpenViews();
+            }));
+        }
+
+        // Base file dropdown (for surfaces backed by an entity)
+        if (surface.entityKey) {
+          const currentBase = (this.plugin.settings.baseFiles || {})[surface.entityKey] || '';
+          s.addDropdown((dd) => {
+            dd.addOption('', '— no base —');
+            baseFiles.forEach(p => dd.addOption(p, p.split('/').pop().replace('.base', '')));
+            dd.setValue(currentBase);
+            dd.onChange(async (v) => {
+              if (!this.plugin.settings.baseFiles) this.plugin.settings.baseFiles = {};
+              if (v) this.plugin.settings.baseFiles[surface.entityKey] = v;
+              else   delete this.plugin.settings.baseFiles[surface.entityKey];
+              await this.plugin.saveSettings();
+              if (this.plugin.settings.useSchemas) await applySchemas(this.plugin.app, this.plugin.settings);
+              await applyCustomEntities(this.plugin.app, this.plugin.settings);
+              this.plugin.refreshOpenViews();
+            });
+          });
+        }
+      });
+
+      // Special case: Projects gets a multi-folder editor below its row
+      if (group.id === 'planner') {
+        const projectFoldersEl = containerEl.createDiv({ cls: 'cad-project-folders' });
+        projectFoldersEl.style.cssText = 'padding:0 16px 12px;';
+        const renderProjectFolders = () => {
+          projectFoldersEl.empty();
+          projectFoldersEl.createEl('div', { text: 'Project folders (first = default, additional = also scanned)', cls: 'setting-item-description' });
+          const allFolders = [
+            (this.plugin.settings.folderProjects || 'Cadence/Projects'),
+            ...(this.plugin.settings.projectFolders || []),
+          ];
+          allFolders.forEach((folder, idx) => {
+            const row = projectFoldersEl.createDiv({ cls: 'cad-folder-row' });
+            row.style.cssText = 'display:flex;align-items:center;gap:6px;margin:4px 0;';
+            const inp = row.createEl('input', { type: 'text', cls: 'cad-folder-input' });
+            inp.style.cssText = 'flex:1;';
+            inp.value = folder;
+            inp.placeholder = idx === 0 ? 'Default folder' : 'Additional folder';
+            if (idx === 0) row.createEl('span', { text: 'default' }).style.cssText = 'font-size:10px;opacity:.6;';
+            inp.addEventListener('change', async () => {
+              const updated = [...allFolders];
+              updated[idx] = inp.value.trim();
+              this.plugin.settings.folderProjects = updated[0] || 'Cadence/Projects';
+              this.plugin.settings.projectFolders = updated.slice(1).filter(f => f);
+              await this.plugin.saveSettings();
+              syncEntityFolders(this.plugin.settings);
+              this.plugin.refreshOpenViews();
+            });
+            if (idx > 0) {
+              const rm = row.createEl('button', { text: '✕' });
+              rm.addEventListener('click', async () => {
+                const updated = allFolders.filter((_, i) => i !== idx);
+                this.plugin.settings.folderProjects = updated[0] || 'Cadence/Projects';
+                this.plugin.settings.projectFolders = updated.slice(1).filter(f => f);
+                await this.plugin.saveSettings();
+                syncEntityFolders(this.plugin.settings);
+                this.plugin.refreshOpenViews();
+                renderProjectFolders();
+              });
+            }
+          });
+          const addBtn = projectFoldersEl.createEl('button', { text: '+ Add folder' });
+          addBtn.style.marginTop = '4px';
+          addBtn.addEventListener('click', async () => {
+            if (!this.plugin.settings.projectFolders) this.plugin.settings.projectFolders = [];
+            this.plugin.settings.projectFolders.push('');
+            await this.plugin.saveSettings();
+            renderProjectFolders();
+          });
+        };
+        renderProjectFolders();
+      }
     });
 
     containerEl.createEl('h3', { text: 'Reminders' });
@@ -4987,48 +5434,31 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       d.onChange(async (v) => { this.plugin.settings.defaultTab = v; await this.plugin.saveSettings(); });
     });
 
-    /* ─── Folders ─── */
-    containerEl.createEl('h3', { text: 'Folders' });
-    containerEl.createEl('p', {
-      text: 'Vault paths where Cadence stores each entity type. Change these if you want to keep Cadence data in a different location. Existing files are not moved — rename the folder in your vault first, then update the path here.',
-      cls: 'setting-item-description',
-    });
+    /* ─── Schemas ─── */
+    containerEl.createEl('h3', { text: 'Schemas' });
+    new obsidian.Setting(containerEl)
+      .setName('Use schema YAML files')
+      .setDesc('Read entity definitions (folders, type filters, field types, enum options) from Metadata Menu schema YAML files.')
+      .addToggle((t) => t
+        .setValue(this.plugin.settings.useSchemas)
+        .onChange(async (v) => {
+          this.plugin.settings.useSchemas = v;
+          await this.plugin.saveSettings();
+          if (v) await applySchemas(this.plugin.app, this.plugin.settings);
+          await applyCustomEntities(this.plugin.app, this.plugin.settings);
+          this.plugin.refreshOpenViews();
+        }));
+    new obsidian.Setting(containerEl)
+      .setName('Schemas folder')
+      .setDesc('Vault path where schema YAML files live (one per entity).')
+      .addText((t) => t
+        .setPlaceholder('00-CORE/Schemas/source')
+        .setValue(this.plugin.settings.schemasFolder)
+        .onChange(async (v) => {
+          this.plugin.settings.schemasFolder = v.trim() || '00-CORE/Schemas/source';
+          await this.plugin.saveSettings();
+        }));
 
-    const folderSettings = [
-      { key: 'folderContacts',      label: 'Contacts',        entityKey: 'contact',       def: 'Cadence/Contacts' },
-      { key: 'folderCompanies',     label: 'Companies',       entityKey: 'company',       def: 'Cadence/Companies' },
-      { key: 'folderPipeline',      label: 'Pipeline (Deals)',entityKey: 'deal',          def: 'Cadence/Pipeline' },
-      { key: 'folderActivities',    label: 'Activities',      entityKey: 'activity',      def: 'Cadence/Activities' },
-      { key: 'folderProjects',      label: 'Projects',        entityKey: 'project',       def: 'Cadence/Projects' },
-      { key: 'folderPartners',      label: 'Partners',        entityKey: 'partner',       def: 'Cadence/Partners' },
-      { key: 'folderRegistrations', label: 'Registrations',   entityKey: 'registration',  def: 'Cadence/Registrations' },
-      { key: 'folderCommissions',   label: 'Commissions',     entityKey: 'commission',    def: 'Cadence/Commissions' },
-      { key: 'folderLeads',         label: 'Leads',           entityKey: 'lead',          def: 'Cadence/Leads' },
-      { key: 'folderCertifications',label: 'Certifications',  entityKey: 'certification', def: 'Cadence/Certifications' },
-      { key: 'folderSequences',     label: 'Sequences',       entityKey: 'sequence',      def: 'Cadence/Sequences' },
-    ];
-    folderSettings.forEach(({ key, label, entityKey, def }) => {
-      const eDef = ENTITIES[entityKey] || {};
-      const overridden = eDef.typeFilter || eDef.typeFilters || Array.isArray(eDef.folders) || Array.isArray(eDef.typesFilter);
-      const s = new obsidian.Setting(containerEl).setName(label);
-      if (overridden) {
-        const parts = [];
-        if (eDef.typeFilter)                parts.push(`typeFilter: "${eDef.typeFilter}"`);
-        if (eDef.typeFilters)               parts.push(`typeFilters: ${JSON.stringify(eDef.typeFilters)}`);
-        if (Array.isArray(eDef.folders))    parts.push(`folders: [${eDef.folders.join(', ')}]`);
-        if (Array.isArray(eDef.typesFilter))parts.push(`typesFilter: [${eDef.typesFilter.join(', ')}]`);
-        s.setDesc('Managed via entities.json — ' + parts.join(' · '));
-      } else {
-        s.addText((t) => t
-          .setPlaceholder(def)
-          .setValue(this.plugin.settings[key] || def)
-          .onChange(async (v) => {
-            this.plugin.settings[key] = v.trim() || def;
-            await this.plugin.saveSettings();
-            this.plugin.refreshOpenViews();
-          }));
-      }
-    });
 
     containerEl.createEl('h3', { text: 'Cloud sync — coming soon' });
     const cloudDesc = containerEl.createEl('p', { cls: 'setting-item-description' });
@@ -5060,7 +5490,8 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
 class CadencePlugin extends obsidian.Plugin {
   async onload() {
     await this.loadSettings();
-    await applyCustomEntities(this.app);
+    if (this.settings.useSchemas) await applySchemas(this.app, this.settings);
+    await applyCustomEntities(this.app, this.settings);
 
     this.registerView(
       VIEW_TYPE_CADENCE_APP,
@@ -5148,13 +5579,15 @@ class CadencePlugin extends obsidian.Plugin {
     // ─── Custom entities — watch for changes ───
     this.registerEvent(this.app.vault.on('modify', async (file) => {
       if (file.path === ENTITIES_CONFIG_PATH) {
-        await applyCustomEntities(this.app);
+        if (this.settings.useSchemas) await applySchemas(this.app, this.settings);
+    await applyCustomEntities(this.app, this.settings);
         this.refreshOpenViews();
       }
     }));
     this.registerEvent(this.app.vault.on('create', async (file) => {
       if (file.path === ENTITIES_CONFIG_PATH) {
-        await applyCustomEntities(this.app);
+        if (this.settings.useSchemas) await applySchemas(this.app, this.settings);
+    await applyCustomEntities(this.app, this.settings);
         this.refreshOpenViews();
       }
     }));

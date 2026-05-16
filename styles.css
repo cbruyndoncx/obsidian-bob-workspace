@@ -812,16 +812,24 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
 
 /* ─────────── Entity create modal — fallback ─────────── */
 .cad-create-modal {
-  padding: 28px 32px 20px 32px;
+  padding: 16px 24px 0 24px;
   min-width: 520px;
   max-width: 640px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
 }
 .cad-create-title {
-  margin: 0 0 22px 0;
-  font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+  margin: 0 0 14px 0;
+  font-size: 18px; font-weight: 700; letter-spacing: -0.01em;
   color: var(--text-normal);
 }
-.cad-create-form { display: flex; flex-direction: column; gap: 14px; }
+.cad-create-form {
+  display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+  padding-bottom: 8px;
+}
 .cad-create-row {
   display: grid; grid-template-columns: 130px 1fr; gap: 16px; align-items: center;
 }
@@ -845,8 +853,17 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
 select.cad-create-input { appearance: auto; padding-right: 28px; }
 .cad-create-actions {
   display: flex; justify-content: flex-end; gap: 8px;
-  margin-top: 22px; padding-top: 18px;
+  padding: 12px 0 16px 0;
   border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  position: sticky;
+  bottom: 0;
+}
+.cad-btn-disabled,
+.cad-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 .cad-rem-project-field { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
