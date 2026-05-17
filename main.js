@@ -38,6 +38,9 @@ const NAV_GROUPS = [
       { id: 'crm.contacts',   label: 'Contacts',   icon: 'users',           module: 'crm', entityKey: 'contact',  folderKey: 'folderContacts',     desc: 'People as markdown notes — name, email, company, last-talked-to cadence, tags.' },
       { id: 'crm.clients',    label: 'Clients',    icon: 'briefcase',       module: 'crm', entityKey: 'client',   folderKey: 'folderClients',      desc: 'Client company profiles — status, regions, contact details, related deals and projects.' },
       { id: 'crm.companies',  label: 'My Companies', icon: 'building-2',    module: 'crm', entityKey: 'company',  folderKey: 'folderCompanies',    desc: 'Your own company profiles (can be multiple) — regions, status, branding.' },
+      { id: 'crm.leads',      label: 'Leads',      icon: 'target',          module: 'crm', entityKey: 'lead',     folderKey: 'folderLeads',        desc: 'Prospect records — qualification, source, outreach status. Per-lead folder for replies in 03-COMMS/.' },
+      { id: 'crm.campaigns',  label: 'Campaigns',  icon: 'megaphone',       module: 'crm', entityKey: 'campaign', folderKey: 'folderCampaigns',    desc: 'Marketing/sales campaigns — outbound (sequences), inbound (content+ads), or mixed.' },
+      { id: 'crm.sequences',  label: 'Sequences',  icon: 'zap',             module: 'crm', entityKey: 'sequence', folderKey: 'folderSequences',    desc: 'Outbound multi-touch sequences — execution detail within a campaign.' },
       { id: 'crm.activities', label: 'Activities', icon: 'calendar',        module: 'crm', entityKey: 'activity', folderKey: 'folderActivities',   desc: 'Cross-cutting activity timeline — calls, meetings, telegram/whatsapp/email logs.' },
     ],
   },
@@ -53,15 +56,8 @@ const NAV_GROUPS = [
       { id: 'prm.partners',       label: 'Partners',       icon: 'handshake',        module: 'prm', entityKey: 'partner',       folderKey: 'folderPartners',       desc: 'Partner organisations — relationship status, named contacts, joint pipeline.' },
       { id: 'prm.registrations',  label: 'Registrations',  icon: 'clipboard-check',  module: 'prm', entityKey: 'registration',  folderKey: 'folderRegistrations',  desc: 'Deal registrations submitted by partners — status, expiry, attached deals.' },
       { id: 'prm.commissions',    label: 'Commissions',    icon: 'wallet',           module: 'prm', entityKey: 'commission',    folderKey: 'folderCommissions',    desc: 'Commission ledger across partners — earned, pending, paid, by quarter.' },
-      { id: 'prm.leads',          label: 'Leads',          icon: 'target',           module: 'prm', entityKey: 'lead',          folderKey: 'folderLeads',          desc: 'Lead distribution — round-robin/queue assignment to partners or reps.' },
       { id: 'prm.certifications', label: 'Certifications', icon: 'award',            module: 'prm', entityKey: 'certification', folderKey: 'folderCertifications', desc: 'Partner certifications — track expiries, renewals, training completion.' },
       { id: 'prm.analytics',      label: 'Analytics',      icon: 'bar-chart-3',      module: 'prm', desc: 'PRM analytics — partner-sourced revenue, top performers, lifecycle funnel.' },
-    ],
-  },
-  {
-    id: 'workflow', label: 'Workflow',
-    items: [
-      { id: 'workflow.sequences', label: 'Sequences', icon: 'zap', entityKey: 'sequence', folderKey: 'folderSequences', desc: 'Multi-step outreach sequences — templates, cadence steps, who\'s in which step.' },
     ],
   },
   {
@@ -157,7 +153,7 @@ const ENTITIES = {
     columns: ['name', 'tier', 'status', 'region', 'owner'],
   },
   registration: {
-    folder: 'Cadence/Registrations',
+    folder: '20-COMPANY/35-PARTNERS',
     label: 'Registration', plural: 'Registrations',
     fields: [
       { key: 'title',     label: 'Title',      primary: true },
@@ -170,7 +166,7 @@ const ENTITIES = {
     columns: ['title', 'partner', 'status', 'value', 'expires'],
   },
   commission: {
-    folder: 'Cadence/Commissions',
+    folder: '20-COMPANY/35-PARTNERS',
     label: 'Commission', plural: 'Commissions',
     fields: [
       { key: 'reference', label: 'Ref',     primary: true },
@@ -183,7 +179,7 @@ const ENTITIES = {
     columns: ['reference', 'partner', 'amount', 'status', 'period', 'paidOn'],
   },
   lead: {
-    folder: 'Cadence/Leads',
+    folder: '20-COMPANY/55-LEADS',
     label: 'Lead', plural: 'Leads',
     fields: [
       { key: 'name',     label: 'Name',     primary: true },
@@ -195,7 +191,7 @@ const ENTITIES = {
     columns: ['name', 'company', 'source', 'status', 'assigned'],
   },
   certification: {
-    folder: 'Cadence/Certifications',
+    folder: '20-COMPANY/35-PARTNERS',
     label: 'Certification', plural: 'Certifications',
     fields: [
       { key: 'name',    label: 'Name',    primary: true },
@@ -218,17 +214,37 @@ const ENTITIES = {
     ],
     columns: ['when', 'type', 'subject', 'with', 'related'],
   },
+  campaign: {
+    folder: '20-COMPANY/60-SALES/CAMPAIGNS',
+    typeFilter: 'campaign',
+    label: 'Campaign', plural: 'Campaigns',
+    fields: [
+      { key: 'campaign_name',  label: 'Name',        primary: true },
+      { key: 'campaign_type',  label: 'Type',        type: 'enum', options: ['outbound', 'inbound', 'mixed'] },
+      { key: 'status',         label: 'Status',      type: 'enum', options: ['draft', 'active', 'paused', 'completed', 'archived'] },
+      { key: 'target_persona', label: 'Persona' },
+      { key: 'launch_date',    label: 'Launch',      type: 'date' },
+      { key: 'owner',          label: 'Owner' },
+      { key: 'tags',           label: 'Tags',        type: 'tags' },
+    ],
+    columns: ['campaign_name', 'campaign_type', 'status', 'launch_date', 'owner'],
+  },
   sequence: {
-    folder: 'Cadence/Sequences',
+    folder: '20-COMPANY/60-SALES/SEQUENCES',
+    typeFilter: 'sequence',
     label: 'Sequence', plural: 'Sequences',
     fields: [
-      { key: 'name',     label: 'Name',     primary: true },
-      { key: 'audience', label: 'Audience' },
-      { key: 'steps',    label: 'Steps',    type: 'number' },
-      { key: 'active',   label: 'Active',   type: 'number' },
-      { key: 'status',   label: 'Status',   type: 'enum', options: ['Draft', 'Active', 'Paused', 'Archived'] },
+      { key: 'sequence_name',   label: 'Name',         primary: true },
+      { key: 'campaign_ref',    label: 'Campaign' },
+      { key: 'target_persona',  label: 'Persona' },
+      { key: 'total_touches',   label: 'Touches',      type: 'number' },
+      { key: 'duration_days',   label: 'Days',         type: 'number' },
+      { key: 'enrolled_count',  label: 'Enrolled',     type: 'number' },
+      { key: 'status',          label: 'Status',       type: 'enum', options: ['draft', 'active', 'paused', 'completed', 'archived'] },
+      { key: 'launch_date',     label: 'Launch',       type: 'date' },
+      { key: 'tags',            label: 'Tags',         type: 'tags' },
     ],
-    columns: ['name', 'audience', 'steps', 'active', 'status'],
+    columns: ['sequence_name', 'campaign_ref', 'status', 'total_touches', 'enrolled_count', 'launch_date'],
   },
   project: {
     folder: 'Cadence/Projects',
@@ -309,10 +325,9 @@ function entityKeyFromFile(app, file) {
 const BUILT_SURFACES = new Set([
   'home',
   'planner.inbox', 'planner.today', 'planner.calendar', 'planner.projects',
-  'crm.dashboard', 'crm.pipeline', 'crm.contacts', 'crm.clients', 'crm.companies', 'crm.activities',
+  'crm.dashboard', 'crm.pipeline', 'crm.contacts', 'crm.leads', 'crm.campaigns', 'crm.sequences', 'crm.clients', 'crm.companies', 'crm.activities',
   'srm.suppliers',
-  'prm.partners', 'prm.registrations', 'prm.commissions', 'prm.leads', 'prm.certifications', 'prm.analytics',
-  'workflow.sequences',
+  'prm.partners', 'prm.registrations', 'prm.commissions', 'prm.certifications', 'prm.analytics',
   'reports.pipeline', 'reports.sales', 'reports.partners', 'reports.activity', 'reports.productivity',
   'team', 'settings',
 ]);
@@ -346,12 +361,13 @@ const DEFAULT_SETTINGS = {
   folderSuppliers: '20-COMPANY/30-SUPPLIERS',
   folderPipeline: 'Cadence/Pipeline',
   folderPartners: 'Cadence/Partners',
-  folderRegistrations: 'Cadence/Registrations',
-  folderCommissions: 'Cadence/Commissions',
-  folderLeads: 'Cadence/Leads',
-  folderCertifications: 'Cadence/Certifications',
+  folderRegistrations: '20-COMPANY/35-PARTNERS',
+  folderCommissions: '20-COMPANY/35-PARTNERS',
+  folderLeads: '20-COMPANY/55-LEADS',
+  folderCertifications: '20-COMPANY/35-PARTNERS',
   folderActivities: 'Cadence/Activities',
-  folderSequences: 'Cadence/Sequences',
+  folderSequences: '20-COMPANY/60-SALES/SEQUENCES',
+  folderCampaigns: '20-COMPANY/60-SALES/CAMPAIGNS',
   folderProjects: 'Cadence/Projects',
   projectFolders: [],   // extra folders to scan; first non-empty = default for new projects
   baseFiles: {},  // { [entityKey]: 'path/to/entity.base' }
@@ -369,12 +385,13 @@ let ENTITY_FOLDERS = {
   supplier: '20-COMPANY/30-SUPPLIERS',
   deal: 'Cadence/Pipeline',
   partner: 'Cadence/Partners',
-  registration: 'Cadence/Registrations',
-  commission: 'Cadence/Commissions',
-  lead: 'Cadence/Leads',
-  certification: 'Cadence/Certifications',
+  registration: '20-COMPANY/35-PARTNERS',
+  commission: '20-COMPANY/35-PARTNERS',
+  lead: '20-COMPANY/55-LEADS',
+  certification: '20-COMPANY/35-PARTNERS',
   activity: 'Cadence/Activities',
-  sequence: 'Cadence/Sequences',
+  sequence: '20-COMPANY/60-SALES/SEQUENCES',
+  campaign: '20-COMPANY/60-SALES/CAMPAIGNS',
   project: 'Cadence/Projects',
 };
 
@@ -385,12 +402,13 @@ function syncEntityFolders(settings) {
   ENTITY_FOLDERS.supplier     = (settings.folderSuppliers     || '').trim() || '20-COMPANY/30-SUPPLIERS';
   ENTITY_FOLDERS.deal         = (settings.folderPipeline      || '').trim() || 'Cadence/Pipeline';
   ENTITY_FOLDERS.partner      = (settings.folderPartners      || '').trim() || 'Cadence/Partners';
-  ENTITY_FOLDERS.registration = (settings.folderRegistrations || '').trim() || 'Cadence/Registrations';
-  ENTITY_FOLDERS.commission   = (settings.folderCommissions   || '').trim() || 'Cadence/Commissions';
-  ENTITY_FOLDERS.lead         = (settings.folderLeads         || '').trim() || 'Cadence/Leads';
-  ENTITY_FOLDERS.certification= (settings.folderCertifications|| '').trim() || 'Cadence/Certifications';
+  ENTITY_FOLDERS.registration = (settings.folderRegistrations || '').trim() || '20-COMPANY/35-PARTNERS';
+  ENTITY_FOLDERS.commission   = (settings.folderCommissions   || '').trim() || '20-COMPANY/35-PARTNERS';
+  ENTITY_FOLDERS.lead         = (settings.folderLeads         || '').trim() || '20-COMPANY/55-LEADS';
+  ENTITY_FOLDERS.certification= (settings.folderCertifications|| '').trim() || '20-COMPANY/35-PARTNERS';
   ENTITY_FOLDERS.activity     = (settings.folderActivities    || '').trim() || 'Cadence/Activities';
-  ENTITY_FOLDERS.sequence     = (settings.folderSequences     || '').trim() || 'Cadence/Sequences';
+  ENTITY_FOLDERS.sequence     = (settings.folderSequences     || '').trim() || '20-COMPANY/60-SALES/SEQUENCES';
+  ENTITY_FOLDERS.campaign     = (settings.folderCampaigns     || '').trim() || '20-COMPANY/60-SALES/CAMPAIGNS';
   const extraProjectFolders = (settings.projectFolders || []).filter(f => f && f.trim());
   const allProjectFolders = [
     (settings.folderProjects || '').trim() || 'Cadence/Projects',
@@ -570,12 +588,15 @@ async function applySchemas(app, settings = {}) {
     const entityKey = SCHEMA_TO_ENTITY_KEY[schema.entity] || schema.entity;
     if (!ENTITIES[entityKey]) continue;   // only enrich built-in entities; skip unknown
 
-    // Derive folders from location_pattern (strip placeholder onwards)
+    // Derive folders from location_pattern. Handles single, ` or `-joined, and `{placeholder}` patterns.
+    //   "30-CLIENTS/{client-id}/00-PROFILE/"          -> ["30-CLIENTS"]
+    //   "10-ME/10-PEOPLE/ or 30-CLIENTS/{id}/10-PEOPLE/" -> ["10-ME/10-PEOPLE", "30-CLIENTS"]
     if (schema.location_pattern) {
-      const folderPrefix = schema.location_pattern.split('{')[0].replace(/\/$/, '');
-      if (folderPrefix && folderPrefix.includes('/')) {
-        ENTITIES[entityKey].folders = [folderPrefix];
-      }
+      const folders = schema.location_pattern
+        .split(/\s+or\s+/i)
+        .map(p => p.split('{')[0].replace(/\/$/, '').trim())
+        .filter(p => p && p.includes('/'));
+      if (folders.length) ENTITIES[entityKey].folders = folders;
     }
 
     // typeFilter from type_value
@@ -2401,10 +2422,11 @@ class CadenceAppView extends obsidian.ItemView {
       'prm.partners':        () => this.renderEntityList(content, 'partner'),
       'prm.registrations':   () => this.renderEntityList(content, 'registration'),
       'prm.commissions':     () => this.renderEntityList(content, 'commission'),
-      'prm.leads':           () => this.renderEntityList(content, 'lead'),
+      'crm.leads':           () => this.renderEntityList(content, 'lead'),
+      'crm.campaigns':       () => this.renderEntityList(content, 'campaign'),
+      'crm.sequences':       () => this.renderEntityList(content, 'sequence'),
       'prm.certifications':  () => this.renderEntityList(content, 'certification'),
       'prm.analytics':       () => this.renderPRMAnalytics(content),
-      'workflow.sequences':  () => this.renderEntityList(content, 'sequence'),
       'reports.pipeline':    () => this.renderReportPipeline(content),
       'reports.sales':       () => this.renderReportSales(content),
       'reports.partners':    () => this.renderReportPartners(content),
@@ -5163,11 +5185,15 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       const headingText = group.label || (isModuleGroup ? group.id.toUpperCase() : '');
       if (!headingText) return;
 
-      containerEl.createEl('h4', { text: headingText, cls: 'cad-settings-module-heading' });
+      const moduleDisabled = isModuleGroup && ensureMods()[group.module] === false;
+
+      containerEl.createEl('h3', { text: headingText });
+      const settingGroup = containerEl.createDiv({ cls: 'setting-group' + (moduleDisabled ? ' cad-settings-panel-off' : '') });
+      const panel = settingGroup.createDiv({ cls: 'setting-items' });
 
       // Module enable/disable toggle (only for groups with a module ID)
       if (isModuleGroup) {
-        new obsidian.Setting(containerEl)
+        new obsidian.Setting(panel)
           .setName(`Enable ${headingText}`)
           .setDesc(moduleLabels[group.module] || '')
           .addToggle((t) => t
@@ -5176,6 +5202,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
               ensureMods()[group.module] = v;
               await this.plugin.saveSettings();
               this.plugin.refreshOpenViews();
+              this.display();   // re-render to update surface row enabled state
             }));
       }
 
@@ -5191,36 +5218,41 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         } else {
           desc.push(surface.id);
         }
-        const s = new obsidian.Setting(containerEl)
+        const s = new obsidian.Setting(panel)
           .setName(surface.label)
           .setDesc(desc.join(' · '));
+        if (moduleDisabled) s.settingEl.classList.add('cad-setting-disabled');
 
         // Visibility toggle
-        s.addToggle((t) => t
-          .setValue(!disabled.has(surface.id))
-          .onChange(async (v) => {
-            const arr = this.plugin.settings.disabledSurfaces || [];
-            if (!v) { if (!arr.includes(surface.id)) arr.push(surface.id); }
-            else { const i = arr.indexOf(surface.id); if (i >= 0) arr.splice(i, 1); }
-            this.plugin.settings.disabledSurfaces = arr;
-            await this.plugin.saveSettings();
-            this.plugin.refreshOpenViews();
-          }));
+        s.addToggle((t) => {
+          t.setValue(!disabled.has(surface.id))
+            .onChange(async (v) => {
+              const arr = this.plugin.settings.disabledSurfaces || [];
+              if (!v) { if (!arr.includes(surface.id)) arr.push(surface.id); }
+              else { const i = arr.indexOf(surface.id); if (i >= 0) arr.splice(i, 1); }
+              this.plugin.settings.disabledSurfaces = arr;
+              await this.plugin.saveSettings();
+              this.plugin.refreshOpenViews();
+            });
+          if (moduleDisabled) t.setDisabled(true);
+        });
 
         // Folder text input (if this surface has a folderKey and isn't overridden by schema/.base/entities.json)
         if (surface.folderKey && !overridden) {
           const placeholder = eDef?.folders?.[0] || DEFAULT_SETTINGS[surface.folderKey] || '';
-          s.addText((t) => t
-            .setPlaceholder(placeholder)
-            .setValue(this.plugin.settings[surface.folderKey] || '')
-            .onChange(async (v) => {
-              const trimmed = v.trim();
-              if (trimmed) this.plugin.settings[surface.folderKey] = trimmed;
-              else delete this.plugin.settings[surface.folderKey];
-              await this.plugin.saveSettings();
-              syncEntityFolders(this.plugin.settings);
-              this.plugin.refreshOpenViews();
-            }));
+          s.addText((t) => {
+            t.setPlaceholder(placeholder)
+              .setValue(this.plugin.settings[surface.folderKey] || '')
+              .onChange(async (v) => {
+                const trimmed = v.trim();
+                if (trimmed) this.plugin.settings[surface.folderKey] = trimmed;
+                else delete this.plugin.settings[surface.folderKey];
+                await this.plugin.saveSettings();
+                syncEntityFolders(this.plugin.settings);
+                this.plugin.refreshOpenViews();
+              });
+            if (moduleDisabled) t.setDisabled(true);
+          });
         }
 
         // Base file dropdown (for surfaces backed by an entity)
@@ -5239,13 +5271,14 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
               await applyCustomEntities(this.plugin.app, this.plugin.settings);
               this.plugin.refreshOpenViews();
             });
+            if (moduleDisabled) dd.setDisabled(true);
           });
         }
       });
 
       // Special case: Projects gets a multi-folder editor below its row
       if (group.id === 'planner') {
-        const projectFoldersEl = containerEl.createDiv({ cls: 'cad-project-folders' });
+        const projectFoldersEl = panel.createDiv({ cls: 'cad-project-folders' });
         projectFoldersEl.style.cssText = 'padding:0 16px 12px;';
         const renderProjectFolders = () => {
           projectFoldersEl.empty();
@@ -5567,9 +5600,10 @@ class CadencePlugin extends obsidian.Plugin {
           else if (m === 'prm.partners') entityKey = 'partner';
           else if (m === 'prm.registrations') entityKey = 'registration';
           else if (m === 'prm.commissions') entityKey = 'commission';
-          else if (m === 'prm.leads') entityKey = 'lead';
+          else if (m === 'crm.leads') entityKey = 'lead';
+          else if (m === 'crm.campaigns') entityKey = 'campaign';
           else if (m === 'prm.certifications') entityKey = 'certification';
-          else if (m === 'workflow.sequences') entityKey = 'sequence';
+          else if (m === 'crm.sequences') entityKey = 'sequence';
           else if (m === 'planner.projects') entityKey = 'project';
         }
         new CadenceImportModal(this.app, { entityKey }).open();

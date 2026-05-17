@@ -865,6 +865,15 @@ select.cad-create-input { appearance: auto; padding-right: 28px; }
   cursor: not-allowed;
   pointer-events: none;
 }
+.cad-setting-disabled {
+  opacity: 0.5;
+}
+.cad-setting-disabled .setting-item-name,
+.cad-setting-disabled .setting-item-description {
+  color: var(--text-faint);
+}
+.cad-settings-panel-off { opacity: 0.6; }
+
 .cad-rem-project-field { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 /* Import modal — fallback */
