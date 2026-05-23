@@ -115,6 +115,7 @@
 .cadence-app.cad-dark .cad-dash-card-head,
 .cadence-app.cad-dark .cad-pt-group-head,
 .cadence-app.cad-dark .cad-table thead th { background: #161616; border-bottom-color: #303030; color: #6f6f6f; }
+.cadence-app.cad-dark .cad-table thead th.cad-th-sortable:hover { background: #2a2a2a; color: #dcddde; }
 
 /* Kanban */
 .cadence-app.cad-dark .cad-kanban-col { background: #161616; border-color: #303030; }
@@ -420,6 +421,19 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--text-muted); padding: 10px 12px;
   border-bottom: 1px solid var(--background-modifier-border);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--background-primary);
+}
+.cad-table thead th.cad-th-sortable { cursor: pointer; user-select: none; }
+.cad-table thead th.cad-th-sortable:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.cad-table thead th.cad-th-sorted { color: var(--text-normal); }
+.cad-table thead th .cad-th-label { display: inline-flex; align-items: center; gap: 6px; }
+.cad-table thead th .cad-th-indicator {
+  font-size: 10px;
+  letter-spacing: 0;
+  opacity: 0.75;
 }
 .cad-table tbody td {
   padding: 10px 12px; border-bottom: 1px solid var(--background-modifier-border);

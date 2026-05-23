@@ -36,6 +36,12 @@ The plugin has several layers. Later layers should refine or override earlier la
 
 The most important rule: **the vault data model should live in the vault, not in plugin code.**
 
+## Template Folders
+
+BOB Workspace ignores entity files located inside folder segments named `Templates` or `templates`.
+
+This lets starter vaults ship valid example/template notes with normal frontmatter, such as `type: meeting`, without those files appearing in dashboards, entity lists, workbook exports, or counts. Prefer putting reusable templates under paths such as `00-CORE/Templates/...` instead of relying on filename filters like `!file.name.contains("Template")`.
+
 ## Entity Identity
 
 Each entity type normally needs:

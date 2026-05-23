@@ -58,7 +58,7 @@ const NAV_GROUPS = [
   {
     id: 'client-work', label: 'Client Work', module: 'client-work',
     items: [
-      { id: 'client-work.overview',      label: 'Workspace',    icon: 'briefcase-business', module: 'client-work', entityKey: 'meeting',      desc: 'Client delivery workspace: meetings, communications, deliverables, feedback, surveys, testimonials and decisions.' },
+      { id: 'client-work.overview',      label: 'Workspace',    icon: 'briefcase-business', module: 'client-work', desc: 'Client delivery workspace: meetings, communications, deliverables, feedback, surveys, testimonials and decisions.' },
       { id: 'client-work.meetings',      label: 'Meetings',     icon: 'calendar-clock',     module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'meeting',      desc: 'Client meetings with attendees, status, dates and related client IDs.' },
       { id: 'client-work.comms',         label: 'Comms',        icon: 'messages-square',    module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'comms-thread', desc: 'Client and lead communication threads across email, WhatsApp and Telegram.' },
       { id: 'client-work.deliverables',  label: 'Deliverables', icon: 'package-check',      module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'deliverable',  desc: 'Client deliverables and their review, approval and delivery status.' },
@@ -1162,7 +1162,7 @@ async function migrateLegacyEntitiesConfig(app) {
   const raw = await adapter.read(ENTITIES_LEGACY_PATH);
   await adapter.write(ENTITIES_CONFIG_PATH, raw);
   new obsidian.Notice(`BOB Workspace: migrated entities.json → ${ENTITIES_CONFIG_PATH}. Legacy vault copy retained at ${ENTITIES_LEGACY_PATH}.`);
-  return true;
+  return null;
 }
 
 /** Validate + write entities.json with backup. Throws on invalid JSON. */
@@ -1416,8 +1416,18 @@ async function applySchemas(app, settings = {}) {
     if (schema.location_pattern) {
       const folders = schema.location_pattern
         .split(/\s+or\s+/i)
-        .map(p => p.split('{')[0].replace(/\/$/, '').trim())
-        .filter(p => p && p.includes('/'));
+        .map((p) => {
+          const base = String(p || '')
+            .trim()
+            .replace(/^['"]|['"]$/g, '')
+            .split('{')[0]
+            .replace(/\/$/, '')
+            .trim();
+          // We can only express prefix folder matches; ignore wildcard/suffix patterns like "*/20-MEETINGS/".
+          if (!base || base.includes('*')) return '';
+          return base;
+        })
+        .filter((p) => p && p.includes('/'));
       if (entityKey === 'contact') {
         delete ENTITIES[entityKey].folders;
       } else if (folders.length) {
@@ -1656,7 +1666,7 @@ function hasBaseValue(value) {
   if (value == null) return false;
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === 'string') return value.trim() !== '';
-  return true;
+  return null;
 }
 
 function parseTodayExpression(raw) {
@@ -1680,6 +1690,7 @@ function isSupportedBaseFilterCondition(raw) {
     || /^file\.folder\s*!=\s*["'].+?["']$/.test(cond)
     || /^file\.path\.startsWith\(["'].+?["']\)$/.test(cond)
     || /^file\.path\.contains\(["'].+?["']\)$/.test(cond)
+    || /^.+?\.contains\(["'].+?["']\)$/.test(cond)
     || /^(?:date\()?[\w-]+\)?\.isEmpty\(\)$/.test(cond)
     || /^(?:note\.|note\[['"].+?['"]\])?[\w-]*\s*(==|!=)\s*(?:["'].*?["']|null)$/.test(cond)
     || /^(?:date\()?[\w.-]+(?:\[['"].+?['"]\])?\)?\s*(==|<|<=|>|>=)\s*(?:today\(\)|now\(\))(?:\s*[+-]\s*["']?\d+\s*(?:d|day|days)["']?)?$/.test(cond);
@@ -1884,6 +1895,13 @@ function ensureFolderSync(app, path) {
   return Promise.all(promises);
 }
 
+function isTemplatePath(path) {
+  return String(path || '')
+    .split('/')
+    .slice(0, -1)
+    .some((segment) => ['template', 'templates'].includes(segment.toLowerCase()));
+}
+
 function listEntityFiles(app, entityKey) {
   const def = ENTITIES[entityKey];
   if (!def) return [];
@@ -1892,6 +1910,8 @@ function listEntityFiles(app, entityKey) {
   const useDefaultPath = !def.typeFilter && !hasPathFilter;
 
   return app.vault.getMarkdownFiles().filter((f) => {
+    if (isTemplatePath(f.path)) return false;
+
     // Path filter (OR within folders array; AND with type)
     if (hasPathFilter) {
       if (!def.folders.some((d) => f.path.startsWith(d.replace(/\/$/, '') + '/'))) return false;
@@ -1981,6 +2001,13 @@ function evaluateBaseFilterCondition(app, file, raw) {
   const pathContains = cond.match(/^file\.path\.contains\(["'](.+?)["']\)$/);
   if (pathContains) return file.path.includes(pathContains[1]);
 
+  const contains = cond.match(/^(.+?)\.contains\(["'](.+?)["']\)$/);
+  if (contains) {
+    const value = basePropValue(app, file, fm, contains[1]);
+    if (Array.isArray(value)) return value.map((item) => String(item)).includes(contains[2]);
+    return String(value ?? '').includes(contains[2]);
+  }
+
   const empty = cond.match(/^(?:date\()?(.+?)\)?\.isEmpty\(\)$/);
   if (empty) return !hasBaseValue(basePropValue(app, file, fm, empty[1]));
 
@@ -2005,7 +2032,7 @@ function evaluateBaseFilterCondition(app, file, raw) {
     return compareBaseDates(actual, dateCompare[2], target);
   }
 
-  return true;
+  return null;
 }
 
 function parseBaseDate(value) {
@@ -4001,6 +4028,10 @@ class CadenceAppView extends obsidian.ItemView {
 
   async setMode(m) {
     this.mode = this._migrateModeId(m);
+    if (this.mode === 'client-work.overview') {
+      const state = this._secondaryTabState || (this._secondaryTabState = {});
+      state['client-work.overview'] = 'client-work.dashboard';
+    }
     // Switching surfaces clears any open detail form
     this.detailFile = null;
     this.detailEntityKey = null;
@@ -4139,40 +4170,49 @@ class CadenceAppView extends obsidian.ItemView {
       return;
     }
 
-    const route = {
-      'home':                () => this.renderHome(content),
-      'planner.inbox':       () => this.renderInbox(content),
-      'planner.today':       () => this.renderTodayPane(content),
-      'planner.calendar':    () => this.renderPlannerPane(content),
-      'planner.projects':    () => this.renderProjectsView(content),
-      'crm.dashboard':       () => this.renderDashboard(content),
-      'crm.pipeline':        () => this.renderEntityKanban(content, 'deal', dealStageField(ENTITIES.deal), getDealStages(ENTITIES.deal)),
-      'crm.contacts':        () => this.renderEntityList(content, 'contact'),
-      'crm.clients':         () => this.renderEntityList(content, 'client'),
-      'crm.companies':       () => this.renderEntityList(content, 'company'),
-      'crm.activities':      () => this.renderEntityList(content, 'activity'),
-      'prm.partners':        () => this.renderEntityTabs(content, 'prm.partners', 'prm.partners.overview'),
-      'prm.registrations':   () => this.renderEntityList(content, 'registration'),
-      'prm.commissions':     () => this.renderEntityList(content, 'commission'),
-      'crm.leads':           () => this.renderEntityList(content, 'lead'),
-      'crm.campaigns':       () => this.renderEntityTabs(content, 'crm.campaigns', 'crm.campaigns.overview'),
-      'crm.sequences':       () => this.renderEntityList(content, 'sequence'),
-      'prm.certifications':  () => this.renderEntityList(content, 'certification'),
-      'prm.analytics':       () => this.renderPRMAnalytics(content),
-      'reports.pipeline':    () => this.renderReportPipeline(content),
-      'reports.sales':       () => this.renderReportSales(content),
-      'reports.partners':    () => this.renderReportPartners(content),
-      'reports.activity':    () => this.renderReportActivity(content),
-      'reports.productivity':() => this.renderProductivity(content),
-      'team':                () => this.renderTeam(content),
-      'settings':            () => this.openSettingsTab(content),
-      'finance.invoices':    () => this.renderEntityTabs(content, 'finance.invoices', 'invoice'),
-      'finance.gl':          () => this.renderEntityTabs(content, 'finance.gl', 'finance.gl.overview'),
-      'finance.setup':       () => this.renderEntityTabs(content, 'finance.setup', 'finance.setup.overview'),
-      'client-work.overview': () => this.renderClientWorkWorkspace(content),
-      'procurement.suppliers': () => this.renderEntityTabs(content, 'procurement.suppliers', 'procurement.overview'),
-      'tax.overview':        () => this.renderEntityTabs(content, 'tax.overview', 'tax.dashboard'),
-    };
+	    const route = {
+	      'home':                () => this.renderHome(content),
+	      'planner.inbox':       () => this.renderInbox(content),
+	      'planner.today':       () => this.renderTodayPane(content),
+	      'planner.calendar':    () => this.renderPlannerPane(content),
+	      'planner.projects':    () => this.renderProjectsView(content),
+	      'crm.dashboard':       () => this.renderDashboard(content),
+	      'crm.pipeline':        () => this.renderEntityKanban(content, 'deal', dealStageField(ENTITIES.deal), getDealStages(ENTITIES.deal)),
+	      'crm.contacts':        () => this.renderEntityList(content, 'contact'),
+	      'crm.clients':         () => this.renderEntityList(content, 'client'),
+	      'crm.companies':       () => this.renderEntityList(content, 'company'),
+	      'crm.activities':      () => this.renderEntityList(content, 'activity'),
+	      'prm.partners':        () => this.renderEntityTabs(content, 'prm.partners', 'prm.partners.overview'),
+	      'prm.registrations':   () => this.renderEntityList(content, 'registration'),
+	      'prm.commissions':     () => this.renderEntityList(content, 'commission'),
+	      'crm.leads':           () => this.renderEntityList(content, 'lead'),
+	      'crm.campaigns':       () => this.renderEntityTabs(content, 'crm.campaigns', 'crm.campaigns.overview'),
+	      'crm.sequences':       () => this.renderEntityList(content, 'sequence'),
+	      'prm.certifications':  () => this.renderEntityList(content, 'certification'),
+	      'prm.analytics':       () => this.renderPRMAnalytics(content),
+	      'reports.pipeline':    () => this.renderReportPipeline(content),
+	      'reports.sales':       () => this.renderReportSales(content),
+	      'reports.partners':    () => this.renderReportPartners(content),
+	      'reports.activity':    () => this.renderReportActivity(content),
+	      'reports.productivity':() => this.renderProductivity(content),
+	      'team':                () => this.renderTeam(content),
+	      'settings':            () => this.openSettingsTab(content),
+	      'finance.invoices':    () => this.renderEntityTabs(content, 'finance.invoices', 'invoice'),
+	      'finance.gl':          () => this.renderEntityTabs(content, 'finance.gl', 'finance.gl.overview'),
+	      'finance.setup':       () => this.renderEntityTabs(content, 'finance.setup', 'finance.setup.overview'),
+	      'client-work.overview': () => this.renderClientWorkWorkspace(content),
+	      // Client Work: always render the internal table for these list pages so they don't go blank when
+	      // the underlying Base view is non-table (calendar/board/etc). Users can still use "Open Base".
+	      'client-work.meetings': () => this._renderClientWorkEntityList(content, 'meeting'),
+	      'client-work.comms': () => this._renderClientWorkEntityList(content, 'comms-thread'),
+	      'client-work.deliverables': () => this._renderClientWorkEntityList(content, 'deliverable'),
+	      'client-work.feedback': () => this._renderClientWorkEntityList(content, 'feedback'),
+	      'client-work.surveys': () => this._renderClientWorkEntityList(content, 'survey'),
+	      'client-work.testimonials': () => this._renderClientWorkEntityList(content, 'testimonial'),
+	      'client-work.decisions': () => this._renderClientWorkEntityList(content, 'decision'),
+	      'procurement.suppliers': () => this.renderEntityTabs(content, 'procurement.suppliers', 'procurement.overview'),
+	      'tax.overview':        () => this.renderEntityTabs(content, 'tax.overview', 'tax.dashboard'),
+	    };
     if (route[this.mode]) {
       await route[this.mode]();
     } else if (active && active.entityKey && ENTITIES[active.entityKey]) {
@@ -4361,26 +4401,88 @@ class CadenceAppView extends obsidian.ItemView {
 
     const thead = table.createEl('thead');
     const trh = thead.createEl('tr');
-    cols.forEach((f) => trh.createEl('th', { text: f.label }));
+    const sortState = this._tableSortState || (this._tableSortState = {});
+    const stateKey = `${this.mode || ''}::${entityKey}`;
+    const currentSort = sortState[stateKey] || { key: null, dir: 'ASC' };
+
+    const normSortVal = (val, type) => {
+      if (val == null) return null;
+      if (Array.isArray(val)) val = val.join(', ');
+      if (type === 'currency' || type === 'number') {
+        const n = Number(val);
+        return isNaN(n) ? null : n;
+      }
+      if (type === 'date') {
+        const t = new Date(String(val).slice(0, 10)).getTime();
+        return isNaN(t) ? null : t;
+      }
+      return String(val).toLowerCase();
+    };
+
+    const sortEntities = (arr) => {
+      if (!currentSort.key) return arr;
+      const field = cols.find((c) => c.key === currentSort.key);
+      if (!field) return arr;
+      const dirMul = currentSort.dir === 'DESC' ? -1 : 1;
+      const withIdx = arr.map((e, i) => ({ e, i }));
+      withIdx.sort((a, b) => {
+        const av = normSortVal(entityValue(a.e, field.key, def), field.type);
+        const bv = normSortVal(entityValue(b.e, field.key, def), field.type);
+        if (av == null && bv == null) return a.i - b.i;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dirMul || (a.i - b.i);
+        return String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' }) * dirMul || (a.i - b.i);
+      });
+      return withIdx.map((x) => x.e);
+    };
 
     const tbody = table.createEl('tbody');
-    entities.forEach((e) => {
-      const tr = tbody.createEl('tr', { cls: 'cad-row' });
-      cols.forEach((f, i) => {
-        const td = tr.createEl('td');
-        const val = entityValue(e, f.key, def);
-        const formatted = fmtValue(val, f.type);
-        if (i === 0) {
-          const a = td.createEl('a', { cls: 'cad-row-primary', text: formatted || e.basename });
-          a.addEventListener('click', (ev) => {
-            ev.preventDefault();
-            this.openEntityDetail(entityKey, e.file);
-          });
-        } else {
-          td.setText(formatted);
-        }
+    const renderBody = (arr) => {
+      tbody.empty();
+      arr.forEach((e) => {
+        const tr = tbody.createEl('tr', { cls: 'cad-row' });
+        cols.forEach((f, i) => {
+          const td = tr.createEl('td');
+          const val = entityValue(e, f.key, def);
+          const formatted = fmtValue(val, f.type);
+          if (i === 0) {
+            const a = td.createEl('a', { cls: 'cad-row-primary', text: formatted || e.basename });
+            a.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              this.openEntityDetail(entityKey, e.file);
+            });
+          } else {
+            td.setText(formatted);
+          }
+        });
       });
-    });
+    };
+
+    const renderHeader = () => {
+      trh.empty();
+      cols.forEach((f) => {
+        const isActive = currentSort.key === f.key;
+        const th = trh.createEl('th', {
+          cls: 'cad-th-sortable' + (isActive ? ' cad-th-sorted' : ''),
+        });
+        const label = th.createSpan({ cls: 'cad-th-label' });
+        label.createSpan({ text: f.label });
+        const ind = label.createSpan({ cls: 'cad-th-indicator' });
+        if (isActive) ind.setText(currentSort.dir === 'DESC' ? 'v' : '^');
+        else ind.setText('');
+        th.addEventListener('click', () => {
+          if (currentSort.key === f.key) currentSort.dir = currentSort.dir === 'ASC' ? 'DESC' : 'ASC';
+          else { currentSort.key = f.key; currentSort.dir = 'ASC'; }
+          sortState[stateKey] = { key: currentSort.key, dir: currentSort.dir };
+          renderHeader();
+          renderBody(sortEntities([...entities]));
+        });
+      });
+    };
+    renderHeader();
+
+    renderBody(sortEntities([...entities]));
   }
 
   _tabsForParent(parentId) {
@@ -4521,26 +4623,48 @@ class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async renderClientWorkWorkspace(root) {
-    if (this._clientWorkClientId && !this._clientWorkOptions().some((client) => client.id === this._clientWorkClientId)) {
-      this._clientWorkClientId = '';
-    }
-    if (this._clientWorkProjectId && !this._clientWorkProjectOptions().some((project) => project.id === this._clientWorkProjectId)) {
-      this._clientWorkProjectId = '';
-    }
-    const selectedClientId = this._clientWorkClientId || '';
-    const selectedProjectId = this._clientWorkProjectId || '';
-    const titleParts = [selectedClientId, selectedProjectId].filter(Boolean);
-    return this.renderEntityTabs(root, 'client-work.overview', 'meeting', {
-      filter: (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId),
-      forceInternal: !!selectedClientId || !!selectedProjectId,
-      titleSuffix: titleParts.length ? ` · ${titleParts.join(' · ')}` : '',
-      renderHeaderControls: (right) => this._renderClientWorkSelector(right),
-      emptyDescription: titleParts.length
-        ? `No records matching ${titleParts.join(' / ')} in this tab.`
-        : null,
-    });
-  }
+	  async renderClientWorkWorkspace(root) {
+	    if (this._clientWorkClientId && !this._clientWorkOptions().some((client) => client.id === this._clientWorkClientId)) {
+	      this._clientWorkClientId = '';
+	    }
+	    if (this._clientWorkProjectId && !this._clientWorkProjectOptions().some((project) => project.id === this._clientWorkProjectId)) {
+	      this._clientWorkProjectId = '';
+	    }
+	    const selectedClientId = this._clientWorkClientId || '';
+	    const selectedProjectId = this._clientWorkProjectId || '';
+	    const titleParts = [selectedClientId, selectedProjectId].filter(Boolean);
+	    return this.renderEntityTabs(root, 'client-work.overview', 'client-work.dashboard', {
+	      filter: (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId),
+	      forceInternal: true,
+	      titleSuffix: titleParts.length ? ` · ${titleParts.join(' · ')}` : '',
+	      renderHeaderControls: (right) => this._renderClientWorkSelector(right),
+	      emptyDescription: titleParts.length
+	        ? `No records matching ${titleParts.join(' / ')} in this tab.`
+	        : null,
+	    });
+	  }
+
+	  async _renderClientWorkEntityList(root, entityKey) {
+	    if (this._clientWorkClientId && !this._clientWorkOptions().some((client) => client.id === this._clientWorkClientId)) {
+	      this._clientWorkClientId = '';
+	    }
+	    if (this._clientWorkProjectId && !this._clientWorkProjectOptions().some((project) => project.id === this._clientWorkProjectId)) {
+	      this._clientWorkProjectId = '';
+	    }
+	    const selectedClientId = this._clientWorkClientId || '';
+	    const selectedProjectId = this._clientWorkProjectId || '';
+	    const titleParts = [selectedClientId, selectedProjectId].filter(Boolean);
+	    return this.renderEntityList(root, entityKey, {
+	      filter: (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId),
+	      // Always show the internal list here so it doesn't "disappear" when the Base view is non-table.
+	      forceInternal: true,
+	      titleSuffix: titleParts.length ? ` · ${titleParts.join(' · ')}` : '',
+	      renderHeaderControls: (right) => this._renderClientWorkSelector(right),
+	      emptyDescription: titleParts.length
+	        ? `No records matching ${titleParts.join(' / ')} in this list.`
+	        : null,
+	    });
+	  }
 
   _isOpenEntity(entity, entityKey) {
     const def = ENTITIES[entityKey];
@@ -4645,7 +4769,7 @@ class CadenceAppView extends obsidian.ItemView {
       this._renderClientWorkSelector(right);
     });
     this._dashboardStats(root, [
-      { label: 'MEETINGS', value: meetings.length, sub: 'client conversations', accent: 'sky' },
+      { label: 'MEETINGS', value: meetings.length, sub: 'client conversations', accent: 'sky', mode: 'client-work.meetings' },
       { label: 'OPEN DELIVERABLES', value: deliverables.filter((e) => this._isOpenEntity(e, 'deliverable')).length, sub: `${deliverables.length} total`, accent: 'emerald' },
       { label: 'OPEN COMMS', value: comms.filter((e) => this._isOpenEntity(e, 'comms-thread')).length, sub: `${comms.length} threads`, accent: 'mint' },
       { label: 'FEEDBACK', value: feedback.length, sub: 'items captured', accent: 'warn' },
@@ -4654,6 +4778,7 @@ class CadenceAppView extends obsidian.ItemView {
     const cols = root.createDiv({ cls: 'cad-dash-cols' });
     const left = cols.createDiv({ cls: 'cad-dash-col' });
     const right = cols.createDiv({ cls: 'cad-dash-col' });
+    this._dashCardSection(left, 'RECENT MEETINGS', this._recentRows('meeting', meetings, ['context', 'name', 'title'], ['date', 'status', 'client_id', 'project_id']), 'No meetings.');
     this._dashCardSection(left, 'OPEN DELIVERABLES', this._recentRows('deliverable', deliverables.filter((e) => this._isOpenEntity(e, 'deliverable')), ['title', 'project'], ['status', 'client_id', 'project_id']), 'No open deliverables.');
     this._dashCardSection(left, 'RECENT COMMS', this._recentRows('comms-thread', comms, ['subject', 'thread_id'], ['channel', 'status', 'last_message_at']), 'No communication threads.');
     this._dashCardSection(right, 'RECENT FEEDBACK', this._recentRows('feedback', feedback, ['respondent', 'feedback_type'], ['score', 'status', 'client_id']), 'No feedback captured.');

@@ -27,7 +27,7 @@ Generated: 2026-05-23
 - CRM: Leads (`lead`)
 - CRM: Campaigns (`campaign`)
 - CRM: Activities (`activity`)
-- Client Work: Workspace (`meeting`)
+- Client Work: Workspace (overview)
 - PRM: Partners (`partner`)
 - Finance: Customer Invoices (`invoice`)
 - Finance: General Ledger
@@ -64,7 +64,7 @@ Generated: 2026-05-23
 | CRM | Campaigns | `crm.campaigns` | primary |  | `campaign` / `campaign` |
 | CRM | Sequences | `crm.sequences` | secondary | `crm.campaigns` | `sequence` / `sequence` |
 | CRM | Activities | `crm.activities` | primary |  | `activity` / `activity` |
-| Client Work | Workspace | `client-work.overview` | primary |  | `meeting` / `meeting` |
+| Client Work | Workspace | `client-work.overview` | primary |  | overview |
 | Client Work | Meetings | `client-work.meetings` | secondary | `client-work.overview` | `meeting` / `meeting` |
 | Client Work | Comms | `client-work.comms` | secondary | `client-work.overview` | `comms-thread` / `comms-thread` |
 | Client Work | Deliverables | `client-work.deliverables` | secondary | `client-work.overview` | `deliverable` / `deliverable` |
