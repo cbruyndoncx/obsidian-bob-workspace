@@ -27,6 +27,7 @@ const NAV_GROUPS = [
       { id: 'planner.inbox',    label: 'Inbox',    icon: 'inbox',         module: 'planner', desc: 'Universal capture + reminders. Anything you toss in here surfaces at the right time.' },
       { id: 'planner.today',    label: 'Today',    icon: 'sun',           module: 'planner', desc: 'Diary view of today\'s daily note.' },
       { id: 'planner.calendar', label: 'Calendar', icon: 'calendar-days', module: 'planner', desc: 'Week view across daily notes.' },
+      { id: 'planner.tasknotes', label: 'TaskNotes', icon: 'circle-check-big', module: 'planner', entityKey: 'task', folderKey: 'taskNotesFolder', desc: 'TaskNotes as full markdown task records with status, priority, due date and context.' },
       { id: 'planner.projects', label: 'Projects', icon: 'folder-kanban', module: 'planner', entityKey: 'project', folderKey: 'folderProjects', desc: 'Active projects with milestones, owners, statuses — kanban over project notes.' },
     ],
   },
@@ -34,30 +35,72 @@ const NAV_GROUPS = [
     id: 'crm', label: 'CRM', module: 'crm',
     items: [
       { id: 'crm.dashboard',  label: 'Dashboard',  icon: 'layout-grid',     module: 'crm', desc: 'Overview cards — today\'s tasks, deal momentum, recent contacts, week stats.' },
-      { id: 'crm.pipeline',   label: 'Pipeline',   icon: 'trending-up',     module: 'crm', entityKey: 'deal',     folderKey: 'folderPipeline',     desc: 'Sales pipeline. Deals as markdown notes with stage, value and contact frontmatter.' },
+      { id: 'crm.pipeline',   label: 'Pipeline',   icon: 'trending-up',     module: 'crm', entityKey: 'deal',     folderKey: 'folderPipeline',     desc: 'Sales pipeline. Deals as markdown notes with stage, deal value, client and follow-up frontmatter.' },
       { id: 'crm.contacts',   label: 'Contacts',   icon: 'users',           module: 'crm', entityKey: 'contact',  folderKey: 'folderContacts',     desc: 'People as markdown notes — name, email, company, last-talked-to cadence, tags.' },
       { id: 'crm.clients',    label: 'Clients',    icon: 'briefcase',       module: 'crm', entityKey: 'client',   folderKey: 'folderClients',      desc: 'Client company profiles — status, regions, contact details, related deals and projects.' },
-      { id: 'crm.companies',  label: 'My Companies', icon: 'building-2',    module: 'crm', entityKey: 'company',  folderKey: 'folderCompanies',    desc: 'Your own company profiles (can be multiple) — regions, status, branding.' },
+      { id: 'crm.companies',  label: 'My Companies', icon: 'building-2',    module: 'crm', navLevel: 'setup', parent: 'settings', entityKey: 'company',  folderKey: 'folderCompanies',    desc: 'Your own company profiles (can be multiple) — regions, status, branding.' },
       { id: 'crm.leads',      label: 'Leads',      icon: 'target',          module: 'crm', entityKey: 'lead',     folderKey: 'folderLeads',        desc: 'Prospect records — qualification, source, outreach status. Per-lead folder for replies in 03-COMMS/.' },
       { id: 'crm.campaigns',  label: 'Campaigns',  icon: 'megaphone',       module: 'crm', entityKey: 'campaign', folderKey: 'folderCampaigns',    desc: 'Marketing/sales campaigns — outbound (sequences), inbound (content+ads), or mixed.' },
-      { id: 'crm.sequences',  label: 'Sequences',  icon: 'zap',             module: 'crm', entityKey: 'sequence', folderKey: 'folderSequences',    desc: 'Outbound multi-touch sequences — execution detail within a campaign.' },
+      { id: 'crm.sequences',  label: 'Sequences',  icon: 'zap',             module: 'crm', navLevel: 'secondary', parent: 'crm.campaigns', entityKey: 'sequence', folderKey: 'folderSequences',    desc: 'Outbound multi-touch sequences — execution detail within a campaign.' },
       { id: 'crm.activities', label: 'Activities', icon: 'calendar',        module: 'crm', entityKey: 'activity', folderKey: 'folderActivities',   desc: 'Cross-cutting activity timeline — calls, meetings, telegram/whatsapp/email logs.' },
-    ],
-  },
-  {
-    id: 'srm', label: 'SRM', module: 'srm',
-    items: [
-      { id: 'srm.suppliers', label: 'Suppliers', icon: 'truck', module: 'srm', entityKey: 'supplier', folderKey: 'folderSuppliers', desc: 'Supplier profiles — services, contracts, contacts, spend.' },
     ],
   },
   {
     id: 'prm', label: 'PRM', module: 'prm',
     items: [
       { id: 'prm.partners',       label: 'Partners',       icon: 'handshake',        module: 'prm', entityKey: 'partner',       folderKey: 'folderPartners',       desc: 'Partner organisations — relationship status, named contacts, joint pipeline.' },
-      { id: 'prm.registrations',  label: 'Registrations',  icon: 'clipboard-check',  module: 'prm', entityKey: 'registration',  folderKey: 'folderRegistrations',  desc: 'Deal registrations submitted by partners — status, expiry, attached deals.' },
-      { id: 'prm.commissions',    label: 'Commissions',    icon: 'wallet',           module: 'prm', entityKey: 'commission',    folderKey: 'folderCommissions',    desc: 'Commission ledger across partners — earned, pending, paid, by quarter.' },
-      { id: 'prm.certifications', label: 'Certifications', icon: 'award',            module: 'prm', entityKey: 'certification', folderKey: 'folderCertifications', desc: 'Partner certifications — track expiries, renewals, training completion.' },
-      { id: 'prm.analytics',      label: 'Analytics',      icon: 'bar-chart-3',      module: 'prm', desc: 'PRM analytics — partner-sourced revenue, top performers, lifecycle funnel.' },
+      { id: 'prm.registrations',  label: 'Registrations',  icon: 'clipboard-check',  module: 'prm', navLevel: 'secondary', parent: 'prm.partners', entityKey: 'registration',  folderKey: 'folderRegistrations',  desc: 'Deal registrations submitted by partners — status, expiry, attached deals.' },
+      { id: 'prm.commissions',    label: 'Commissions',    icon: 'wallet',           module: 'prm', navLevel: 'secondary', parent: 'prm.partners', entityKey: 'commission',    folderKey: 'folderCommissions',    desc: 'Commission ledger across partners — earned, pending, paid, by quarter.' },
+      { id: 'prm.certifications', label: 'Certifications', icon: 'award',            module: 'prm', navLevel: 'secondary', parent: 'prm.partners', entityKey: 'certification', folderKey: 'folderCertifications', desc: 'Partner certifications — track expiries, renewals, training completion.' },
+      { id: 'prm.analytics',      label: 'Analytics',      icon: 'bar-chart-3',      module: 'prm', navLevel: 'secondary', parent: 'prm.partners', desc: 'PRM analytics — partner-sourced revenue, top performers, lifecycle funnel.' },
+    ],
+  },
+  {
+    id: 'client-work', label: 'Client Work', module: 'client-work',
+    items: [
+      { id: 'client-work.overview',      label: 'Workspace',    icon: 'briefcase-business', module: 'client-work', entityKey: 'meeting',      desc: 'Client delivery workspace: meetings, communications, deliverables, feedback, surveys, testimonials and decisions.' },
+      { id: 'client-work.meetings',      label: 'Meetings',     icon: 'calendar-clock',     module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'meeting',      desc: 'Client meetings with attendees, status, dates and related client IDs.' },
+      { id: 'client-work.comms',         label: 'Comms',        icon: 'messages-square',    module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'comms-thread', desc: 'Client and lead communication threads across email, WhatsApp and Telegram.' },
+      { id: 'client-work.deliverables',  label: 'Deliverables', icon: 'package-check',      module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'deliverable',  desc: 'Client deliverables and their review, approval and delivery status.' },
+      { id: 'client-work.feedback',      label: 'Feedback',     icon: 'message-circle',     module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'feedback',     desc: 'Client feedback, scores, themes, sentiment and response actions.' },
+      { id: 'client-work.surveys',       label: 'Surveys',      icon: 'clipboard-list',     module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'survey',       desc: 'Survey campaigns, response rates, launch dates and analysis status.' },
+      { id: 'client-work.testimonials',  label: 'Testimonials', icon: 'quote',              module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'testimonial',  desc: 'Client testimonials with permissions, attribution and publication status.' },
+      { id: 'client-work.decisions',     label: 'Decisions',    icon: 'git-pull-request',   module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'decision',     desc: 'Decision records connected to client and delivery work.' },
+    ],
+  },
+  {
+    id: 'finance', label: 'Finance', module: 'finance',
+    items: [
+      { id: 'finance.invoices',                label: 'Customer Invoices',       icon: 'receipt',        module: 'finance', entityKey: 'invoice',                desc: 'Customer invoices, payment status and amounts.' },
+      { id: 'finance.gl',                      label: 'General Ledger',          icon: 'book-open',      module: 'finance', desc: 'GL work area for chart of accounts, journal entries, trial balances and financial statements.' },
+      { id: 'finance.setup',                   label: 'Finance Setup',           icon: 'sliders-horizontal', module: 'finance', desc: 'Finance setup records: periods, bank accounts, FX rates and inventory/reference setup.' },
+      { id: 'finance.accounting-periods',      label: 'Accounting Periods',      icon: 'calendar-range', module: 'finance', navLevel: 'setup', parent: 'finance.setup', entityKey: 'accounting-period',      desc: 'Accounting periods — month, quarter and annual close windows.' },
+      { id: 'finance.bank-accounts',           label: 'Bank Accounts',           icon: 'landmark',       module: 'finance', navLevel: 'setup', parent: 'finance.setup', entityKey: 'bank-account',           desc: 'Bank accounts linked to currencies and GL accounts.' },
+      { id: 'finance.fx-rates',                label: 'FX Rates Tables',         icon: 'repeat-2',       module: 'finance', navLevel: 'setup', parent: 'finance.setup', entityKey: 'fx-rates-table',         desc: 'Foreign exchange rate tables and sources.' },
+      { id: 'finance.inventory',               label: 'Inventory',               icon: 'boxes',          module: 'finance', navLevel: 'secondary', parent: 'finance.setup', entityKey: 'inventory',              desc: 'Inventory items, quantities, costing and write-downs.' },
+      { id: 'finance.bank-reconciliations',    label: 'Bank Reconciliations',    icon: 'scale',          module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'bank-reconciliation',    desc: 'Bank reconciliation records by account and period.' },
+      { id: 'finance.chart-of-accounts',       label: 'Chart of Accounts',       icon: 'list-tree',      module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'chart-of-accounts',      desc: 'Chart of accounts by jurisdiction and account classification.' },
+      { id: 'finance.journal-entries',         label: 'Journal Entries',         icon: 'book-open',      module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'journal-entry',          desc: 'Journal entries with posting status and totals.' },
+      { id: 'finance.trial-balances',          label: 'Trial Balances',          icon: 'table-2',        module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'trial-balance',          desc: 'Trial balances by period with review status.' },
+      { id: 'finance.financial-statements',    label: 'Financial Statements',    icon: 'file-bar-chart', module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'financial-statement',    desc: 'Financial statements generated from trial balances.' },
+      { id: 'finance.fs-notes',                label: 'FS Notes',                icon: 'notebook-text',   module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'fs-notes',               desc: 'Financial statement notes and policy disclosures.' },
+      { id: 'tax.overview',              label: 'Tax',                   icon: 'receipt-text',   module: 'finance', desc: 'Tax and compliance work area: VAT, corporate tax, transfer pricing, free-zone status and retention.' },
+      { id: 'tax.vat-returns',           label: 'VAT Returns',           icon: 'receipt-text',   module: 'finance', navLevel: 'secondary', parent: 'tax.overview', entityKey: 'vat-return',           desc: 'VAT returns, filing status, payable/refund and payment references.' },
+      { id: 'tax.corporate-tax-returns', label: 'Corporate Tax Returns', icon: 'landmark',       module: 'finance', navLevel: 'secondary', parent: 'tax.overview', entityKey: 'corporate-tax-return', desc: 'Corporate tax returns, taxable income and filing status.' },
+      { id: 'tax.deferred-tax',          label: 'Deferred Tax',          icon: 'split-square-horizontal', module: 'finance', navLevel: 'secondary', parent: 'tax.overview', entityKey: 'deferred-tax', desc: 'Deferred tax asset/liability assessments and review status.' },
+      { id: 'tax.transfer-pricing',      label: 'Transfer Pricing',      icon: 'git-compare',    module: 'finance', navLevel: 'secondary', parent: 'tax.overview', entityKey: 'transfer-pricing',     desc: 'Related-party transactions and transfer pricing documentation.' },
+      { id: 'tax.free-zone-status',      label: 'Free Zone Status',      icon: 'building',       module: 'finance', navLevel: 'secondary', parent: 'tax.overview', entityKey: 'free-zone-status',     desc: 'Free-zone qualifying status, substance and nexus records.' },
+      { id: 'tax.legal-rules',           label: 'Legal Rules',           icon: 'scale',          module: 'finance', navLevel: 'setup', parent: 'tax.overview', entityKey: 'legal-rule',           desc: 'Legal and regulatory source tracking by jurisdiction.' },
+      { id: 'tax.document-retention',    label: 'Document Retention',    icon: 'archive',        module: 'finance', navLevel: 'setup', parent: 'tax.overview', entityKey: 'document-retention',    desc: 'Retention register, destruction dates and responsible owners.' },
+    ],
+  },
+  {
+    id: 'procurement', label: 'Suppliers & Procurement', module: 'procurement',
+    items: [
+      { id: 'procurement.suppliers',             label: 'Suppliers',             icon: 'truck',          module: 'procurement', entityKey: 'supplier', folderKey: 'folderSuppliers', desc: 'Supplier profiles — services, contracts, contacts, spend.' },
+      { id: 'procurement.supplier-invoices',     label: 'Supplier Invoices',     icon: 'file-check-2',   module: 'procurement', entityKey: 'supplier-invoice', desc: 'Supplier invoices, three-way match and payment status.' },
+      { id: 'procurement.purchase-requisitions', label: 'Purchase Requisitions', icon: 'clipboard-list', module: 'procurement', entityKey: 'purchase-requisition', desc: 'Internal purchase requests before spend is approved or a PO is issued.' },
+      { id: 'procurement.purchase-orders',       label: 'Purchase Orders',       icon: 'shopping-cart',  module: 'procurement', entityKey: 'purchase-order',       desc: 'Formal supplier purchase orders, approval status and delivery references.' },
     ],
   },
   {
@@ -73,8 +116,8 @@ const NAV_GROUPS = [
   {
     id: 'misc', label: '',
     items: [
-      { id: 'team',     label: 'Team',     icon: 'user-cog',   desc: 'Team members, roles, seats — admin view of your Cadence workspace.' },
-      { id: 'settings', label: 'Settings', icon: 'settings-2', desc: 'Cadence app settings — folders, headings, week start, API connection.' },
+      { id: 'team',     label: 'Team',     icon: 'user-cog',   desc: 'Team members, roles, seats — admin view of your BOB Workspace.' },
+      { id: 'settings', label: 'Settings', icon: 'settings-2', desc: 'BOB Workspace settings — folders, headings, week start, API connection.' },
     ],
   },
 ];
@@ -82,6 +125,76 @@ const NAV_GROUPS = [
 // Convenience flat lookup
 const ALL_SURFACES = NAV_GROUPS.flatMap((g) => g.items);
 const SURFACE_BY_ID = Object.fromEntries(ALL_SURFACES.map((s) => [s.id, s]));
+const SURFACES_BY_ENTITY_KEY = Object.fromEntries(ALL_SURFACES.filter((s) => s.entityKey).map((s) => [s.entityKey, s]));
+const SECONDARY_TABS = {
+  'crm.campaigns': [
+    { label: 'Overview', route: 'crm.campaigns.overview' },
+    { label: 'Campaigns', entityKey: 'campaign' },
+    { label: 'Sequences', entityKey: 'sequence' },
+  ],
+  'client-work.overview': [
+    { label: 'Overview', route: 'client-work.dashboard' },
+    { label: 'Meetings', entityKey: 'meeting' },
+    { label: 'Comms', entityKey: 'comms-thread' },
+    { label: 'Deliverables', entityKey: 'deliverable' },
+    { label: 'Feedback', entityKey: 'feedback' },
+    { label: 'Surveys', entityKey: 'survey' },
+    { label: 'Testimonials', entityKey: 'testimonial' },
+    { label: 'Decisions', entityKey: 'decision' },
+  ],
+  'prm.partners': [
+    { label: 'Overview', route: 'prm.partners.overview' },
+    { label: 'Partners', entityKey: 'partner' },
+    { label: 'Registrations', entityKey: 'registration' },
+    { label: 'Commissions', entityKey: 'commission' },
+    { label: 'Certifications', entityKey: 'certification' },
+    { label: 'Analytics', route: 'prm.analytics' },
+  ],
+  'finance.invoices': [
+    { label: 'Customer Invoices', entityKey: 'invoice' },
+  ],
+  'finance.gl': [
+    { label: 'Overview', route: 'finance.gl.overview' },
+    { label: 'Chart of Accounts', entityKey: 'chart-of-accounts' },
+    { label: 'Journal Entries', entityKey: 'journal-entry' },
+    { label: 'Bank Reconciliations', entityKey: 'bank-reconciliation' },
+    { label: 'Trial Balances', entityKey: 'trial-balance' },
+    { label: 'Statements', entityKey: 'financial-statement' },
+    { label: 'FS Notes', entityKey: 'fs-notes' },
+  ],
+  'finance.setup': [
+    { label: 'Overview', route: 'finance.setup.overview' },
+    { label: 'Accounting Periods', entityKey: 'accounting-period' },
+    { label: 'Bank Accounts', entityKey: 'bank-account' },
+    { label: 'FX Rates', entityKey: 'fx-rates-table' },
+    { label: 'Inventory', entityKey: 'inventory' },
+  ],
+  'procurement.suppliers': [
+    { label: 'Overview', route: 'procurement.overview' },
+    { label: 'Suppliers', entityKey: 'supplier' },
+    { label: 'Supplier Invoices', entityKey: 'supplier-invoice' },
+    { label: 'Purchase Requisitions', entityKey: 'purchase-requisition' },
+    { label: 'Purchase Orders', entityKey: 'purchase-order' },
+  ],
+  'tax.overview': [
+    { label: 'Overview', route: 'tax.dashboard' },
+    { label: 'VAT Returns', entityKey: 'vat-return' },
+    { label: 'Corporate Tax', entityKey: 'corporate-tax-return' },
+    { label: 'Deferred Tax', entityKey: 'deferred-tax' },
+    { label: 'Transfer Pricing', entityKey: 'transfer-pricing' },
+    { label: 'Free Zone Status', entityKey: 'free-zone-status' },
+    { label: 'Legal Rules', entityKey: 'legal-rule' },
+    { label: 'Document Retention', entityKey: 'document-retention' },
+  ],
+};
+const WORKBOOK_EXPORT_GROUPS = [
+  { id: 'planner', label: 'Planner', entityKeys: ['task', 'project'] },
+  { id: 'crm', label: 'CRM', entityKeys: ['deal', 'contact', 'client', 'company', 'lead', 'campaign', 'sequence', 'activity'] },
+  { id: 'client-work', label: 'Client Work', entityKeys: ['meeting', 'comms-thread', 'deliverable', 'feedback', 'survey', 'testimonial', 'decision'] },
+  { id: 'prm', label: 'PRM', entityKeys: ['partner', 'registration', 'commission', 'certification'] },
+  { id: 'finance', label: 'Finance', entityKeys: ['invoice', 'chart-of-accounts', 'journal-entry', 'bank-reconciliation', 'trial-balance', 'financial-statement', 'fs-notes', 'accounting-period', 'bank-account', 'fx-rates-table', 'inventory', 'vat-return', 'corporate-tax-return', 'deferred-tax', 'transfer-pricing', 'free-zone-status', 'legal-rule', 'document-retention'] },
+  { id: 'procurement', label: 'Suppliers & Procurement', entityKeys: ['supplier', 'supplier-invoice', 'purchase-requisition', 'purchase-order'] },
+];
 
 /* ─────────── Entity registry ───────────
    Each entity = a folder of markdown notes with a known frontmatter shape.
@@ -89,17 +202,19 @@ const SURFACE_BY_ID = Object.fromEntries(ALL_SURFACES.map((s) => [s.id, s]));
    (Pipeline kanban, Dashboard, Reports) compose on top of the same data. */
 const ENTITIES = {
   contact: {
-    folder: 'Cadence/Contacts',
+    folder: '10-ME/10-PEOPLE',
+    typeFilter: 'person',
     label: 'Contact', plural: 'Contacts',
     fields: [
       { key: 'name',        label: 'Name',         primary: true },
+      { key: 'person_category', label: 'Category', type: 'enum', options: ['employee', 'freelancer', 'contractor', 'business-contact', 'personal-contact', 'prospect', 'other'] },
       { key: 'email',       label: 'Email',        type: 'email' },
       { key: 'company',     label: 'Company' },
       { key: 'role',        label: 'Role' },
-      { key: 'lastContact', label: 'Last contact', type: 'date' },
+      { key: 'last_contact', label: 'Last contact', type: 'date' },
       { key: 'tags',        label: 'Tags',         type: 'tags' },
     ],
-    columns: ['name', 'company', 'email', 'role', 'lastContact'],
+    columns: ['name', 'person_category', 'company', 'email', 'role', 'last_contact'],
   },
   company: {
     folder: '20-COMPANY/00-PROFILE',
@@ -122,10 +237,16 @@ const ENTITIES = {
       { key: 'client_name', label: 'Name', primary: true },
       { key: 'client_id',   label: 'Client ID' },
       { key: 'status',      label: 'Status', type: 'enum', options: ['prospect', 'active', 'inactive', 'on-hold', 'completed', 'archived'] },
+      { key: 'regions',     label: 'Regions', type: 'tags' },
+      { key: 'jurisdiction', label: 'Jurisdiction' },
+      { key: 'legal_form', label: 'Legal Form' },
+      { key: 'company_registration_number', label: 'Registration No.' },
+      { key: 'company_registration_registry', label: 'Registry' },
+      { key: 'vat_id', label: 'VAT ID' },
       { key: 'location',    label: 'Location' },
       { key: 'tags',        label: 'Tags', type: 'tags' },
     ],
-    columns: ['client_name', 'client_id', 'status', 'location'],
+    columns: ['client_name', 'client_id', 'status', 'regions', 'jurisdiction', 'legal_form', 'vat_id'],
   },
   supplier: {
     folder: '20-COMPANY/30-SUPPLIERS',
@@ -135,84 +256,248 @@ const ENTITIES = {
       { key: 'supplier_name', label: 'Name', primary: true },
       { key: 'supplier_id',   label: 'Supplier ID' },
       { key: 'status',        label: 'Status', type: 'enum', options: ['active', 'inactive', 'archived'] },
-      { key: 'category',      label: 'Category' },
+      { key: 'spend_category', label: 'Category' },
+      { key: 'regions', label: 'Regions', type: 'tags' },
+      { key: 'contract_value_annual', label: 'Annual Spend', type: 'currency' },
+      { key: 'payment_terms_default', label: 'Payment Terms' },
+      { key: 'contract_expiry', label: 'Contract Expiry', type: 'date' },
       { key: 'tags',          label: 'Tags', type: 'tags' },
     ],
-    columns: ['supplier_name', 'supplier_id', 'status', 'category'],
+    columns: ['supplier_name', 'supplier_id', 'status', 'spend_category', 'regions', 'contract_value_annual', 'payment_terms_default'],
   },
   partner: {
-    folder: 'Cadence/Partners',
+    folder: '20-COMPANY/35-PARTNERS',
+    typeFilter: 'partner',
     label: 'Partner', plural: 'Partners',
     fields: [
-      { key: 'name',   label: 'Name',   primary: true },
-      { key: 'tier',   label: 'Tier',   type: 'enum', options: ['Gold', 'Silver', 'Bronze', 'Standard'] },
-      { key: 'status', label: 'Status', type: 'enum', options: ['Active', 'Onboarding', 'Inactive', 'Churned'] },
-      { key: 'owner',  label: 'Owner' },
-      { key: 'region', label: 'Region' },
+      { key: 'partner_name', label: 'Name', primary: true },
+      { key: 'partner_id', label: 'Partner ID' },
+      { key: 'status', label: 'Status', type: 'enum', options: ['lead', 'qualified', 'active', 'inactive', 'archived'] },
+      { key: 'relationship_type', label: 'Relationship' },
+      { key: 'my_role', label: 'My Role' },
+      { key: 'agreement_type', label: 'Agreement' },
     ],
-    columns: ['name', 'tier', 'status', 'region', 'owner'],
+    columns: ['partner_name', 'partner_id', 'status', 'relationship_type', 'my_role', 'agreement_type'],
   },
   registration: {
     folder: '20-COMPANY/35-PARTNERS',
+    typeFilter: 'registration',
     label: 'Registration', plural: 'Registrations',
     fields: [
       { key: 'title',     label: 'Title',      primary: true },
-      { key: 'partner',   label: 'Partner' },
-      { key: 'status',    label: 'Status',     type: 'enum', options: ['Submitted', 'Approved', 'Rejected', 'Expired'] },
+      { key: 'partner_ref', label: 'Partner' },
+      { key: 'status',    label: 'Status',     type: 'enum', options: ['submitted', 'approved', 'rejected', 'expired'] },
       { key: 'value',     label: 'Value',      type: 'currency' },
-      { key: 'submitted', label: 'Submitted',  type: 'date' },
-      { key: 'expires',   label: 'Expires',    type: 'date' },
+      { key: 'submitted_date', label: 'Submitted',  type: 'date' },
+      { key: 'expires_date',   label: 'Expires',    type: 'date' },
+      { key: 'deal_ref', label: 'Deal' },
     ],
-    columns: ['title', 'partner', 'status', 'value', 'expires'],
+    columns: ['title', 'partner_ref', 'status', 'value', 'submitted_date', 'expires_date'],
   },
   commission: {
     folder: '20-COMPANY/35-PARTNERS',
+    typeFilter: 'commission',
     label: 'Commission', plural: 'Commissions',
     fields: [
       { key: 'reference', label: 'Ref',     primary: true },
-      { key: 'partner',   label: 'Partner' },
+      { key: 'partner_ref', label: 'Partner' },
       { key: 'amount',    label: 'Amount',  type: 'currency' },
-      { key: 'status',    label: 'Status',  type: 'enum', options: ['Pending', 'Earned', 'Paid', 'Disputed'] },
+      { key: 'status',    label: 'Status',  type: 'enum', options: ['pending', 'earned', 'paid', 'disputed', 'written-off'] },
       { key: 'period',    label: 'Period' },
-      { key: 'paidOn',    label: 'Paid on', type: 'date' },
+      { key: 'earned_date', label: 'Earned', type: 'date' },
+      { key: 'paid_date', label: 'Paid on', type: 'date' },
+      { key: 'deal_ref', label: 'Deal' },
     ],
-    columns: ['reference', 'partner', 'amount', 'status', 'period', 'paidOn'],
+    columns: ['reference', 'partner_ref', 'amount', 'status', 'period', 'earned_date', 'paid_date'],
   },
   lead: {
     folder: '20-COMPANY/55-LEADS',
+    typeFilter: 'lead',
     label: 'Lead', plural: 'Leads',
     fields: [
-      { key: 'name',     label: 'Name',     primary: true },
-      { key: 'company',  label: 'Company' },
+      { key: 'company_name', label: 'Company', primary: true },
+      { key: 'client_id', label: 'Billing Client' },
+      { key: 'end_client_id', label: 'End Client' },
+      { key: 'project_id', label: 'Project ID' },
+      { key: 'project', label: 'Project' },
+      { key: 'contact_name', label: 'Contact' },
+      { key: 'contact_email', label: 'Email', type: 'email' },
       { key: 'source',   label: 'Source' },
-      { key: 'status',   label: 'Status',   type: 'enum', options: ['New', 'Contacted', 'Qualified', 'Disqualified', 'Converted'] },
-      { key: 'assigned', label: 'Assigned' },
+      { key: 'owner', label: 'Owner' },
+      { key: 'status',   label: 'Status',   type: 'enum', options: ['lead', 'qualified', 'nurture', 'disqualified'] },
+      { key: 'prospect_grade', label: 'Grade', type: 'enum', options: ['A+', 'A', 'B', 'C', 'D'] },
+      { key: 'prospect_score', label: 'Score', type: 'number' },
+      { key: 'next_action', label: 'Next Action' },
+      { key: 'next_action_date', label: 'Action Date', type: 'date' },
+      { key: 'last_contact', label: 'Last Contact', type: 'date' },
+      { key: 'related', label: 'Related' },
+      { key: 'lead_date', label: 'Lead Date', type: 'date' },
     ],
-    columns: ['name', 'company', 'source', 'status', 'assigned'],
+    columns: ['company_name', 'client_id', 'end_client_id', 'project_id', 'status', 'owner', 'prospect_grade', 'next_action_date'],
   },
   certification: {
     folder: '20-COMPANY/35-PARTNERS',
+    typeFilter: 'certification',
     label: 'Certification', plural: 'Certifications',
     fields: [
       { key: 'name',    label: 'Name',    primary: true },
-      { key: 'partner', label: 'Partner' },
+      { key: 'partner_ref', label: 'Partner' },
       { key: 'level',   label: 'Level' },
-      { key: 'issued',  label: 'Issued',  type: 'date' },
-      { key: 'expires', label: 'Expires', type: 'date' },
+      { key: 'issued_date', label: 'Issued',  type: 'date' },
+      { key: 'expires_date', label: 'Expires', type: 'date' },
+      { key: 'status', label: 'Status', type: 'enum', options: ['active', 'expiring-soon', 'expired', 'renewed', 'revoked'] },
+      { key: 'holder_ref', label: 'Holder' },
     ],
-    columns: ['name', 'partner', 'level', 'issued', 'expires'],
+    columns: ['name', 'partner_ref', 'level', 'issued_date', 'expires_date', 'status'],
   },
   activity: {
-    folder: 'Cadence/Activities',
+    folder: '30-CLIENTS',
+    typeFilter: 'activity',
     label: 'Activity', plural: 'Activities',
     fields: [
-      { key: 'subject', label: 'Subject', primary: true },
-      { key: 'type',    label: 'Type',    type: 'enum', options: ['Call', 'Email', 'Meeting', 'Note', 'Task'] },
-      { key: 'when',    label: 'When',    type: 'date' },
-      { key: 'with',    label: 'With' },
+      { key: 'title', label: 'Title', primary: true },
+      { key: 'channel', label: 'Channel', type: 'enum', options: ['telegram', 'whatsapp', 'email', 'call', 'meeting', 'note'] },
+      { key: 'direction', label: 'Direction', type: 'enum', options: ['in', 'out', 'internal'] },
+      { key: 'client_id', label: 'Client' },
+      { key: 'lead_id', label: 'Lead' },
+      { key: 'contact_ref', label: 'Contact' },
+      { key: 'date', label: 'Date', type: 'date' },
+      { key: 'outcome', label: 'Outcome' },
+      { key: 'next_action', label: 'Next Action' },
+      { key: 'next_action_date', label: 'Action Date', type: 'date' },
       { key: 'related', label: 'Related' },
     ],
-    columns: ['when', 'type', 'subject', 'with', 'related'],
+    columns: ['title', 'channel', 'direction', 'client_id', 'lead_id', 'contact_ref', 'date'],
+  },
+  meeting: {
+    folder: '30-CLIENTS',
+    typeFilter: 'meeting',
+    label: 'Meeting', plural: 'Meetings',
+    fields: [
+      { key: 'context', label: 'Context', primary: true },
+      { key: 'date', label: 'Date', type: 'date' },
+      { key: 'attendees', label: 'Attendees', type: 'tags' },
+      { key: 'status', label: 'Status', type: 'enum', options: ['scheduled', 'completed', 'cancelled'] },
+      { key: 'client_id', label: 'Client' },
+      { key: 'end_client_id', label: 'End Client' },
+      { key: 'project_id', label: 'Project ID' },
+      { key: 'project', label: 'Project' },
+      { key: 'time', label: 'Time' },
+      { key: 'created', label: 'Created', type: 'date' },
+    ],
+    columns: ['context', 'date', 'client_id', 'end_client_id', 'project_id', 'status'],
+  },
+  'comms-thread': {
+    folder: '30-CLIENTS',
+    typeFilter: 'comms-thread',
+    label: 'Comms Thread', plural: 'Comms Threads',
+    fields: [
+      { key: 'client_id', label: 'Client', primary: true },
+      { key: 'thread_id', label: 'Thread ID' },
+      { key: 'channel', label: 'Channel', type: 'enum', options: ['email', 'whatsapp', 'telegram'] },
+      { key: 'subject', label: 'Subject' },
+      { key: 'status', label: 'Status', type: 'enum', options: ['open', 'awaiting-us', 'awaiting-them', 'closed'] },
+      { key: 'urgency', label: 'Urgency', type: 'enum', options: ['urgent', 'high', 'normal', 'low'] },
+      { key: 'awaiting_reply', label: 'Awaiting Reply' },
+      { key: 'last_message_at', label: 'Last Message' },
+      { key: 'end_client_id', label: 'End Client' },
+      { key: 'project_id', label: 'Project ID' },
+      { key: 'project', label: 'Project' },
+      { key: 'lead_id', label: 'Lead' },
+      { key: 'captured_in', label: 'Captured In', type: 'tags' },
+    ],
+    columns: ['client_id', 'end_client_id', 'project_id', 'channel', 'subject', 'status', 'last_message_at'],
+  },
+  deliverable: {
+    folder: '30-CLIENTS',
+    typeFilter: 'deliverable',
+    label: 'Deliverable', plural: 'Deliverables',
+    fields: [
+      { key: 'client_id', label: 'Client', primary: true },
+      { key: 'end_client_id', label: 'End Client' },
+      { key: 'project_id', label: 'Project ID' },
+      { key: 'project', label: 'Project' },
+      { key: 'status', label: 'Status', type: 'enum', options: ['draft', 'review', 'approved', 'delivered'] },
+      { key: 'related', label: 'Related', type: 'tags' },
+      { key: 'created', label: 'Created', type: 'date' },
+    ],
+    columns: ['client_id', 'end_client_id', 'project_id', 'project', 'status', 'created'],
+  },
+  feedback: {
+    folder: '30-CLIENTS',
+    typeFilter: 'feedback',
+    label: 'Feedback', plural: 'Feedback',
+    fields: [
+      { key: 'feedback_type', label: 'Type', primary: true, type: 'enum', options: ['nps', 'csat', 'pmf', 'exit-survey', 'interview', 'feature-request', 'supplier-review'] },
+      { key: 'respondent', label: 'Respondent' },
+      { key: 'score', label: 'Score', type: 'number' },
+      { key: 'themes', label: 'Themes', type: 'tags' },
+      { key: 'sentiment', label: 'Sentiment', type: 'enum', options: ['positive', 'neutral', 'negative', 'mixed'] },
+      { key: 'status', label: 'Status', type: 'enum', options: ['raw', 'reviewed', 'actioned', 'archived'] },
+      { key: 'client_id', label: 'Client' },
+      { key: 'end_client_id', label: 'End Client' },
+      { key: 'project_id', label: 'Project ID' },
+      { key: 'project', label: 'Project' },
+      { key: 'action_taken', label: 'Action Taken' },
+    ],
+    columns: ['feedback_type', 'client_id', 'end_client_id', 'project_id', 'respondent', 'score', 'status'],
+  },
+  survey: {
+    folder: '20-COMPANY/70-OPERATIONS/SURVEYS',
+    typeFilter: 'survey',
+    label: 'Survey', plural: 'Surveys',
+    fields: [
+      { key: 'title', label: 'Title', primary: true },
+      { key: 'client_id', label: 'Client' },
+      { key: 'end_client_id', label: 'End Client' },
+      { key: 'project_id', label: 'Project ID' },
+      { key: 'project', label: 'Project' },
+      { key: 'survey_type', label: 'Type', type: 'enum', options: ['nps', 'csat', 'pmf', 'exit-survey', 'supplier-review', 'custom'] },
+      { key: 'target_audience', label: 'Audience', type: 'enum', options: ['clients', 'prospects', 'suppliers', 'mixed'] },
+      { key: 'tool', label: 'Tool' },
+      { key: 'external_url', label: 'External URL' },
+      { key: 'response_count', label: 'Responses', type: 'number' },
+      { key: 'response_rate', label: 'Response Rate', type: 'number' },
+      { key: 'status', label: 'Status', type: 'enum', options: ['draft', 'active', 'closed', 'analyzed'] },
+      { key: 'launch_date', label: 'Launch', type: 'date' },
+      { key: 'close_date', label: 'Close', type: 'date' },
+    ],
+    columns: ['title', 'client_id', 'end_client_id', 'project_id', 'survey_type', 'target_audience', 'status', 'launch_date'],
+  },
+  testimonial: {
+    folder: '30-CLIENTS',
+    typeFilter: 'testimonial',
+    label: 'Testimonial', plural: 'Testimonials',
+    fields: [
+      { key: 'client_id', label: 'Client', primary: true },
+      { key: 'end_client_id', label: 'End Client' },
+      { key: 'respondent', label: 'Respondent' },
+      { key: 'format', label: 'Format', type: 'enum', options: ['written', 'video', 'linkedin-recommendation', 'case-study-quote'] },
+      { key: 'permission_level', label: 'Permission', type: 'enum', options: ['public', 'anonymized', 'internal-only'] },
+      { key: 'status', label: 'Status', type: 'enum', options: ['requested', 'received', 'approved', 'published', 'expired'] },
+      { key: 'respondent_name', label: 'Name' },
+      { key: 'respondent_role', label: 'Role' },
+      { key: 'respondent_company', label: 'Company' },
+      { key: 'received_date', label: 'Received', type: 'date' },
+      { key: 'expiry_date', label: 'Expires', type: 'date' },
+      { key: 'project_id', label: 'Project ID' },
+      { key: 'project', label: 'Project' },
+    ],
+    columns: ['client_id', 'end_client_id', 'project_id', 'respondent_name', 'format', 'permission_level', 'status'],
+  },
+  decision: {
+    folder: '20-COMPANY/02-DECISIONS',
+    typeFilter: 'decision-log',
+    label: 'Decision', plural: 'Decisions',
+    fields: [
+      { key: 'status', label: 'Status', primary: true, type: 'enum', options: ['proposed', 'decided', 'superseded'] },
+      { key: 'client_id', label: 'Client' },
+      { key: 'end_client_id', label: 'End Client' },
+      { key: 'project_id', label: 'Project ID' },
+      { key: 'project', label: 'Project' },
+      { key: 'created', label: 'Created', type: 'date' },
+    ],
+    columns: ['status', 'client_id', 'end_client_id', 'project_id', 'created'],
   },
   campaign: {
     folder: '20-COMPANY/60-SALES/CAMPAIGNS',
@@ -224,10 +509,13 @@ const ENTITIES = {
       { key: 'status',         label: 'Status',      type: 'enum', options: ['draft', 'active', 'paused', 'completed', 'archived'] },
       { key: 'target_persona', label: 'Persona' },
       { key: 'launch_date',    label: 'Launch',      type: 'date' },
+      { key: 'target_metric_value', label: 'Target Metric', type: 'number' },
+      { key: 'budget',         label: 'Budget',      type: 'currency' },
       { key: 'owner',          label: 'Owner' },
+      { key: 'expected_end_date', label: 'Expected End', type: 'date' },
       { key: 'tags',           label: 'Tags',        type: 'tags' },
     ],
-    columns: ['campaign_name', 'campaign_type', 'status', 'launch_date', 'owner'],
+    columns: ['campaign_name', 'campaign_type', 'status', 'launch_date', 'target_persona', 'target_metric_value', 'budget', 'owner'],
   },
   sequence: {
     folder: '20-COMPANY/60-SALES/SEQUENCES',
@@ -240,61 +528,431 @@ const ENTITIES = {
       { key: 'total_touches',   label: 'Touches',      type: 'number' },
       { key: 'duration_days',   label: 'Days',         type: 'number' },
       { key: 'enrolled_count',  label: 'Enrolled',     type: 'number' },
+      { key: 'reply_count',     label: 'Replies',      type: 'number' },
+      { key: 'meeting_count',   label: 'Meetings',     type: 'number' },
       { key: 'status',          label: 'Status',       type: 'enum', options: ['draft', 'active', 'paused', 'completed', 'archived'] },
       { key: 'launch_date',     label: 'Launch',       type: 'date' },
+      { key: 'owner',           label: 'Owner' },
       { key: 'tags',            label: 'Tags',         type: 'tags' },
     ],
-    columns: ['sequence_name', 'campaign_ref', 'status', 'total_touches', 'enrolled_count', 'launch_date'],
+    columns: ['sequence_name', 'campaign_ref', 'status', 'total_touches', 'duration_days', 'enrolled_count', 'reply_count', 'meeting_count', 'launch_date'],
   },
   project: {
-    folder: 'Cadence/Projects',
+    folder: '30-CLIENTS',
+    typeFilter: 'project',
     label: 'Project', plural: 'Projects',
     fields: [
-      { key: 'name',     label: 'Name',     primary: true },
+      { key: 'project_id', label: 'Project ID', primary: true },
+      { key: 'project', label: 'Project' },
+      { key: 'client_id', label: 'Client' },
+      { key: 'end_client_id', label: 'End Client' },
       { key: 'status',   label: 'Status',   type: 'enum', options: ['active', 'on_hold', 'backlog', 'done', 'cancelled'] },
       { key: 'priority', label: 'Priority', type: 'enum', options: ['low', 'medium', 'high'] },
-      { key: 'owner',    label: 'Owner' },
-      { key: 'started',  label: 'Started',  type: 'date' },
-      { key: 'due',      label: 'Due',      type: 'date' },
-      { key: 'tags',     label: 'Tags',     type: 'tags' },
+      { key: 'deadline', label: 'Deadline', type: 'date' },
+      { key: 'created',  label: 'Created',  type: 'date' },
     ],
-    columns: ['name', 'status', 'owner', 'due'],
+    columns: ['project_id', 'project', 'client_id', 'end_client_id', 'status', 'priority', 'deadline'],
+  },
+  task: {
+    folder: '00-CORE/TaskNotes/Tasks',
+    typeFilter: 'task',
+    label: 'TaskNote', plural: 'TaskNotes',
+    fields: [
+      { key: 'title', label: 'Title', primary: true },
+      { key: 'status', label: 'Status', type: 'enum', options: ['open', 'in-progress', 'awaiting-input', 'done'] },
+      { key: 'priority', label: 'Priority', type: 'enum', options: ['none', 'low', 'normal', 'high'] },
+      { key: 'due', label: 'Due', type: 'date' },
+      { key: 'size', label: 'Size', type: 'enum', options: ['XS', 'S', 'M', 'L', 'XL'] },
+      { key: 'projects', label: 'Projects', type: 'tags' },
+      { key: 'blockedBy', label: 'Blocked By' },
+      { key: 'playbook', label: 'Playbook' },
+      { key: 'remaining-steps', label: 'Remaining Steps', type: 'number' },
+      { key: 'awaiting', label: 'Awaiting' },
+      { key: 'run_command', label: 'Run Command' },
+      { key: 'contexts', label: 'Contexts', type: 'tags' },
+      { key: 'timeEstimate', label: 'Time Estimate', type: 'number' },
+    ],
+    columns: ['title', 'status', 'priority', 'due', 'size', 'projects', 'blockedBy'],
+  },
+  'accounting-period': {
+    folder: '20-COMPANY/06-FINANCE/PERIODS',
+    typeFilter: 'accounting-period',
+    label: 'Accounting Period', plural: 'Accounting Periods',
+    fields: [
+      { key: 'period_id', label: 'Period ID', primary: true },
+      { key: 'period_type', label: 'Period Type' },
+      { key: 'start_date', label: 'Start', type: 'date' },
+      { key: 'end_date', label: 'End', type: 'date' },
+      { key: 'status', label: 'Status' },
+      { key: 'currency', label: 'Currency' },
+    ],
+    columns: ['period_id', 'period_type', 'start_date', 'end_date', 'status', 'currency'],
+  },
+  'bank-account': {
+    folder: '20-COMPANY/06-FINANCE/BANK',
+    typeFilter: 'bank-account',
+    label: 'Bank Account', plural: 'Bank Accounts',
+    fields: [
+      { key: 'account_id', label: 'Account ID', primary: true },
+      { key: 'bank_name', label: 'Bank' },
+      { key: 'iban', label: 'IBAN' },
+      { key: 'currency', label: 'Currency' },
+      { key: 'gl_account_code', label: 'GL Account' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['account_id', 'bank_name', 'iban', 'currency', 'gl_account_code', 'status'],
+  },
+  'bank-reconciliation': {
+    folder: '20-COMPANY/06-FINANCE/BANK',
+    typeFilter: 'bank-reconciliation',
+    label: 'Bank Reconciliation', plural: 'Bank Reconciliations',
+    fields: [
+      { key: 'recon_id', label: 'Recon ID', primary: true },
+      { key: 'bank_account', label: 'Bank Account' },
+      { key: 'period_id', label: 'Period' },
+      { key: 'bank_statement_balance', label: 'Statement Balance', type: 'number' },
+      { key: 'gl_balance', label: 'GL Balance', type: 'number' },
+      { key: 'adjusted_bank_balance', label: 'Adjusted Bank', type: 'number' },
+      { key: 'adjusted_gl_balance', label: 'Adjusted GL', type: 'number' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['recon_id', 'bank_account', 'period_id', 'bank_statement_balance', 'gl_balance', 'adjusted_bank_balance', 'adjusted_gl_balance', 'status'],
+  },
+  'chart-of-accounts': {
+    folder: '20-COMPANY/06-FINANCE/COA',
+    typeFilter: 'coa-account',
+    label: 'Chart of Accounts', plural: 'Chart of Accounts',
+    fields: [
+      { key: 'account_code', label: 'Account Code', primary: true },
+      { key: 'account_name', label: 'Account Name' },
+      { key: 'account_type', label: 'Type' },
+      { key: 'normal_balance', label: 'Normal Balance' },
+      { key: 'jurisdiction', label: 'Jurisdiction' },
+      { key: 'ifrs_classification', label: 'IFRS Classification' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['account_code', 'account_name', 'account_type', 'normal_balance', 'jurisdiction', 'ifrs_classification', 'status'],
+  },
+  'financial-statement': {
+    folder: '20-COMPANY/06-FINANCE/REPORTS',
+    typeFilter: 'financial-statement',
+    label: 'Financial Statement', plural: 'Financial Statements',
+    fields: [
+      { key: 'statement_type', label: 'Statement Type', primary: true },
+      { key: 'period_id', label: 'Period' },
+      { key: 'trial_balance', label: 'Trial Balance' },
+      { key: 'total_assets', label: 'Assets', type: 'number' },
+      { key: 'total_liabilities', label: 'Liabilities', type: 'number' },
+      { key: 'total_equity', label: 'Equity', type: 'number' },
+      { key: 'generated_date', label: 'Generated', type: 'date' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['statement_type', 'period_id', 'trial_balance', 'total_assets', 'total_liabilities', 'total_equity', 'status'],
+  },
+  'fs-notes': {
+    folder: '20-COMPANY/06-FINANCE/REPORTS',
+    typeFilter: 'fs-notes',
+    label: 'FS Notes', plural: 'FS Notes',
+    fields: [
+      { key: 'period_id', label: 'Period', primary: true },
+      { key: 'statement_refs', label: 'Statements' },
+      { key: 'status', label: 'Status' },
+      { key: 'significant_accounting_policies', label: 'Policies' },
+      { key: 'going_concern_assessment', label: 'Going Concern' },
+      { key: 'notes', label: 'Notes' },
+    ],
+    columns: ['period_id', 'statement_refs', 'status'],
+  },
+  'fx-rates-table': {
+    folder: '20-COMPANY/06-FINANCE/FX',
+    typeFilter: 'fx-rate-table',
+    label: 'FX Rates Table', plural: 'FX Rates Tables',
+    fields: [
+      { key: 'rates_date', label: 'Rates Date', primary: true, type: 'date' },
+      { key: 'period_id', label: 'Period' },
+      { key: 'source', label: 'Source' },
+      { key: 'rates', label: 'Rates' },
+    ],
+    columns: ['rates_date', 'period_id', 'source'],
+  },
+  inventory: {
+    folder: '20-COMPANY/06-FINANCE/INVENTORY',
+    typeFilter: 'inventory-item',
+    label: 'Inventory', plural: 'Inventory',
+    fields: [
+      { key: 'sku', label: 'SKU', primary: true },
+      { key: 'description', label: 'Description' },
+      { key: 'cost_method', label: 'Cost Method' },
+      { key: 'closing_qty', label: 'Closing Qty', type: 'number' },
+      { key: 'total_cost', label: 'Total Cost', type: 'number' },
+      { key: 'net_realisable_value', label: 'NRV', type: 'number' },
+      { key: 'write_down', label: 'Write-down', type: 'number' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['sku', 'description', 'cost_method', 'closing_qty', 'total_cost', 'net_realisable_value', 'write_down', 'status'],
+  },
+  invoice: {
+    folder: '30-CLIENTS',
+    typeFilter: 'invoice',
+    label: 'Invoice', plural: 'Invoices',
+    fields: [
+      { key: 'invoice_id', label: 'Invoice ID', primary: true },
+      { key: 'client_id', label: 'Client ID' },
+      { key: 'client_name', label: 'Client' },
+      { key: 'invoice_date', label: 'Invoice Date', type: 'date' },
+      { key: 'due_date', label: 'Due Date', type: 'date' },
+      { key: 'amount', label: 'Amount', type: 'currency' },
+      { key: 'currency', label: 'Currency' },
+      { key: 'payment_status', label: 'Payment Status' },
+      { key: 'deal_ref', label: 'Deal' },
+    ],
+    columns: ['invoice_id', 'client_id', 'client_name', 'invoice_date', 'due_date', 'amount', 'currency', 'payment_status', 'deal_ref'],
+  },
+  'journal-entry': {
+    folder: '20-COMPANY/06-FINANCE/JOURNALS',
+    typeFilter: 'journal-entry',
+    label: 'Journal Entry', plural: 'Journal Entries',
+    fields: [
+      { key: 'je_id', label: 'JE ID', primary: true },
+      { key: 'period_id', label: 'Period' },
+      { key: 'entry_date', label: 'Entry Date', type: 'date' },
+      { key: 'entry_type', label: 'Entry Type' },
+      { key: 'total_debit', label: 'Debit', type: 'number' },
+      { key: 'total_credit', label: 'Credit', type: 'number' },
+      { key: 'source_document', label: 'Source Document' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['je_id', 'period_id', 'entry_date', 'entry_type', 'total_debit', 'total_credit', 'source_document', 'status'],
+  },
+  'purchase-order': {
+    folder: '20-COMPANY/06-FINANCE/AP/ORDERS',
+    typeFilter: 'purchase-order',
+    label: 'Purchase Order', plural: 'Purchase Orders',
+    fields: [
+      { key: 'po_id', label: 'PO ID', primary: true },
+      { key: 'supplier_id', label: 'Supplier' },
+      { key: 'pr_ref', label: 'PR Ref' },
+      { key: 'total_amount', label: 'Total', type: 'currency' },
+      { key: 'currency', label: 'Currency' },
+      { key: 'payment_terms', label: 'Payment Terms' },
+      { key: 'approval_status', label: 'Approval Status' },
+      { key: 'delivery_status', label: 'Delivery Status' },
+      { key: 'created', label: 'Issued', type: 'date' },
+    ],
+    columns: ['po_id', 'supplier_id', 'pr_ref', 'total_amount', 'currency', 'approval_status', 'delivery_status', 'created'],
+  },
+  'purchase-requisition': {
+    folder: '20-COMPANY/06-FINANCE/AP/REQUISITIONS',
+    typeFilter: 'purchase-requisition',
+    label: 'Purchase Requisition', plural: 'Purchase Requisitions',
+    fields: [
+      { key: 'pr_id', label: 'PR ID', primary: true },
+      { key: 'title', label: 'Title' },
+      { key: 'requestor', label: 'Requestor' },
+      { key: 'category', label: 'Category' },
+      { key: 'estimated_amount', label: 'Estimated Amount', type: 'currency' },
+      { key: 'currency', label: 'Currency' },
+      { key: 'approval_status', label: 'Approval Status' },
+      { key: 'supplier_id', label: 'Supplier' },
+      { key: 'po_ref', label: 'PO Ref' },
+      { key: 'created', label: 'Requested', type: 'date' },
+    ],
+    columns: ['pr_id', 'requestor', 'category', 'estimated_amount', 'currency', 'approval_status', 'supplier_id', 'po_ref', 'created'],
+  },
+  'supplier-invoice': {
+    folder: '20-COMPANY/06-FINANCE/AP/INVOICES',
+    typeFilter: 'supplier-invoice',
+    label: 'Supplier Invoice', plural: 'Supplier Invoices',
+    fields: [
+      { key: 'internal_id', label: 'Internal ID', primary: true },
+      { key: 'invoice_id', label: 'Invoice ID' },
+      { key: 'supplier_id', label: 'Supplier' },
+      { key: 'po_ref', label: 'PO Ref' },
+      { key: 'amount', label: 'Amount', type: 'currency' },
+      { key: 'currency', label: 'Currency' },
+      { key: 'invoice_date', label: 'Invoice Date', type: 'date' },
+      { key: 'due_date', label: 'Due Date', type: 'date' },
+      { key: 'match_status', label: 'Match Status' },
+      { key: 'payment_status', label: 'Payment Status' },
+    ],
+    columns: ['invoice_id', 'supplier_id', 'po_ref', 'amount', 'currency', 'invoice_date', 'due_date', 'match_status', 'payment_status'],
+  },
+  'trial-balance': {
+    folder: '20-COMPANY/06-FINANCE/REPORTS',
+    typeFilter: 'trial-balance',
+    label: 'Trial Balance', plural: 'Trial Balances',
+    fields: [
+      { key: 'period_id', label: 'Period', primary: true },
+      { key: 'generated_date', label: 'Generated', type: 'date' },
+      { key: 'total_closing_dr', label: 'Closing DR', type: 'number' },
+      { key: 'total_closing_cr', label: 'Closing CR', type: 'number' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['period_id', 'generated_date', 'total_closing_dr', 'total_closing_cr', 'status'],
+  },
+  'vat-return': {
+    folder: '20-COMPANY/06-FINANCE/TAX/VAT',
+    typeFilter: 'vat-return',
+    label: 'VAT Return', plural: 'VAT Returns',
+    fields: [
+      { key: 'return_id', label: 'Return ID', primary: true },
+      { key: 'trn', label: 'TRN' },
+      { key: 'period_start', label: 'Period Start', type: 'date' },
+      { key: 'period_end', label: 'Period End', type: 'date' },
+      { key: 'output_vat', label: 'Output VAT', type: 'number' },
+      { key: 'input_vat', label: 'Input VAT', type: 'number' },
+      { key: 'net_payable', label: 'Net Payable', type: 'number' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['return_id', 'trn', 'period_start', 'period_end', 'output_vat', 'input_vat', 'net_payable', 'status'],
+  },
+  'corporate-tax-return': {
+    folder: '20-COMPANY/06-FINANCE/TAX/CT',
+    typeFilter: 'ct-return',
+    label: 'Corporate Tax Return', plural: 'Corporate Tax Returns',
+    fields: [
+      { key: 'return_id', label: 'Return ID', primary: true },
+      { key: 'entity_type', label: 'Entity Type' },
+      { key: 'taxable_income', label: 'Taxable Income', type: 'number' },
+      { key: 'tax_rate', label: 'Tax Rate', type: 'number' },
+      { key: 'tax_payable', label: 'Tax Payable', type: 'number' },
+      { key: 'small_business_relief', label: 'Small Business Relief' },
+      { key: 'filing_due', label: 'Filing Due', type: 'date' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['return_id', 'entity_type', 'taxable_income', 'tax_rate', 'tax_payable', 'small_business_relief', 'status'],
+  },
+  'deferred-tax': {
+    folder: '20-COMPANY/06-FINANCE/TAX/DEFERRED',
+    typeFilter: 'deferred-tax',
+    label: 'Deferred Tax', plural: 'Deferred Tax',
+    fields: [
+      { key: 'period_id', label: 'Period', primary: true },
+      { key: 'net_dta', label: 'Net DTA', type: 'number' },
+      { key: 'net_dtl', label: 'Net DTL', type: 'number' },
+      { key: 'tax_rate_used', label: 'Tax Rate', type: 'number' },
+      { key: 'recoverability_assessment', label: 'Recoverability' },
+      { key: 'assessment_date', label: 'Assessment Date', type: 'date' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['period_id', 'net_dta', 'net_dtl', 'tax_rate_used', 'recoverability_assessment', 'assessment_date', 'status'],
+  },
+  'transfer-pricing': {
+    folder: '20-COMPANY/06-FINANCE/TAX/TP',
+    typeFilter: 'transfer-pricing',
+    label: 'Transfer Pricing', plural: 'Transfer Pricing',
+    fields: [
+      { key: 'period_id', label: 'Period', primary: true },
+      { key: 'related_party', label: 'Related Party' },
+      { key: 'transaction_type', label: 'Transaction Type' },
+      { key: 'transaction_amount', label: 'Amount', type: 'number' },
+      { key: 'arm_length_method', label: 'Arm Length Method' },
+      { key: 'documented', label: 'Documented' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['period_id', 'related_party', 'transaction_type', 'transaction_amount', 'arm_length_method', 'documented', 'status'],
+  },
+  'free-zone-status': {
+    folder: '20-COMPANY/04-LEGAL/FREEZONE',
+    typeFilter: 'freezone-status',
+    label: 'Free Zone Status', plural: 'Free Zone Status',
+    fields: [
+      { key: 'period_id', label: 'Period', primary: true },
+      { key: 'free_zone_authority', label: 'Authority' },
+      { key: 'qualifying_income', label: 'Qualifying Income', type: 'number' },
+      { key: 'non_qualifying_income', label: 'Non-Qualifying Income', type: 'number' },
+      { key: 'substance_test_passed', label: 'Substance Test' },
+      { key: 'nexus_maintained', label: 'Nexus Maintained' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['period_id', 'free_zone_authority', 'qualifying_income', 'non_qualifying_income', 'substance_test_passed', 'nexus_maintained', 'status'],
+  },
+  'legal-rule': {
+    folder: '40-RESOURCES/legal',
+    typeFilter: 'legal-rule',
+    label: 'Legal Rule', plural: 'Legal Rules',
+    fields: [
+      { key: 'rule_identifier', label: 'Rule Identifier', primary: true },
+      { key: 'rule_jurisdiction', label: 'Jurisdiction' },
+      { key: 'rule_source_type', label: 'Source Type' },
+      { key: 'rule_authority', label: 'Authority' },
+      { key: 'rule_effective_from', label: 'Effective From', type: 'date' },
+      { key: 'as_of_date', label: 'As Of', type: 'date' },
+      { key: 'last_verified', label: 'Last Verified', type: 'date' },
+      { key: 'confidence', label: 'Confidence', type: 'number' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['rule_identifier', 'rule_jurisdiction', 'rule_source_type', 'rule_authority', 'rule_effective_from', 'as_of_date', 'last_verified', 'confidence', 'status'],
+  },
+  'document-retention': {
+    folder: '20-COMPANY/04-LEGAL/RETENTION',
+    typeFilter: 'retention-register',
+    label: 'Document Retention', plural: 'Document Retention',
+    fields: [
+      { key: 'document_type', label: 'Document Type', primary: true },
+      { key: 'retention_period_years', label: 'Retention Years' },
+      { key: 'destroy_after_date', label: 'Destroy After', type: 'date' },
+      { key: 'responsible_person', label: 'Responsible Person' },
+      { key: 'status', label: 'Status' },
+    ],
+    columns: ['document_type', 'retention_period_years', 'destroy_after_date', 'responsible_person', 'status'],
   },
   deal: {
-    folder: 'Cadence/Pipeline',
+    folder: '30-CLIENTS',
+    typeFilter: 'deal',
+    valueField: 'deal_value',
+    closeByField: 'expected_close',
+    wonStages: ['won'],
+    lostStages: ['lost'],
     label: 'Deal', plural: 'Deals',
     fields: [
       { key: 'title',   label: 'Title',   primary: true },
-      { key: 'stage',   label: 'Stage',   type: 'enum', options: ['Lead', 'Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'] },
-      { key: 'value',   label: 'Value',   type: 'currency' },
-      { key: 'company', label: 'Company' },
-      { key: 'contact', label: 'Contact' },
-      { key: 'owner',   label: 'Owner' },
-      { key: 'closeBy', label: 'Close by', type: 'date' },
+      { key: 'client_id', label: 'Client' },
+      { key: 'end_client_id', label: 'End Client' },
+      { key: 'project_id', label: 'Project ID' },
+      { key: 'project', label: 'Project' },
+      { key: 'owner', label: 'Owner' },
+      { key: 'stage',   label: 'Stage',   type: 'enum', options: ['lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'] },
+      { key: 'deal_value', label: 'Deal Value', type: 'currency' },
+      { key: 'deal_source', label: 'Source', type: 'enum', options: ['referral', 'inbound', 'outbound', 'event', 'partner'] },
+      { key: 'probability', label: 'Probability', type: 'number' },
+      { key: 'expected_close', label: 'Expected close', type: 'date' },
+      { key: 'next_action', label: 'Next Action', type: 'date' },
+      { key: 'next_action_note', label: 'Next Action Note' },
+      { key: 'last_contact', label: 'Last Contact', type: 'date' },
     ],
-    columns: ['title', 'stage', 'value', 'company', 'closeBy'],
+    columns: ['title', 'client_id', 'end_client_id', 'project_id', 'owner', 'stage', 'deal_value', 'expected_close'],
   },
 };
+const BUILTIN_ENTITY_DEFAULTS = JSON.parse(JSON.stringify(ENTITIES));
 
-const DEAL_STAGES = ['Lead', 'Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'];
+const DEAL_STAGES = ['lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'];
 
 /* Deal field accessors — read entity definition overrides with safe defaults */
 function dealStageField(def)    { return def.stageField    || 'stage'; }
-function dealValueField(def)    { return def.valueField    || 'value'; }
-function dealCloseByField(def)  { return def.closeByField  || 'closeBy'; }
-function dealWonStages(def)     { return def.wonStages     || ['Won']; }
-function dealLostStages(def)    { return def.lostStages    || ['Lost']; }
+function dealValueField(def)    { return def.valueField    || 'deal_value'; }
+function dealCloseByField(def)  { return def.closeByField  || 'expected_close'; }
+function dealWonStages(def)     { return def.wonStages     || ['won']; }
+function dealLostStages(def)    { return def.lostStages    || ['lost']; }
 function dealTerminalStages(def){ return [...dealWonStages(def), ...dealLostStages(def)]; }
 /* Activity field accessors — configurable with mtime fallback for dateField */
 function activityDate(entity, def) {
-  const field = def.dateField || 'when';
+  const field = def.dateField || 'date';
   const val = entity.frontmatter?.[field];
   if (val) return String(val);
   return entity.file?.stat?.mtime ? new Date(entity.file.stat.mtime).toISOString().slice(0, 10) : '';
 }
 function activityTitle(entity, def) {
-  const field = def.titleField || 'subject';
+  const field = def.titleField || 'title';
   return entity.frontmatter?.[field] || entity.basename || '';
+}
+
+function primaryField(def) {
+  return def?.fields?.find((f) => f.primary) || def?.fields?.[0] || null;
+}
+
+function primaryFieldKey(def) {
+  return primaryField(def)?.key || '';
 }
 
 function getDealStages(def) {
@@ -326,7 +984,10 @@ const BUILT_SURFACES = new Set([
   'home',
   'planner.inbox', 'planner.today', 'planner.calendar', 'planner.projects',
   'crm.dashboard', 'crm.pipeline', 'crm.contacts', 'crm.leads', 'crm.campaigns', 'crm.sequences', 'crm.clients', 'crm.companies', 'crm.activities',
-  'srm.suppliers',
+  'client-work.overview', 'client-work.meetings', 'client-work.comms', 'client-work.deliverables', 'client-work.feedback', 'client-work.surveys', 'client-work.testimonials', 'client-work.decisions',
+  'procurement.suppliers', 'procurement.supplier-invoices', 'procurement.purchase-requisitions', 'procurement.purchase-orders',
+  'finance.invoices', 'finance.gl', 'finance.setup',
+  'tax.overview',
   'prm.partners', 'prm.registrations', 'prm.commissions', 'prm.certifications', 'prm.analytics',
   'reports.pipeline', 'reports.sales', 'reports.partners', 'reports.activity', 'reports.productivity',
   'team', 'settings',
@@ -345,8 +1006,11 @@ const DEFAULT_SETTINGS = {
   currency: 'USD',
   cadenceAppDark: false,
   taskProjectLinks: {}, // { "dailyPath::taskText": "Cadence/Projects/X.md" }
-  modules: { crm: true, prm: true, srm: true, planner: true },
+  modules: { crm: true, 'client-work': true, prm: true, srm: true, finance: true, procurement: true, tax: true, planner: true },
   disabledSurfaces: [],    // surface IDs hidden from nav regardless of module toggle
+  showSecondaryNav: false,
+  showSetupNav: false,
+  teamPersonCategories: ['employee', 'freelancer', 'contractor'],
   desktopNotifications: false,
   reminders: [], // [{ id, text, when (ISO|null), repeat ('none'|'daily'|'weekly'), notified, done, createdAt }]
   cadenceApiUrl: '',
@@ -354,23 +1018,69 @@ const DEFAULT_SETTINGS = {
   // Task mode
   taskMode: 'checkbox',              // 'checkbox' | 'tasknotes' | 'hybrid'
   taskNotesFolder: '00-CORE/TaskNotes/Tasks',
+  taskNotesArchiveFolder: '00-CORE/TaskNotes/Archive',
+  workbookExportFolder: 'BOB Workspace/Exports',
   // Entity folder locations (all configurable)
-  folderContacts: 'Cadence/Contacts',
+  folderContacts: '10-ME/10-PEOPLE',
   folderCompanies: '20-COMPANY/00-PROFILE',
   folderClients: '30-CLIENTS',
   folderSuppliers: '20-COMPANY/30-SUPPLIERS',
-  folderPipeline: 'Cadence/Pipeline',
-  folderPartners: 'Cadence/Partners',
+  folderPipeline: '30-CLIENTS',
+  folderPartners: '20-COMPANY/35-PARTNERS',
   folderRegistrations: '20-COMPANY/35-PARTNERS',
   folderCommissions: '20-COMPANY/35-PARTNERS',
   folderLeads: '20-COMPANY/55-LEADS',
   folderCertifications: '20-COMPANY/35-PARTNERS',
-  folderActivities: 'Cadence/Activities',
+  folderActivities: '30-CLIENTS',
   folderSequences: '20-COMPANY/60-SALES/SEQUENCES',
   folderCampaigns: '20-COMPANY/60-SALES/CAMPAIGNS',
-  folderProjects: 'Cadence/Projects',
+  folderProjects: '30-CLIENTS',
   projectFolders: [],   // extra folders to scan; first non-empty = default for new projects
-  baseFiles: {},  // { [entityKey]: 'path/to/entity.base' }
+  baseFiles: {
+    contact: '00-CORE/Bases/People.base',
+    client: '00-CORE/Bases/Clients.base',
+    company: '00-CORE/Bases/Companies.base',
+    deal: '00-CORE/Bases/Pipeline.base',
+    activity: '00-CORE/Bases/Activities.base',
+    lead: '00-CORE/Bases/Sales-Leads.base',
+    partner: '00-CORE/Bases/Partners.base',
+    registration: '00-CORE/Bases/Partner-Registrations.base',
+    commission: '00-CORE/Bases/Partner-Commissions.base',
+    certification: '00-CORE/Bases/Partner-Certifications.base',
+    campaign: '00-CORE/Bases/Campaigns.base',
+    sequence: '00-CORE/Bases/Sequences.base',
+    meeting: '00-CORE/Bases/Meetings.base',
+    'comms-thread': '00-CORE/Bases/Comms.base',
+    deliverable: '00-CORE/Bases/Deliverables.base',
+    feedback: '00-CORE/Bases/Feedback.base',
+    survey: '00-CORE/Bases/Surveys.base',
+    testimonial: '00-CORE/Bases/Testimonials.base',
+    decision: '00-CORE/Bases/Decisions.base',
+    project: '00-CORE/Bases/Projects.base',
+    supplier: '00-CORE/Bases/Suppliers.base',
+    'accounting-period': '00-CORE/Bases/Accounting-Periods.base',
+    'bank-account': '00-CORE/Bases/Bank-Accounts.base',
+    'bank-reconciliation': '00-CORE/Bases/Bank-Reconciliations.base',
+    'chart-of-accounts': '00-CORE/Bases/Chart-of-Accounts.base',
+    'financial-statement': '00-CORE/Bases/Financial-Statements.base',
+    'fs-notes': '00-CORE/Bases/FS-Notes.base',
+    'fx-rates-table': '00-CORE/Bases/FX-Rates-Tables.base',
+    inventory: '00-CORE/Bases/Inventory.base',
+    invoice: '00-CORE/Bases/AR.base',
+    'journal-entry': '00-CORE/Bases/Journal-Entries.base',
+    'purchase-requisition': '00-CORE/Bases/Purchase-Requisitions.base',
+    'purchase-order': '00-CORE/Bases/Purchase-Orders.base',
+    'supplier-invoice': '00-CORE/Bases/Supplier-Invoices.base',
+    'trial-balance': '00-CORE/Bases/Trial-Balances.base',
+    'vat-return': '00-CORE/Bases/VAT-Returns.base',
+    'corporate-tax-return': '00-CORE/Bases/Corporate-Tax-Returns.base',
+    'deferred-tax': '00-CORE/Bases/Deferred-Tax.base',
+    'transfer-pricing': '00-CORE/Bases/Transfer-Pricing.base',
+    'free-zone-status': '00-CORE/Bases/Free-Zone-Status.base',
+    'legal-rule': '00-CORE/Bases/Legal-Rules.base',
+    'document-retention': '00-CORE/Bases/Document-Retention.base',
+  },  // { [entityKey]: 'path/to/entity.base' }
+  baseViews: {},  // { [entityKey]: 'View name inside selected .base' }
   schemasFolder: '00-CORE/Schemas/source',  // Metadata Menu schema source folder
   useSchemas: false,    // toggle: read entity defs from schema YAML files
 };
@@ -379,44 +1089,47 @@ const DEFAULT_SETTINGS = {
    without threading settings through every call. */
 let CURRENT_CURRENCY = 'USD';
 let ENTITY_FOLDERS = {
-  contact: 'Cadence/Contacts',
+  contact: '10-ME/10-PEOPLE',
   company: '20-COMPANY/00-PROFILE',
   client: '30-CLIENTS',
   supplier: '20-COMPANY/30-SUPPLIERS',
-  deal: 'Cadence/Pipeline',
-  partner: 'Cadence/Partners',
+  deal: '30-CLIENTS',
+  partner: '20-COMPANY/35-PARTNERS',
   registration: '20-COMPANY/35-PARTNERS',
   commission: '20-COMPANY/35-PARTNERS',
   lead: '20-COMPANY/55-LEADS',
   certification: '20-COMPANY/35-PARTNERS',
-  activity: 'Cadence/Activities',
+  activity: '30-CLIENTS',
   sequence: '20-COMPANY/60-SALES/SEQUENCES',
   campaign: '20-COMPANY/60-SALES/CAMPAIGNS',
-  project: 'Cadence/Projects',
+  project: '30-CLIENTS',
 };
 
 function syncEntityFolders(settings) {
-  ENTITY_FOLDERS.contact      = (settings.folderContacts      || '').trim() || 'Cadence/Contacts';
+  ENTITY_FOLDERS.contact      = (settings.folderContacts      || '').trim() || '10-ME/10-PEOPLE';
   ENTITY_FOLDERS.company      = (settings.folderCompanies     || '').trim() || '20-COMPANY/00-PROFILE';
   ENTITY_FOLDERS.client       = (settings.folderClients       || '').trim() || '30-CLIENTS';
   ENTITY_FOLDERS.supplier     = (settings.folderSuppliers     || '').trim() || '20-COMPANY/30-SUPPLIERS';
-  ENTITY_FOLDERS.deal         = (settings.folderPipeline      || '').trim() || 'Cadence/Pipeline';
-  ENTITY_FOLDERS.partner      = (settings.folderPartners      || '').trim() || 'Cadence/Partners';
+  ENTITY_FOLDERS.deal         = (settings.folderPipeline      || '').trim() || '30-CLIENTS';
+  ENTITY_FOLDERS.partner      = (settings.folderPartners      || '').trim() || '20-COMPANY/35-PARTNERS';
   ENTITY_FOLDERS.registration = (settings.folderRegistrations || '').trim() || '20-COMPANY/35-PARTNERS';
   ENTITY_FOLDERS.commission   = (settings.folderCommissions   || '').trim() || '20-COMPANY/35-PARTNERS';
   ENTITY_FOLDERS.lead         = (settings.folderLeads         || '').trim() || '20-COMPANY/55-LEADS';
   ENTITY_FOLDERS.certification= (settings.folderCertifications|| '').trim() || '20-COMPANY/35-PARTNERS';
-  ENTITY_FOLDERS.activity     = (settings.folderActivities    || '').trim() || 'Cadence/Activities';
+  ENTITY_FOLDERS.activity     = (settings.folderActivities    || '').trim() || '30-CLIENTS';
   ENTITY_FOLDERS.sequence     = (settings.folderSequences     || '').trim() || '20-COMPANY/60-SALES/SEQUENCES';
   ENTITY_FOLDERS.campaign     = (settings.folderCampaigns     || '').trim() || '20-COMPANY/60-SALES/CAMPAIGNS';
   const extraProjectFolders = (settings.projectFolders || []).filter(f => f && f.trim());
   const allProjectFolders = [
-    (settings.folderProjects || '').trim() || 'Cadence/Projects',
+    (settings.folderProjects || '').trim() || '30-CLIENTS',
     ...extraProjectFolders,
   ];
   ENTITY_FOLDERS.project = allProjectFolders[0];
   ENTITIES.project.folders = allProjectFolders.length > 1 ? allProjectFolders : undefined;
   if (!ENTITIES.project.folders) delete ENTITIES.project.folders;
+  ENTITY_FOLDERS.task = (settings.taskNotesFolder || '').trim() || '00-CORE/TaskNotes/Tasks';
+  ENTITIES.task.folder = ENTITY_FOLDERS.task;
+  ENTITIES.task.folders = taskNoteFolders(settings);
 }
 
 function entityFolder(entityKey) {
@@ -429,18 +1142,67 @@ function entityFolder(entityKey) {
    Reads Cadence/entities.json from the vault and merges definitions into
    ENTITIES at runtime. New keys get a nav item; existing keys get field/column
    overrides. Call applyCustomEntities() on load and on file-change. */
-const ENTITIES_CONFIG_PATH = 'Cadence/entities.json';
+let PLUGIN_DIR = '';
+let ENTITIES_CONFIG_PATH = 'Cadence/entities.json';   // overridden in onload to plugin dir
+let ENTITIES_BACKUP_PATH = 'Cadence/entities.backup.json';
+const ENTITIES_LEGACY_PATH = 'Cadence/entities.json';
 let CUSTOM_ENTITY_KEYS = new Set();
 
+function initEntitiesPaths(plugin) {
+  const dir = (plugin.manifest && plugin.manifest.dir) || `.obsidian/plugins/${plugin.manifest.id}`;
+  PLUGIN_DIR = dir;
+  ENTITIES_CONFIG_PATH = `${dir}/entities.json`;
+  ENTITIES_BACKUP_PATH = `${dir}/entities.backup.json`;
+}
+
+async function migrateLegacyEntitiesConfig(app) {
+  const adapter = app.vault.adapter;
+  if (await adapter.exists(ENTITIES_CONFIG_PATH)) return false;
+  if (!(await adapter.exists(ENTITIES_LEGACY_PATH))) return false;
+  const raw = await adapter.read(ENTITIES_LEGACY_PATH);
+  await adapter.write(ENTITIES_CONFIG_PATH, raw);
+  new obsidian.Notice(`BOB Workspace: migrated entities.json → ${ENTITIES_CONFIG_PATH}. Legacy vault copy retained at ${ENTITIES_LEGACY_PATH}.`);
+  return true;
+}
+
+/** Validate + write entities.json with backup. Throws on invalid JSON. */
+async function saveEntitiesConfig(app, jsonText) {
+  const parsed = JSON.parse(jsonText);   // throws SyntaxError
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Must be a JSON object keyed by entity type');
+  }
+  const adapter = app.vault.adapter;
+  if (await adapter.exists(ENTITIES_CONFIG_PATH)) {
+    const prev = await adapter.read(ENTITIES_CONFIG_PATH);
+    await adapter.write(ENTITIES_BACKUP_PATH, prev);
+  }
+  await adapter.write(ENTITIES_CONFIG_PATH, jsonText);
+  return parsed;
+}
+
 function clearCustomEntities() {
+  const customSurfaceIds = new Set([...CUSTOM_ENTITY_KEYS].map((key) => `custom.${key}`));
   for (const key of CUSTOM_ENTITY_KEYS) {
     delete ENTITIES[key];
     delete ENTITY_FOLDERS[key];
-    BUILT_SURFACES.delete(`custom.${key}`);
+    customSurfaceIds.add(`custom.${key}`);
   }
+  customSurfaceIds.forEach((id) => BUILT_SURFACES.delete(id));
   CUSTOM_ENTITY_KEYS.clear();
-  const grp = NAV_GROUPS.find((g) => g.id === 'custom');
-  if (grp) grp.items = [];
+  NAV_GROUPS.forEach((group) => {
+    group.items = group.items.filter((item) => !customSurfaceIds.has(item.id));
+  });
+}
+
+function resetEntityRegistry(settings = {}) {
+  clearCustomEntities();
+  Object.keys(ENTITIES).forEach((key) => {
+    if (!BUILTIN_ENTITY_DEFAULTS[key]) delete ENTITIES[key];
+  });
+  Object.entries(BUILTIN_ENTITY_DEFAULTS).forEach(([key, def]) => {
+    ENTITIES[key] = JSON.parse(JSON.stringify(def));
+  });
+  syncEntityFolders(settings);
 }
 
 async function applyCustomEntities(app, settings = {}) {
@@ -452,11 +1214,11 @@ async function applyCustomEntities(app, settings = {}) {
     const raw = await app.vault.adapter.read(ENTITIES_CONFIG_PATH);
     config = JSON.parse(raw);
   } catch (e) {
-    new obsidian.Notice(`Cadence: entities.json error — ${e.message}`);
+    new obsidian.Notice(`BOB Workspace: entities.json error — ${e.message}`);
     return;
   }
   if (typeof config !== 'object' || Array.isArray(config)) {
-    new obsidian.Notice('Cadence: entities.json must be a JSON object keyed by entity type');
+    new obsidian.Notice('BOB Workspace: entities.json must be a JSON object keyed by entity type');
     return;
   }
 
@@ -465,8 +1227,9 @@ async function applyCustomEntities(app, settings = {}) {
 
     // Base file: settings UI takes priority, then entities.json def.base
     const basePath = (settings.baseFiles || {})[key] || def.base;
+    const baseView = (settings.baseViews || {})[key] || def.baseView;
     if (basePath) {
-      const baseConfig = await parseBaseFile(app, basePath, def.baseView);
+      const baseConfig = await parseBaseFile(app, basePath, baseView);
       if (baseConfig) {
         // Field-level merge: base provides structure, def augments with type/options/primary
         let mergedFields = baseConfig.fields;
@@ -495,6 +1258,13 @@ async function applyCustomEntities(app, settings = {}) {
         fields: def.fields,
         columns: def.columns || def.fields.slice(0, 5).map((f) => f.key),
       };
+      if (def.typeFilter) ENTITIES[key].typeFilter = def.typeFilter;
+      if (def.typeFilters) ENTITIES[key].typeFilters = def.typeFilters;
+      ['stageField','valueField','closeByField','wonStages','lostStages',
+       'detailMetaFields','detailSections','terminalStatuses','stageConfidence',
+       'folders','dateField','titleField','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters'].forEach((k) => {
+        if (def[k] != null) ENTITIES[key][k] = def[k];
+      });
       ENTITY_FOLDERS[key] = folder;
       CUSTOM_ENTITY_KEYS.add(key);
 
@@ -516,6 +1286,8 @@ async function applyCustomEntities(app, settings = {}) {
         label: def.plural || `${def.label}s`,
         icon: def.icon || 'file-text',
         module: def.module,
+        entityKey: key,
+        folderKey: def.folderKey,
         desc: def.desc || `${def.plural || `${def.label}s`} — custom entity`,
       });
     } else {
@@ -532,12 +1304,19 @@ async function applyCustomEntities(app, settings = {}) {
       if (def.label)        ENTITIES[key].label        = def.label;
       if (def.plural)       ENTITIES[key].plural       = def.plural;
       if (def.folder)       ENTITY_FOLDERS[key]        = folder;
-      if (def.typeFilter)   ENTITIES[key].typeFilter   = def.typeFilter;
-      else                  delete ENTITIES[key].typeFilter;
+      if (Object.prototype.hasOwnProperty.call(def, 'typeFilter')) {
+        if (def.typeFilter) ENTITIES[key].typeFilter = def.typeFilter;
+        else delete ENTITIES[key].typeFilter;
+      }
+      if (Object.prototype.hasOwnProperty.call(def, 'typeFilters')) {
+        if (def.typeFilters) ENTITIES[key].typeFilters = def.typeFilters;
+        else delete ENTITIES[key].typeFilters;
+      }
       // Per-entity config overrides
       ['stageField','valueField','closeByField','wonStages','lostStages',
        'detailMetaFields','detailSections','terminalStatuses','stageConfidence',
-       'folders','dateField','titleField'].forEach((k) => {
+       'folders','dateField','titleField','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters'].forEach((k) => {
+        if (!Object.prototype.hasOwnProperty.call(def, k)) return;
         if (def[k] != null) ENTITIES[key][k] = def[k];
         else delete ENTITIES[key][k];
       });
@@ -559,13 +1338,56 @@ const SCHEMA_TO_ENTITY_KEY = {
   person: 'contact',
 };
 
-function _schemaTypeToFieldType(schemaType) {
+function _schemaTypeToFieldType(schemaType, schemaField = {}) {
+  if ((schemaField.format || '').toLowerCase() === 'date') return 'date';
   switch ((schemaType || '').toLowerCase()) {
     case 'number':  return 'number';
     case 'date':    return 'date';
     case 'boolean': return null;
+    case 'array':   return 'tags';
     default:        return null;   // string → text (default)
   }
+}
+
+function schemaFieldLabel(name) {
+  return String(name || '')
+    .replace(/_/g, ' ')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
+function fieldsFromSchema(schema, existingFields = []) {
+  if (!Array.isArray(schema.fields)) return null;
+  const existingByKey = new Map((existingFields || []).map((f) => [f.key, f]));
+  const schemaFields = schema.fields.filter((sf) => sf && sf.name && sf.name !== 'type');
+  if (!schemaFields.length) return null;
+  const primaryKey = (schema.key_fields || []).find((key) => key && key !== 'type') || schemaFields[0].name;
+  const fields = schemaFields.map((sf) => {
+    const existing = existingByKey.get(sf.name) || {};
+    const field = Object.assign({}, existing, {
+      key: sf.name,
+      label: existing.label || schemaFieldLabel(sf.name),
+    });
+    if (sf.required === true) field.required = true;
+    if (sf.name === primaryKey) field.primary = true;
+    else delete field.primary;
+    if (Array.isArray(sf.enum) && sf.enum.length) {
+      field.type = 'enum';
+      field.options = sf.enum;
+    } else {
+      const fieldType = _schemaTypeToFieldType(sf.type, sf);
+      if (fieldType) field.type = fieldType;
+      else if (field.type && !existing.type) delete field.type;
+    }
+    return field;
+  });
+  (existingFields || []).forEach((field) => {
+    if (field?.key && field.key !== 'type' && !fields.some((f) => f.key === field.key)) {
+      fields.push(Object.assign({}, field));
+    }
+  });
+  fields.sort((a, b) => (a.primary ? -1 : 0) + (b.primary ? 1 : 0));
+  return fields;
 }
 
 async function applySchemas(app, settings = {}) {
@@ -596,28 +1418,23 @@ async function applySchemas(app, settings = {}) {
         .split(/\s+or\s+/i)
         .map(p => p.split('{')[0].replace(/\/$/, '').trim())
         .filter(p => p && p.includes('/'));
-      if (folders.length) ENTITIES[entityKey].folders = folders;
+      if (entityKey === 'contact') {
+        delete ENTITIES[entityKey].folders;
+      } else if (folders.length) {
+        ENTITIES[entityKey].folders = folders;
+      }
     }
 
     // typeFilter from type_value
     if (schema.type_value) ENTITIES[entityKey].typeFilter = schema.type_value;
 
-    // Enrich field types from schema.fields (preserve existing labels/options)
+    // Enrich fields from schema.fields (preserve existing labels where present)
     if (Array.isArray(schema.fields) && ENTITIES[entityKey].fields) {
-      const schemaFieldMap = new Map(schema.fields.map(f => [f.name, f]));
-      ENTITIES[entityKey].fields = ENTITIES[entityKey].fields.map(f => {
-        const sf = schemaFieldMap.get(f.key);
-        if (!sf) return f;
-        const enriched = Object.assign({}, f);
-        // Schema enum on field → plugin enum + options
-        if (Array.isArray(sf.enum) && sf.enum.length) {
-          enriched.type = 'enum';
-          enriched.options = sf.enum;
-          return enriched;
-        }
-        const fieldType = _schemaTypeToFieldType(sf.type);
-        return fieldType ? Object.assign(enriched, { type: fieldType }) : f;
-      });
+      const schemaFields = fieldsFromSchema(schema, ENTITIES[entityKey].fields);
+      if (schemaFields?.length) {
+        ENTITIES[entityKey].fields = schemaFields;
+        ENTITIES[entityKey].columns = schemaFields.slice(0, 5).map((f) => f.key);
+      }
     }
 
     // status_lifecycle → enum options on status/stage field
@@ -648,15 +1465,38 @@ async function parseBaseFile(app, basePath, viewName) {
     const raw = await app.vault.adapter.read(basePath);
     yaml = obsidian.parseYaml(raw);
   } catch (e) {
-    new obsidian.Notice(`Cadence: failed to parse ${basePath} — ${e.message}`);
+    new obsidian.Notice(`BOB Workspace: failed to parse ${basePath} — ${e.message}`);
     return null;
   }
   if (!yaml || typeof yaml !== 'object') return null;
 
   const result = {};
+  const views = Array.isArray(yaml.views) ? yaml.views : [];
+  const targetView = viewName
+    ? views.find(v => v.name === viewName)
+    : null;
+  const targetViewType = targetView?.type || '';
+  const externalBaseView = !!targetViewType && targetViewType !== 'table';
+  if (targetView) {
+    result.baseView = {
+      type: targetViewType || 'table',
+      name: targetView.name || viewName || '',
+      basePath,
+    };
+  }
+  if (externalBaseView) {
+    result.externalBaseView = {
+      type: targetViewType,
+      name: targetView?.name || viewName || targetViewType,
+      basePath,
+    };
+  }
 
   // ── Translate filters ──────────────────────────────────────────────────
-  const conditions = yaml.filters?.and || (yaml.filters ? [yaml.filters] : []);
+  const conditions = [
+    ...collectBaseFilterConditions(yaml.filters),
+    ...collectBaseFilterConditions(externalBaseView ? null : targetView?.filters),
+  ];
   const noteFilters = {};   // key → value for note.* == "..." conditions
   const folders = [];
 
@@ -671,25 +1511,52 @@ async function parseBaseFile(app, basePath, viewName) {
     }
 
     // note.<key> == "value"
-    const noteEq = cond.match(/^note\.(\w+)\s*==\s*["'](.+?)["']/);
+    const noteEq = cond.match(/^note(?:\.(\w+)|\[['"](.+?)['"]\])\s*==\s*["'](.+?)["']/);
     if (noteEq) {
-      noteFilters[noteEq[1]] = noteEq[2];
+      noteFilters[noteEq[1] || noteEq[2]] = noteEq[3];
       continue;
     }
 
+    // Bare property equality, common in newer Base files: type == "task"
+    const bareEq = cond.match(/^(\w+)\s*==\s*["'](.+?)["']/);
+    if (bareEq) {
+      noteFilters[bareEq[1]] = bareEq[2];
+      continue;
+    }
   }
 
   if (folders.length)             result.folders = folders;
+  if (Object.keys(noteFilters).length) result.typeFilters = Object.assign({}, noteFilters);
   if (noteFilters.type)           result.typeFilter = noteFilters.type;
+  result.baseFilters = { global: yaml.filters || null, view: externalBaseView ? null : targetView?.filters || null };
+  if (!externalBaseView && Array.isArray(targetView?.sort)) {
+    const sort = targetView.sort
+      .map((item) => ({
+        property: basePropKey(item?.property || item),
+        direction: String(item?.direction || 'ASC').toUpperCase(),
+      }))
+      .filter((item) => item.property && !String(item.property).startsWith('formula.'));
+    if (sort.length) result.baseSort = sort;
+  }
+  if (!externalBaseView && targetView?.groupBy?.property) {
+    const property = basePropKey(targetView.groupBy.property);
+    if (property && !String(property).startsWith('formula.')) {
+      result.baseGroupBy = {
+        property,
+        direction: String(targetView.groupBy.direction || 'ASC').toUpperCase(),
+      };
+    }
+  }
+  const unsupportedFilters = [
+    ...collectUnsupportedBaseFilterConditions(yaml.filters),
+    ...collectUnsupportedBaseFilterConditions(externalBaseView ? null : targetView?.filters),
+  ];
+  if (unsupportedFilters.length) result.unsupportedBaseFilters = [...new Set(unsupportedFilters)];
 
   // ── Translate properties + view order → fields + columns ──────────────
   const props = yaml.properties || {};
-  const views = Array.isArray(yaml.views) ? yaml.views : [];
-  const targetView = viewName
-    ? views.find(v => v.name === viewName)
-    : null;
   // Default: use properties order (all fields), not first view (which may be filtered)
-  const orderKeys = targetView?.order || Object.keys(props);
+  const orderKeys = externalBaseView ? Object.keys(props) : (targetView?.order || Object.keys(props));
 
   const fields = orderKeys
     .filter(k => k !== 'formula.open')   // skip formula columns
@@ -706,6 +1573,220 @@ async function parseBaseFile(app, basePath, viewName) {
   if (yaml.views?.length > 1) result._baseViews = yaml.views.map(v => v.name);
 
   return result;
+}
+
+function collectBaseFilterConditions(node) {
+  if (!node) return [];
+  if (typeof node === 'string') return [node];
+  if (Array.isArray(node)) return node.flatMap(collectBaseFilterConditions);
+  if (typeof node === 'object') {
+    return Object.values(node).flatMap(collectBaseFilterConditions);
+  }
+  return [];
+}
+
+function stripOuterParens(value) {
+  let s = String(value || '').trim();
+  while (s.startsWith('(') && s.endsWith(')')) {
+    let depth = 0;
+    let quote = null;
+    let encloses = true;
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (quote) {
+        if (ch === quote && s[i - 1] !== '\\') quote = null;
+        continue;
+      }
+      if (ch === '"' || ch === "'") { quote = ch; continue; }
+      if (ch === '(') depth++;
+      if (ch === ')') depth--;
+      if (depth === 0 && i < s.length - 1) { encloses = false; break; }
+    }
+    if (!encloses) break;
+    s = s.slice(1, -1).trim();
+  }
+  return s;
+}
+
+function splitBaseExpression(expr, operator) {
+  const parts = [];
+  const op = ` ${operator} `;
+  let quote = null;
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i <= expr.length - op.length; i++) {
+    const ch = expr[i];
+    if (quote) {
+      if (ch === quote && expr[i - 1] !== '\\') quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") { quote = ch; continue; }
+    if (ch === '(') { depth++; continue; }
+    if (ch === ')') { depth = Math.max(0, depth - 1); continue; }
+    if (depth === 0 && expr.slice(i, i + op.length) === op) {
+      parts.push(expr.slice(start, i).trim());
+      start = i + op.length;
+      i = start - 1;
+    }
+  }
+  if (parts.length) parts.push(expr.slice(start).trim());
+  return parts.length ? parts : null;
+}
+
+function basePropKey(raw) {
+  const s = String(raw || '').trim();
+  if (s === 'file.path' || s === 'file.folder' || s === 'file.name' || s === 'file.basename' || s === 'file.ctime' || s === 'file.mtime' || s === 'file.tags') return s;
+  const bracket = s.match(/^note\[['"](.+?)['"]\]$/);
+  if (bracket) return bracket[1];
+  return s.replace(/^note\./, '');
+}
+
+function basePropValue(app, file, fm, rawKey) {
+  const key = basePropKey(rawKey);
+  if (key === 'file.path') return file.path;
+  if (key === 'file.folder') return file.parent?.path || file.path.split('/').slice(0, -1).join('/');
+  if (key === 'file.name' || key === 'file.basename') return file.basename;
+  if (key === 'file.ctime') return file.stat?.ctime ? new Date(file.stat.ctime) : null;
+  if (key === 'file.mtime') return file.stat?.mtime ? new Date(file.stat.mtime) : null;
+  if (key === 'file.tags') return fm.tags || [];
+  return fm[key];
+}
+
+function hasBaseValue(value) {
+  if (value == null) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'string') return value.trim() !== '';
+  return true;
+}
+
+function parseTodayExpression(raw) {
+  const expr = String(raw || '').trim();
+  const match = expr.match(/^(?:today\(\)|now\(\))(?:\s*([+-])\s*["']?(\d+)\s*(?:d|day|days)["']?)?$/);
+  if (!match) return null;
+  const base = expr.startsWith('now()') ? new Date() : startOfDay(new Date());
+  const sign = match[1] === '-' ? -1 : 1;
+  const offset = match[2] ? Number(match[2]) * sign : 0;
+  return startOfDay(addDays(base, offset));
+}
+
+function isSupportedBaseFilterCondition(raw) {
+  const cond = stripOuterParens(String(raw || '').trim().replace(/^!/, ''));
+  if (!cond) return true;
+  const orParts = splitBaseExpression(cond, '||');
+  if (orParts) return orParts.every(isSupportedBaseFilterCondition);
+  const andParts = splitBaseExpression(cond, '&&');
+  if (andParts) return andParts.every(isSupportedBaseFilterCondition);
+  return /^file\.hasTag\(["']#?.+?["']\)$/.test(cond)
+    || /^file\.folder\s*!=\s*["'].+?["']$/.test(cond)
+    || /^file\.path\.startsWith\(["'].+?["']\)$/.test(cond)
+    || /^file\.path\.contains\(["'].+?["']\)$/.test(cond)
+    || /^(?:date\()?[\w-]+\)?\.isEmpty\(\)$/.test(cond)
+    || /^(?:note\.|note\[['"].+?['"]\])?[\w-]*\s*(==|!=)\s*(?:["'].*?["']|null)$/.test(cond)
+    || /^(?:date\()?[\w.-]+(?:\[['"].+?['"]\])?\)?\s*(==|<|<=|>|>=)\s*(?:today\(\)|now\(\))(?:\s*[+-]\s*["']?\d+\s*(?:d|day|days)["']?)?$/.test(cond);
+}
+
+function collectUnsupportedBaseFilterConditions(node) {
+  return collectBaseFilterConditions(node).filter((cond) => !isSupportedBaseFilterCondition(cond));
+}
+
+function normBaseName(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+async function readBaseSummary(app, file) {
+  try {
+    const raw = await app.vault.read(file);
+    const yaml = obsidian.parseYaml(raw);
+    if (!yaml || typeof yaml !== 'object') return null;
+    const conditions = collectBaseFilterConditions(yaml.filters);
+    const typeFilters = [];
+    const folders = [];
+    conditions.forEach((cond) => {
+      if (typeof cond !== 'string') return;
+      const noteEq = cond.match(/^note(?:\.(\w+)|\[['"](.+?)['"]\])\s*==\s*["'](.+?)["']/);
+      const bareEq = cond.match(/^(\w+)\s*==\s*["'](.+?)["']/);
+      const match = noteEq || bareEq;
+      const key = noteEq ? (match[1] || match[2]) : match?.[1];
+      const value = noteEq ? match[3] : match?.[2];
+      if (match && key === 'type') typeFilters.push(value);
+      const pathMatch = cond.match(/^file\.path\.startsWith\(["'](.+?)["']\)/);
+      if (pathMatch) folders.push(pathMatch[1].replace(/\/$/, ''));
+    });
+    return {
+      path: file.path,
+      label: file.path.split('/').pop().replace(/\.base$/i, ''),
+      views: Array.isArray(yaml.views) ? yaml.views.map((v) => v.name).filter(Boolean) : [],
+      typeFilters: [...new Set(typeFilters)],
+      folders: [...new Set(folders)],
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function baseSummaryCompatibleWithEntity(summary, entityKey) {
+  const def = ENTITIES[entityKey];
+  if (!summary || !def) return false;
+  const expectedTypes = new Set([entityKey, def.typeFilter].filter(Boolean).map(normBaseName));
+  if (summary.typeFilters.length) {
+    return summary.typeFilters.some((type) => expectedTypes.has(normBaseName(type)));
+  }
+  const entityNames = [
+    entityKey,
+    def.label,
+    def.plural,
+    ...(entityKey === 'task' ? ['tasks', 'tasknotes'] : []),
+  ].map(normBaseName).filter(Boolean);
+  const baseName = normBaseName(summary.label);
+  return entityNames.some((name) => baseName.includes(name) || name.includes(baseName));
+}
+
+function mergeBaseConfigIntoEntity(entityKey, baseConfig) {
+  const entity = ENTITIES[entityKey];
+  if (!entity || !baseConfig) return;
+  if (baseConfig.fields?.length) {
+    const existingByKey = new Map((entity.fields || []).map((f) => [f.key, f]));
+    entity.fields = baseConfig.fields.map((field) => (
+      existingByKey.has(field.key)
+        ? Object.assign({}, existingByKey.get(field.key), field)
+        : field
+    ));
+    (entity.fields || []).forEach((field) => existingByKey.delete(field.key));
+    for (const field of existingByKey.values()) {
+      if (field.primary) entity.fields.push(field);
+    }
+    entity.columns = baseConfig.columns || entity.fields.slice(0, 5).map((f) => f.key);
+    const primary = entity.fields.find((field) => field.primary);
+    if (primary && !entity.columns.includes(primary.key)) {
+      entity.columns = [primary.key, ...entity.columns].slice(0, 5);
+    }
+  }
+  if (baseConfig.folders) entity.folders = baseConfig.folders;
+  if (baseConfig.typeFilters) entity.typeFilters = baseConfig.typeFilters;
+  if (baseConfig.typeFilter) entity.typeFilter = baseConfig.typeFilter;
+  if (baseConfig.baseFilters) entity.baseFilters = baseConfig.baseFilters;
+  if (baseConfig.baseSort) entity.baseSort = baseConfig.baseSort;
+  if (baseConfig.baseGroupBy) entity.baseGroupBy = baseConfig.baseGroupBy;
+  if (baseConfig.baseView) entity.baseView = baseConfig.baseView;
+  if (baseConfig.externalBaseView) entity.externalBaseView = baseConfig.externalBaseView;
+  if (baseConfig.unsupportedBaseFilters) entity.unsupportedBaseFilters = baseConfig.unsupportedBaseFilters;
+}
+
+async function applyBaseOverrides(app, settings = {}) {
+  const baseFiles = settings.baseFiles || {};
+  const baseViews = settings.baseViews || {};
+  for (const [entityKey, basePath] of Object.entries(baseFiles)) {
+    if (!basePath || !ENTITIES[entityKey]) continue;
+    const baseConfig = await parseBaseFile(app, basePath, baseViews[entityKey]);
+    mergeBaseConfigIntoEntity(entityKey, baseConfig);
+  }
+}
+
+async function reloadEntityConfiguration(app, settings = {}) {
+  resetEntityRegistry(settings);
+  if (settings.useSchemas) await applySchemas(app, settings);
+  await applyCustomEntities(app, settings);
+  await applyBaseOverrides(app, settings);
 }
 
 const ENTITIES_JSON_TEMPLATE = JSON.stringify({
@@ -822,6 +1903,19 @@ function listEntityFiles(app, entityKey) {
       const fm = (app.metadataCache.getFileCache(f) || {}).frontmatter || {};
       if (fm.type !== def.typeFilter) return false;
     }
+    // Multi-frontmatter filter, used by selected Base views.
+    if (def.typeFilters && typeof def.typeFilters === 'object') {
+      const fm = (app.metadataCache.getFileCache(f) || {}).frontmatter || {};
+      for (const [key, value] of Object.entries(def.typeFilters)) {
+        if (String(fm[key] ?? '') !== String(value)) return false;
+      }
+    }
+    if (def.baseFilters) {
+      const globalMatch = evaluateBaseFilterNode(app, f, def.baseFilters.global);
+      if (globalMatch === false) return false;
+      const viewMatch = evaluateBaseFilterNode(app, f, def.baseFilters.view);
+      if (viewMatch === false) return false;
+    }
     return true;
   });
 }
@@ -832,16 +1926,154 @@ function readEntity(app, file) {
   return { file, frontmatter: fm, basename: file.basename };
 }
 
+function evaluateBaseFilterNode(app, file, node) {
+  if (!node) return true;
+  if (typeof node === 'string') return evaluateBaseFilterCondition(app, file, node);
+  if (Array.isArray(node)) return evaluateBaseFilterGroup(app, file, 'and', node);
+  if (typeof node !== 'object') return true;
+  if (Array.isArray(node.and)) return evaluateBaseFilterGroup(app, file, 'and', node.and);
+  if (Array.isArray(node.or)) return evaluateBaseFilterGroup(app, file, 'or', node.or);
+  const results = Object.values(node).map((child) => evaluateBaseFilterNode(app, file, child));
+  return results.includes(false) ? false : true;
+}
+
+function evaluateBaseFilterGroup(app, file, op, children) {
+  const results = children.map((child) => evaluateBaseFilterNode(app, file, child));
+  if (op === 'or') {
+    if (results.includes(true)) return true;
+    if (results.every((result) => result === false)) return false;
+    return true;
+  }
+  return results.includes(false) ? false : true;
+}
+
+function evaluateBaseFilterCondition(app, file, raw) {
+  let cond = stripOuterParens(String(raw || '').trim());
+  if (!cond) return true;
+  if (cond.startsWith('!')) {
+    const inner = evaluateBaseFilterCondition(app, file, cond.slice(1));
+    return inner == null ? true : !inner;
+  }
+  const orParts = splitBaseExpression(cond, '||');
+  if (orParts) return orParts.some((part) => evaluateBaseFilterCondition(app, file, part) === true);
+  const andParts = splitBaseExpression(cond, '&&');
+  if (andParts) return andParts.every((part) => evaluateBaseFilterCondition(app, file, part) !== false);
+
+  const cache = app.metadataCache.getFileCache(file) || {};
+  const fm = cache.frontmatter || {};
+  const folder = file.parent?.path || file.path.split('/').slice(0, -1).join('/');
+  const frontmatterTags = Array.isArray(fm.tags) ? fm.tags : String(fm.tags || '').split(/[,\s]+/).filter(Boolean);
+  const tags = new Set([...frontmatterTags, ...(cache.tags || []).map((t) => t.tag)]);
+  const today = startOfDay(new Date());
+
+  const hasTag = cond.match(/^file\.hasTag\(["']#?(.+?)["']\)$/);
+  if (hasTag) {
+    const tag = hasTag[1].replace(/^#/, '');
+    return tags.has(tag) || tags.has(`#${tag}`);
+  }
+
+  const folderNe = cond.match(/^file\.folder\s*!=\s*["'](.+?)["']$/);
+  if (folderNe) return folder !== folderNe[1];
+
+  const pathStarts = cond.match(/^file\.path\.startsWith\(["'](.+?)["']\)$/);
+  if (pathStarts) return file.path.startsWith(pathStarts[1].replace(/\/$/, '') + '/');
+
+  const pathContains = cond.match(/^file\.path\.contains\(["'](.+?)["']\)$/);
+  if (pathContains) return file.path.includes(pathContains[1]);
+
+  const empty = cond.match(/^(?:date\()?(.+?)\)?\.isEmpty\(\)$/);
+  if (empty) return !hasBaseValue(basePropValue(app, file, fm, empty[1]));
+
+  const propEq = cond.match(/^(.+?)\s*(==|!=)\s*(?:(["'])(.*?)\3|null)$/);
+  if (propEq) {
+    const actualValue = basePropValue(app, file, fm, propEq[1]);
+    const expectedIsNull = propEq[0].trim().endsWith('null');
+    if (expectedIsNull) {
+      const present = hasBaseValue(actualValue);
+      return propEq[2] === '==' ? !present : present;
+    }
+    const actual = String(actualValue ?? '');
+    const expected = propEq[4] ?? '';
+    return propEq[2] === '==' ? actual === expected : actual !== expected;
+  }
+
+  const dateCompare = cond.match(/^(?:date\()?(.+?)\)?\s*(==|<|<=|>|>=)\s*((?:today|now)\(\)(?:\s*[+-]\s*["']?\d+\s*(?:d|day|days)["']?)?)$/);
+  if (dateCompare) {
+    const actual = parseBaseDate(basePropValue(app, file, fm, dateCompare[1]));
+    if (!actual) return false;
+    const target = parseTodayExpression(dateCompare[3]) || today;
+    return compareBaseDates(actual, dateCompare[2], target);
+  }
+
+  return true;
+}
+
+function parseBaseDate(value) {
+  if (!value) return null;
+  const d = startOfDay(new Date(value));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function compareBaseDates(actual, op, target) {
+  const a = actual.getTime();
+  const b = target.getTime();
+  if (op === '==') return a === b;
+  if (op === '<') return a < b;
+  if (op === '<=') return a <= b;
+  if (op === '>') return a > b;
+  if (op === '>=') return a >= b;
+  return true;
+}
+
 function listEntities(app, entityKey) {
-  return listEntityFiles(app, entityKey).map((f) => readEntity(app, f));
+  const def = ENTITIES[entityKey];
+  const entities = listEntityFiles(app, entityKey).map((f) => readEntity(app, f));
+  if (!def?.baseSort?.length) return entities;
+  return entities.sort((a, b) => compareEntitiesByBaseSort(a, b, def));
+}
+
+function compareEntitiesByBaseSort(a, b, def) {
+  for (const sort of def.baseSort || []) {
+    const av = entityValue(a, sort.property, def);
+    const bv = entityValue(b, sort.property, def);
+    const cmp = compareBaseSortValues(av, bv);
+    if (cmp !== 0) return sort.direction === 'DESC' ? -cmp : cmp;
+  }
+  return 0;
+}
+
+function compareBaseSortValues(a, b) {
+  const aEmpty = !hasBaseValue(a);
+  const bEmpty = !hasBaseValue(b);
+  if (aEmpty && bEmpty) return 0;
+  if (aEmpty) return 1;
+  if (bEmpty) return -1;
+  const an = Number(a);
+  const bn = Number(b);
+  if (!isNaN(an) && !isNaN(bn)) return an - bn;
+  const ad = new Date(a);
+  const bd = new Date(b);
+  if (!isNaN(ad.getTime()) && !isNaN(bd.getTime())) return ad.getTime() - bd.getTime();
+  return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
 }
 
 function entityValue(entity, key, def) {
   const fm = entity.frontmatter || {};
   if (fm[key] != null && fm[key] !== '') return fm[key];
-  // Fallback: 'name' / 'title' / 'subject' default to file basename
-  if (def && def.fields[0] && def.fields[0].key === key) return entity.basename;
+  // File-name-backed fields default to the note basename.
+  if (['name', 'title', 'subject', 'file.name', 'file.basename'].includes(key)) return entity.basename;
+  if (key === 'file.path') return entity.file?.path || '';
+  if (key === 'file.folder') return entity.file?.parent?.path || entity.file?.path?.split('/').slice(0, -1).join('/') || '';
+  if (key === 'file.ctime') return entity.file?.stat?.ctime ? new Date(entity.file.stat.ctime).toISOString() : '';
+  if (key === 'file.mtime') return entity.file?.stat?.mtime ? new Date(entity.file.stat.mtime).toISOString() : '';
+  if (key === 'file.tags') return fm.tags || [];
+  if (key && key === primaryFieldKey(def)) return entity.basename;
   return '';
+}
+
+function entityPrimaryValue(entity, def) {
+  const key = primaryFieldKey(def);
+  return (key ? entityValue(entity, key, def) : '') || entity.basename || '';
 }
 
 function fmtValue(val, type) {
@@ -882,7 +2114,7 @@ function entityTemplate(entityKey, name) {
   }
 
   def.fields.forEach((f) => {
-    if (f.key === def.fields[0].key) lines.push(`${f.key}: ${name}`);
+    if (f.key === primaryFieldKey(def)) lines.push(`${f.key}: ${name}`);
     else if (f.type === 'tags') lines.push(`${f.key}: []`);
     else if (f.type === 'number' || f.type === 'currency') lines.push(`${f.key}: 0`);
     else lines.push(`${f.key}:`);
@@ -890,7 +2122,7 @@ function entityTemplate(entityKey, name) {
   // Pipeline default stage
   if (entityKey === 'deal') {
     const idx = lines.findIndex((l) => l.startsWith('stage:'));
-    if (idx >= 0) lines[idx] = 'stage: Lead';
+    if (idx >= 0) lines[idx] = 'stage: lead';
   }
   lines.push('---', '', `# ${name}`, '', '');
   return lines.join('\n');
@@ -1083,6 +2315,45 @@ function listTodayTaskNotes(app, settings) {
       const due   = fm.due       ? String(fm.due).slice(0, 10)       : null;
       const sched = fm.scheduled ? String(fm.scheduled).slice(0, 10) : null;
       return due === todayStr || sched === todayStr;
+    });
+}
+
+function taskNoteStatus(fm) {
+  return String(fm?.status || 'open').toLowerCase().replace(/[\s_]+/g, '-');
+}
+function taskNoteIgnored(status) {
+  return status === 'cancelled' || status === 'canceled';
+}
+function taskNoteFolders(settings) {
+  const active = (settings.taskNotesFolder || '00-CORE/TaskNotes/Tasks').replace(/\/$/, '');
+  const fallbackArchive = active.replace(/\/Tasks$/, '/Archive');
+  const archive = (settings.taskNotesArchiveFolder || fallbackArchive || '00-CORE/TaskNotes/Archive').replace(/\/$/, '');
+  return [...new Set([active, archive].filter(Boolean))];
+}
+function taskNoteDateValue(file, fm, done) {
+  const raw = done
+    ? (fm.dateCompleted || fm.completedDate || fm.completed || fm.dateModified || fm.modified || fm.due || fm.scheduled || fm.dateCreated || fm.created)
+    : (fm.due || fm.scheduled || fm.dateCreated || fm.created || fm.dateModified || fm.modified);
+  if (raw) return String(raw).slice(0, 10);
+  if (file?.stat?.mtime) return ymd(new Date(file.stat.mtime));
+  return '';
+}
+function listTaskNotesForProductivity(app, settings, start, end) {
+  const folders = taskNoteFolders(settings);
+  const startTime = startOfDay(start).getTime();
+  const endTime = startOfDay(end).getTime();
+  return app.vault.getMarkdownFiles()
+    .filter((f) => folders.some((folder) => f.path.startsWith(folder + '/')))
+    .map((file) => {
+      const fm = (app.metadataCache.getFileCache(file) || {}).frontmatter || {};
+      const status = taskNoteStatus(fm);
+      const done = status === 'done' || status === 'completed' || status === 'archived';
+      const date = taskNoteDateValue(file, fm, done);
+      return { file, fm, status, done, date };
+    })
+    .filter((item) => {
+      const time = item.date ? new Date(item.date + 'T00:00:00').getTime() : NaN;
+      return !taskNoteIgnored(item.status) && Number.isFinite(time) && time >= startTime && time <= endTime;
     });
 }
 
@@ -1652,6 +2923,287 @@ function parseCSV(text) {
   return rows.filter((r) => !(r.length === 1 && r[0] === ''));
 }
 
+function csvEscape(value) {
+  const s = value == null ? '' : String(value);
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function sampleValueForField(field, def, idx) {
+  const type = field.type || 'text';
+  if (idx === 0 || field.primary) return `Example ${def.label}`;
+  if (type === 'email') return 'name@example.com';
+  if (type === 'number') return '10';
+  if (type === 'currency') return '1000';
+  if (type === 'date') return ymd();
+  if (type === 'enum') return (field.options || [])[0] || '';
+  if (type === 'tags') return 'tag1; tag2';
+  return `Example ${field.label || field.key}`;
+}
+
+function csvTemplateForEntity(entityKey) {
+  const def = ENTITIES[entityKey];
+  const fields = def?.fields || [];
+  const headers = fields.map((f) => f.key);
+  const example = fields.map((f, i) => sampleValueForField(f, def, i));
+  return `${headers.map(csvEscape).join(',')}\n${example.map(csvEscape).join(',')}\n`;
+}
+
+let XLSX_LIB = null;
+function getXLSX(app) {
+  if (XLSX_LIB) return XLSX_LIB;
+  const relPath = `${PLUGIN_DIR || '.obsidian/plugins/bob-workspace'}/vendor/xlsx.full.min.js`;
+  const candidates = [
+    './vendor/xlsx.full.min.js',
+    relPath,
+  ];
+  try {
+    if (app?.vault?.adapter?.getFullPath) candidates.push(app.vault.adapter.getFullPath(relPath));
+  } catch (_) {}
+  const errors = [];
+  for (const candidate of candidates) {
+    try {
+      XLSX_LIB = require(candidate);
+      return XLSX_LIB;
+    } catch (e) {
+      errors.push(`${candidate}: ${e.message}`);
+    }
+  }
+  throw new Error(`XLSX library not found at ${relPath}. Install vendor/xlsx.full.min.js with the plugin. ${errors.join(' | ')}`);
+}
+
+function safeSheetName(raw, used = new Set()) {
+  const base = String(raw || 'Sheet')
+    .replace(/[\[\]:*?/\\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 31) || 'Sheet';
+  let name = base;
+  let n = 2;
+  while (used.has(name)) {
+    const suffix = ` ${n}`;
+    name = `${base.slice(0, Math.max(1, 31 - suffix.length))}${suffix}`;
+    n++;
+  }
+  used.add(name);
+  return name;
+}
+
+function workbookEntityKeyFromSheet(sheetName) {
+  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const n = norm(sheetName);
+  for (const [key, def] of Object.entries(ENTITIES)) {
+    if (n === norm(key) || n === norm(def.label) || n === norm(def.plural)) return key;
+  }
+  return null;
+}
+
+function xlsxCellValue(value) {
+  if (value == null) return '';
+  if (Array.isArray(value)) return value.join('; ');
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === 'object') return JSON.stringify(value);
+  return value;
+}
+
+function entityRowsForWorkbook(app, entityKey) {
+  const def = ENTITIES[entityKey];
+  if (!def) return [];
+  return listEntities(app, entityKey).map((entity) => {
+    const row = {};
+    row.file_path = entity.file.path;
+    row.created = new Date(entity.file.stat.ctime).toISOString();
+    row.modified = new Date(entity.file.stat.mtime).toISOString();
+    def.fields.forEach((f) => {
+      row[f.key] = xlsxCellValue(entityValue(entity, f.key, def));
+    });
+    return row;
+  });
+}
+
+function worksheetRowsForEntity(app, entityKey) {
+  const def = ENTITIES[entityKey];
+  const headers = ['file_path', 'created', 'modified', ...(def?.fields || []).map((f) => f.key)];
+  const rows = entityRowsForWorkbook(app, entityKey);
+  return rows.length ? rows : [Object.fromEntries(headers.map((h) => [h, '']))];
+}
+
+async function writeWorkbookToVault(app, workbook, path) {
+  const XLSX = getXLSX(app);
+  const data = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  await ensureFolderSync(app, path.split('/').slice(0, -1).join('/'));
+  await app.vault.adapter.writeBinary(path, data);
+}
+
+function workbookExportFolder(settings = {}) {
+  return (settings.workbookExportFolder || DEFAULT_SETTINGS.workbookExportFolder || 'BOB Workspace/Exports')
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '');
+}
+
+function workbookExportGroups() {
+  return WORKBOOK_EXPORT_GROUPS
+    .map((group) => ({
+      id: group.id,
+      label: group.label,
+      entityKeys: group.entityKeys.filter((key) => ENTITIES[key]),
+    }))
+    .filter((group) => group.entityKeys.length);
+}
+
+function entityKeysForWorkbookGroups(groupIds) {
+  const selected = new Set(groupIds || []);
+  const keys = [];
+  workbookExportGroups().forEach((group) => {
+    if (!selected.has(group.id)) return;
+    group.entityKeys.forEach((key) => {
+      if (ENTITIES[key] && !keys.includes(key)) keys.push(key);
+    });
+  });
+  return keys;
+}
+
+function selectedWorkbookEntityKeys(groupIds) {
+  if (!groupIds || !groupIds.length) return [];
+  return entityKeysForWorkbookGroups(groupIds);
+}
+
+async function exportEntitiesXLSX(app, entityKeys, suffix = '', settings = {}) {
+  const XLSX = getXLSX(app);
+  const wb = XLSX.utils.book_new();
+  const used = new Set();
+  const included = entityKeys?.length ? new Set(entityKeys) : null;
+  const sortedEntities = Object.entries(ENTITIES)
+    .filter(([key]) => !included || included.has(key))
+    .sort(([, a], [, b]) => String(a.plural || a.label || '').localeCompare(String(b.plural || b.label || '')));
+  if (!sortedEntities.length) throw new Error('No entities selected for export.');
+  for (const [entityKey, def] of sortedEntities) {
+    const rows = worksheetRowsForEntity(app, entityKey);
+    const headers = ['file_path', 'created', 'modified', ...def.fields.map((f) => f.key)];
+    const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+    XLSX.utils.book_append_sheet(wb, ws, safeSheetName(def.plural || entityKey, used));
+  }
+  const nameSuffix = suffix ? `-${suffix}` : '';
+  const path = `${workbookExportFolder(settings)}/bob-workspace-export${nameSuffix}-${ymd()}.xlsx`;
+  await writeWorkbookToVault(app, wb, path);
+  return path;
+}
+
+async function exportAllEntitiesXLSX(app, settings = {}) {
+  return exportEntitiesXLSX(app, null, '', settings);
+}
+
+function rowValue(row, key) {
+  const target = String(key).toLowerCase();
+  for (const [k, v] of Object.entries(row)) {
+    if (String(k).toLowerCase() === target) return v;
+  }
+  return '';
+}
+
+function normalizeImportValue(value, field) {
+  let val = value == null ? '' : value;
+  if (typeof val === 'string') val = val.trim();
+  if (val === '') return null;
+  if (field.type === 'number' || field.type === 'currency') {
+    const n = Number(String(val).replace(/[^\d.\-]/g, ''));
+    return isNaN(n) ? null : n;
+  }
+  if (field.type === 'tags') {
+    if (Array.isArray(val)) return val.filter(Boolean);
+    const tags = String(val).split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+    return tags.length ? tags : null;
+  }
+  if (field.type === 'date') {
+    if (val instanceof Date && !isNaN(val.getTime())) return val.toISOString().slice(0, 10);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? String(val) : d.toISOString().slice(0, 10);
+  }
+  return val;
+}
+
+async function importEntityRows(app, entityKey, rows) {
+  const def = ENTITIES[entityKey];
+  if (!def) return { created: 0, failed: rows.length };
+  const primary = primaryField(def);
+  if (!primary) return { created: 0, failed: rows.length };
+  let created = 0;
+  let updated = 0;
+  let failed = 0;
+  for (const row of rows) {
+    const primaryValue = String(rowValue(row, primary.key) || rowValue(row, primary.label) || '').trim();
+    if (!primaryValue) { failed++; continue; }
+    try {
+      const explicitPath = String(rowValue(row, 'file_path') || '').trim();
+      let file = explicitPath ? app.vault.getAbstractFileByPath(explicitPath) : null;
+      let isUpdate = file instanceof obsidian.TFile;
+      if (!isUpdate) file = await createEntity(app, entityKey, primaryValue);
+      await app.fileManager.processFrontMatter(file, (fm) => {
+        def.fields.forEach((field) => {
+          if (field.key === primary.key) return;
+          const imported = normalizeImportValue(rowValue(row, field.key), field);
+          if (imported == null || imported === '') return;
+          if (Array.isArray(imported) && !imported.length) return;
+          fm[field.key] = imported;
+        });
+      });
+      if (isUpdate) updated++;
+      else created++;
+    } catch (_) {
+      failed++;
+    }
+  }
+  return { created, updated, failed };
+}
+
+async function importWorkbookEntities(app, file) {
+  const XLSX = getXLSX(app);
+  const data = await app.vault.readBinary(file);
+  const wb = XLSX.read(data, { type: 'array', cellDates: true });
+  const result = { created: 0, updated: 0, failed: 0, sheets: 0, skippedSheets: [] };
+  for (const sheetName of wb.SheetNames) {
+    const entityKey = workbookEntityKeyFromSheet(sheetName);
+    if (!entityKey) {
+      result.skippedSheets.push(sheetName);
+      continue;
+    }
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '', raw: false });
+    const nonEmptyRows = rows.filter((row) => Object.values(row).some((v) => String(v || '').trim()));
+    const imported = await importEntityRows(app, entityKey, nonEmptyRows);
+    result.created += imported.created;
+    result.updated += imported.updated || 0;
+    result.failed += imported.failed;
+    result.sheets++;
+  }
+  return result;
+}
+
+async function promptImportWorkbook(app, onDone = () => {}) {
+  const workbookFiles = app.vault.getFiles().filter((f) => {
+    const p = f.path.toLowerCase();
+    return p.endsWith('.xlsx') || p.endsWith('.xlsm') || p.endsWith('.xlsb') || p.endsWith('.xls');
+  });
+  if (!workbookFiles.length) {
+    new obsidian.Notice('No Excel workbooks found in vault.');
+    return;
+  }
+  const picker = new (class extends obsidian.SuggestModal {
+    constructor(app, files, onPick) { super(app); this.files = files; this.onPick = onPick; this.setPlaceholder('Import workbook…'); }
+    getSuggestions(q) { return this.files.filter((f) => f.path.toLowerCase().includes(q.toLowerCase())); }
+    renderSuggestion(file, el) { el.setText(file.path); }
+    onChooseSuggestion(file) { this.onPick(file); }
+  })(app, workbookFiles, async (file) => {
+    try {
+      const result = await importWorkbookEntities(app, file);
+      await onDone(result);
+      const skipped = result.skippedSheets.length ? ` · skipped sheets: ${result.skippedSheets.join(', ')}` : '';
+      new obsidian.Notice(`BOB Workspace: imported ${result.created} created, ${result.updated || 0} updated from ${result.sheets} sheet${result.sheets === 1 ? '' : 's'}${result.failed ? ` · ${result.failed} skipped` : ''}${skipped}`, 8000);
+    } catch (e) {
+      new obsidian.Notice(`BOB Workspace: XLSX import failed — ${e.message}`, 8000);
+    }
+  });
+  picker.open();
+}
+
 /* ─────────── CSV import modal ─────────── */
 class CadenceImportModal extends obsidian.Modal {
   constructor(app, opts) {
@@ -1665,24 +3217,31 @@ class CadenceImportModal extends obsidian.Modal {
   }
 
   onOpen() {
-    const { contentEl } = this;
+    const { contentEl, modalEl } = this;
     contentEl.empty();
     contentEl.addClass('cad-import-modal');
+    if (modalEl) modalEl.addClass('cad-import-modal-shell');
     contentEl.createEl('h3', { cls: 'cad-create-title', text: 'Import from CSV' });
 
     /* Entity selector */
     const entityRow = contentEl.createDiv({ cls: 'cad-create-row' });
     entityRow.createDiv({ cls: 'cad-create-label', text: 'IMPORT AS' });
     const entitySelect = entityRow.createEl('select', { cls: 'cad-create-input' });
-    Object.entries(ENTITIES).forEach(([key, def]) => {
+    Object.entries(ENTITIES)
+      .sort(([, a], [, b]) => String(a.plural || a.label || '').localeCompare(String(b.plural || b.label || '')))
+      .forEach(([key, def]) => {
       const o = entitySelect.createEl('option', { value: key, text: def.plural });
       if (key === this.entityKey) o.selected = true;
     });
     entitySelect.addEventListener('change', () => {
       this.entityKey = entitySelect.value;
       this._autoDetectMapping();
+      this._renderFieldReference();
       this._renderPreview();
     });
+
+    this.fieldInfoEl = contentEl.createDiv({ cls: 'cad-import-field-ref' });
+    this._renderFieldReference();
 
     /* CSV input */
     const csvRow = contentEl.createDiv({ cls: 'cad-create-row' });
@@ -1696,10 +3255,17 @@ class CadenceImportModal extends obsidian.Modal {
     const tabs = csvWrap.createDiv();
     tabs.style.display = 'flex';
     tabs.style.gap = '6px';
+    tabs.style.flexWrap = 'wrap';
     const pasteBtn = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Paste' });
     pasteBtn.type = 'button';
     const fileBtn  = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Pick .csv from vault' });
     fileBtn.type = 'button';
+    const xlsxBtn = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Pick .xlsx from vault' });
+    xlsxBtn.type = 'button';
+    const exportBtn = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Export CSV template' });
+    exportBtn.type = 'button';
+    const exportXlsxBtn = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Export XLSX template' });
+    exportXlsxBtn.type = 'button';
 
     const ta = csvWrap.createEl('textarea', { cls: 'cad-create-input' });
     ta.rows = 8;
@@ -1714,6 +3280,9 @@ class CadenceImportModal extends obsidian.Modal {
     });
 
     pasteBtn.addEventListener('click', () => ta.focus());
+    exportBtn.addEventListener('click', () => this._exportTemplateCSV());
+    exportXlsxBtn.addEventListener('click', () => this._exportTemplateXLSX());
+    xlsxBtn.addEventListener('click', () => this._pickXLSXFromVault(ta));
     fileBtn.addEventListener('click', async () => {
       const csvFiles = this.app.vault.getFiles().filter((f) => f.path.toLowerCase().endsWith('.csv'));
       if (!csvFiles.length) {
@@ -1754,6 +3323,103 @@ class CadenceImportModal extends obsidian.Modal {
     this.importBtn.addEventListener('click', () => this._submitImport());
   }
 
+  _renderFieldReference() {
+    if (!this.fieldInfoEl) return;
+    this.fieldInfoEl.empty();
+    const def = ENTITIES[this.entityKey];
+    if (!def) return;
+
+    const head = this.fieldInfoEl.createDiv({ cls: 'cad-import-field-ref-head' });
+    head.createDiv({ cls: 'cad-create-label', text: 'EXPECTED FIELDS' });
+    const hint = head.createDiv({ cls: 'cad-import-field-hint' });
+    hint.appendText('Use field keys as CSV headers for automatic mapping. ');
+    hint.createEl('code', { text: def.fields.map((f) => f.key).join(', ') });
+
+    const list = this.fieldInfoEl.createDiv({ cls: 'cad-import-field-list' });
+    def.fields.forEach((f, idx) => {
+      const required = idx === 0 || f.required === true;
+      const item = list.createDiv({ cls: 'cad-import-field-item' + (required ? ' required' : '') });
+      item.createDiv({ cls: 'cad-import-field-key', text: f.key });
+      item.createDiv({ cls: 'cad-import-field-label', text: f.label || f.key });
+      const meta = [f.type || 'text'];
+      if (required) meta.push('required');
+      if (f.type === 'enum' && f.options?.length) meta.push(f.options.join(' / '));
+      item.createDiv({ cls: 'cad-import-field-meta', text: meta.join(' · ') });
+    });
+  }
+
+  async _exportTemplateCSV() {
+    const def = ENTITIES[this.entityKey];
+    if (!def) return;
+    const folder = 'Cadence/Imports';
+    const safeKey = this.entityKey.replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
+    const path = `${folder}/${safeKey}-import-template.csv`;
+    try {
+      await ensureFolderSync(this.app, 'Cadence');
+      await ensureFolderSync(this.app, folder);
+      await this.app.vault.adapter.write(path, csvTemplateForEntity(this.entityKey));
+      new obsidian.Notice(`Exported CSV template to ${path}`);
+    } catch (e) {
+      new obsidian.Notice(`BOB Workspace: failed to export CSV template — ${e.message}`);
+    }
+  }
+
+  async _exportTemplateXLSX() {
+    const def = ENTITIES[this.entityKey];
+    if (!def) return;
+    try {
+      const XLSX = getXLSX(this.app);
+      const wb = XLSX.utils.book_new();
+      const rows = [Object.fromEntries(def.fields.map((f, i) => [f.key, sampleValueForField(f, def, i)]))];
+      const ws = XLSX.utils.json_to_sheet(rows, { header: def.fields.map((f) => f.key) });
+      XLSX.utils.book_append_sheet(wb, ws, safeSheetName(def.plural || this.entityKey));
+      const folder = 'Cadence/Imports';
+      const safeKey = this.entityKey.replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
+      const path = `${folder}/${safeKey}-import-template.xlsx`;
+      await writeWorkbookToVault(this.app, wb, path);
+      new obsidian.Notice(`Exported XLSX template to ${path}`);
+    } catch (e) {
+      new obsidian.Notice(`BOB Workspace: failed to export XLSX template — ${e.message}`);
+    }
+  }
+
+  async _pickXLSXFromVault(textarea) {
+    const xlsxFiles = this.app.vault.getFiles().filter((f) => {
+      const p = f.path.toLowerCase();
+      return p.endsWith('.xlsx') || p.endsWith('.xlsm') || p.endsWith('.xlsb') || p.endsWith('.xls');
+    });
+    if (!xlsxFiles.length) {
+      new obsidian.Notice('No Excel files found in vault. Drop one in the vault first.');
+      return;
+    }
+    const picker = new (class extends obsidian.SuggestModal {
+      constructor(app, files, onPick) { super(app); this.files = files; this.onPick = onPick; this.setPlaceholder('Search Excel files…'); }
+      getSuggestions(q) { return this.files.filter((f) => f.path.toLowerCase().includes(q.toLowerCase())); }
+      renderSuggestion(file, el) { el.setText(file.path); }
+      onChooseSuggestion(file) { this.onPick(file); }
+    })(this.app, xlsxFiles, async (file) => {
+      try {
+        const XLSX = getXLSX(this.app);
+        const data = await this.app.vault.readBinary(file);
+        const wb = XLSX.read(data, { type: 'array', cellDates: true });
+        const matchingSheet = wb.SheetNames.find((s) => workbookEntityKeyFromSheet(s) === this.entityKey);
+        const sheetName = matchingSheet || wb.SheetNames[0];
+        if (!sheetName) throw new Error('Workbook has no sheets');
+        const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]);
+        textarea.value = csv;
+        this.csvText = csv;
+        this._parse();
+        this._renderPreview();
+        if (!matchingSheet && wb.SheetNames.length > 1) {
+          new obsidian.Notice(`Loaded sheet "${sheetName}".`);
+        }
+      } catch (e) {
+        new obsidian.Notice(`Failed to read ${file.path}: ${e.message}`);
+      }
+    });
+    picker.open();
+  }
+
   _parse() {
     if (!this.csvText.trim()) { this.headers = []; this.rows = []; return; }
     const all = parseCSV(this.csvText);
@@ -1776,13 +3442,58 @@ class CadenceImportModal extends obsidian.Modal {
     });
     // Common synonyms
     const synonyms = {
-      'fullname': 'name', 'displayname': 'name', 'contact': 'name',
-      'companyname': 'company', 'organisation': 'company', 'organization': 'company',
-      'phone': 'name', // not great — leave unmapped
+      'fullname': 'name', 'displayname': 'name', 'contact': ['contact_ref', 'contact_name', 'name'],
+      'companyname': ['company_name', 'company'], 'organisation': ['company_name', 'company'], 'organization': ['company_name', 'company'],
+      'phone': 'phone', 'phonenumber': 'phone', 'mobile': 'phone',
       'mail': 'email', 'emailaddress': 'email',
-      'amount': 'value', 'price': 'value', 'mrr': 'value', 'arr': 'value',
-      'closedate': 'closeBy', 'expectedclose': 'closeBy',
-      'lastcontacted': 'lastContact', 'lastcontact': 'lastContact',
+      'subject': 'title', 'activitysubject': 'title',
+      'type': ['channel', 'type'], 'activitytype': ['channel', 'type'],
+      'when': ['date', 'next_action_date'], 'activitydate': 'date',
+      'with': ['contact_ref', 'contact_name'],
+      'assigned': 'owner', 'assignee': 'owner', 'assignedto': 'owner',
+      'owner': 'owner',
+      'followup': 'next_action', 'followupdate': 'next_action_date',
+      'amount': ['deal_value', 'amount', 'value'], 'price': ['deal_value', 'amount', 'value'], 'mrr': ['deal_value', 'amount', 'value'], 'arr': ['deal_value', 'amount', 'value'],
+      'value': 'deal_value', 'dealvalue': 'deal_value',
+      'closedate': 'expected_close', 'expectedclose': 'expected_close',
+      'lastcontacted': 'last_contact', 'lastcontact': 'last_contact',
+      'supplier': ['supplier_id', 'supplier_name'], 'supplierid': 'supplier_id', 'suppliername': 'supplier_name',
+      'po': ['po_ref', 'po_id'], 'purchaseorder': ['po_ref', 'po_id'], 'poref': 'po_ref', 'poid': 'po_id',
+      'pr': ['pr_ref', 'pr_id'], 'purchaserequisition': ['pr_ref', 'pr_id'], 'prref': 'pr_ref', 'prid': 'pr_id',
+      'duedate': 'due_date', 'due': 'due_date',
+      'invoicedate': 'invoice_date',
+      'paymentstatus': 'payment_status',
+      'approvalstatus': 'approval_status',
+      'matchstatus': 'match_status',
+      'total': ['total_amount', 'amount'], 'totalamount': 'total_amount',
+      'estimatedamount': 'estimated_amount', 'estimate': 'estimated_amount',
+      'client': ['client_id', 'client_name'], 'clientid': 'client_id', 'clientname': 'client_name',
+      'currencycode': 'currency',
+      'glaccount': 'gl_account_code', 'glaccountcode': 'gl_account_code',
+      'bankstatementbalance': 'bank_statement_balance', 'statementbalance': 'bank_statement_balance',
+      'glbalance': 'gl_balance',
+      'adjustedbank': 'adjusted_bank_balance', 'adjustedbankbalance': 'adjusted_bank_balance',
+      'adjustedgl': 'adjusted_gl_balance', 'adjustedglbalance': 'adjusted_gl_balance',
+      'accountcode': 'account_code', 'accountname': 'account_name', 'accounttype': 'account_type',
+      'normalbalance': 'normal_balance',
+      'ifrs': 'ifrs_classification', 'ifrsclassification': 'ifrs_classification',
+      'statementtype': 'statement_type', 'trialbalance': 'trial_balance',
+      'totalassets': 'total_assets', 'totalliabilities': 'total_liabilities', 'totalequity': 'total_equity',
+      'closingdr': 'total_closing_dr', 'totalclosingdr': 'total_closing_dr',
+      'closingcr': 'total_closing_cr', 'totalclosingcr': 'total_closing_cr',
+      'outputvat': 'output_vat', 'inputvat': 'input_vat', 'netpayable': 'net_payable',
+      'taxableincome': 'taxable_income', 'taxrate': ['tax_rate', 'tax_rate_used'], 'taxpayable': 'tax_payable',
+      'smallbusinessrelief': 'small_business_relief',
+      'recoverability': 'recoverability_assessment', 'recoverabilityassessment': 'recoverability_assessment',
+      'relatedparty': 'related_party', 'transactiontype': 'transaction_type', 'transactionamount': 'transaction_amount',
+      'armlengthmethod': 'arm_length_method', 'documented': 'documented',
+      'freezoneauthority': 'free_zone_authority', 'qualifyingincome': 'qualifying_income', 'nonqualifyingincome': 'non_qualifying_income',
+      'substancetest': 'substance_test_passed', 'substancetestpassed': 'substance_test_passed',
+      'nexus': 'nexus_maintained', 'nexusmaintained': 'nexus_maintained',
+      'ruleid': 'rule_identifier', 'ruleidentifier': 'rule_identifier', 'jurisdiction': 'rule_jurisdiction',
+      'ruletype': 'rule_source_type', 'rulesourcetype': 'rule_source_type', 'authority': 'rule_authority',
+      'effectivefrom': 'rule_effective_from', 'asof': 'as_of_date', 'asofdate': 'as_of_date',
+      'lastverified': 'last_verified',
     };
 
     this.headers.forEach((h) => {
@@ -1790,8 +3501,10 @@ class CadenceImportModal extends obsidian.Modal {
       if (!n) { this.mapping[h] = null; return; }
       if (keyByNorm[n]) { this.mapping[h] = keyByNorm[n]; return; }
       // Synonyms — only take if the target key is a real field
-      if (synonyms[n] && def.fields.some((f) => f.key === synonyms[n])) {
-        this.mapping[h] = synonyms[n]; return;
+      const candidates = Array.isArray(synonyms[n]) ? synonyms[n] : [synonyms[n]];
+      const target = candidates.find((candidate) => candidate && def.fields.some((f) => f.key === candidate));
+      if (target) {
+        this.mapping[h] = target; return;
       }
       // Fuzzy contains
       const fuzzy = def.fields.find((f) => n.includes(norm(f.key)) || norm(f.key).includes(n));
@@ -1844,8 +3557,9 @@ class CadenceImportModal extends obsidian.Modal {
 
     /* Summary */
     const summary = this.previewEl.createDiv({ cls: 'cad-import-summary' });
-    // Required = primary (first field) + any field with required: true
-    const requiredFields = def.fields.filter((f, i) => i === 0 || f.required === true);
+    // Required = explicit primary + any field with required: true
+    const primary = primaryField(def);
+    const requiredFields = def.fields.filter((f) => f.key === primary?.key || f.required === true);
     const mappedKeys = new Set(Object.values(this.mapping).filter(Boolean));
     const missing = requiredFields.filter(f => !mappedKeys.has(f.key));
     if (missing.length) {
@@ -1867,7 +3581,8 @@ class CadenceImportModal extends obsidian.Modal {
 
   async _submitImport() {
     const def = ENTITIES[this.entityKey];
-    const primaryKey = def.fields[0].key;
+    const primaryKey = primaryFieldKey(def);
+    if (!primaryKey) return;
     const primaryHeader = Object.entries(this.mapping).find(([_, v]) => v === primaryKey);
     if (!primaryHeader) return;
     const primaryColIdx = this.headers.indexOf(primaryHeader[0]);
@@ -1954,8 +3669,9 @@ class CadenceEntityCreateModal extends obsidian.Modal {
 
     const requiredInputs = [];
 
-    this.def.fields.forEach((f, idx) => {
-      const isPrimary = idx === 0;
+    const primaryKey = primaryFieldKey(this.def);
+    this.def.fields.forEach((f) => {
+      const isPrimary = f.key === primaryKey;
       const isRequired = isPrimary || f.required === true;
       const row = form.createDiv({ cls: 'cad-create-row' });
       const label = row.createDiv({ cls: 'cad-create-label' });
@@ -1970,7 +3686,7 @@ class CadenceEntityCreateModal extends obsidian.Modal {
         (f.options || []).forEach((opt) => input.createEl('option', { value: opt, text: opt }));
         // Smart defaults — first option for stage/status fields
         if (['stage', 'status', 'priority', 'tier', 'type'].includes(f.key) && f.options && f.options.length) {
-          const sensible = f.key === 'stage' ? 'Lead'
+          const sensible = f.key === 'stage' ? (f.options.includes('lead') ? 'lead' : 'Lead')
             : f.key === 'status' ? (f.options.find((o) => /active|new|draft|submitted|pending/i.test(o)) || f.options[0])
             : f.key === 'priority' ? (f.options.find((o) => /medium/i.test(o)) || f.options[0])
             : f.options[0];
@@ -2017,7 +3733,7 @@ class CadenceEntityCreateModal extends obsidian.Modal {
         const key = el.dataset.fieldKey;
         const type = el.dataset.fieldType;
         let raw = el.value;
-        if (idx === 0) primaryValue = (raw || '').trim();
+        if (key === primaryKey) primaryValue = (raw || '').trim();
         if (raw === '' || raw == null) return;
         if (type === 'tags') raw = raw.split(',').map((t) => t.trim()).filter(Boolean);
         else if (type === 'number' || type === 'currency') {
@@ -2029,7 +3745,8 @@ class CadenceEntityCreateModal extends obsidian.Modal {
         values[key] = raw;
       });
       if (!primaryValue) {
-        if (inputs[0]) inputs[0].focus();
+        const primaryInput = inputs.find((input) => input.dataset.fieldKey === primaryKey);
+        if (primaryInput) primaryInput.focus();
         return;
       }
       this._submitted = true;
@@ -2175,6 +3892,8 @@ class CadenceAppView extends obsidian.ItemView {
   _migrateModeId(id) {
     if (id === 'today')   return 'planner.today';
     if (id === 'planner') return 'planner.calendar';
+    if (id === 'srm.suppliers') return 'procurement.suppliers';
+    if (id === 'finance.supplier-invoices') return 'procurement.supplier-invoices';
     return SURFACE_BY_ID[id] ? id : 'home';
   }
 
@@ -2187,14 +3906,20 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   _visibleNavGroups() {
-    const mods = this.plugin.settings.modules || { crm: true, prm: true, srm: true, planner: true };
+    const mods = this.plugin.settings.modules || { crm: true, prm: true, srm: true, finance: true, procurement: true, tax: true, planner: true };
     const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
+    const showSecondary = !!this.plugin.settings.showSecondaryNav;
+    const showSetup = !!this.plugin.settings.showSetupNav;
     return NAV_GROUPS
       .map((g) => {
         if (g.module && mods[g.module] === false) return null;
-        const items = g.items.filter((it) =>
-          (!it.module || mods[it.module] !== false) && !disabled.has(it.id)
-        );
+        const items = g.items.filter((it) => {
+          if (it.module && mods[it.module] === false) return false;
+          if (disabled.has(it.id)) return false;
+          if (it.navLevel === 'secondary' && !showSecondary) return false;
+          if (it.navLevel === 'setup' && !showSetup) return false;
+          return true;
+        });
         if (!items.length) return null;
         return Object.assign({}, g, { items });
       })
@@ -2271,7 +3996,7 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   getViewType()    { return VIEW_TYPE_CADENCE_APP; }
-  getDisplayText() { return 'Cadence'; }
+  getDisplayText() { return 'BOB Workspace Cadence'; }
   getIcon()        { return 'sparkles'; }
 
   async setMode(m) {
@@ -2327,9 +4052,13 @@ class CadenceAppView extends obsidian.ItemView {
 
   _modeUsesEntityFolder(path) {
     if (!path) return false;
-    // Most surfaces read entity folders; refresh whenever a touched file
-    // sits under any Cadence/* folder. Cheap enough.
-    return path.startsWith('Cadence/');
+    // Entity surfaces can now show secondary tabs backed by folders outside
+    // the old Cadence/* tree, so refresh if the touched path belongs to any
+    // configured entity folder.
+    return Object.keys(ENTITIES).some((key) => {
+      const folder = entityFolder(key);
+      return folder && (path === folder || path.startsWith(folder + '/'));
+    });
   }
 
   async render() {
@@ -2339,12 +4068,13 @@ class CadenceAppView extends obsidian.ItemView {
     root.toggleClass('cad-dark', !!this.plugin.settings.cadenceAppDark);
 
     const active = SURFACE_BY_ID[this.mode] || SURFACE_BY_ID['planner.today'];
+    const activeParentId = active?.parent || null;
 
     /* ── Top brand bar ──────────────────────── */
     const topbar = root.createDiv({ cls: 'cad-app-topbar' });
     const brand = topbar.createDiv({ cls: 'cad-app-brand' });
     brand.createSpan({ cls: 'cad-app-brand-mark', text: '◐' });
-    brand.createSpan({ cls: 'cad-app-brand-text', text: 'Cadence' });
+    brand.createSpan({ cls: 'cad-app-brand-text', text: 'BOB Workspace Cadence' });
 
     const topRight = topbar.createDiv({ cls: 'cad-app-topbar-right' });
 
@@ -2352,7 +4082,7 @@ class CadenceAppView extends obsidian.ItemView {
     const dark = !!this.plugin.settings.cadenceAppDark;
     const themeBtn = topRight.createEl('button', { cls: 'cad-topbar-icon-btn' });
     try { obsidian.setIcon(themeBtn, dark ? 'sun' : 'moon'); } catch (_) {}
-    themeBtn.title = dark ? 'Cadence: switch to light' : 'Cadence: switch to dark';
+    themeBtn.title = dark ? 'BOB Workspace: switch to light' : 'BOB Workspace: switch to dark';
     themeBtn.addEventListener('click', () => this._toggleCadenceDark());
 
     const eyebrow = topRight.createDiv({ cls: 'cad-app-topbar-meta' });
@@ -2379,13 +4109,16 @@ class CadenceAppView extends obsidian.ItemView {
       if (!isCollapsed || !group.label) {
         const list = groupEl.createDiv({ cls: 'cad-nav-group-items' });
         group.items.forEach((s) => {
+          const isActive = this.mode === s.id;
+          const isActiveParent = activeParentId === s.id;
           const item = list.createDiv({
-            cls: 'cad-app-nav-item' + (this.mode === s.id ? ' active' : ''),
+            cls: 'cad-app-nav-item' + (isActive ? ' active' : '') + (isActiveParent ? ' active-parent' : ''),
           });
+          if (isActive) item.setAttribute('aria-current', 'page');
           const ic = item.createSpan({ cls: 'cad-app-nav-icon' });
           try { obsidian.setIcon(ic, s.icon); } catch (_) {}
           item.createSpan({ cls: 'cad-app-nav-label', text: s.label });
-          if (!BUILT_SURFACES.has(s.id)) {
+          if (!BUILT_SURFACES.has(s.id) && !s.entityKey) {
             item.createSpan({ cls: 'cad-app-nav-badge', text: 'soon' });
           }
           // Inbox: badge with overdue count
@@ -2417,13 +4150,12 @@ class CadenceAppView extends obsidian.ItemView {
       'crm.contacts':        () => this.renderEntityList(content, 'contact'),
       'crm.clients':         () => this.renderEntityList(content, 'client'),
       'crm.companies':       () => this.renderEntityList(content, 'company'),
-      'srm.suppliers':       () => this.renderEntityList(content, 'supplier'),
       'crm.activities':      () => this.renderEntityList(content, 'activity'),
-      'prm.partners':        () => this.renderEntityList(content, 'partner'),
+      'prm.partners':        () => this.renderEntityTabs(content, 'prm.partners', 'prm.partners.overview'),
       'prm.registrations':   () => this.renderEntityList(content, 'registration'),
       'prm.commissions':     () => this.renderEntityList(content, 'commission'),
       'crm.leads':           () => this.renderEntityList(content, 'lead'),
-      'crm.campaigns':       () => this.renderEntityList(content, 'campaign'),
+      'crm.campaigns':       () => this.renderEntityTabs(content, 'crm.campaigns', 'crm.campaigns.overview'),
       'crm.sequences':       () => this.renderEntityList(content, 'sequence'),
       'prm.certifications':  () => this.renderEntityList(content, 'certification'),
       'prm.analytics':       () => this.renderPRMAnalytics(content),
@@ -2434,9 +4166,17 @@ class CadenceAppView extends obsidian.ItemView {
       'reports.productivity':() => this.renderProductivity(content),
       'team':                () => this.renderTeam(content),
       'settings':            () => this.openSettingsTab(content),
+      'finance.invoices':    () => this.renderEntityTabs(content, 'finance.invoices', 'invoice'),
+      'finance.gl':          () => this.renderEntityTabs(content, 'finance.gl', 'finance.gl.overview'),
+      'finance.setup':       () => this.renderEntityTabs(content, 'finance.setup', 'finance.setup.overview'),
+      'client-work.overview': () => this.renderClientWorkWorkspace(content),
+      'procurement.suppliers': () => this.renderEntityTabs(content, 'procurement.suppliers', 'procurement.overview'),
+      'tax.overview':        () => this.renderEntityTabs(content, 'tax.overview', 'tax.dashboard'),
     };
     if (route[this.mode]) {
       await route[this.mode]();
+    } else if (active && active.entityKey && ENTITIES[active.entityKey]) {
+      await this.renderEntityList(content, active.entityKey);
     } else if (this.mode && this.mode.startsWith('custom.')) {
       const entityKey = this.mode.slice('custom.'.length);
       if (ENTITIES[entityKey]) await this.renderEntityList(content, entityKey);
@@ -2472,30 +4212,150 @@ class CadenceAppView extends obsidian.ItemView {
     return head;
   }
 
-  /* ── Generic entity LIST view ───────────── */
-  async renderEntityList(root, entityKey, opts = {}) {
-    root.addClass('cadence-list');
-    const def = ENTITIES[entityKey];
-    if (!def) { this.renderComingSoon(root, SURFACE_BY_ID[this.mode]); return; }
+  _renderEntityViewSelect(container, entityKey) {
+    const basePath = (this.plugin.settings.baseFiles || {})[entityKey];
+    if (!basePath) return;
 
-    const entities = listEntities(this.app, entityKey);
-    const filtered = opts.filter ? entities.filter(opts.filter) : entities;
-
-    this._renderPageHeader(root, opts.title || def.plural, `${filtered.length} ${filtered.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${entityFolder(entityKey)}`, (right) => {
-      const importBtn = right.createEl('button', { cls: 'cad-btn', text: 'Import CSV' });
-      importBtn.addEventListener('click', () => new CadenceImportModal(this.app, { entityKey }).open());
-      const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
-      btn.addEventListener('click', () => this._createEntityFromPrompt(entityKey));
+    const select = container.createEl('select', {
+      cls: 'dropdown cad-page-view-select',
+      attr: { 'aria-label': 'Base view' },
     });
+    select.title = 'Base view';
+    select.createEl('option', { value: '', text: 'Loading views...' });
+    select.disabled = true;
 
-    if (!filtered.length) {
-      const empty = root.createDiv({ cls: 'cad-empty-state' });
-      empty.createDiv({ cls: 'cad-empty-state-title', text: `No ${def.plural.toLowerCase()} yet` });
-      empty.createDiv({ cls: 'cad-empty-state-desc', text: `Drop a markdown note in ${entityFolder(entityKey)}/ with frontmatter, or hit "+ New" above.` });
+    const currentView = (this.plugin.settings.baseViews || {})[entityKey] || '';
+    const baseFile = this.app.vault.getAbstractFileByPath(basePath);
+    if (!(baseFile instanceof obsidian.TFile)) {
+      select.empty();
+      select.createEl('option', { value: '', text: 'Base not found' });
       return;
     }
 
-    const cols = (opts.columns || def.columns).map((k) => def.fields.find((f) => f.key === k)).filter(Boolean);
+    readBaseSummary(this.app, baseFile).then((summary) => {
+      const views = summary?.views || [];
+      if (!views.length) {
+        select.remove();
+        return;
+      }
+      select.empty();
+      select.createEl('option', { value: '', text: 'All properties' });
+      views.forEach((viewName) => {
+        select.createEl('option', { value: viewName, text: viewName });
+      });
+      select.value = views.includes(currentView) ? currentView : '';
+      select.disabled = false;
+    });
+
+    select.addEventListener('change', async () => {
+      const viewName = select.value;
+      if (!this.plugin.settings.baseViews) this.plugin.settings.baseViews = {};
+      if (viewName) this.plugin.settings.baseViews[entityKey] = viewName;
+      else delete this.plugin.settings.baseViews[entityKey];
+      await this.plugin.saveSettings();
+      await reloadEntityConfiguration(this.app, this.plugin.settings);
+      this.plugin.refreshOpenViews();
+    });
+  }
+
+  async _openEntityBase(entityKey) {
+    const basePath = (this.plugin.settings.baseFiles || {})[entityKey] || ENTITIES[entityKey]?.externalBaseView?.basePath;
+    if (!basePath) return;
+    const viewName = (this.plugin.settings.baseViews || {})[entityKey] || ENTITIES[entityKey]?.baseView?.name || '';
+    const baseFile = this.app.vault.getAbstractFileByPath(basePath);
+    if (!(baseFile instanceof obsidian.TFile)) {
+      new obsidian.Notice(`BOB Workspace: Base not found: ${basePath}`);
+      return;
+    }
+    const leaf = this.app.workspace.getLeaf('tab');
+    await leaf.openFile(baseFile);
+    this.app.workspace.setActiveLeaf(leaf, { focus: true });
+    if (viewName) {
+      window.setTimeout(() => this._switchBaseLeafView(leaf, viewName), 250);
+    }
+  }
+
+  _switchBaseLeafView(leaf, viewName) {
+    const view = leaf?.view;
+    const controller = view?.controller;
+    const candidates = [
+      () => view?.setView?.(viewName),
+      () => view?.setActiveView?.(viewName),
+      () => view?.setActiveViewByName?.(viewName),
+      () => controller?.setView?.(viewName),
+      () => controller?.setActiveView?.(viewName),
+      () => controller?.setActiveViewByName?.(viewName),
+      () => controller?.viewState?.setActiveView?.(viewName),
+    ];
+    for (const fn of candidates) {
+      try {
+        const result = fn();
+        if (result !== undefined) return true;
+      } catch (_) {}
+    }
+    try {
+      const buttons = view?.containerEl?.querySelectorAll?.('[aria-label], .bases-view-tab, .bases-view-tabs button, button');
+      const target = Array.from(buttons || []).find((el) =>
+        (el.textContent || '').trim() === viewName || el.getAttribute('aria-label') === viewName
+      );
+      if (target) {
+        target.click();
+        return true;
+      }
+    } catch (_) {}
+    new obsidian.Notice(`BOB Workspace: opened Base. Select "${viewName}" if it is not active.`);
+    return false;
+  }
+
+  _renderExternalBaseView(root, entityKey) {
+    const def = ENTITIES[entityKey];
+    const external = def?.externalBaseView;
+    if (!external) return false;
+    const wrap = root.createDiv({ cls: 'cad-empty-state' });
+    wrap.createDiv({ cls: 'cad-empty-state-title', text: external.name || 'External Base view' });
+    wrap.createDiv({
+      cls: 'cad-empty-state-desc',
+      text: `This view uses ${external.type}, so BOB Workspace delegates rendering to Obsidian Bases/TaskNotes instead of duplicating that UI.`,
+    });
+    const btn = wrap.createEl('button', { cls: 'cad-btn primary', text: 'Open in Base' });
+    btn.addEventListener('click', () => this._openEntityBase(entityKey));
+    return true;
+  }
+
+  _renderUnsupportedBaseFilters(root, def) {
+    const unsupported = def?.unsupportedBaseFilters || [];
+    if (!unsupported.length) return;
+    const details = root.createEl('details', { cls: 'cad-base-filter-warnings' });
+    details.createEl('summary', { text: `${unsupported.length} Base filter${unsupported.length === 1 ? '' : 's'} not applied` });
+    const list = details.createEl('ul');
+    unsupported.forEach((filter) => {
+      list.createEl('li').createEl('code', { text: filter });
+    });
+  }
+
+  _groupEntitiesForView(entities, def) {
+    const groupBy = def?.baseGroupBy;
+    if (!groupBy?.property) return null;
+    const groups = new Map();
+    entities.forEach((entity) => {
+      const raw = entityValue(entity, groupBy.property, def);
+      const values = Array.isArray(raw) ? raw : [raw];
+      const nonEmpty = values.map((v) => String(v ?? '').trim()).filter(Boolean);
+      const keys = nonEmpty.length ? nonEmpty : ['(blank)'];
+      keys.forEach((key) => {
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(entity);
+      });
+    });
+    const sorted = Array.from(groups.entries()).sort(([a], [b]) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+    );
+    if (groupBy.direction === 'DESC') sorted.reverse();
+    return sorted;
+  }
+
+  _renderEntityTable(root, entities, entityKey, cols) {
+    const def = ENTITIES[entityKey];
     const tableWrap = root.createDiv({ cls: 'cad-table-wrap' });
     const table = tableWrap.createEl('table', { cls: 'cad-table' });
 
@@ -2504,7 +4364,7 @@ class CadenceAppView extends obsidian.ItemView {
     cols.forEach((f) => trh.createEl('th', { text: f.label }));
 
     const tbody = table.createEl('tbody');
-    filtered.forEach((e) => {
+    entities.forEach((e) => {
       const tr = tbody.createEl('tr', { cls: 'cad-row' });
       cols.forEach((f, i) => {
         const td = tr.createEl('td');
@@ -2523,6 +4383,471 @@ class CadenceAppView extends obsidian.ItemView {
     });
   }
 
+  _tabsForParent(parentId) {
+    const tabs = SECONDARY_TABS[parentId] || [];
+    return tabs.flatMap((tab) => {
+      if (!tab.children) return [tab];
+      return tab.children.map((child) => Object.assign({}, child, { label: `${tab.label} · ${child.label}` }));
+    });
+  }
+
+  async renderEntityTabs(root, parentId, defaultEntityKey, opts = {}) {
+    const tabs = this._tabsForParent(parentId);
+    const state = this._secondaryTabState || (this._secondaryTabState = {});
+    const current = state[parentId] || defaultEntityKey;
+    const activeTab = tabs.find((tab) => tab.entityKey === current || tab.route === current) || tabs[0];
+    const activeKey = activeTab?.entityKey || activeTab?.route || defaultEntityKey;
+    state[parentId] = activeKey;
+
+    const tabWrap = root.createDiv({ cls: 'cad-secondary-tabs' });
+    tabs.forEach((tab) => {
+      const key = tab.entityKey || tab.route;
+      const btn = tabWrap.createEl('button', {
+        cls: 'cad-secondary-tab' + (key === activeKey ? ' active' : ''),
+        text: tab.label,
+      });
+      btn.addEventListener('click', async () => {
+        state[parentId] = key;
+        await this.render();
+      });
+    });
+
+    if (activeTab?.route) return this._renderSecondaryRoute(root, activeTab.route, opts);
+    return this.renderEntityList(root, activeTab?.entityKey || defaultEntityKey, opts);
+  }
+
+  async _renderSecondaryRoute(root, route, opts = {}) {
+    if (route === 'client-work.dashboard') return this.renderClientWorkDashboard(root, opts);
+    if (route === 'finance.gl.overview') return this.renderFinanceGLDashboard(root);
+    if (route === 'finance.setup.overview') return this.renderFinanceSetupDashboard(root);
+    if (route === 'procurement.overview') return this.renderProcurementDashboard(root);
+    if (route === 'tax.dashboard') return this.renderTaxDashboard(root);
+    if (route === 'prm.partners.overview') return this.renderPartnerWorkspaceDashboard(root);
+    if (route === 'crm.campaigns.overview') return this.renderCampaignWorkspaceDashboard(root);
+    if (route === 'prm.analytics') return this.renderPRMAnalytics(root);
+    return this.renderComingSoon(root, { label: route, icon: 'layout-dashboard', desc: 'Workspace overview.' });
+  }
+
+  _clientWorkOptions() {
+    const seen = new Set();
+    return listEntities(this.app, 'client')
+      .map((client) => {
+        const id = String(entityValue(client, 'client_id', ENTITIES.client) || '').trim();
+        if (!id) return null;
+        const name = String(entityValue(client, 'client_name', ENTITIES.client) || entityValue(client, 'name', ENTITIES.client) || client.basename || id).trim();
+        return { id, label: name && name !== id ? `${name} (${id})` : id };
+      })
+      .filter(Boolean)
+      .filter((client) => {
+        if (seen.has(client.id)) return false;
+        seen.add(client.id);
+        return true;
+      })
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }));
+  }
+
+  _clientWorkProjectOptions() {
+    const seen = new Set();
+    return listEntities(this.app, 'project')
+      .map((project) => {
+        const id = String(entityValue(project, 'project_id', ENTITIES.project) || project.basename || '').trim();
+        if (!id) return null;
+        const name = String(entityValue(project, 'project', ENTITIES.project) || entityValue(project, 'name', ENTITIES.project) || project.basename || id).trim();
+        const client = String(entityValue(project, 'client_id', ENTITIES.project) || '').trim();
+        const label = name && name !== id ? `${name} (${id})` : id;
+        return { id, label: client ? `${label} · ${client}` : label };
+      })
+      .filter(Boolean)
+      .filter((project) => {
+        if (seen.has(project.id)) return false;
+        seen.add(project.id);
+        return true;
+      })
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }));
+  }
+
+  _entityMatchesClient(entity, clientId) {
+    if (!clientId) return true;
+    const direct = entity.frontmatter?.client_id;
+    const endClient = entity.frontmatter?.end_client_id;
+    const values = [
+      ...(Array.isArray(direct) ? direct : [direct]),
+      ...(Array.isArray(endClient) ? endClient : [endClient]),
+    ];
+    return values.some((value) => String(value ?? '').trim() === clientId);
+  }
+
+  _entityMatchesProject(entity, projectId) {
+    if (!projectId) return true;
+    const ids = entity.frontmatter?.project_id;
+    const legacy = entity.frontmatter?.project;
+    const values = [
+      ...(Array.isArray(ids) ? ids : [ids]),
+      ...(Array.isArray(legacy) ? legacy : [legacy]),
+    ];
+    return values.some((value) => String(value ?? '').trim() === projectId);
+  }
+
+  _renderClientWorkSelector(container) {
+    const wrap = container.createDiv({ cls: 'cad-client-work-filter' });
+    const clientSelect = wrap.createEl('select', { cls: 'dropdown cad-client-work-client-select' });
+    clientSelect.createEl('option', { value: '', text: 'All clients' });
+    const clients = this._clientWorkOptions();
+    clients.forEach((client) => {
+      clientSelect.createEl('option', { value: client.id, text: client.label });
+    });
+    if (this._clientWorkClientId && !clients.some((client) => client.id === this._clientWorkClientId)) {
+      this._clientWorkClientId = '';
+    }
+    clientSelect.value = this._clientWorkClientId || '';
+    clientSelect.addEventListener('change', async () => {
+      this._clientWorkClientId = clientSelect.value;
+      await this.render();
+    });
+
+    const projectSelect = wrap.createEl('select', { cls: 'dropdown cad-client-work-project-select' });
+    projectSelect.createEl('option', { value: '', text: 'All projects' });
+    const projects = this._clientWorkProjectOptions();
+    projects.forEach((project) => {
+      projectSelect.createEl('option', { value: project.id, text: project.label });
+    });
+    if (this._clientWorkProjectId && !projects.some((project) => project.id === this._clientWorkProjectId)) {
+      this._clientWorkProjectId = '';
+    }
+    projectSelect.value = this._clientWorkProjectId || '';
+    projectSelect.addEventListener('change', async () => {
+      this._clientWorkProjectId = projectSelect.value;
+      await this.render();
+    });
+  }
+
+  async renderClientWorkWorkspace(root) {
+    if (this._clientWorkClientId && !this._clientWorkOptions().some((client) => client.id === this._clientWorkClientId)) {
+      this._clientWorkClientId = '';
+    }
+    if (this._clientWorkProjectId && !this._clientWorkProjectOptions().some((project) => project.id === this._clientWorkProjectId)) {
+      this._clientWorkProjectId = '';
+    }
+    const selectedClientId = this._clientWorkClientId || '';
+    const selectedProjectId = this._clientWorkProjectId || '';
+    const titleParts = [selectedClientId, selectedProjectId].filter(Boolean);
+    return this.renderEntityTabs(root, 'client-work.overview', 'meeting', {
+      filter: (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId),
+      forceInternal: !!selectedClientId || !!selectedProjectId,
+      titleSuffix: titleParts.length ? ` · ${titleParts.join(' · ')}` : '',
+      renderHeaderControls: (right) => this._renderClientWorkSelector(right),
+      emptyDescription: titleParts.length
+        ? `No records matching ${titleParts.join(' / ')} in this tab.`
+        : null,
+    });
+  }
+
+  _isOpenEntity(entity, entityKey) {
+    const def = ENTITIES[entityKey];
+    const status = String(entityValue(entity, 'status', def) || '').toLowerCase().replace(/[\s_]+/g, '-');
+    if (!status) return true;
+    return !['done', 'completed', 'closed', 'cancelled', 'canceled', 'archived', 'paid', 'filed', 'submitted', 'approved'].includes(status);
+  }
+
+  _dateValue(entity, entityKey, fields) {
+    const def = ENTITIES[entityKey];
+    for (const field of fields) {
+      const value = entityValue(entity, field, def);
+      if (value) {
+        const date = new Date(String(value).slice(0, 10));
+        if (!isNaN(date.getTime())) return date;
+      }
+    }
+    return null;
+  }
+
+  _dashboardStats(root, stats) {
+    const grid = root.createDiv({ cls: 'cad-stat-grid' });
+    stats.forEach((item) => {
+      const card = grid.createDiv({ cls: 'cad-stat-card' });
+      if (item.accent) card.dataset.accent = item.accent;
+      card.createDiv({ cls: 'cad-stat-label', text: item.label });
+      card.createDiv({ cls: 'cad-stat-value', text: String(item.value) });
+      if (item.sub) card.createDiv({ cls: 'cad-stat-sub', text: item.sub });
+      if (item.mode) {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => this.setMode(item.mode));
+      }
+    });
+  }
+
+  _recentRows(entityKey, entities, titleFields = ['title', 'name'], metaFields = ['status']) {
+    const def = ENTITIES[entityKey];
+    return [...entities]
+      .sort((a, b) => (b.file?.stat?.mtime || 0) - (a.file?.stat?.mtime || 0))
+      .slice(0, 6)
+      .map((entity) => {
+        const titleField = titleFields.find((field) => entityValue(entity, field, def));
+        const title = (titleField ? entityValue(entity, titleField, def) : '') || entity.basename;
+        const meta = metaFields.map((field) => fmtValue(entityValue(entity, field, def), def.fields.find((f) => f.key === field)?.type)).filter(Boolean).join(' · ');
+        return { title, meta: meta || 'No status', file: entity.file };
+      });
+  }
+
+  _dueRows(entityKey, entities, dateFields, titleFields = ['title', 'name']) {
+    const today = startOfDay(new Date());
+    const horizon = addDays(today, 30);
+    const def = ENTITIES[entityKey];
+    return entities
+      .map((entity) => ({ entity, date: this._dateValue(entity, entityKey, dateFields) }))
+      .filter((item) => item.date && item.date.getTime() <= horizon.getTime())
+      .sort((a, b) => a.date - b.date)
+      .slice(0, 6)
+      .map(({ entity, date }) => {
+        const titleField = titleFields.find((field) => entityValue(entity, field, def));
+        return {
+          title: (titleField ? entityValue(entity, titleField, def) : '') || entity.basename,
+          meta: `${fmtValue(date, 'date')} · ${entityValue(entity, 'status', def) || 'open'}`,
+          file: entity.file,
+        };
+      });
+  }
+
+  _renderFinanceStatementLegend(root) {
+    const card = root.createDiv({ cls: 'cad-dash-card cad-finance-legend' });
+    card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'FINANCIAL STATEMENT LEGEND' });
+    const body = card.createDiv({ cls: 'cad-dash-card-body cad-finance-legend-grid' });
+    [
+      ['SOFP', 'Statement of Financial Position', 'Balance sheet: assets, liabilities and equity at a date.'],
+      ['SOPL', 'Statement of Profit or Loss', 'Income statement / P&L for the period.'],
+      ['SOCI', 'Statement of Comprehensive Income', 'Profit or loss plus other comprehensive income.'],
+      ['SOCF', 'Statement of Cash Flows', 'Operating, investing and financing cash movements.'],
+      ['SOCE', 'Statement of Changes in Equity', 'Opening equity, profit/loss, contributions, distributions and closing equity.'],
+    ].forEach(([code, title, desc]) => {
+      const item = body.createDiv({ cls: 'cad-finance-legend-item' });
+      item.createDiv({ cls: 'cad-finance-legend-code', text: code });
+      const text = item.createDiv({ cls: 'cad-finance-legend-text' });
+      text.createDiv({ cls: 'cad-finance-legend-title', text: title });
+      text.createDiv({ cls: 'cad-finance-legend-desc', text: desc });
+    });
+  }
+
+  async renderClientWorkDashboard(root, opts = {}) {
+    const selectedClientId = this._clientWorkClientId || '';
+    const selectedProjectId = this._clientWorkProjectId || '';
+    const titleParts = [selectedClientId, selectedProjectId].filter(Boolean);
+    const matches = (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId);
+    const get = (key) => listEntities(this.app, key).filter(matches);
+    const meetings = get('meeting');
+    const comms = get('comms-thread');
+    const deliverables = get('deliverable');
+    const feedback = get('feedback');
+    const surveys = get('survey');
+    const testimonials = get('testimonial');
+    const decisions = get('decision');
+
+    this._renderPageHeader(root, `Client Work${titleParts.length ? ` · ${titleParts.join(' · ')}` : ''}`, 'Delivery overview across meetings, comms, deliverables, feedback and decisions', (right) => {
+      this._renderClientWorkSelector(right);
+    });
+    this._dashboardStats(root, [
+      { label: 'MEETINGS', value: meetings.length, sub: 'client conversations', accent: 'sky' },
+      { label: 'OPEN DELIVERABLES', value: deliverables.filter((e) => this._isOpenEntity(e, 'deliverable')).length, sub: `${deliverables.length} total`, accent: 'emerald' },
+      { label: 'OPEN COMMS', value: comms.filter((e) => this._isOpenEntity(e, 'comms-thread')).length, sub: `${comms.length} threads`, accent: 'mint' },
+      { label: 'FEEDBACK', value: feedback.length, sub: 'items captured', accent: 'warn' },
+      { label: 'DECISIONS', value: decisions.length, sub: 'decision records', accent: 'rose' },
+    ]);
+    const cols = root.createDiv({ cls: 'cad-dash-cols' });
+    const left = cols.createDiv({ cls: 'cad-dash-col' });
+    const right = cols.createDiv({ cls: 'cad-dash-col' });
+    this._dashCardSection(left, 'OPEN DELIVERABLES', this._recentRows('deliverable', deliverables.filter((e) => this._isOpenEntity(e, 'deliverable')), ['title', 'project'], ['status', 'client_id', 'project_id']), 'No open deliverables.');
+    this._dashCardSection(left, 'RECENT COMMS', this._recentRows('comms-thread', comms, ['subject', 'thread_id'], ['channel', 'status', 'last_message_at']), 'No communication threads.');
+    this._dashCardSection(right, 'RECENT FEEDBACK', this._recentRows('feedback', feedback, ['respondent', 'feedback_type'], ['score', 'status', 'client_id']), 'No feedback captured.');
+    this._dashCardSection(right, 'RECENT DECISIONS', this._recentRows('decision', decisions, ['title', 'status'], ['status', 'client_id', 'project_id']), 'No decisions recorded.');
+    if (surveys.length || testimonials.length) {
+      const extra = root.createDiv({ cls: 'cad-dash-cols' });
+      this._dashCardSection(extra.createDiv({ cls: 'cad-dash-col' }), 'SURVEYS', this._recentRows('survey', surveys, ['title'], ['status', 'response_count', 'response_rate']), 'No surveys.');
+      this._dashCardSection(extra.createDiv({ cls: 'cad-dash-col' }), 'TESTIMONIALS', this._recentRows('testimonial', testimonials, ['respondent_name', 'respondent'], ['status', 'permission_level']), 'No testimonials.');
+    }
+  }
+
+  async renderFinanceGLDashboard(root) {
+    const coa = listEntities(this.app, 'chart-of-accounts');
+    const journals = listEntities(this.app, 'journal-entry');
+    const recs = listEntities(this.app, 'bank-reconciliation');
+    const tbs = listEntities(this.app, 'trial-balance');
+    const statements = listEntities(this.app, 'financial-statement');
+    const notes = listEntities(this.app, 'fs-notes');
+    this._renderPageHeader(root, 'General Ledger', 'Posting, reconciliation, trial balance and reporting overview');
+    this._dashboardStats(root, [
+      { label: 'ACCOUNTS', value: coa.length, sub: 'chart records', accent: 'sky' },
+      { label: 'OPEN JOURNALS', value: journals.filter((e) => this._isOpenEntity(e, 'journal-entry')).length, sub: `${journals.length} total`, accent: 'mint' },
+      { label: 'RECONCILIATIONS', value: recs.length, sub: 'bank rec records', accent: 'emerald' },
+      { label: 'TRIAL BALANCES', value: tbs.length, sub: 'period snapshots', accent: 'warn' },
+      { label: 'STATEMENTS', value: statements.length, sub: `${notes.length} FS notes`, accent: 'rose' },
+    ]);
+    const cols = root.createDiv({ cls: 'cad-dash-cols' });
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'RECENT JOURNALS', this._recentRows('journal-entry', journals, ['journal_id', 'title'], ['status', 'period_id', 'client_id']), 'No journal entries.');
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'RECENT RECONCILIATIONS', this._recentRows('bank-reconciliation', recs, ['reconciliation_id', 'account_id'], ['status', 'period_id', 'difference']), 'No bank reconciliations.');
+    const cols2 = root.createDiv({ cls: 'cad-dash-cols' });
+    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'TRIAL BALANCES', this._recentRows('trial-balance', tbs, ['trial_balance_id', 'period_id'], ['status', 'period_id', 'client_id']), 'No trial balances.');
+    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'FINANCIAL STATEMENTS', this._recentRows('financial-statement', statements, ['statement_id', 'statement_type', 'period_id'], ['statement_type', 'status', 'period_id', 'client_id']), 'No financial statements.');
+    this._renderFinanceStatementLegend(root);
+  }
+
+  async renderFinanceSetupDashboard(root) {
+    const periods = listEntities(this.app, 'accounting-period');
+    const banks = listEntities(this.app, 'bank-account');
+    const fx = listEntities(this.app, 'fx-rates-table');
+    const inventory = listEntities(this.app, 'inventory');
+    this._renderPageHeader(root, 'Finance Setup', 'Configuration records required before finance workflows run cleanly');
+    this._dashboardStats(root, [
+      { label: 'PERIODS', value: periods.length, sub: `${periods.filter((e) => this._isOpenEntity(e, 'accounting-period')).length} open`, accent: 'sky' },
+      { label: 'BANK ACCOUNTS', value: banks.length, sub: 'configured accounts', accent: 'mint' },
+      { label: 'FX TABLES', value: fx.length, sub: 'rate tables', accent: 'warn' },
+      { label: 'INVENTORY ITEMS', value: inventory.length, sub: 'tracked records', accent: 'emerald' },
+    ]);
+    const cols = root.createDiv({ cls: 'cad-dash-cols' });
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'OPEN PERIODS', this._recentRows('accounting-period', periods.filter((e) => this._isOpenEntity(e, 'accounting-period')), ['period_id'], ['status', 'start_date', 'end_date']), 'No open periods.');
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'RECENT SETUP CHANGES', [
+      ...this._recentRows('bank-account', banks, ['account_name', 'account_id'], ['currency', 'status']),
+      ...this._recentRows('fx-rates-table', fx, ['rate_table_id', 'base_currency'], ['period_id', 'source']),
+    ].sort((a, b) => (b.file?.stat?.mtime || 0) - (a.file?.stat?.mtime || 0)).slice(0, 6), 'No setup records.');
+  }
+
+  async renderProcurementDashboard(root) {
+    const suppliers = listEntities(this.app, 'supplier');
+    const invoices = listEntities(this.app, 'supplier-invoice');
+    const reqs = listEntities(this.app, 'purchase-requisition');
+    const pos = listEntities(this.app, 'purchase-order');
+    const openInvoices = invoices.filter((e) => this._isOpenEntity(e, 'supplier-invoice'));
+    this._renderPageHeader(root, 'Suppliers & Procurement', 'Supplier, invoice, requisition and purchase order overview');
+    this._dashboardStats(root, [
+      { label: 'SUPPLIERS', value: suppliers.length, sub: 'supplier records', accent: 'sky' },
+      { label: 'OPEN INVOICES', value: openInvoices.length, sub: `${invoices.length} total`, accent: 'rose' },
+      { label: 'REQUISITIONS', value: reqs.filter((e) => this._isOpenEntity(e, 'purchase-requisition')).length, sub: `${reqs.length} total`, accent: 'warn' },
+      { label: 'OPEN POS', value: pos.filter((e) => this._isOpenEntity(e, 'purchase-order')).length, sub: `${pos.length} total`, accent: 'mint' },
+    ]);
+    const cols = root.createDiv({ cls: 'cad-dash-cols' });
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'OPEN SUPPLIER INVOICES', this._dueRows('supplier-invoice', openInvoices, ['due_date', 'invoice_date'], ['invoice_id', 'supplier_id']), 'No open supplier invoices.');
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'PENDING REQUISITIONS', this._recentRows('purchase-requisition', reqs.filter((e) => this._isOpenEntity(e, 'purchase-requisition')), ['requisition_id', 'title'], ['status', 'requester', 'amount']), 'No pending requisitions.');
+    const cols2 = root.createDiv({ cls: 'cad-dash-cols' });
+    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'OPEN PURCHASE ORDERS', this._dueRows('purchase-order', pos.filter((e) => this._isOpenEntity(e, 'purchase-order')), ['expected_delivery', 'order_date'], ['po_id', 'supplier_id']), 'No open purchase orders.');
+    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'RECENT SUPPLIERS', this._recentRows('supplier', suppliers, ['supplier_name', 'name'], ['status', 'category']), 'No suppliers.');
+  }
+
+  async renderTaxDashboard(root) {
+    const vat = listEntities(this.app, 'vat-return');
+    const ct = listEntities(this.app, 'corporate-tax-return');
+    const deferred = listEntities(this.app, 'deferred-tax');
+    const tp = listEntities(this.app, 'transfer-pricing');
+    const fz = listEntities(this.app, 'free-zone-status');
+    const rules = listEntities(this.app, 'legal-rule');
+    const retention = listEntities(this.app, 'document-retention');
+    this._renderPageHeader(root, 'Tax', 'Filing, tax review, legal rule and retention overview');
+    this._dashboardStats(root, [
+      { label: 'OPEN VAT', value: vat.filter((e) => this._isOpenEntity(e, 'vat-return')).length, sub: `${vat.length} returns`, accent: 'sky' },
+      { label: 'OPEN CT', value: ct.filter((e) => this._isOpenEntity(e, 'corporate-tax-return')).length, sub: `${ct.length} returns`, accent: 'mint' },
+      { label: 'TP FILES', value: tp.length, sub: 'transfer pricing', accent: 'warn' },
+      { label: 'LEGAL RULES', value: rules.length, sub: `${retention.length} retention records`, accent: 'rose' },
+    ]);
+    const cols = root.createDiv({ cls: 'cad-dash-cols' });
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'UPCOMING VAT RETURNS', this._dueRows('vat-return', vat.filter((e) => this._isOpenEntity(e, 'vat-return')), ['filing_due_date', 'due_date', 'period_end'], ['return_id', 'period_id']), 'No open VAT returns.');
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'UPCOMING CORPORATE TAX', this._dueRows('corporate-tax-return', ct.filter((e) => this._isOpenEntity(e, 'corporate-tax-return')), ['filing_due_date', 'due_date', 'period_end'], ['return_id', 'period_id']), 'No open corporate tax returns.');
+    const cols2 = root.createDiv({ cls: 'cad-dash-cols' });
+    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'TAX REVIEWS', [
+      ...this._recentRows('deferred-tax', deferred, ['assessment_id', 'period_id'], ['status', 'period_id']),
+      ...this._recentRows('free-zone-status', fz, ['assessment_id', 'entity_id'], ['status', 'period_id']),
+    ].slice(0, 6), 'No deferred tax or free-zone reviews.');
+    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'RECENT LEGAL / RETENTION', [
+      ...this._recentRows('legal-rule', rules, ['rule_id', 'title'], ['jurisdiction', 'status']),
+      ...this._recentRows('document-retention', retention, ['document_type', 'retention_id'], ['status', 'destroy_after_date']),
+    ].slice(0, 6), 'No legal or retention records.');
+  }
+
+  async renderPartnerWorkspaceDashboard(root) {
+    const partners = listEntities(this.app, 'partner');
+    const regs = listEntities(this.app, 'registration');
+    const commissions = listEntities(this.app, 'commission');
+    const certs = listEntities(this.app, 'certification');
+    const deals = listEntities(this.app, 'deal').filter((e) => entityValue(e, 'partner', ENTITIES.deal));
+    this._renderPageHeader(root, 'Partners', 'Partner operations overview across registrations, commissions and certifications');
+    this._dashboardStats(root, [
+      { label: 'PARTNERS', value: partners.length, sub: 'partner records', accent: 'sky' },
+      { label: 'REGISTRATIONS', value: regs.filter((e) => this._isOpenEntity(e, 'registration')).length, sub: `${regs.length} total`, accent: 'mint' },
+      { label: 'COMMISSIONS', value: commissions.filter((e) => this._isOpenEntity(e, 'commission')).length, sub: `${commissions.length} total`, accent: 'warn' },
+      { label: 'CERTIFICATIONS', value: certs.length, sub: 'cert records', accent: 'emerald' },
+      { label: 'PARTNER DEALS', value: deals.length, sub: 'attributed deals', accent: 'rose' },
+    ]);
+    const cols = root.createDiv({ cls: 'cad-dash-cols' });
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'PENDING REGISTRATIONS', this._recentRows('registration', regs.filter((e) => this._isOpenEntity(e, 'registration')), ['deal_name', 'registration_id'], ['status', 'partner_ref', 'expiry_date']), 'No pending registrations.');
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'OPEN COMMISSIONS', this._recentRows('commission', commissions.filter((e) => this._isOpenEntity(e, 'commission')), ['commission_id', 'partner_ref'], ['status', 'amount', 'currency']), 'No open commissions.');
+    const cols2 = root.createDiv({ cls: 'cad-dash-cols' });
+    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'CERTIFICATIONS EXPIRING', this._dueRows('certification', certs, ['expires_date', 'renewal_date'], ['name', 'certification_id']), 'No certifications expiring soon.');
+    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'RECENT PARTNERS', this._recentRows('partner', partners, ['partner_name', 'name'], ['tier', 'status']), 'No partners.');
+  }
+
+  async renderCampaignWorkspaceDashboard(root) {
+    const campaigns = listEntities(this.app, 'campaign');
+    const sequences = listEntities(this.app, 'sequence');
+    const leads = listEntities(this.app, 'lead');
+    const activeCampaigns = campaigns.filter((e) => this._isOpenEntity(e, 'campaign'));
+    const activeSequences = sequences.filter((e) => this._isOpenEntity(e, 'sequence'));
+    this._renderPageHeader(root, 'Campaigns', 'Campaign and outbound sequence overview');
+    this._dashboardStats(root, [
+      { label: 'ACTIVE CAMPAIGNS', value: activeCampaigns.length, sub: `${campaigns.length} total`, accent: 'sky' },
+      { label: 'ACTIVE SEQUENCES', value: activeSequences.length, sub: `${sequences.length} total`, accent: 'mint' },
+      { label: 'LEADS', value: leads.length, sub: 'lead records', accent: 'warn' },
+    ]);
+    const cols = root.createDiv({ cls: 'cad-dash-cols' });
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'ACTIVE CAMPAIGNS', this._recentRows('campaign', activeCampaigns, ['campaign_name', 'title'], ['status', 'campaign_type', 'launch_date']), 'No active campaigns.');
+    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'ACTIVE SEQUENCES', this._recentRows('sequence', activeSequences, ['sequence_name', 'title'], ['status', 'channel', 'campaign_id']), 'No active sequences.');
+    this._dashCardSection(root.createDiv({ cls: 'cad-dash-cols' }).createDiv({ cls: 'cad-dash-col' }), 'RECENT LEADS', this._recentRows('lead', leads, ['company_name', 'contact_name'], ['status', 'owner', 'next_action_date']), 'No leads captured.');
+  }
+
+  /* ── Generic entity LIST view ───────────── */
+  async renderEntityList(root, entityKey, opts = {}) {
+    root.addClass('cadence-list');
+    const def = ENTITIES[entityKey];
+    if (!def) { this.renderComingSoon(root, SURFACE_BY_ID[this.mode]); return; }
+
+    const entities = listEntities(this.app, entityKey);
+    const filtered = opts.filter ? entities.filter(opts.filter) : entities;
+    const unsupported = def.unsupportedBaseFilters || [];
+    const unsupportedText = unsupported.length
+      ? ` · ${unsupported.length} Base filter${unsupported.length === 1 ? '' : 's'} not applied`
+      : '';
+
+    const title = `${opts.title || def.plural}${opts.titleSuffix || ''}`;
+    this._renderPageHeader(root, title, `${filtered.length} ${filtered.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${entityFolder(entityKey)}${unsupportedText}`, (right) => {
+      if (opts.renderHeaderControls) opts.renderHeaderControls(right, entityKey);
+      this._renderEntityViewSelect(right, entityKey);
+      if (def.externalBaseView) {
+        const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
+        openBaseBtn.addEventListener('click', () => this._openEntityBase(entityKey));
+      }
+      const importBtn = right.createEl('button', { cls: 'cad-btn', text: 'Import CSV' });
+      importBtn.addEventListener('click', () => new CadenceImportModal(this.app, { entityKey }).open());
+      const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
+      btn.addEventListener('click', () => this._createEntityFromPrompt(entityKey));
+    });
+
+    if (!opts.forceInternal && this._renderExternalBaseView(root, entityKey)) return;
+    this._renderUnsupportedBaseFilters(root, def);
+
+    if (!filtered.length) {
+      const empty = root.createDiv({ cls: 'cad-empty-state' });
+      empty.createDiv({ cls: 'cad-empty-state-title', text: `No ${def.plural.toLowerCase()} yet` });
+      empty.createDiv({ cls: 'cad-empty-state-desc', text: opts.emptyDescription || `Drop a markdown note in ${entityFolder(entityKey)}/ with frontmatter, or hit "+ New" above.` });
+      return;
+    }
+
+    const cols = (opts.columns || def.columns).map((k) => def.fields.find((f) => f.key === k)).filter(Boolean);
+    const groups = this._groupEntitiesForView(filtered, def);
+    if (groups) {
+      groups.forEach(([label, items]) => {
+        root.createDiv({ cls: 'cad-section-label-lg', text: `${label} · ${items.length}` });
+        this._renderEntityTable(root, items, entityKey, cols);
+      });
+    } else {
+      this._renderEntityTable(root, filtered, entityKey, cols);
+    }
+  }
+
   /* ── Entity DETAIL view (in-app form, autosaves to frontmatter) ── */
   async renderEntityDetail(root, entityKey, file) {
     // Projects get a richer PM-style detail view
@@ -2535,8 +4860,8 @@ class CadenceAppView extends obsidian.ItemView {
     // Read current entity
     const cache = this.app.metadataCache.getFileCache(file) || {};
     const fm = Object.assign({}, cache.frontmatter || {});
-    const primaryKey = def.fields[0].key;
-    const titleVal = (fm[primaryKey] != null && fm[primaryKey] !== '') ? fm[primaryKey] : file.basename;
+    const primaryKey = primaryFieldKey(def);
+    const titleVal = primaryKey ? entityValue({ file, frontmatter: fm, basename: file.basename }, primaryKey, def) : file.basename;
 
     // Header: back / breadcrumb / title / actions
     const head = root.createDiv({ cls: 'cad-detail-header' });
@@ -3041,12 +5366,24 @@ class CadenceAppView extends obsidian.ItemView {
     const files = listEntityFiles(this.app, 'project');
 
     const projectFolderLabel = ENTITIES.project.folders ? ENTITIES.project.folders.join(', ') : entityFolder('project');
-    this._renderPageHeader(root, 'Projects', `${files.length} ${files.length === 1 ? 'project' : 'projects'} in ${projectFolderLabel}`, (right) => {
+    const unsupported = def.unsupportedBaseFilters || [];
+    const unsupportedText = unsupported.length
+      ? ` · ${unsupported.length} Base filter${unsupported.length === 1 ? '' : 's'} not applied`
+      : '';
+    this._renderPageHeader(root, 'Projects', `${files.length} ${files.length === 1 ? 'project' : 'projects'} in ${projectFolderLabel}${unsupportedText}`, (right) => {
+      this._renderEntityViewSelect(right, 'project');
+      if (def.externalBaseView) {
+        const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
+        openBaseBtn.addEventListener('click', () => this._openEntityBase('project'));
+      }
       const importBtn = right.createEl('button', { cls: 'cad-btn', text: 'Import CSV' });
       importBtn.addEventListener('click', () => new CadenceImportModal(this.app, { entityKey: 'project' }).open());
       const btn = right.createEl('button', { cls: 'cad-btn primary', text: '+ New Project' });
       btn.addEventListener('click', () => this._createEntityFromPrompt('project'));
     });
+
+    if (this._renderExternalBaseView(root, 'project')) return;
+    this._renderUnsupportedBaseFilters(root, def);
 
     if (!files.length) {
       const empty = root.createDiv({ cls: 'cad-empty-state' });
@@ -3380,17 +5717,26 @@ class CadenceAppView extends obsidian.ItemView {
 
   async _homeWeekCard(parent) {
     const settings = this.plugin.settings;
+    const taskMode = settings.taskMode || 'checkbox';
+    const includeCheckboxTasks = taskMode === 'checkbox' || taskMode === 'hybrid';
+    const includeTaskNotes = taskMode === 'tasknotes' || taskMode === 'hybrid';
     const weekStart = startOfWeek(new Date(), settings.weekStartsOn);
     let open = 0, done = 0;
+    const weekEnd = addDays(weekStart, 6);
+    const taskNotes = includeTaskNotes ? listTaskNotesForProductivity(this.app, settings, weekStart, weekEnd) : [];
     for (let i = 0; i < 7; i++) {
       const d = addDays(weekStart, i);
       const f = this.app.vault.getAbstractFileByPath(dailyNotePath(settings, d));
-      if (f && f instanceof obsidian.TFile) {
+      if (includeCheckboxTasks && f && f instanceof obsidian.TFile) {
         const c = await this.app.vault.read(f);
         const p = parseSections(c, settings);
         p.tasks.forEach((l) => { if (/ \[(x|X)\] /.test(l)) done++; else if (/ \[ \] /.test(l)) open++; });
       }
     }
+    taskNotes.forEach((task) => {
+      if (task.done) done++;
+      else open++;
+    });
     const total = open + done;
     const pct = total === 0 ? 0 : Math.round((done / total) * 100);
 
@@ -3436,7 +5782,7 @@ class CadenceAppView extends obsidian.ItemView {
     }
     // Registration expiries
     listEntities(this.app, 'registration').forEach((e) => {
-      const exp = entityValue(e, 'expires', ENTITIES.registration);
+      const exp = entityValue(e, 'expires_date', ENTITIES.registration);
       if (!exp) return;
       const d = new Date(exp);
       if (isNaN(d.getTime())) return;
@@ -3446,7 +5792,7 @@ class CadenceAppView extends obsidian.ItemView {
     });
     // Cert expiries
     listEntities(this.app, 'certification').forEach((e) => {
-      const exp = entityValue(e, 'expires', ENTITIES.certification);
+      const exp = entityValue(e, 'expires_date', ENTITIES.certification);
       if (!exp) return;
       const d = new Date(exp);
       if (isNaN(d.getTime())) return;
@@ -3576,8 +5922,8 @@ class CadenceAppView extends obsidian.ItemView {
     sorted.forEach((e) => {
       const row = body.createDiv({ cls: 'cad-home-row' });
       const main = row.createDiv({ cls: 'cad-home-row-main' });
-      main.createDiv({ cls: 'cad-home-row-title', text: entityValue(e, 'subject', def) || e.basename });
-      main.createDiv({ cls: 'cad-home-row-meta', text: `${entityValue(e, 'type', def) || '—'} · ${fmtValue(activityDate(e, def), 'date')}` });
+      main.createDiv({ cls: 'cad-home-row-title', text: activityTitle(e, def) });
+      main.createDiv({ cls: 'cad-home-row-meta', text: `${entityValue(e, 'channel', def) || '—'} · ${fmtValue(activityDate(e, def), 'date')}` });
       row.addEventListener('click', () => this.openEntityDetailFromFile(e.file));
     });
   }
@@ -3609,7 +5955,7 @@ class CadenceAppView extends obsidian.ItemView {
     if (!all.length) {
       const empty = root.createDiv({ cls: 'cad-empty-state' });
       empty.createDiv({ cls: 'cad-empty-state-title', text: 'Inbox zero' });
-      empty.createDiv({ cls: 'cad-empty-state-desc', text: 'Capture anything with + Quick capture above (or Cmd+Shift+I). Add a time and Cadence will remind you.' });
+      empty.createDiv({ cls: 'cad-empty-state-desc', text: 'Capture anything with + Quick capture above (or Cmd+Shift+I). Add a time and BOB Workspace will remind you.' });
       return;
     }
 
@@ -3795,12 +6141,24 @@ class CadenceAppView extends obsidian.ItemView {
     const entities = listEntities(this.app, entityKey);
     const totalValue = entities.reduce((sum, e) => sum + (Number(entityValue(e, dealValueField(def), def)) || 0), 0);
 
-    this._renderPageHeader(root, def.plural, `${entities.length} ${entities.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} · ${fmtValue(totalValue, 'currency')} total`, (right) => {
+    const unsupported = def.unsupportedBaseFilters || [];
+    const unsupportedText = unsupported.length
+      ? ` · ${unsupported.length} Base filter${unsupported.length === 1 ? '' : 's'} not applied`
+      : '';
+    this._renderPageHeader(root, def.plural, `${entities.length} ${entities.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} · ${fmtValue(totalValue, 'currency')} total${unsupportedText}`, (right) => {
+      this._renderEntityViewSelect(right, entityKey);
+      if (def.externalBaseView) {
+        const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
+        openBaseBtn.addEventListener('click', () => this._openEntityBase(entityKey));
+      }
       const importBtn = right.createEl('button', { cls: 'cad-btn', text: 'Import CSV' });
       importBtn.addEventListener('click', () => new CadenceImportModal(this.app, { entityKey }).open());
       const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
       btn.addEventListener('click', () => this._createEntityFromPrompt(entityKey));
     });
+
+    if (this._renderExternalBaseView(root, entityKey)) return;
+    this._renderUnsupportedBaseFilters(root, def);
 
     const board = root.createDiv({ cls: 'cad-kanban-board' });
     groups.forEach((stage) => {
@@ -3849,7 +6207,7 @@ class CadenceAppView extends obsidian.ItemView {
           const card = list.createDiv({ cls: 'cad-kanban-card' });
           card.draggable = true;
           card.dataset.path = e.file.path;
-          card.createDiv({ cls: 'cad-kanban-card-title', text: entityValue(e, 'title', def) || e.basename });
+          card.createDiv({ cls: 'cad-kanban-card-title', text: entityPrimaryValue(e, def) });
           const meta = card.createDiv({ cls: 'cad-kanban-card-meta' });
           const v = entityValue(e, dealValueField(def), def);
           if (v) meta.createSpan({ cls: 'cad-kanban-card-value', text: fmtValue(v, 'currency') });
@@ -3976,7 +6334,7 @@ class CadenceAppView extends obsidian.ItemView {
       .slice(0, 6)
       .map((e) => ({
         title: activityTitle(e, ENTITIES.activity),
-        meta: `${entityValue(e, 'type', ENTITIES.activity) || '—'} · ${fmtValue(activityDate(e, ENTITIES.activity), 'date')}`,
+        meta: `${entityValue(e, 'channel', ENTITIES.activity) || '—'} · ${fmtValue(activityDate(e, ENTITIES.activity), 'date')}`,
         file: e.file,
       }));
     this._dashCardSection(right, `RECENT ACTIVITY · ${activities.length} total`, recentAct, 'No activity logged yet. Capture a call or meeting under CRM > Activities.');
@@ -4021,10 +6379,23 @@ class CadenceAppView extends obsidian.ItemView {
   async renderProductivity(root) {
     root.addClass('cadence-report');
     const settings = this.plugin.settings;
+    const taskMode = settings.taskMode || 'checkbox';
+    const includeCheckboxTasks = taskMode === 'checkbox' || taskMode === 'hybrid';
+    const includeTaskNotes = taskMode === 'tasknotes' || taskMode === 'hybrid';
 
     // Walk last 30 days
     const today = startOfDay(new Date());
     const days = Array.from({ length: 30 }, (_, i) => addDays(today, -i));
+    const oldestDay = days[days.length - 1];
+    const weekStart = startOfWeek(today, this.plugin.settings.weekStartsOn);
+    const oldestWeekStart = addDays(weekStart, -11 * 7);
+    const taskNoteStart = oldestWeekStart.getTime() < oldestDay.getTime() ? oldestWeekStart : oldestDay;
+    const taskNotes = includeTaskNotes ? listTaskNotesForProductivity(this.app, settings, taskNoteStart, today) : [];
+    const taskNotesByDate = new Map();
+    taskNotes.forEach((task) => {
+      if (!taskNotesByDate.has(task.date)) taskNotesByDate.set(task.date, []);
+      taskNotesByDate.get(task.date).push(task);
+    });
     let totalOpen = 0, totalDone = 0, totalJournalChars = 0;
     let activeDays = 0;
     let streak = 0, streakBroken = false;
@@ -4032,26 +6403,38 @@ class CadenceAppView extends obsidian.ItemView {
     for (const d of days) {
       const f = this.app.vault.getAbstractFileByPath(dailyNotePath(settings, d));
       let open = 0, done = 0, jChars = 0, hasNote = false;
-      if (f && f instanceof obsidian.TFile) {
+      if (includeCheckboxTasks && f && f instanceof obsidian.TFile) {
         hasNote = true;
         const c = await this.app.vault.read(f);
         const p = parseSections(c, settings);
         open = p.tasks.filter((l) => / \[ \] /.test(l)).length;
         done = p.tasks.filter((l) => / \[(x|X)\] /.test(l)).length;
         jChars = (p.journal || '').length;
+      } else if (f && f instanceof obsidian.TFile) {
+        hasNote = true;
+        const c = await this.app.vault.read(f);
+        const p = parseSections(c, settings);
+        jChars = (p.journal || '').length;
       }
-      perDay.push({ date: d, open, done, jChars, hasNote });
+      const dayTaskNotes = taskNotesByDate.get(ymd(d)) || [];
+      if (includeTaskNotes) {
+        done += dayTaskNotes.filter((task) => task.done).length;
+        open += dayTaskNotes.filter((task) => !task.done).length;
+      }
+      const hasTaskNote = dayTaskNotes.length > 0;
+      perDay.push({ date: d, open, done, jChars, hasNote, hasTaskNote });
       totalOpen += open; totalDone += done; totalJournalChars += jChars;
-      if (hasNote) activeDays++;
+      if (hasNote || hasTaskNote) activeDays++;
       if (!streakBroken) {
-        if (hasNote && (done > 0 || jChars > 0)) streak++;
+        if ((hasNote || hasTaskNote) && (done > 0 || jChars > 0)) streak++;
         else streakBroken = true;
       }
     }
 
     const completion = totalOpen + totalDone === 0 ? 0 : Math.round((totalDone / (totalOpen + totalDone)) * 100);
 
-    this._renderPageHeader(root, 'Productivity', 'Last 30 days · across your daily notes');
+    const taskSource = taskMode === 'tasknotes' ? 'TaskNotes' : taskMode === 'hybrid' ? 'daily notes + TaskNotes' : 'daily notes';
+    this._renderPageHeader(root, 'Productivity', `Last 30 days · ${taskSource}`);
 
     const grid = root.createDiv({ cls: 'cad-stat-grid' });
     const stat = (label, value, sub, accent) => {
@@ -4083,7 +6466,6 @@ class CadenceAppView extends obsidian.ItemView {
     });
 
     /* 12-week completion trend */
-    const weekStart = startOfWeek(today, this.plugin.settings.weekStartsOn);
     const weeks = [];
     for (let w = 11; w >= 0; w--) {
       const ws = addDays(weekStart, -w * 7);
@@ -4093,11 +6475,17 @@ class CadenceAppView extends obsidian.ItemView {
         const d = addDays(ws, i);
         if (d.getTime() > today.getTime()) break;
         const f = this.app.vault.getAbstractFileByPath(dailyNotePath(settings, d));
-        if (f && f instanceof obsidian.TFile) {
+        if (includeCheckboxTasks && f && f instanceof obsidian.TFile) {
           anyNote = true;
           const c = await this.app.vault.read(f);
           const p = parseSections(c, settings);
           p.tasks.forEach((l) => { if (/ \[(x|X)\] /.test(l)) wd++; else if (/ \[ \] /.test(l)) wo++; });
+        }
+        if (includeTaskNotes) {
+          const dayTaskNotes = taskNotesByDate.get(ymd(d)) || [];
+          wd += dayTaskNotes.filter((task) => task.done).length;
+          wo += dayTaskNotes.filter((task) => !task.done).length;
+          if (dayTaskNotes.length) anyNote = true;
         }
       }
       weeks.push({ start: ws, done: wd, open: wo, any: anyNote, label: ws.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) });
@@ -4435,7 +6823,7 @@ class CadenceAppView extends obsidian.ItemView {
     const horizon = now + 90 * 86400000;
     const upcomingCerts = certs
       .map((e) => {
-        const exp = entityValue(e, 'expires', certDef);
+        const exp = entityValue(e, 'expires_date', certDef);
         if (!exp) return null;
         const d = new Date(exp);
         if (isNaN(d.getTime())) return null;
@@ -4446,7 +6834,7 @@ class CadenceAppView extends obsidian.ItemView {
       .slice(0, 8)
       .map((x) => ({
         title: entityValue(x.entity, 'name', certDef) || x.entity.basename,
-        meta: `${entityValue(x.entity, 'partner', certDef) || '—'} · expires ${fmtValue(x.date, 'date')}`,
+        meta: `${entityValue(x.entity, 'partner_ref', certDef) || '—'} · expires ${fmtValue(x.date, 'date')}`,
         file: x.entity.file,
       }));
     this._dashCardSection(right, 'CERTS EXPIRING · NEXT 90 DAYS', upcomingCerts, 'No certifications expiring in the next 90 days.');
@@ -4462,7 +6850,7 @@ class CadenceAppView extends obsidian.ItemView {
 
     const counts = new Map();
     acts.forEach((e) => {
-      const t = String(entityValue(e, 'type', def) || 'unspecified');
+      const t = String(entityValue(e, 'channel', def) || 'unspecified');
       counts.set(t, (counts.get(t) || 0) + 1);
     });
 
@@ -4517,7 +6905,7 @@ class CadenceAppView extends obsidian.ItemView {
     // Top contacts by activity count
     const contactCounts = new Map();
     acts.forEach((e) => {
-      const w = String(entityValue(e, 'with', def) || '').trim();
+      const w = String(entityValue(e, 'client_id', def) || '').trim();
       if (!w) return;
       contactCounts.set(w, (contactCounts.get(w) || 0) + 1);
     });
@@ -4528,19 +6916,19 @@ class CadenceAppView extends obsidian.ItemView {
         title: who,
         meta: `${count} activit${count === 1 ? 'y' : 'ies'}`,
       }));
-    this._dashCardSection(left, 'TOP CONTACTS · by activity count', topContactRows, 'No activities tagged with a contact yet.');
+    this._dashCardSection(left, 'TOP CLIENTS · by activity count', topContactRows, 'No activities tagged with a client yet.');
 
     // Recent activity (last 10)
     const recent = [...acts]
       .sort((a, b) => {
-        const da = new Date(entityValue(a, 'when', def) || 0).getTime();
-        const db = new Date(entityValue(b, 'when', def) || 0).getTime();
+        const da = new Date(activityDate(a, def) || 0).getTime();
+        const db = new Date(activityDate(b, def) || 0).getTime();
         return db - da;
       })
       .slice(0, 10)
       .map((e) => ({
-        title: entityValue(e, 'subject', def) || e.basename,
-        meta: `${entityValue(e, 'type', def) || '—'} · ${entityValue(e, 'with', def) || '—'} · ${fmtValue(entityValue(e, 'when', def), 'date')}`,
+        title: activityTitle(e, def),
+        meta: `${entityValue(e, 'channel', def) || '—'} · ${entityValue(e, 'client_id', def) || '—'} · ${fmtValue(activityDate(e, def), 'date')}`,
         file: e.file,
       }));
     this._dashCardSection(right, 'RECENT ACTIVITY · last 10', recent, 'No activities yet — log one under CRM > Activities.');
@@ -4673,15 +7061,19 @@ class CadenceAppView extends obsidian.ItemView {
     convFill.style.width = `${conv}%`;
   }
 
-  /* ── Team (contacts where role contains "team") ─ */
+  /* ── Team (configurable People categories) ─ */
   async renderTeam(root) {
+    const configured = Array.isArray(this.plugin.settings.teamPersonCategories)
+      ? this.plugin.settings.teamPersonCategories
+      : DEFAULT_SETTINGS.teamPersonCategories;
+    const categories = new Set(configured.map((v) => String(v || '').toLowerCase()).filter(Boolean));
     return this.renderEntityList(root, 'contact', {
       title: 'Team',
       filter: (e) => {
-        const role = String(entityValue(e, 'role', ENTITIES.contact) || '').toLowerCase();
-        return role.includes('team') || role.includes('admin') || role.includes('member');
+        const category = String(entityValue(e, 'person_category', ENTITIES.contact) || '').toLowerCase();
+        return categories.has(category);
       },
-      columns: ['name', 'role', 'email', 'company'],
+      columns: ['name', 'person_category', 'role', 'email', 'company'],
     });
   }
 
@@ -4694,7 +7086,7 @@ class CadenceAppView extends obsidian.ItemView {
     wrap.createDiv({ cls: 'cad-eyebrow', text: 'CADENCE' });
     wrap.createDiv({ cls: 'cad-soon-title', text: 'Settings' });
     wrap.createDiv({ cls: 'cad-soon-desc', text: 'Configure folders, headings, week start, default tab, and the (future) Cadence API connection.' });
-    const btn = wrap.createEl('button', { cls: 'cad-btn primary', text: 'Open Cadence settings' });
+    const btn = wrap.createEl('button', { cls: 'cad-btn primary', text: 'Open BOB Workspace settings' });
     btn.style.marginTop = '12px';
     btn.addEventListener('click', () => {
       this.app.setting.open();
@@ -4820,7 +7212,7 @@ class CadenceAppView extends obsidian.ItemView {
         try {
           const file = await createEntity(this.app, entityKey, result.name);
           // Patch frontmatter with whatever else the user filled in (skip primary key — already set by template).
-          const primaryKey = def.fields[0].key;
+          const primaryKey = primaryFieldKey(def);
           const extras = Object.assign({}, result.values);
           delete extras[primaryKey];
           if (Object.keys(extras).length) {
@@ -4834,7 +7226,7 @@ class CadenceAppView extends obsidian.ItemView {
           new obsidian.Notice(`Created ${def.label}: ${file.basename}\nSaved to ${file.path}`, 4000);
           await this.openEntityDetail(entityKey, file);
         } catch (e) {
-          new obsidian.Notice(`Cadence: failed to create ${def.label} — ${e.message}`);
+          new obsidian.Notice(`BOB Workspace: failed to create ${def.label} — ${e.message}`);
         }
       },
     }).open();
@@ -5150,7 +7542,17 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl('h2', { text: 'Cadence' });
+    containerEl.createEl('h2', { text: 'BOB Workspace Cadence' });
+
+    const fork = containerEl.createEl('p', { cls: 'setting-item-description' });
+    fork.appendText('BOB Workspace is a fork of the ');
+    fork.createEl('a', {
+      text: 'Cadence Planner',
+      href: 'https://github.com/iotool/obsidian-cadence-planner',
+    }).setAttribute('target', '_blank');
+    fork.appendText(' Obsidian plugin, extended with schemas, .base files, vault-aware entity mapping, configurable folders, and an in-settings entities.json editor. ');
+    fork.createEl('strong', { text: 'Folder-structure compatibility with upstream Cadence is intended but not yet fully verified' });
+    fork.appendText(' — if you switch between forks, back up your vault first.');
 
     /* ─── Modules (consolidated: toggle + surfaces + folders + base files) ─── */
     containerEl.createEl('h3', { text: 'Modules' });
@@ -5161,21 +7563,30 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
 
     const ensureMods = () => {
       if (!this.plugin.settings.modules) {
-        this.plugin.settings.modules = { crm: true, prm: true, srm: true, planner: true };
+        this.plugin.settings.modules = { crm: true, 'client-work': true, prm: true, srm: true, finance: true, procurement: true, tax: true, planner: true };
       }
+      if (this.plugin.settings.modules['client-work'] == null) this.plugin.settings.modules['client-work'] = true;
+      if (this.plugin.settings.modules.finance == null) this.plugin.settings.modules.finance = true;
+      if (this.plugin.settings.modules.procurement == null) this.plugin.settings.modules.procurement = true;
+      if (this.plugin.settings.modules.tax == null) this.plugin.settings.modules.tax = true;
       return this.plugin.settings.modules;
     };
     const moduleLabels = {
-      planner: 'Customer Relationship Management is for daily planning, projects and capture.',
+      planner: 'Planner — daily planning, projects and capture.',
       crm:     'Customer Relationship Management — Contacts, Clients, My Companies, Pipeline, Activities.',
+      'client-work': 'Client Work — Meetings, communications, deliverables, feedback, surveys, testimonials and decisions.',
       srm:     'Supplier Relationship Management — Suppliers, contracts, spend.',
       prm:     'Partner Relationship Management — Partners, Registrations, Commissions, Leads, Certifications, Analytics.',
+      finance: 'Finance — periods, bank, journals, invoices, purchases, trial balances and statements.',
+      procurement: 'Procurement — internal purchase requests and formal supplier purchase orders.',
+      tax:     'Tax & Compliance — VAT, corporate tax, deferred tax, transfer pricing, legal rules and retention.',
     };
 
     const baseFiles = this.plugin.app.vault.getFiles()
       .filter(f => f.extension === 'base')
-      .map(f => f.path)
-      .sort();
+      .sort((a, b) => a.path.localeCompare(b.path));
+    const baseSummariesPromise = Promise.all(baseFiles.map((file) => readBaseSummary(this.plugin.app, file)))
+      .then((items) => items.filter(Boolean).sort((a, b) => a.label.localeCompare(b.label)));
 
     NAV_GROUPS.forEach((group) => {
       const items = group.items.filter((s) => !['home', 'team', 'settings'].includes(s.id));
@@ -5211,7 +7622,13 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       items.forEach((surface) => {
         const eDef = surface.entityKey ? ENTITIES[surface.entityKey] : null;
         const overridden = eDef && (eDef.typeFilter || Array.isArray(eDef.folders));
+        const level = surface.navLevel || 'primary';
+        const levelLabel = level === 'secondary' ? 'Secondary tab'
+          : level === 'setup' ? 'Setup'
+          : 'Primary';
         const desc = [];
+        desc.push(levelLabel);
+        if (surface.parent) desc.push(`parent: ${SURFACE_BY_ID[surface.parent]?.label || surface.parent}`);
         if (overridden) {
           if (eDef.typeFilter)            desc.push(`type: "${eDef.typeFilter}"`);
           if (Array.isArray(eDef.folders))desc.push(`folders: [${eDef.folders.join(', ')}]`);
@@ -5219,7 +7636,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           desc.push(surface.id);
         }
         const s = new obsidian.Setting(panel)
-          .setName(surface.label)
+          .setName(`${surface.label} (${levelLabel})`)
           .setDesc(desc.join(' · '));
         if (moduleDisabled) s.settingEl.classList.add('cad-setting-disabled');
 
@@ -5258,20 +7675,61 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         // Base file dropdown (for surfaces backed by an entity)
         if (surface.entityKey) {
           const currentBase = (this.plugin.settings.baseFiles || {})[surface.entityKey] || '';
+          const currentView = (this.plugin.settings.baseViews || {})[surface.entityKey] || '';
           s.addDropdown((dd) => {
-            dd.addOption('', '— no base —');
-            baseFiles.forEach(p => dd.addOption(p, p.split('/').pop().replace('.base', '')));
-            dd.setValue(currentBase);
+            dd.addOption('', 'Loading bases...');
+            dd.setValue('');
+            baseSummariesPromise.then((summaries) => {
+              const compatible = summaries.filter((summary) => baseSummaryCompatibleWithEntity(summary, surface.entityKey));
+              const selectedSummary = currentBase ? summaries.find((summary) => summary.path === currentBase) : null;
+              const options = selectedSummary && !compatible.some((summary) => summary.path === selectedSummary.path)
+                ? [selectedSummary, ...compatible]
+                : compatible;
+              dd.selectEl.empty();
+              dd.addOption('', '— no base —');
+              options.forEach((summary) => {
+                const label = summary === selectedSummary && !baseSummaryCompatibleWithEntity(summary, surface.entityKey)
+                  ? `[incompatible] ${summary.label}`
+                  : summary.label;
+                dd.addOption(summary.path, label);
+              });
+              dd.setValue(currentBase);
+            });
             dd.onChange(async (v) => {
               if (!this.plugin.settings.baseFiles) this.plugin.settings.baseFiles = {};
+              if (!this.plugin.settings.baseViews) this.plugin.settings.baseViews = {};
               if (v) this.plugin.settings.baseFiles[surface.entityKey] = v;
               else   delete this.plugin.settings.baseFiles[surface.entityKey];
+              delete this.plugin.settings.baseViews[surface.entityKey];
               await this.plugin.saveSettings();
-              if (this.plugin.settings.useSchemas) await applySchemas(this.plugin.app, this.plugin.settings);
-              await applyCustomEntities(this.plugin.app, this.plugin.settings);
+              await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
               this.plugin.refreshOpenViews();
+              this.display();
             });
             if (moduleDisabled) dd.setDisabled(true);
+          });
+          s.addDropdown((dd) => {
+            dd.addOption('', currentBase ? 'Loading views...' : '— all properties —');
+            dd.setValue('');
+            if (!currentBase || moduleDisabled) dd.setDisabled(true);
+            if (currentBase) {
+              baseSummariesPromise.then((summaries) => {
+                const summary = summaries.find((item) => item.path === currentBase);
+                dd.selectEl.empty();
+                dd.addOption('', '— all properties —');
+                (summary?.views || []).forEach((viewName) => dd.addOption(viewName, viewName));
+                dd.setValue(currentView);
+                if (!moduleDisabled) dd.setDisabled(false);
+              });
+            }
+            dd.onChange(async (v) => {
+              if (!this.plugin.settings.baseViews) this.plugin.settings.baseViews = {};
+              if (v) this.plugin.settings.baseViews[surface.entityKey] = v;
+              else delete this.plugin.settings.baseViews[surface.entityKey];
+              await this.plugin.saveSettings();
+              await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+              this.plugin.refreshOpenViews();
+            });
           });
         }
       });
@@ -5284,7 +7742,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           projectFoldersEl.empty();
           projectFoldersEl.createEl('div', { text: 'Project folders (first = default, additional = also scanned)', cls: 'setting-item-description' });
           const allFolders = [
-            (this.plugin.settings.folderProjects || 'Cadence/Projects'),
+            (this.plugin.settings.folderProjects || '30-CLIENTS'),
             ...(this.plugin.settings.projectFolders || []),
           ];
           allFolders.forEach((folder, idx) => {
@@ -5298,7 +7756,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
             inp.addEventListener('change', async () => {
               const updated = [...allFolders];
               updated[idx] = inp.value.trim();
-              this.plugin.settings.folderProjects = updated[0] || 'Cadence/Projects';
+              this.plugin.settings.folderProjects = updated[0] || '30-CLIENTS';
               this.plugin.settings.projectFolders = updated.slice(1).filter(f => f);
               await this.plugin.saveSettings();
               syncEntityFolders(this.plugin.settings);
@@ -5308,7 +7766,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
               const rm = row.createEl('button', { text: '✕' });
               rm.addEventListener('click', async () => {
                 const updated = allFolders.filter((_, i) => i !== idx);
-                this.plugin.settings.folderProjects = updated[0] || 'Cadence/Projects';
+                this.plugin.settings.folderProjects = updated[0] || '30-CLIENTS';
                 this.plugin.settings.projectFolders = updated.slice(1).filter(f => f);
                 await this.plugin.saveSettings();
                 syncEntityFolders(this.plugin.settings);
@@ -5331,7 +7789,9 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     });
 
     containerEl.createEl('h3', { text: 'Reminders' });
-    new obsidian.Setting(containerEl)
+    const remindersGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section' });
+    const remindersPanel = remindersGroup.createDiv({ cls: 'setting-items' });
+    new obsidian.Setting(remindersPanel)
       .setName('Desktop notifications')
       .setDesc('In addition to the in-app banner, fire a system notification when a reminder is due. Requires browser permission.')
       .addToggle((t) => t
@@ -5344,7 +7804,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           }
         }));
 
-    new obsidian.Setting(containerEl)
+    new obsidian.Setting(remindersPanel)
       .setName('Notification permission')
       .setDesc(typeof Notification === 'undefined'
         ? 'Notifications API not available in this environment.'
@@ -5354,7 +7814,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         try { await Notification.requestPermission(); this.display(); } catch (_) {}
       }));
 
-    new obsidian.Setting(containerEl)
+    new obsidian.Setting(remindersPanel)
       .setName('Clear completed reminders')
       .setDesc(`${(this.plugin.settings.reminders || []).filter((r) => r.done).length} completed reminders stored.`)
       .addButton((b) => b.setButtonText('Clear').onClick(async () => {
@@ -5366,8 +7826,64 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
 
     /* ─── App ─── */
     containerEl.createEl('h3', { text: 'App' });
+    const appGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section' });
+    const appPanel = appGroup.createDiv({ cls: 'setting-items' });
 
-    new obsidian.Setting(containerEl)
+    new obsidian.Setting(appPanel)
+      .setName('Show secondary screens in left navigation')
+      .setDesc('Shows lower-frequency child screens such as Sequences, Registrations, Commissions, Certifications, Journals, Statements and tax returns. They remain available as tabs on their parent screens when hidden.')
+      .addToggle((t) => t
+        .setValue(!!this.plugin.settings.showSecondaryNav)
+        .onChange(async (v) => {
+          this.plugin.settings.showSecondaryNav = v;
+          await this.plugin.saveSettings();
+          this.plugin.refreshOpenViews();
+        }));
+
+    new obsidian.Setting(appPanel)
+      .setName('Show setup screens in left navigation')
+      .setDesc('Shows setup/reference screens such as My Companies, Accounting Periods, Bank Accounts, Chart of Accounts, FX Rates, Legal Rules and Document Retention.')
+      .addToggle((t) => t
+        .setValue(!!this.plugin.settings.showSetupNav)
+        .onChange(async (v) => {
+          this.plugin.settings.showSetupNav = v;
+          await this.plugin.saveSettings();
+          this.plugin.refreshOpenViews();
+        }));
+
+    const peopleCategories = ENTITIES.contact.fields.find((f) => f.key === 'person_category')?.options
+      || DEFAULT_SETTINGS.teamPersonCategories;
+    const selectedTeamCategories = new Set(
+      (Array.isArray(this.plugin.settings.teamPersonCategories)
+        ? this.plugin.settings.teamPersonCategories
+        : DEFAULT_SETTINGS.teamPersonCategories)
+        .map((v) => String(v || '').toLowerCase())
+    );
+    const teamSetting = new obsidian.Setting(appPanel)
+      .setName('Team person categories')
+      .setDesc('People categories included on the Team screen.');
+    const teamControls = teamSetting.controlEl.createDiv({ cls: 'cad-settings-checkboxes' });
+    peopleCategories.forEach((category) => {
+      const label = teamControls.createEl('label', { cls: 'cad-settings-checkbox' });
+      const checkbox = label.createEl('input', { type: 'checkbox' });
+      checkbox.checked = selectedTeamCategories.has(category);
+      label.createEl('span', { text: category });
+      checkbox.addEventListener('change', async () => {
+        const next = new Set(
+          (Array.isArray(this.plugin.settings.teamPersonCategories)
+            ? this.plugin.settings.teamPersonCategories
+            : DEFAULT_SETTINGS.teamPersonCategories)
+            .map((v) => String(v || '').toLowerCase())
+        );
+        if (checkbox.checked) next.add(category);
+        else next.delete(category);
+        this.plugin.settings.teamPersonCategories = Array.from(next);
+        await this.plugin.saveSettings();
+        this.plugin.refreshOpenViews();
+      });
+    });
+
+    new obsidian.Setting(appPanel)
       .setName('Daily note folder')
       .setDesc('Folder under which daily notes live, e.g. "daily" or "Journal/Daily".')
       .addText((t) => t
@@ -5376,7 +7892,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         .onChange(async (v) => { this.plugin.settings.dailyNoteFolder = v; await this.plugin.saveSettings(); }));
 
     /* ── Task mode ── */
-    const taskModeEl = new obsidian.Setting(containerEl)
+    const taskModeEl = new obsidian.Setting(appPanel)
       .setName('Task mode')
       .setDesc('How tasks are stored and displayed in the Planner.')
       .addDropdown((d) => d
@@ -5392,7 +7908,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         }));
 
     if ((this.plugin.settings.taskMode || 'checkbox') !== 'checkbox') {
-      new obsidian.Setting(containerEl)
+      new obsidian.Setting(appPanel)
         .setName('TaskNotes folder')
         .setDesc('Vault path where TaskNote files are stored.')
         .addText((t) => t
@@ -5402,23 +7918,33 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
             this.plugin.settings.taskNotesFolder = v.trim() || '00-CORE/TaskNotes/Tasks';
             await this.plugin.saveSettings();
           }));
+      new obsidian.Setting(appPanel)
+        .setName('TaskNotes archive folder')
+        .setDesc('Vault path where archived TaskNote files are stored and included in productivity history.')
+        .addText((t) => t
+          .setPlaceholder('00-CORE/TaskNotes/Archive')
+          .setValue(this.plugin.settings.taskNotesArchiveFolder || '00-CORE/TaskNotes/Archive')
+          .onChange(async (v) => {
+            this.plugin.settings.taskNotesArchiveFolder = v.trim() || '00-CORE/TaskNotes/Archive';
+            await this.plugin.saveSettings();
+          }));
     }
 
-    new obsidian.Setting(containerEl)
+    new obsidian.Setting(appPanel)
       .setName('Tasks heading')
       .setDesc('The H2 inside each daily note where tasks live. Default "## Today".')
       .addText((t) => t
         .setValue(this.plugin.settings.tasksHeading)
         .onChange(async (v) => { this.plugin.settings.tasksHeading = v; await this.plugin.saveSettings(); }));
 
-    new obsidian.Setting(containerEl)
+    new obsidian.Setting(appPanel)
       .setName('Journal heading')
       .setDesc('The H2 where today\'s journal entry lives. Default "## Journal".')
       .addText((t) => t
         .setValue(this.plugin.settings.journalHeading)
         .onChange(async (v) => { this.plugin.settings.journalHeading = v; await this.plugin.saveSettings(); }));
 
-    new obsidian.Setting(containerEl)
+    new obsidian.Setting(appPanel)
       .setName('Currency')
       .setDesc('Used to format money values across Pipeline, Reports and Commissions.')
       .addDropdown((d) => {
@@ -5434,7 +7960,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         });
       });
 
-    new obsidian.Setting(containerEl)
+    new obsidian.Setting(appPanel)
       .setName('Week starts on')
       .setDesc('First day of the week shown in the Planner tab.')
       .addDropdown((d) => d
@@ -5446,16 +7972,16 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           await this.plugin.saveSettings();
         }));
 
-    new obsidian.Setting(containerEl)
-      .setName('Open Cadence on Obsidian startup')
-      .setDesc('Auto-open the Cadence Home command centre when Obsidian launches.')
+    new obsidian.Setting(appPanel)
+      .setName('Open BOB Workspace on Obsidian startup')
+      .setDesc('Auto-open the BOB Workspace Home command centre when Obsidian launches.')
       .addToggle((t) => t
         .setValue(!!this.plugin.settings.openOnStartup)
         .onChange(async (v) => { this.plugin.settings.openOnStartup = v; await this.plugin.saveSettings(); }));
 
-    const defaultDrop = new obsidian.Setting(containerEl)
+    const defaultDrop = new obsidian.Setting(appPanel)
       .setName('Default tab')
-      .setDesc('Which surface opens first when you launch the Cadence app.');
+      .setDesc('Which surface opens first when you launch BOB Workspace.');
     defaultDrop.addDropdown((d) => {
       NAV_GROUPS.forEach((g) => {
         g.items.forEach((s) => {
@@ -5467,9 +7993,99 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       d.onChange(async (v) => { this.plugin.settings.defaultTab = v; await this.plugin.saveSettings(); });
     });
 
+    /* ─── Custom entities (entities.json) ─── */
+    containerEl.createEl('h3', { text: 'Custom entities' });
+    const entDesc = containerEl.createEl('p', { cls: 'setting-item-description' });
+    entDesc.appendText('Define new entity types or override fields on built-in ones. Stored in plugin folder as ');
+    entDesc.createEl('code', { text: 'entities.json' });
+    entDesc.appendText(' (next to data.json). A backup of the previous version is written to ');
+    entDesc.createEl('code', { text: 'entities.backup.json' });
+    entDesc.appendText(' on each save.');
+
+    const entWrap = containerEl.createDiv({ cls: 'cad-settings-entities' });
+    const entStatus = entWrap.createDiv({ cls: 'cad-settings-entities-status' });
+    const entTa = entWrap.createEl('textarea', { cls: 'cad-settings-entities-textarea' });
+    entTa.rows = 20;
+    entTa.spellcheck = false;
+    entTa.style.width = '100%';
+    entTa.style.fontFamily = 'var(--font-monospace)';
+    entTa.style.fontSize = '12px';
+
+    const adapter = this.plugin.app.vault.adapter;
+    (async () => {
+      try {
+        if (await adapter.exists(ENTITIES_CONFIG_PATH)) {
+          entTa.value = await adapter.read(ENTITIES_CONFIG_PATH);
+        } else {
+          entTa.value = ENTITIES_JSON_TEMPLATE;
+          entStatus.setText('No entities.json yet — edit and Save to create.');
+        }
+      } catch (e) {
+        entStatus.setText(`Read error: ${e.message}`);
+      }
+    })();
+
+    const setStatus = (msg, ok) => {
+      entStatus.setText(msg);
+      entStatus.style.color = ok ? 'var(--text-success)' : 'var(--text-error)';
+    };
+
+    entTa.addEventListener('input', () => {
+      const v = entTa.value.trim();
+      if (!v) { setStatus('Empty', false); return; }
+      try {
+        const p = JSON.parse(v);
+        if (!p || typeof p !== 'object' || Array.isArray(p)) throw new Error('must be a JSON object');
+        setStatus(`Valid · ${Object.keys(p).length} entit${Object.keys(p).length === 1 ? 'y' : 'ies'}`, true);
+      } catch (e) {
+        setStatus(`Invalid JSON: ${e.message}`, false);
+      }
+    });
+
+    const entBtns = entWrap.createDiv({ cls: 'cad-settings-entities-btns' });
+    entBtns.style.display = 'flex';
+    entBtns.style.gap = '8px';
+    entBtns.style.marginTop = '8px';
+
+    const formatBtn = entBtns.createEl('button', { text: 'Format' });
+    formatBtn.addEventListener('click', () => {
+      try {
+        entTa.value = JSON.stringify(JSON.parse(entTa.value), null, 2);
+        setStatus('Formatted', true);
+      } catch (e) { setStatus(`Cannot format: ${e.message}`, false); }
+    });
+
+    const saveBtn = entBtns.createEl('button', { text: 'Save', cls: 'mod-cta' });
+    saveBtn.addEventListener('click', async () => {
+      try {
+        await saveEntitiesConfig(this.plugin.app, entTa.value);
+        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        this.plugin.refreshOpenViews();
+        setStatus('Saved · entities reloaded', true);
+        new obsidian.Notice('BOB Workspace: entities.json saved.');
+      } catch (e) {
+        setStatus(`Save failed: ${e.message}`, false);
+        new obsidian.Notice(`BOB Workspace: save failed — ${e.message}`);
+      }
+    });
+
+    const restoreBtn = entBtns.createEl('button', { text: 'Restore backup' });
+    restoreBtn.addEventListener('click', async () => {
+      try {
+        if (!(await adapter.exists(ENTITIES_BACKUP_PATH))) {
+          setStatus('No backup file found', false);
+          return;
+        }
+        entTa.value = await adapter.read(ENTITIES_BACKUP_PATH);
+        setStatus('Backup loaded into editor — click Save to apply', true);
+      } catch (e) { setStatus(`Restore failed: ${e.message}`, false); }
+    });
+
     /* ─── Schemas ─── */
     containerEl.createEl('h3', { text: 'Schemas' });
-    new obsidian.Setting(containerEl)
+    const schemasGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section' });
+    const schemasPanel = schemasGroup.createDiv({ cls: 'setting-items' });
+    new obsidian.Setting(schemasPanel)
       .setName('Use schema YAML files')
       .setDesc('Read entity definitions (folders, type filters, field types, enum options) from Metadata Menu schema YAML files.')
       .addToggle((t) => t
@@ -5477,11 +8093,10 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         .onChange(async (v) => {
           this.plugin.settings.useSchemas = v;
           await this.plugin.saveSettings();
-          if (v) await applySchemas(this.plugin.app, this.plugin.settings);
-          await applyCustomEntities(this.plugin.app, this.plugin.settings);
+          await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
           this.plugin.refreshOpenViews();
         }));
-    new obsidian.Setting(containerEl)
+    new obsidian.Setting(schemasPanel)
       .setName('Schemas folder')
       .setDesc('Vault path where schema YAML files live (one per entity).')
       .addText((t) => t
@@ -5492,14 +8107,67 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           await this.plugin.saveSettings();
         }));
 
+    containerEl.createEl('h3', { text: 'Data import/export' });
+    const dataGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section' });
+    const dataPanel = dataGroup.createDiv({ cls: 'setting-items' });
+    new obsidian.Setting(dataPanel)
+      .setName('Workbook export folder')
+      .setDesc('Vault folder where XLSX workbook exports are written.')
+      .addText((t) => t
+        .setPlaceholder(DEFAULT_SETTINGS.workbookExportFolder)
+        .setValue(this.plugin.settings.workbookExportFolder || DEFAULT_SETTINGS.workbookExportFolder)
+        .onChange(async (v) => {
+          this.plugin.settings.workbookExportFolder = v.trim().replace(/^\/+/, '').replace(/\/+$/, '') || DEFAULT_SETTINGS.workbookExportFolder;
+          await this.plugin.saveSettings();
+        }));
+    const exportGroups = workbookExportGroups();
+    const exportSetting = new obsidian.Setting(dataPanel)
+      .setName('Export entity groups to XLSX')
+      .setDesc(`Select one or more navigation groups to create a limited workbook under ${workbookExportFolder(this.plugin.settings)}.`);
+    const exportControl = exportSetting.controlEl.createDiv({ cls: 'cad-workbook-export-control' });
+    const groupSelect = exportControl.createEl('select', { cls: 'dropdown cad-workbook-group-select', attr: { multiple: 'multiple' } });
+    groupSelect.size = Math.min(Math.max(exportGroups.length, 6), 12);
+    exportGroups.forEach((group) => {
+      const option = groupSelect.createEl('option', {
+        value: group.id,
+        text: `${group.label} (${group.entityKeys.length})`,
+      });
+      option.selected = true;
+    });
+    const exportBtn = exportControl.createEl('button', { cls: 'mod-cta', text: 'Export workbook' });
+    exportBtn.addEventListener('click', async () => {
+      const selectedGroups = Array.from(groupSelect.selectedOptions).map((option) => option.value);
+      const entityKeys = selectedWorkbookEntityKeys(selectedGroups);
+      if (!entityKeys.length) {
+        new obsidian.Notice('BOB Workspace: select at least one group to export.');
+        return;
+      }
+      try {
+        const suffix = selectedGroups.length === exportGroups.length ? '' : 'selected';
+        const path = await exportEntitiesXLSX(this.plugin.app, entityKeys, suffix, this.plugin.settings);
+        new obsidian.Notice(`BOB Workspace: exported workbook to ${path}`, 6000);
+      } catch (e) {
+        new obsidian.Notice(`BOB Workspace: XLSX export failed — ${e.message}`, 8000);
+      }
+    });
+    new obsidian.Setting(dataPanel)
+      .setName('Import entities from XLSX')
+      .setDesc('Imports workbook sheets named after entity keys, labels or plurals, using field keys as column headers.')
+      .addButton((b) => b
+        .setButtonText('Import workbook')
+        .onClick(async () => {
+          await promptImportWorkbook(this.plugin.app, async () => this.plugin.refreshOpenViews());
+        }));
 
     containerEl.createEl('h3', { text: 'Cloud sync — coming soon' });
-    const cloudDesc = containerEl.createEl('p', { cls: 'setting-item-description' });
-    cloudDesc.appendText('Future option to two-way sync your vault with a live Cadence instance, so contacts, deals and partners stay aligned across desktop and mobile. ');
+    const syncGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section cad-settings-panel-off cad-sync-disabled' });
+    const syncPanel = syncGroup.createDiv({ cls: 'setting-items' });
+    const cloudDesc = syncPanel.createEl('p', { cls: 'setting-item-description cad-sync-disabled-desc' });
+    cloudDesc.appendText('Future option to two-way sync your vault with a live BOB Workspace / Cadence backend, so contacts, deals and partners stay aligned across desktop and mobile. ');
     cloudDesc.createEl('strong', { text: 'Not active yet.' });
     cloudDesc.appendText(' These fields are persisted but unused until the sync feature ships in a later release.');
-    new obsidian.Setting(containerEl)
-      .setName('Cadence base URL')
+    new obsidian.Setting(syncPanel)
+      .setName('Backend base URL')
       .setDesc('Coming soon')
       .addText((t) => {
         t.setPlaceholder('https://your-cadence-instance')
@@ -5507,7 +8175,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
          .onChange(async (v) => { this.plugin.settings.cadenceApiUrl = v; await this.plugin.saveSettings(); });
         t.inputEl.disabled = true;
       });
-    new obsidian.Setting(containerEl)
+    new obsidian.Setting(syncPanel)
       .setName('API token')
       .setDesc('Coming soon')
       .addText((t) => {
@@ -5523,8 +8191,9 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
 class CadencePlugin extends obsidian.Plugin {
   async onload() {
     await this.loadSettings();
-    if (this.settings.useSchemas) await applySchemas(this.app, this.settings);
-    await applyCustomEntities(this.app, this.settings);
+    initEntitiesPaths(this);
+    await migrateLegacyEntitiesConfig(this.app);
+    await reloadEntityConfiguration(this.app, this.settings);
 
     this.registerView(
       VIEW_TYPE_CADENCE_APP,
@@ -5532,31 +8201,31 @@ class CadencePlugin extends obsidian.Plugin {
     );
 
     // Single ribbon icon → opens the Cadence app
-    this.addRibbonIcon('sparkles', 'Open Cadence', () => this.openApp());
+    this.addRibbonIcon('sparkles', 'Open BOB Workspace', () => this.openApp());
 
     this.addCommand({
       id: 'open-cadence',
-      name: 'Open Cadence',
+      name: 'Open BOB Workspace',
       callback: () => this.openApp(),
     });
     this.addCommand({
       id: 'open-cadence-home',
-      name: 'Open Cadence — Home (command centre)',
+      name: 'Open BOB Workspace — Home (command centre)',
       callback: () => this.openApp('home'),
     });
     this.addCommand({
       id: 'open-cadence-today',
-      name: 'Open Cadence — Today',
+      name: 'Open BOB Workspace — Today',
       callback: () => this.openApp('planner.today'),
     });
     this.addCommand({
       id: 'open-cadence-calendar',
-      name: 'Open Cadence — Calendar (week)',
+      name: 'Open BOB Workspace — Calendar (week)',
       callback: () => this.openApp('planner.calendar'),
     });
     this.addCommand({
       id: 'open-cadence-pipeline',
-      name: 'Open Cadence — Pipeline',
+      name: 'Open BOB Workspace — Pipeline',
       callback: () => this.openApp('crm.pipeline'),
     });
     this.addCommand({
@@ -5571,7 +8240,7 @@ class CadencePlugin extends obsidian.Plugin {
     this.addSettingTab(new CadenceSettingTab(this.app, this));
 
     // ─── Quick capture (with optional reminder) ───
-    this.addRibbonIcon('plus-circle', 'Cadence quick capture', () => this.openQuickCapture());
+    this.addRibbonIcon('plus-circle', 'BOB Workspace quick capture', () => this.openQuickCapture());
     this.addCommand({
       id: 'quick-capture',
       name: 'Quick capture (with optional reminder)',
@@ -5580,7 +8249,7 @@ class CadencePlugin extends obsidian.Plugin {
     });
     this.addCommand({
       id: 'open-cadence-inbox',
-      name: 'Open Cadence — Inbox',
+      name: 'Open BOB Workspace — Inbox',
       callback: () => this.openApp('planner.inbox'),
     });
 
@@ -5610,21 +8279,29 @@ class CadencePlugin extends obsidian.Plugin {
       },
     });
 
-    // ─── Custom entities — watch for changes ───
-    this.registerEvent(this.app.vault.on('modify', async (file) => {
-      if (file.path === ENTITIES_CONFIG_PATH) {
-        if (this.settings.useSchemas) await applySchemas(this.app, this.settings);
-    await applyCustomEntities(this.app, this.settings);
-        this.refreshOpenViews();
-      }
-    }));
-    this.registerEvent(this.app.vault.on('create', async (file) => {
-      if (file.path === ENTITIES_CONFIG_PATH) {
-        if (this.settings.useSchemas) await applySchemas(this.app, this.settings);
-    await applyCustomEntities(this.app, this.settings);
-        this.refreshOpenViews();
-      }
-    }));
+    this.addCommand({
+      id: 'bob-workspace-export-xlsx',
+      name: 'Export all entities to XLSX',
+      callback: async () => {
+        try {
+          const path = await exportAllEntitiesXLSX(this.app, this.settings);
+          new obsidian.Notice(`BOB Workspace: exported workbook to ${path}`, 6000);
+        } catch (e) {
+          new obsidian.Notice(`BOB Workspace: XLSX export failed — ${e.message}`, 8000);
+        }
+      },
+    });
+
+    this.addCommand({
+      id: 'bob-workspace-import-xlsx',
+      name: 'Import entities from XLSX workbook',
+      callback: async () => {
+        await promptImportWorkbook(this.app, async () => this.refreshOpenViews());
+      },
+    });
+
+    // entities.json lives in the plugin folder (next to data.json) — edit it
+    // via Settings → Cadence → Custom entities, or use the template command.
 
     this.addCommand({
       id: 'create-entities-config',
@@ -5632,13 +8309,20 @@ class CadencePlugin extends obsidian.Plugin {
       callback: async () => {
         if (await this.app.vault.adapter.exists(ENTITIES_CONFIG_PATH)) {
           new obsidian.Notice(`entities.json already exists at ${ENTITIES_CONFIG_PATH}`);
-          this.app.workspace.openLinkText(ENTITIES_CONFIG_PATH, '', false);
           return;
         }
-        await ensureFolderSync(this.app, 'Cadence');
-        await this.app.vault.create(ENTITIES_CONFIG_PATH, ENTITIES_JSON_TEMPLATE);
-        this.app.workspace.openLinkText(ENTITIES_CONFIG_PATH, '', false);
-        new obsidian.Notice('Created Cadence/entities.json — edit it to add custom entity types.');
+        await this.app.vault.adapter.write(ENTITIES_CONFIG_PATH, ENTITIES_JSON_TEMPLATE);
+        new obsidian.Notice(`Created ${ENTITIES_CONFIG_PATH} — edit it via Settings → BOB Workspace → Custom entities.`);
+      },
+    });
+
+    this.addCommand({
+      id: 'reload-entities-config',
+      name: 'Reload entities.json',
+      callback: async () => {
+        await reloadEntityConfiguration(this.app, this.settings);
+        this.refreshOpenViews();
+        new obsidian.Notice('BOB Workspace: entities reloaded.');
       },
     });
 
@@ -5786,7 +8470,7 @@ class CadencePlugin extends obsidian.Plugin {
     if (this.settings.desktopNotifications && typeof Notification !== 'undefined') {
       try {
         if (Notification.permission === 'granted') {
-          new Notification('Cadence reminder', { body: r.text });
+          new Notification('BOB Workspace reminder', { body: r.text });
         }
       } catch (_) {}
     }
@@ -5812,7 +8496,12 @@ class CadencePlugin extends obsidian.Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const data = await this.loadData();
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+    this.settings.baseFiles = Object.assign({}, DEFAULT_SETTINGS.baseFiles || {}, data?.baseFiles || {});
+    this.settings.baseViews = Object.assign({}, DEFAULT_SETTINGS.baseViews || {}, data?.baseViews || {});
+    this.settings.modules = Object.assign({}, DEFAULT_SETTINGS.modules || {}, data?.modules || {});
+    this.settings.collapsedGroups = Object.assign({}, DEFAULT_SETTINGS.collapsedGroups || {}, data?.collapsedGroups || {});
     CURRENT_CURRENCY = this.settings.currency || 'USD';
     syncEntityFolders(this.settings);
   }

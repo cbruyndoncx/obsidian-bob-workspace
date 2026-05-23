@@ -1,6 +1,10 @@
-# Cadence — a workspace for working life
+# Cadence / BOB Workspace — a workspace for working life
 
 A unified Obsidian plugin for **CRM, PRM, project management, daily planning, and reminders** — all on top of plain markdown. No server, no sync service, no lock-in. Your vault stays your vault.
+
+This repository is a BOB Workspace customization of the original Cadence plugin. The plugin is intended to stay vault-model aware: built-in fields are only fallbacks, while real vault behavior should come from schemas, Bases, and optional `entities.json` overrides.
+
+For extension guidance, see [Extending BOB Workspace Without Code Changes](docs/extending-bob-workspace.md).
 
 ![Cadence Home](docs/screenshots/01-home.png)
 
@@ -53,7 +57,7 @@ Quick-capture with `Cmd+Shift+I` → modal with text, optional datetime, optiona
 ![Quick capture](docs/screenshots/05-capture.png)
 
 ### Reports
-Pipeline · Sales · Partners · Activity · Productivity (over your daily notes — completion %, streaks, journal volume, 14-day done-tasks bar chart).
+Pipeline · Sales · Partners · Activity · Productivity. Productivity follows the configured task mode: daily note checkboxes, TaskNotes, or hybrid. TaskNotes history includes the active TaskNotes folder plus the configured archive folder.
 
 ### New entity capture
 A clean two-column modal for every entity type — type-aware widgets (date pickers, dropdowns for stage/status/priority/tier/type), smart defaults, smart placeholders, primary field marked required. Enter to submit, Esc to cancel.

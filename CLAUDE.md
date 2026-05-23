@@ -112,9 +112,9 @@ Entity folders are resolved at runtime via `ENTITY_FOLDERS` (a module-level obje
 
 All 11 entity folders are configurable in **Settings → Cadence → Folders**. Moving folders: rename in vault first, then update the setting.
 
-### Custom Entity Types (`Cadence/entities.json`)
+### Custom Entity Types (`entities.json`)
 
-Users can add new entity types (or override fields on existing ones) by creating `Cadence/entities.json` in their vault. Use the command palette → **"Cadence: Create entities.json template"** to scaffold it.
+Users can add new entity types (or override fields on existing ones) by editing `entities.json` in the plugin folder (`.obsidian/plugins/cadence-planner/entities.json`, next to `data.json`). Edit via **Settings → Cadence → Custom entities** (JSON-validated textarea, with backup), or use the command palette → **"Cadence: Create entities.json template"** to scaffold it. A legacy copy at `Cadence/entities.json` in the vault is auto-migrated on first load and retained as a safety copy.
 
 ```json
 {
@@ -136,7 +136,7 @@ Users can add new entity types (or override fields on existing ones) by creating
 
 - **New key** → entity added to `ENTITIES`, nav item injected into the `module` group (or a "Custom" group), generic list view auto-wired
 - **Existing key** (e.g. `"contact"`) → overrides `fields`, `columns`, `label`, `plural`, `folder` on the built-in entity
-- **Hot-reload** — any save to `entities.json` re-applies immediately without restarting Obsidian
+- **Reload** — saving via the settings UI re-applies immediately; if you edit the file directly on disk, run **"Cadence: Reload entities.json"** from the command palette (the plugin folder is outside the vault, so vault file-watchers don't fire)
 - **`module`** — optional; slots nav item into `crm`, `prm`, or `planner`; defaults to a "Custom" group
 
 Internally: `applyCustomEntities(app)` reads the file, calls `clearCustomEntities()` first (removes previous custom keys from `ENTITIES`, `ENTITY_FOLDERS`, `BUILT_SURFACES`, and nav group items), then injects new ones. Custom surface IDs follow the `custom.{key}` pattern and are handled by a fallback branch in the route dispatch inside `CadenceAppView.render()`.
@@ -257,7 +257,7 @@ await app.vault.modify(file, replaceSection(content, settings.tasksHeading, stri
 
 **Moving entity folders.** Rename the folder in the vault first, then update the path in Settings → Cadence → Folders. Files are not moved automatically.
 
-**`entities.json` changes not picked up.** The watcher fires on `vault.modify` events. If you created the file externally (outside Obsidian), trigger a reload via disable/enable.
+**`entities.json` changes not picked up.** The active file lives in the plugin folder, not the vault. Save through Settings → Cadence → Custom entities, or run **Cadence: Reload entities.json** after direct disk edits.
 
 ---
 
