@@ -2108,7 +2108,7 @@ function fmtValue(val, type) {
   if (type === 'tags' && Array.isArray(val)) return val.map((t) => `#${t}`).join(' ');
   if (type === 'date') {
     const d = new Date(val);
-    if (!isNaN(d.getTime())) return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    if (!isNaN(d.getTime())) return d.toLocaleDateString(navigator.language || undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     return String(val);
   }
   if (type === 'currency') {
@@ -3721,6 +3721,7 @@ class CadenceEntityCreateModal extends obsidian.Modal {
         }
       } else if (fieldType === 'date') {
         input = row.createEl('input', { type: 'date', cls: 'cad-create-input' });
+        input.lang = navigator.language || '';
       } else if (fieldType === 'number' || fieldType === 'currency') {
         input = row.createEl('input', { type: 'number', cls: 'cad-create-input' });
         input.placeholder = '0';
@@ -4308,43 +4309,8 @@ class CadenceAppView extends obsidian.ItemView {
       return;
     }
     const leaf = this.app.workspace.getLeaf('tab');
-    await leaf.openFile(baseFile);
+    await leaf.openFile(baseFile, viewName ? { eState: { subpath: `#${viewName}` } } : {});
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
-    if (viewName) {
-      window.setTimeout(() => this._switchBaseLeafView(leaf, viewName), 250);
-    }
-  }
-
-  _switchBaseLeafView(leaf, viewName) {
-    const view = leaf?.view;
-    const controller = view?.controller;
-    const candidates = [
-      () => view?.setView?.(viewName),
-      () => view?.setActiveView?.(viewName),
-      () => view?.setActiveViewByName?.(viewName),
-      () => controller?.setView?.(viewName),
-      () => controller?.setActiveView?.(viewName),
-      () => controller?.setActiveViewByName?.(viewName),
-      () => controller?.viewState?.setActiveView?.(viewName),
-    ];
-    for (const fn of candidates) {
-      try {
-        const result = fn();
-        if (result !== undefined) return true;
-      } catch (_) {}
-    }
-    try {
-      const buttons = view?.containerEl?.querySelectorAll?.('[aria-label], .bases-view-tab, .bases-view-tabs button, button');
-      const target = Array.from(buttons || []).find((el) =>
-        (el.textContent || '').trim() === viewName || el.getAttribute('aria-label') === viewName
-      );
-      if (target) {
-        target.click();
-        return true;
-      }
-    } catch (_) {}
-    new obsidian.Notice(`BOB Workspace: opened Base. Select "${viewName}" if it is not active.`);
-    return false;
   }
 
   _renderExternalBaseView(root, entityKey) {
@@ -4396,6 +4362,108 @@ class CadenceAppView extends obsidian.ItemView {
 
   _renderEntityTable(root, entities, entityKey, cols) {
     const def = ENTITIES[entityKey];
+    const selected = new Set(); // selected file paths
+
+    const bulkBar = root.createDiv({ cls: 'cad-bulk-bar cad-bulk-bar-hidden' });
+    const bulkCount = bulkBar.createSpan({ cls: 'cad-bulk-count' });
+    const bulkDelete = bulkBar.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Delete selected' });
+    bulkDelete.addEventListener('click', async () => {
+      // Resolve all files before any deletion so paths can't shift mid-loop
+      const filesToDelete = [...selected]
+        .map((path) => this.app.vault.getAbstractFileByPath(path))
+        .filter(Boolean);
+      if (!filesToDelete.length) return;
+      const names = filesToDelete.map((f) => f.basename).join('\n• ');
+      if (!confirm(`Move to trash:\n• ${names}\n\n${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} will be deleted.`)) return;
+      for (const file of filesToDelete) {
+        try { await this.app.vault.trash(file, true); } catch (e) { new obsidian.Notice(`Delete failed for ${file.basename}: ${e.message}`); }
+      }
+      await this.render();
+    });
+
+    const updateBulkBar = () => {
+      if (selected.size > 0) {
+        bulkBar.removeClass('cad-bulk-bar-hidden');
+        bulkCount.setText(`${selected.size} selected`);
+      } else {
+        bulkBar.addClass('cad-bulk-bar-hidden');
+      }
+    };
+
+    // filterState: fieldKey → Set of included values (missing = no filter)
+    const filterState = new Map();
+    const applyFilters = (arr) => {
+      if (filterState.size === 0) return arr;
+      return arr.filter((e) => {
+        for (const [key, vals] of filterState) {
+          if (!vals || vals.size === 0) continue;
+          const v = String(entityValue(e, key, def) ?? '');
+          if (!vals.has(v)) return false;
+        }
+        return true;
+      });
+    };
+
+    const openFilterDropdown = (th, field, filterBtn) => {
+      document.querySelector('.cad-filter-dropdown')?.remove();
+      const current = filterState.get(field.key); // Set or undefined
+      const dropdown = document.createElement('div');
+      dropdown.className = 'cad-filter-dropdown';
+      // Prevent clicks inside dropdown from bubbling to th (which would trigger sort)
+      dropdown.addEventListener('click', (ev) => ev.stopPropagation());
+
+      const hdr = document.createElement('div');
+      hdr.className = 'cad-filter-header';
+      hdr.textContent = field.label;
+      const clearBtn = document.createElement('button');
+      clearBtn.className = 'cad-filter-clear';
+      clearBtn.textContent = 'Clear';
+      clearBtn.addEventListener('click', () => {
+        filterState.delete(field.key);
+        filterBtn.classList.remove('cad-filter-btn-active');
+        dropdown.remove();
+        renderBody(applyFilters(sortEntities([...entities])));
+      });
+      hdr.appendChild(clearBtn);
+      dropdown.appendChild(hdr);
+
+      // Keep a live ref to current selection so checkboxes stay in sync
+      let sel = current ? new Set(current) : null; // null = all
+      field.options.forEach((opt) => {
+        const label = document.createElement('label');
+        label.className = 'cad-filter-option';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !sel || sel.has(opt);
+        cb.addEventListener('change', () => {
+          if (!sel) sel = new Set(field.options); // expand from "all"
+          if (cb.checked) sel.add(opt); else sel.delete(opt);
+          const isAll = sel.size === field.options.length;
+          if (isAll) { filterState.delete(field.key); sel = null; }
+          else filterState.set(field.key, new Set(sel));
+          filterBtn.classList.toggle('cad-filter-btn-active', filterState.has(field.key));
+          renderBody(applyFilters(sortEntities([...entities])));
+        });
+        label.appendChild(cb);
+        label.append(` ${opt}`);
+        dropdown.appendChild(label);
+      });
+
+      const rect = th.getBoundingClientRect();
+      dropdown.style.position = 'fixed';
+      dropdown.style.top = rect.bottom + 'px';
+      dropdown.style.left = rect.left + 'px';
+      document.body.appendChild(dropdown);
+
+      const close = (ev) => {
+        if (!dropdown.contains(ev.target)) {
+          dropdown.remove();
+          document.removeEventListener('click', close);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', close), 0);
+    };
+
     const tableWrap = root.createDiv({ cls: 'cad-table-wrap' });
     const table = tableWrap.createEl('table', { cls: 'cad-table' });
 
@@ -4437,11 +4505,40 @@ class CadenceAppView extends obsidian.ItemView {
       return withIdx.map((x) => x.e);
     };
 
+    let selectAllCb = null;
+    let currentArr = [];
     const tbody = table.createEl('tbody');
     const renderBody = (arr) => {
+      currentArr = arr;
       tbody.empty();
+      selected.clear();
+      updateBulkBar();
+      if (selectAllCb) { selectAllCb.checked = false; selectAllCb.indeterminate = false; }
       arr.forEach((e) => {
         const tr = tbody.createEl('tr', { cls: 'cad-row' });
+        tr.addEventListener('dblclick', () => {
+          tr.querySelectorAll('td').forEach((cell) => {
+            clearTimeout(cell._cadEditTimer);
+            delete cell._cadEditTimer;
+          });
+          this.openEntityDetail(entityKey, e.file);
+        });
+
+        // Checkbox cell
+        const tdCb = tr.createEl('td', { cls: 'cad-col-cb' });
+        const cb = tdCb.createEl('input', { type: 'checkbox', cls: 'cad-row-cb' });
+        cb.addEventListener('change', () => {
+          if (cb.checked) selected.add(e.file.path); else selected.delete(e.file.path);
+          tr.toggleClass('cad-row-selected', cb.checked);
+          updateBulkBar();
+          if (selectAllCb) {
+            selectAllCb.indeterminate = selected.size > 0 && selected.size < arr.length;
+            selectAllCb.checked = selected.size === arr.length;
+          }
+        });
+        // Prevent checkbox click from triggering dblclick-to-detail
+        tdCb.addEventListener('dblclick', (ev) => ev.stopPropagation());
+
         cols.forEach((f, i) => {
           const td = tr.createEl('td');
           const val = entityValue(e, f.key, def);
@@ -4453,7 +4550,7 @@ class CadenceAppView extends obsidian.ItemView {
               this.openEntityDetail(entityKey, e.file);
             });
           } else {
-            td.setText(formatted);
+            this._makeInlineEditable(td, e, f, def, formatted);
           }
         });
       });
@@ -4461,6 +4558,20 @@ class CadenceAppView extends obsidian.ItemView {
 
     const renderHeader = () => {
       trh.empty();
+      // Select-all checkbox header
+      const thCb = trh.createEl('th', { cls: 'cad-col-cb' });
+      selectAllCb = thCb.createEl('input', { type: 'checkbox', cls: 'cad-row-cb' });
+      selectAllCb.addEventListener('change', () => {
+        if (selectAllCb.checked) currentArr.forEach((e) => selected.add(e.file.path));
+        else selected.clear();
+        tbody.querySelectorAll('tr').forEach((tr, idx) => {
+          const cb = tr.querySelector('.cad-row-cb');
+          if (cb) cb.checked = selectAllCb.checked;
+          tr.toggleClass('cad-row-selected', selectAllCb.checked);
+        });
+        selectAllCb.indeterminate = false;
+        updateBulkBar();
+      });
       cols.forEach((f) => {
         const isActive = currentSort.key === f.key;
         const th = trh.createEl('th', {
@@ -4476,13 +4587,133 @@ class CadenceAppView extends obsidian.ItemView {
           else { currentSort.key = f.key; currentSort.dir = 'ASC'; }
           sortState[stateKey] = { key: currentSort.key, dir: currentSort.dir };
           renderHeader();
-          renderBody(sortEntities([...entities]));
+          renderBody(applyFilters(sortEntities([...entities])));
         });
+        if (f.type === 'enum' && f.options?.length) {
+          const isFiltered = filterState.has(f.key);
+          const filterBtn = th.createEl('button', {
+            cls: 'cad-filter-btn' + (isFiltered ? ' cad-filter-btn-active' : ''),
+            text: '▾',
+          });
+          filterBtn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            openFilterDropdown(th, f, filterBtn);
+          });
+        }
       });
     };
     renderHeader();
 
-    renderBody(sortEntities([...entities]));
+    renderBody(applyFilters(sortEntities([...entities])));
+  }
+
+  _makeInlineEditable(td, entity, field, def, initialFormatted) {
+    td.addClass('cad-cell-editable');
+    td.setText(initialFormatted || '');
+    td._cadEditing = false;
+
+    const refreshCell = () => {
+      const cache = this.app.metadataCache.getFileCache(entity.file);
+      const fm = cache?.frontmatter || {};
+      const newVal = entityValue({ file: entity.file, frontmatter: fm, basename: entity.basename }, field.key, def);
+      td.empty();
+      td.removeClass('cad-cell-editing');
+      td._cadEditing = false;
+      td.setText(fmtValue(newVal, field.type) || '');
+    };
+
+    const saveField = async (raw) => {
+      const fieldType = field.type || 'text';
+      let value = raw;
+      if (fieldType === 'tags') {
+        value = (raw || '').split(',').map((t) => t.trim()).filter(Boolean);
+      } else if (fieldType === 'number' || fieldType === 'currency') {
+        const n = Number(raw);
+        value = isNaN(n) ? null : n;
+      } else if (raw === '' || raw == null) {
+        value = null;
+      }
+      try {
+        await this.app.fileManager.processFrontMatter(entity.file, (fm) => {
+          if (value == null || (Array.isArray(value) && value.length === 0)) {
+            delete fm[field.key];
+          } else {
+            fm[field.key] = value;
+          }
+        });
+      } catch (err) {
+        new obsidian.Notice(`Save failed: ${err.message}`);
+      }
+      refreshCell();
+    };
+
+    const activateEdit = () => {
+      if (td._cadEditing) return;
+      td._cadEditing = true;
+      const cache = this.app.metadataCache.getFileCache(entity.file);
+      const currentVal = entityValue(
+        { file: entity.file, frontmatter: cache?.frontmatter || {}, basename: entity.basename },
+        field.key, def
+      );
+      const fieldType = field.type || 'text';
+      td.empty();
+      td.addClass('cad-cell-editing');
+
+      const cancel = () => {
+        td.empty();
+        td.removeClass('cad-cell-editing');
+        td._cadEditing = false;
+        td.setText(fmtValue(currentVal, field.type) || '');
+      };
+
+      if (fieldType === 'enum') {
+        const sel = td.createEl('select', { cls: 'cad-cell-input' });
+        sel.createEl('option', { value: '', text: '—' });
+        (field.options || []).forEach((opt) => {
+          const o = sel.createEl('option', { value: opt, text: opt });
+          if (String(currentVal || '') === opt) o.selected = true;
+        });
+        let committed = false;
+        sel.addEventListener('change', () => { committed = true; saveField(sel.value); });
+        sel.addEventListener('blur', () => { if (!committed) { committed = true; cancel(); } });
+        sel.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { committed = true; cancel(); } });
+        sel.focus();
+      } else if (fieldType === 'date') {
+        const inp = td.createEl('input', { type: 'date', cls: 'cad-cell-input' });
+        inp.lang = navigator.language || '';
+        if (currentVal) {
+          const d = new Date(String(currentVal).slice(0, 10));
+          if (!isNaN(d.getTime())) inp.value = d.toISOString().slice(0, 10);
+        }
+        let committed = false;
+        inp.addEventListener('change', () => { committed = true; saveField(inp.value); });
+        inp.addEventListener('blur', () => { if (!committed) { committed = true; cancel(); } });
+        inp.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') { if (!committed) { committed = true; saveField(inp.value); } }
+          if (ev.key === 'Escape') { committed = true; cancel(); }
+        });
+        inp.focus();
+      } else {
+        const inputType = fieldType === 'email' ? 'email' : (fieldType === 'number' || fieldType === 'currency') ? 'number' : 'text';
+        const inp = td.createEl('input', { type: inputType, cls: 'cad-cell-input' });
+        if (fieldType === 'tags' && Array.isArray(currentVal)) inp.value = currentVal.join(', ');
+        else if (currentVal != null) inp.value = String(currentVal);
+        let committed = false;
+        inp.addEventListener('blur', () => { if (!committed) { committed = true; saveField(inp.value); } });
+        inp.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') { if (!committed) { committed = true; saveField(inp.value); } }
+          if (ev.key === 'Escape') { committed = true; cancel(); }
+        });
+        inp.focus();
+        inp.select();
+      }
+    };
+
+    td.addEventListener('click', () => {
+      if (td._cadEditing) return;
+      clearTimeout(td._cadEditTimer);
+      td._cadEditTimer = setTimeout(() => activateEdit(), 250);
+    });
   }
 
   _tabsForParent(parentId) {
@@ -5076,6 +5307,7 @@ class CadenceAppView extends obsidian.ItemView {
         sel.addEventListener('change', () => writeField(f.key, sel.value));
       } else if (fieldType === 'date') {
         const inp = row.createEl('input', { type: 'date', cls: 'cad-form-input' });
+        inp.lang = navigator.language || '';
         if (current) {
           const d = new Date(current);
           if (!isNaN(d.getTime())) inp.value = d.toISOString().slice(0, 10);
@@ -5262,6 +5494,7 @@ class CadenceAppView extends obsidian.ItemView {
           await this._commitMilestones(file, items, flashSaved);
         });
         const dateInp = row.createEl('input', { type: 'date', cls: 'cad-pd-mile-date' });
+        dateInp.lang = navigator.language || '';
         if (m.date instanceof Date && !isNaN(m.date.getTime())) {
           dateInp.value = m.date.toISOString().slice(0, 10);
         }

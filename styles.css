@@ -130,7 +130,8 @@
 .cadence-app.cad-dark .cad-pd-meta-input,
 .cadence-app.cad-dark .cad-pd-textarea,
 .cadence-app.cad-dark .cad-mile-notes-textarea,
-.cadence-app.cad-dark .cad-create-input { background: #1e1e1e; color: #dcddde; border-color: #303030; }
+.cadence-app.cad-dark .cad-create-input,
+.cadence-app.cad-dark .cad-cell-input { background: #1e1e1e; color: #dcddde; border-color: #3a8ef6; }
 .cadence-app.cad-dark .cad-pd-meta-input::placeholder,
 .cadence-app.cad-dark .cad-pd-textarea::placeholder,
 .cadence-app.cad-dark .cad-mile-notes-textarea::placeholder,
@@ -414,7 +415,7 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
 }
 
 /* ─────────── Table (entity list) ─────────── */
-.cad-table-wrap { padding: 16px 32px; overflow-x: auto; }
+.cad-table-wrap { padding: 0 32px 16px; overflow: auto; max-height: calc(100vh - 160px); }
 .cad-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .cad-table thead th {
   text-align: left; font-size: 10px; font-weight: 700;
@@ -474,6 +475,83 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   color: var(--text-normal); cursor: pointer; text-decoration: none; font-weight: 500;
 }
 .cad-row-primary:hover { color: var(--interactive-accent); }
+
+/* Column filters */
+.cad-filter-btn {
+  margin-left: 4px; padding: 0 3px; font-size: 10px;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-faint); vertical-align: middle; line-height: 1;
+}
+.cad-filter-btn:hover, .cad-filter-btn-active { color: var(--interactive-accent); }
+.cad-filter-dropdown {
+  position: fixed; z-index: 9999;
+  min-width: 160px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  padding: 4px 0;
+}
+.cad-filter-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-muted); border-bottom: 1px solid var(--background-modifier-border);
+}
+.cad-filter-clear {
+  font-size: 10px; padding: 1px 6px; background: none;
+  border: 1px solid var(--background-modifier-border); border-radius: 3px;
+  cursor: pointer; color: var(--text-muted);
+}
+.cad-filter-clear:hover { color: var(--text-normal); border-color: var(--text-muted); }
+.cad-filter-option {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 10px; font-size: 13px; cursor: pointer;
+  color: var(--text-normal);
+}
+.cad-filter-option:hover { background: var(--background-modifier-hover); }
+.cad-filter-option input { cursor: pointer; accent-color: var(--interactive-accent); }
+
+/* Bulk action bar */
+.cad-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 32px;
+  background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-secondary));
+  border-bottom: 1px solid color-mix(in srgb, var(--interactive-accent) 30%, transparent);
+}
+.cad-bulk-bar-hidden { display: none; }
+.cad-bulk-count { font-size: 13px; font-weight: 600; color: var(--text-normal); flex: 1; }
+
+/* Checkbox column */
+.cad-col-cb { width: 36px; padding: 0 8px !important; text-align: center; vertical-align: middle; }
+.cad-row-cb { cursor: pointer; accent-color: var(--interactive-accent); }
+.cad-row-selected { background: color-mix(in srgb, var(--interactive-accent) 8%, transparent) !important; }
+
+/* Inline cell editing */
+.cad-cell-editable { cursor: pointer; }
+.cad-cell-editable:hover {
+  background: color-mix(in srgb, var(--interactive-accent) 8%, transparent);
+  outline: 1px dashed var(--background-modifier-border);
+  outline-offset: -2px;
+}
+.cad-cell-editing { padding: 2px !important; vertical-align: middle !important; }
+.cad-cell-input {
+  width: 100%;
+  min-width: 80px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--interactive-accent);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+}
+.cad-cell-input:focus { border-color: var(--interactive-accent); }
+select.cad-cell-input { padding: 5px 8px; }
 .cad-base-filter-warnings {
   margin: 12px 32px 0 32px;
   padding: 10px 12px;
