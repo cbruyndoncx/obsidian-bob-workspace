@@ -3311,6 +3311,9 @@ class CadenceImportModal extends obsidian.Modal {
     exportXlsxBtn.addEventListener('click', () => this._exportTemplateXLSX());
     xlsxBtn.addEventListener('click', () => this._pickXLSXFromVault(ta));
     fileBtn.addEventListener('click', async () => {
+      // Intentional vault-wide enumeration: the user is explicitly picking a
+      // .csv file they've placed somewhere in their vault. Limiting this
+      // would defeat the feature. All other entity reads are folder-scoped.
       const csvFiles = this.app.vault.getFiles().filter((f) => f.path.toLowerCase().endsWith('.csv'));
       if (!csvFiles.length) {
         new obsidian.Notice('No .csv files found in vault. Drop one in the vault first.');
@@ -3892,6 +3895,14 @@ class CadenceAppView extends obsidian.ItemView {
     // Detail-view state — when set, renders the entity form instead of the surface
     this.detailFile = null;
     this.detailEntityKey = null;
+    // Mobile nav drawer state (ephemeral, not persisted)
+    this.mobileNavOpen = false;
+  }
+
+  _toggleMobileNav(force) {
+    const root = this.containerEl.children[1];
+    this.mobileNavOpen = (typeof force === 'boolean') ? force : !this.mobileNavOpen;
+    if (root) root.toggleClass('cad-mobile-nav-open', this.mobileNavOpen);
   }
 
   async openEntityDetail(entityKey, file) {
@@ -4104,6 +4115,13 @@ class CadenceAppView extends obsidian.ItemView {
 
     /* ── Top brand bar ──────────────────────── */
     const topbar = root.createDiv({ cls: 'cad-app-topbar' });
+
+    /* Hamburger — visible only on mobile via CSS, toggles the nav drawer */
+    const burger = topbar.createEl('button', { cls: 'cad-mobile-burger' });
+    try { obsidian.setIcon(burger, 'menu'); } catch (_) {}
+    burger.title = 'Show nav';
+    burger.addEventListener('click', () => this._toggleMobileNav());
+
     const brand = topbar.createDiv({ cls: 'cad-app-brand' });
     brand.createSpan({ cls: 'cad-app-brand-mark', text: '◐' });
     brand.createSpan({ cls: 'cad-app-brand-text', text: 'BOB Workspace Cadence' });
@@ -4122,6 +4140,11 @@ class CadenceAppView extends obsidian.ItemView {
 
     /* ── Body: left grouped nav + main content ──────── */
     const body = root.createDiv({ cls: 'cad-app-body' });
+
+    /* Backdrop — only visible on mobile when drawer is open; tapping dismisses. */
+    const backdrop = body.createDiv({ cls: 'cad-mobile-backdrop' });
+    backdrop.addEventListener('click', () => this._toggleMobileNav(false));
+
     const nav = body.createDiv({ cls: 'cad-app-nav' });
     const collapsed = this.plugin.settings.collapsedGroups || {};
 
@@ -4158,7 +4181,11 @@ class CadenceAppView extends obsidian.ItemView {
             const overdue = this._inboxOverdueCount();
             if (overdue > 0) item.createSpan({ cls: 'cad-app-nav-badge cad-nav-badge-alert', text: String(overdue) });
           }
-          item.addEventListener('click', () => this.setMode(s.id));
+          item.addEventListener('click', () => {
+            this.setMode(s.id);
+            // On mobile, picking a nav item closes the drawer.
+            if (this.mobileNavOpen) this._toggleMobileNav(false);
+          });
         });
       }
     });
@@ -5876,6 +5903,9 @@ class CadenceAppView extends obsidian.ItemView {
       newInbox.classList.add('primary');
     });
 
+    /* Top of the day — assistant-style briefing */
+    await this._renderBriefing(root);
+
     /* Two-column grid */
     const cols = root.createDiv({ cls: 'cad-home-cols' });
     const left = cols.createDiv({ cls: 'cad-home-col' });
@@ -5963,6 +5993,207 @@ class CadenceAppView extends obsidian.ItemView {
     head.createDiv({ cls: 'cad-home-card-title', text: title });
     if (typeof action === 'function') action(head);
     return card.createDiv({ cls: 'cad-home-card-body' });
+  }
+
+  /* ── Top of the day — assistant-style daily briefing ── */
+  async _renderBriefing(root) {
+    let items = await this._computeBriefing();
+    const card = root.createDiv({ cls: 'cad-briefing' });
+
+    const head = card.createDiv({ cls: 'cad-briefing-head' });
+    head.createDiv({ cls: 'cad-briefing-eyebrow', text: 'TOP OF THE DAY' });
+    head.createDiv({ cls: 'cad-briefing-headline', text: this._briefingHeadline(items) });
+
+    if (!items.length) {
+      card.createDiv({ cls: 'cad-briefing-empty', text: 'Nothing flagged. Make today count.' });
+      return;
+    }
+
+    // On mobile, trim to the top 3 most urgent. _computeBriefing already
+    // emits items in priority order (overdue → time → opportunity → wins),
+    // so a simple slice keeps what matters most.
+    const isMobile = !!(obsidian.Platform && obsidian.Platform.isMobile);
+    const hiddenCount = isMobile && items.length > 3 ? items.length - 3 : 0;
+    if (isMobile && items.length > 3) items = items.slice(0, 3);
+
+    const list = card.createDiv({ cls: 'cad-briefing-list' });
+    items.forEach((it) => {
+      const row = list.createDiv({ cls: `cad-briefing-row cad-tone-${it.tone || 'emerald'}` });
+      row.createSpan({ cls: 'cad-briefing-icon', text: it.icon });
+      row.createSpan({ cls: 'cad-briefing-text', text: it.text });
+      if (it.action) {
+        row.classList.add('clickable');
+        row.addEventListener('click', it.action);
+      }
+    });
+    if (hiddenCount > 0) {
+      const more = card.createDiv({ cls: 'cad-briefing-more' });
+      more.setText(`+${hiddenCount} more · scroll down for the full picture`);
+    }
+  }
+
+  _briefingHeadline(items) {
+    const hasOverdue = items.some((i) => i.tone === 'rose');
+    if (hasOverdue) return 'A couple of things need attention this morning.';
+    if (items.length >= 4) return "Here's what's worth your attention today.";
+    if (items.length === 0) return 'Inbox zero. Clear runway.';
+    return "Here's what's on your radar.";
+  }
+
+  async _computeBriefing() {
+    const items = [];
+    const settings = this.plugin.settings;
+    const dealDef = ENTITIES.deal;
+    const contactDef = ENTITIES.contact;
+    const today = startOfDay(new Date());
+    const todayMs = today.getTime();
+    const nowMs = Date.now();
+
+    /* 1. Open tasks today */
+    try {
+      const file = await ensureDailyNote(this.app, settings);
+      const content = await this.app.vault.read(file);
+      const parsed = parseSections(content, settings);
+      const openTasks = parsed.tasks.filter((l) => / \[ \] /.test(l)).length;
+      if (openTasks > 0) {
+        items.push({
+          icon: '🎯',
+          tone: 'emerald',
+          text: `${openTasks} open ${openTasks === 1 ? 'task' : 'tasks'} on today's note`,
+          action: () => this.setMode('planner.today'),
+        });
+      }
+    } catch (_) {}
+
+    /* 2. Overdue reminders */
+    const reminders = (settings.reminders || []).filter((r) => !r.done);
+    const overdue = reminders.filter((r) => r.when && new Date(r.when).getTime() <= nowMs);
+    if (overdue.length) {
+      const ex = overdue[0];
+      const exTxt = ex.text.length > 50 ? ex.text.slice(0, 47) + '…' : ex.text;
+      items.push({
+        icon: '⚠',
+        tone: 'rose',
+        text: overdue.length === 1
+          ? `Overdue reminder — "${exTxt}"`
+          : `${overdue.length} overdue reminders — "${exTxt}" + ${overdue.length - 1} more`,
+        action: () => this.setMode('planner.inbox'),
+      });
+    }
+
+    /* 3. Reminders due later today */
+    const dueToday = reminders.filter((r) => {
+      if (!r.when) return false;
+      const w = new Date(r.when).getTime();
+      return w > nowMs && w < todayMs + 86400000;
+    });
+    if (dueToday.length) {
+      items.push({
+        icon: '⏰',
+        tone: 'mint',
+        text: `${dueToday.length} ${dueToday.length === 1 ? 'reminder' : 'reminders'} due later today`,
+        action: () => this.setMode('planner.inbox'),
+      });
+    }
+
+    /* 4. Deals closing this week */
+    const deals = listEntities(this.app, 'deal');
+    const weekEnd = todayMs + 7 * 86400000;
+    const closingThisWeek = deals.filter((e) => {
+      const stage = String(entityValue(e, 'stage', dealDef));
+      if (['Won', 'Lost'].includes(stage)) return false;
+      const closeBy = entityValue(e, 'closeBy', dealDef);
+      if (!closeBy) return false;
+      const d = new Date(closeBy);
+      return !isNaN(d.getTime()) && d.getTime() >= todayMs && d.getTime() <= weekEnd;
+    });
+    if (closingThisWeek.length) {
+      const value = closingThisWeek.reduce((s, e) => s + (Number(entityValue(e, 'value', dealDef)) || 0), 0);
+      items.push({
+        icon: '💼',
+        tone: 'sky',
+        text: `${closingThisWeek.length} ${closingThisWeek.length === 1 ? 'deal closes' : 'deals close'} this week · ${fmtValue(value, 'currency')}`,
+        action: () => this.setMode('crm.pipeline'),
+      });
+    }
+
+    /* 5. Stale contacts on open deals (>30 days since lastContact) */
+    const contacts = listEntities(this.app, 'contact');
+    const openDeals = deals.filter((e) => !['Won', 'Lost'].includes(String(entityValue(e, 'stage', dealDef))));
+    const dealContactNames = new Set(
+      openDeals.map((d) => String(entityValue(d, 'contact', dealDef) || '').trim()).filter(Boolean)
+    );
+    const staleCutoffMs = todayMs - 30 * 86400000;
+    let staleSample = null;
+    let staleCount = 0;
+    contacts.forEach((c) => {
+      const name = String(entityValue(c, 'name', contactDef) || '').trim();
+      if (!name || !dealContactNames.has(name)) return;
+      const lc = entityValue(c, 'lastContact', contactDef);
+      const lcMs = lc ? new Date(lc).getTime() : null;
+      if (lcMs != null && !isNaN(lcMs) && lcMs >= staleCutoffMs) return;
+      staleCount++;
+      if (!staleSample) staleSample = { contact: c, name, lcMs };
+    });
+    if (staleSample) {
+      const days = staleSample.lcMs ? Math.floor((todayMs - staleSample.lcMs) / 86400000) : null;
+      const linkedDeal = openDeals.find((d) => String(entityValue(d, 'contact', dealDef) || '').trim() === staleSample.name);
+      const dealName = linkedDeal ? entityValue(linkedDeal, 'title', dealDef) || '' : '';
+      const ago = days === null ? 'never contacted' : `${days} ${days === 1 ? 'day' : 'days'} quiet`;
+      const more = staleCount > 1 ? ` (+${staleCount - 1} more)` : '';
+      items.push({
+        icon: '👤',
+        tone: 'warn',
+        text: `${staleSample.name} — ${ago}${dealName ? ` · ${dealName}` : ''}${more}`,
+        action: () => this.openEntityDetailFromFile(staleSample.contact.file),
+      });
+    }
+
+    /* 6. Upcoming project milestones (next 14 days) */
+    const projectFiles = listEntityFiles(this.app, 'project');
+    const upcoming = [];
+    for (const f of projectFiles) {
+      try {
+        const meta = await readProjectMeta(this.app, f);
+        if (meta.next && meta.next.date) {
+          const ms = meta.next.date.getTime();
+          if (ms >= todayMs && ms <= todayMs + 14 * 86400000) {
+            upcoming.push({ file: f, milestone: meta.next, name: projectNameFromPath(this.app, f.path) });
+          }
+        }
+      } catch (_) {}
+    }
+    upcoming.sort((a, b) => a.milestone.date - b.milestone.date);
+    if (upcoming.length) {
+      const m = upcoming[0];
+      const days = Math.max(0, Math.ceil((m.milestone.date.getTime() - todayMs) / 86400000));
+      const dayStr = days === 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
+      const title = m.milestone.title || 'milestone';
+      items.push({
+        icon: '📅',
+        tone: 'mint',
+        text: `${m.name} · "${title}" — due ${dayStr}`,
+        action: () => this.openEntityDetail('project', m.file),
+      });
+    }
+
+    /* 7. Recent wins (deals moved to Won in last 7 days) */
+    const winCutoff = nowMs - 7 * 86400000;
+    const recentWins = deals.filter((e) => {
+      if (String(entityValue(e, 'stage', dealDef)) !== 'Won') return false;
+      return e.file && e.file.stat && e.file.stat.mtime >= winCutoff;
+    });
+    if (recentWins.length) {
+      const value = recentWins.reduce((s, e) => s + (Number(entityValue(e, 'value', dealDef)) || 0), 0);
+      items.push({
+        icon: '🎉',
+        tone: 'emerald',
+        text: `${recentWins.length} ${recentWins.length === 1 ? 'deal won' : 'deals won'} this week · ${fmtValue(value, 'currency')}`,
+        action: () => this.setMode('reports.sales'),
+      });
+    }
+
+    return items;
   }
 
   async _homeInboxCard(parent) {
@@ -6561,9 +6792,9 @@ class CadenceAppView extends obsidian.ItemView {
       if (!items.length) {
         list.createDiv({ cls: 'cad-empty', text: '—' });
       } else {
+        const isMobile = !!(obsidian.Platform && obsidian.Platform.isMobile);
         items.forEach((e) => {
           const card = list.createDiv({ cls: 'cad-kanban-card' });
-          card.draggable = true;
           card.dataset.path = e.file.path;
           card.createDiv({ cls: 'cad-kanban-card-title', text: entityPrimaryValue(e, def) });
           const meta = card.createDiv({ cls: 'cad-kanban-card-meta' });
@@ -6572,17 +6803,26 @@ class CadenceAppView extends obsidian.ItemView {
           const co = entityValue(e, 'company', def);
           if (co) meta.createSpan({ cls: 'cad-kanban-card-company', text: ' · ' + co });
 
-          card.addEventListener('dragstart', (ev) => {
-            card.addClass('dragging');
-            try {
-              ev.dataTransfer.effectAllowed = 'move';
-              ev.dataTransfer.setData('text/cadence-entity', e.file.path);
-              ev.dataTransfer.setData('text/cadence-stage', stage);
-              // Plain text payload too, so dropping into editors yields a link
-              ev.dataTransfer.setData('text/plain', `[[${e.file.basename}]]`);
-            } catch (_) {}
-          });
-          card.addEventListener('dragend', () => card.removeClass('dragging'));
+          /* Drag-to-move is a desktop-only affordance. On mobile, HTML5 drag
+             doesn't reliably fire from touch and the `draggable` attribute
+             can interfere with native scrolling. Mobile users instead tap
+             the card to open detail, then change the stage from there. */
+          if (!isMobile) {
+            card.draggable = true;
+            card.addEventListener('dragstart', (ev) => {
+              card.addClass('dragging');
+              try {
+                ev.dataTransfer.effectAllowed = 'move';
+                ev.dataTransfer.setData('text/cadence-entity', e.file.path);
+                ev.dataTransfer.setData('text/cadence-stage', stage);
+                // Plain text payload too, so dropping into editors yields a link
+                ev.dataTransfer.setData('text/plain', `[[${e.file.basename}]]`);
+              } catch (_) {}
+            });
+            card.addEventListener('dragend', () => card.removeClass('dragging'));
+          } else {
+            card.addClass('cad-kanban-card-touch');
+          }
           card.addEventListener('click', () => this.openEntityDetail(entityKey, e.file));
         });
       }
