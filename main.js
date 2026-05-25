@@ -120,6 +120,13 @@ const NAV_GROUPS = [
       { id: 'settings', label: 'Settings', icon: 'settings-2', desc: 'BOB Workspace settings — folders, headings, week start, API connection.' },
     ],
   },
+  {
+    id: 'ai', label: 'AI Workspace', module: 'ai',
+    items: [
+      { id: 'ai.playbooks', label: 'Playbooks', icon: 'book-open-check', module: 'ai', entityKey: 'playbook', folderKey: 'folderPlaybooks', desc: 'Runnable AI playbooks — step-by-step process recipes with triggers, outcomes and maturity levels.' },
+      { id: 'ai.skills',    label: 'Skills',    icon: 'cpu',             module: 'ai', entityKey: 'skill',    folderKey: 'folderSkills',    desc: 'Agent skills installed in the vault — category, version, enabled/disabled status.' },
+    ],
+  },
 ];
 
 // Convenience flat lookup
@@ -194,6 +201,7 @@ const WORKBOOK_EXPORT_GROUPS = [
   { id: 'prm', label: 'PRM', entityKeys: ['partner', 'registration', 'commission', 'certification'] },
   { id: 'finance', label: 'Finance', entityKeys: ['invoice', 'chart-of-accounts', 'journal-entry', 'bank-reconciliation', 'trial-balance', 'financial-statement', 'fs-notes', 'accounting-period', 'bank-account', 'fx-rates-table', 'inventory', 'vat-return', 'corporate-tax-return', 'deferred-tax', 'transfer-pricing', 'free-zone-status', 'legal-rule', 'document-retention'] },
   { id: 'procurement', label: 'Suppliers & Procurement', entityKeys: ['supplier', 'supplier-invoice', 'purchase-requisition', 'purchase-order'] },
+  { id: 'ai', label: 'AI Workspace', entityKeys: ['playbook', 'skill'] },
 ];
 
 /* ─────────── Entity registry ───────────
@@ -923,6 +931,45 @@ const ENTITIES = {
     ],
     columns: ['title', 'client_id', 'end_client_id', 'project_id', 'owner', 'stage', 'deal_value', 'expected_close'],
   },
+
+  playbook: {
+    folder: '00-CORE/Playbooks',
+    typeFilter: 'playbook',
+    label: 'Playbook', plural: 'Playbooks',
+    fields: [
+      { key: 'title',              label: 'Title',       primary: true },
+      { key: 'trigger',            label: 'Trigger' },
+      { key: 'outcome',            label: 'Outcome' },
+      { key: 'status',             label: 'Status',      type: 'enum', options: ['active', 'draft', 'deprecated'] },
+      { key: 'value-chain',        label: 'Value Chain' },
+      { key: 'total-steps',        label: 'Steps',       type: 'number' },
+      { key: 'estimated-duration', label: 'Duration' },
+      { key: 'maturity',           label: 'Maturity',    type: 'tags' },
+      { key: 'tags',               label: 'Tags',        type: 'tags' },
+      { key: 'created',            label: 'Created',     type: 'date' },
+      { key: 'modified',           label: 'Modified',    type: 'date' },
+    ],
+    columns: ['title', 'trigger', 'status', 'value-chain', 'total-steps'],
+  },
+
+  skill: {
+    folder: '00-CORE/Agents/skills',
+    filenameFilter: 'SKILL.md',
+    label: 'Skill', plural: 'Skills',
+    fields: [
+      { key: 'name',                       label: 'Name',         primary: true },
+      { key: 'description',                label: 'Description' },
+      { key: 'category',                   label: 'Category',     type: 'enum', options: ['utilities', 'crm', 'finance', 'marketing', 'operations', 'hr', 'content', 'research', 'legal', 'product'] },
+      { key: 'version',                    label: 'Version' },
+      { key: 'disable-model-invocation',   label: 'Enabled',      type: 'enum', options: ['false', 'true'] },
+      { key: 'user-invocable',             label: 'User Invocable', type: 'enum', options: ['true', 'false'] },
+      { key: 'pricing-tier',               label: 'Pricing Tier', type: 'enum', options: ['starter', 'pro', 'enterprise', 'free'] },
+      { key: 'origin',                     label: 'Origin',       type: 'enum', options: ['custom', 'community', 'marketplace'] },
+      { key: 'value-chains',               label: 'Value Chains', type: 'tags' },
+      { key: 'dev-status',                 label: 'Dev Status',   type: 'enum', options: ['integrated', 'beta', 'experimental', 'deprecated'] },
+    ],
+    columns: ['name', 'category', 'version', 'disable-model-invocation', 'user-invocable', 'pricing-tier'],
+  },
 };
 const BUILTIN_ENTITY_DEFAULTS = JSON.parse(JSON.stringify(ENTITIES));
 
@@ -991,6 +1038,7 @@ const BUILT_SURFACES = new Set([
   'prm.partners', 'prm.registrations', 'prm.commissions', 'prm.certifications', 'prm.analytics',
   'reports.pipeline', 'reports.sales', 'reports.partners', 'reports.activity', 'reports.productivity',
   'team', 'settings',
+  'ai.playbooks', 'ai.skills',
 ]);
 
 /* ─────────── Settings ─────────── */
@@ -1006,7 +1054,7 @@ const DEFAULT_SETTINGS = {
   currency: 'USD',
   cadenceAppDark: false,
   taskProjectLinks: {}, // { "dailyPath::taskText": "Cadence/Projects/X.md" }
-  modules: { crm: true, 'client-work': true, prm: true, srm: true, finance: true, procurement: true, tax: true, planner: true },
+  modules: { crm: true, 'client-work': true, prm: true, srm: true, finance: true, procurement: true, tax: true, planner: true, ai: true },
   disabledSurfaces: [],    // surface IDs hidden from nav regardless of module toggle
   showSecondaryNav: false,
   showSetupNav: false,
@@ -1035,6 +1083,8 @@ const DEFAULT_SETTINGS = {
   folderSequences: '20-COMPANY/60-SALES/SEQUENCES',
   folderCampaigns: '20-COMPANY/60-SALES/CAMPAIGNS',
   folderProjects: '30-CLIENTS',
+  folderPlaybooks: '00-CORE/Playbooks',
+  folderSkills: '00-CORE/Agents/skills',
   projectFolders: [],   // extra folders to scan; first non-empty = default for new projects
   baseFiles: {
     contact: '00-CORE/Bases/People.base',
@@ -1119,6 +1169,8 @@ function syncEntityFolders(settings) {
   ENTITY_FOLDERS.activity     = (settings.folderActivities    || '').trim() || '30-CLIENTS';
   ENTITY_FOLDERS.sequence     = (settings.folderSequences     || '').trim() || '20-COMPANY/60-SALES/SEQUENCES';
   ENTITY_FOLDERS.campaign     = (settings.folderCampaigns     || '').trim() || '20-COMPANY/60-SALES/CAMPAIGNS';
+  ENTITY_FOLDERS.playbook     = (settings.folderPlaybooks     || '').trim() || '00-CORE/Playbooks';
+  ENTITY_FOLDERS.skill        = (settings.folderSkills        || '').trim() || '00-CORE/Agents/skills';
   const extraProjectFolders = (settings.projectFolders || []).filter(f => f && f.trim());
   const allProjectFolders = [
     (settings.folderProjects || '').trim() || '30-CLIENTS',
@@ -1427,7 +1479,7 @@ async function applySchemas(app, settings = {}) {
           if (!base || base.includes('*')) return '';
           return base;
         })
-        .filter((p) => p && p.includes('/'));
+        .filter((p) => p && p.includes('/') && !p.includes(','));
       if (entityKey === 'contact') {
         delete ENTITIES[entityKey].folders;
       } else if (folders.length) {
@@ -1435,8 +1487,8 @@ async function applySchemas(app, settings = {}) {
       }
     }
 
-    // typeFilter from type_value
-    if (schema.type_value) ENTITIES[entityKey].typeFilter = schema.type_value;
+    // typeFilter from type_value — skip if entity uses filenameFilter (matched by filename, not type field)
+    if (schema.type_value && !ENTITIES[entityKey].filenameFilter) ENTITIES[entityKey].typeFilter = schema.type_value;
 
     // Enrich fields from schema.fields (preserve existing labels where present)
     if (Array.isArray(schema.fields) && ENTITIES[entityKey].fields) {
@@ -1918,6 +1970,8 @@ function listEntityFiles(app, entityKey) {
     } else if (useDefaultPath) {
       if (!f.path.startsWith(entityFolder(entityKey) + '/')) return false;
     }
+    // Filename filter (e.g. SKILL.md — one canonical file per subfolder)
+    if (def.filenameFilter && f.name !== def.filenameFilter) return false;
     // Single type filter
     if (def.typeFilter) {
       const fm = (app.metadataCache.getFileCache(f) || {}).frontmatter || {};
@@ -4225,6 +4279,8 @@ class CadenceAppView extends obsidian.ItemView {
 	      'reports.productivity':() => this.renderProductivity(content),
 	      'team':                () => this.renderTeam(content),
 	      'settings':            () => this.openSettingsTab(content),
+	      'ai.playbooks':        () => this.renderEntityList(content, 'playbook'),
+	      'ai.skills':           () => this.renderEntityList(content, 'skill'),
 	      'finance.invoices':    () => this.renderEntityTabs(content, 'finance.invoices', 'invoice'),
 	      'finance.gl':          () => this.renderEntityTabs(content, 'finance.gl', 'finance.gl.overview'),
 	      'finance.setup':       () => this.renderEntityTabs(content, 'finance.setup', 'finance.setup.overview'),
@@ -5219,7 +5275,9 @@ class CadenceAppView extends obsidian.ItemView {
       return;
     }
 
-    const cols = (opts.columns || def.columns).map((k) => def.fields.find((f) => f.key === k)).filter(Boolean);
+    const cols = opts.columns
+      ? opts.columns.map((k) => def.fields.find((f) => f.key === k)).filter(Boolean)
+      : def.fields;
     const groups = this._groupEntitiesForView(filtered, def);
     if (groups) {
       groups.forEach(([label, items]) => {
@@ -8785,6 +8843,94 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
   }
 }
 
+/* ─────────── Playbook Runner Bases view ─────────── */
+const PLAYBOOK_RUNNER_VIEW_TYPE = 'agent-client-playbook-runner';
+const PLAYBOOK_RUNNER_PINNED_KEY = 'bob-pinned-playbooks';
+
+class CadencePlaybookRunnerView extends (obsidian.BasesView || class {}) {
+  constructor(controller, parentEl, app) {
+    if (obsidian.BasesView) super(controller);
+    this._app = app;
+    this._pinned = CadencePlaybookRunnerView._loadPinned();
+    this._root = parentEl.createDiv({ cls: 'cad-pb-runner' });
+  }
+
+  static _loadPinned() {
+    try { return new Set(JSON.parse(localStorage.getItem(PLAYBOOK_RUNNER_PINNED_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+  static _savePinned(set) {
+    localStorage.setItem(PLAYBOOK_RUNNER_PINNED_KEY, JSON.stringify([...set]));
+  }
+
+  onDataUpdated() {
+    this._root.empty();
+    let total = 0;
+    for (const group of (this.data?.groupedData || [])) {
+      for (const entry of group.entries) {
+        total++;
+        const path = entry.file.path;
+        const name = entry.file.basename;
+        const title = String(entry.getValue?.('note.title') ?? entry.getValue?.('file.name') ?? name);
+        const trigger = String(entry.getValue?.('note.trigger') ?? '');
+
+        const card = this._root.createDiv({ cls: 'cad-pb-card' });
+
+        const pinBtn = card.createEl('button', { cls: 'cad-pb-pin' + (this._pinned.has(path) ? ' cad-pb-pin--active' : '') });
+        pinBtn.setText(this._pinned.has(path) ? '★' : '☆');
+        pinBtn.title = this._pinned.has(path) ? 'Unpin' : 'Pin';
+        pinBtn.addEventListener('click', () => {
+          this._pinned.has(path) ? this._pinned.delete(path) : this._pinned.add(path);
+          CadencePlaybookRunnerView._savePinned(this._pinned);
+          this.onDataUpdated();
+        });
+
+        const info = card.createDiv({ cls: 'cad-pb-card-info' });
+        const titleEl = info.createSpan({ cls: 'cad-pb-card-title', text: title });
+        if (trigger) { info.createSpan({ cls: 'cad-pb-card-trigger', text: trigger }); titleEl.title = trigger; }
+
+        const runBtn = card.createEl('button', { cls: 'cad-btn primary cad-pb-run', text: '▶' });
+        runBtn.title = 'Run playbook in AI chat session';
+        runBtn.addEventListener('click', () => this._runPlaybook(title));
+      }
+    }
+    if (total === 0) this._root.createDiv({ cls: 'cad-empty-state-title', text: 'No playbooks found' });
+  }
+
+  async _runPlaybook(title) {
+    const ACW_CHAT = 'agent-client-chat-view';
+    const cmd = `/playbook-runner ${title}`;
+    const { workspace } = this._app;
+
+    const send = async (view) => {
+      view.setInputState({ text: cmd, files: [] });
+      if (typeof view.sendMessage === 'function') await view.sendMessage();
+    };
+
+    // Reveal existing leaf
+    const existing = workspace.getLeavesOfType(ACW_CHAT);
+    if (existing.length > 0) {
+      workspace.revealLeaf(existing[0]);
+      await send(existing[0].view);
+      return;
+    }
+
+    // Open a new split and wait for the view to mount
+    const leaf = workspace.getLeaf('split', 'vertical');
+    try {
+      await leaf.setViewState({ type: ACW_CHAT, active: true });
+      workspace.revealLeaf(leaf);
+      setTimeout(() => {
+        if (typeof leaf.view?.setInputState === 'function') send(leaf.view);
+      }, 400);
+    } catch {
+      leaf.detach();
+      await navigator.clipboard.writeText(cmd);
+      new obsidian.Notice(`Agent chat unavailable. Copied to clipboard:\n${cmd}`, 5000);
+    }
+  }
+}
+
 /* ─────────── The plugin ─────────── */
 class CadencePlugin extends obsidian.Plugin {
   async onload() {
@@ -8797,6 +8943,15 @@ class CadencePlugin extends obsidian.Plugin {
       VIEW_TYPE_CADENCE_APP,
       (leaf) => new CadenceAppView(leaf, this)
     );
+
+    // Register playbook runner as a Bases custom view type (used in Playbooks.base Runner tabs)
+    if (typeof this.registerBasesView === 'function') {
+      this.registerBasesView(PLAYBOOK_RUNNER_VIEW_TYPE, {
+        name: 'Playbook Runner',
+        icon: 'play-circle',
+        factory: (controller, parentEl) => new CadencePlaybookRunnerView(controller, parentEl, this.app),
+      });
+    }
 
     // Single ribbon icon → opens the Cadence app
     this.addRibbonIcon('sparkles', 'Open BOB Workspace', () => this.openApp());

@@ -429,7 +429,7 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   background: var(--background-primary);
 }
 .cad-table thead th.cad-th-sortable { cursor: pointer; user-select: none; }
-.cad-table thead th.cad-th-sortable:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.cad-table thead th.cad-th-sortable:hover { background-image: linear-gradient(var(--background-modifier-hover), var(--background-modifier-hover)); background-color: var(--background-primary); color: var(--text-normal); }
 .cad-table thead th.cad-th-sorted { color: var(--text-normal); }
 .cad-table thead th .cad-th-label { display: inline-flex; align-items: center; gap: 6px; }
 .cad-table thead th .cad-th-indicator {
@@ -2136,3 +2136,22 @@ select.cad-form-input {
   color: var(--text-muted); text-align: center;
   border-top: 1px dashed var(--background-modifier-border);
 }
+
+/* ─────────── Playbook Runner Bases view ─────────── */
+.cad-pb-runner { display: flex; flex-direction: column; gap: 6px; padding: 8px; }
+.cad-pb-card {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 6px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+}
+.cad-pb-card:hover { background: var(--background-modifier-hover); }
+.cad-pb-pin {
+  flex-shrink: 0; background: none; border: none; cursor: pointer;
+  font-size: 14px; color: var(--text-muted); padding: 0 2px;
+}
+.cad-pb-pin--active { color: var(--color-yellow); }
+.cad-pb-card-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cad-pb-card-title { font-weight: 600; font-size: 13px; color: var(--text-normal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cad-pb-card-trigger { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cad-pb-run { flex-shrink: 0; font-size: 12px; }
