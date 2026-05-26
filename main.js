@@ -1208,6 +1208,175 @@ function entityFolder(entityKey) {
   return ENTITY_FOLDERS[entityKey] || ENTITIES[entityKey]?.folder || '';
 }
 
+function normalizePathSegment(value) {
+  return String(value ?? '')
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizedLookupKey(value) {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function buildEntityCreateValueMap(def, context = {}) {
+  const values = Object.assign({}, context.values || {});
+  const map = new Map();
+  const add = (key, value) => {
+    if (value == null || value === '') return;
+    const normalized = normalizedLookupKey(key);
+    if (normalized) map.set(normalized, value);
+  };
+
+  Object.entries(values).forEach(([key, value]) => add(key, value));
+  if (context.rawName) {
+    const primaryKey = primaryFieldKey(def);
+    if (primaryKey) add(primaryKey, context.rawName);
+    add('name', context.rawName);
+    add('title', context.rawName);
+  }
+  if (context.filePath) {
+    add('file_path', context.filePath);
+    add('path', context.filePath);
+  }
+  return map;
+}
+
+function lookupCreateValue(name, valueMap) {
+  const key = normalizedLookupKey(name);
+  if (!key) return '';
+  if (valueMap.has(key)) return valueMap.get(key);
+  return '';
+}
+
+function resolveLocationPatternFolder(pattern, def, context = {}) {
+  if (!pattern) return '';
+  const valueMap = buildEntityCreateValueMap(def, context);
+  const candidates = String(pattern)
+    .split(/\s+or\s+/i)
+    .map((part) => part.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean);
+  const resolvedPaths = [];
+
+  for (const candidate of candidates) {
+    const segments = candidate.split('/').map((segment) => segment.trim()).filter(Boolean);
+    const pathSegments = [];
+    let blocked = false;
+    let hadPlaceholder = false;
+
+    for (const segment of segments) {
+      if (!segment.includes('{')) {
+        const clean = normalizePathSegment(segment);
+        if (clean) pathSegments.push(clean);
+        continue;
+      }
+
+      hadPlaceholder = true;
+      let segmentResolved = segment;
+      let unresolved = false;
+      segmentResolved = segmentResolved.replace(/\{([^}]+)\}/g, (_, placeholder) => {
+        const value = lookupCreateValue(placeholder, valueMap);
+        if (value === '') {
+          unresolved = true;
+          return '';
+        }
+        return normalizePathSegment(value);
+      });
+
+      if (unresolved) {
+        blocked = true;
+        break;
+      }
+
+      const clean = normalizePathSegment(segmentResolved);
+      if (clean) pathSegments.push(clean);
+    }
+
+    resolvedPaths.push({
+      path: pathSegments.join('/'),
+      depth: pathSegments.length,
+      fullyResolved: !blocked && (!hadPlaceholder || pathSegments.length === segments.length),
+    });
+  }
+
+  const fullMatch = resolvedPaths
+    .filter((item) => item.path && item.fullyResolved)
+    .sort((a, b) => b.depth - a.depth)[0];
+  if (fullMatch) return fullMatch.path;
+
+  const bestPartial = resolvedPaths
+    .filter((item) => item.path)
+    .sort((a, b) => b.depth - a.depth)[0];
+  return bestPartial?.path || '';
+}
+
+function resolveEntityCreateFolder(entityKey, rawName, context = {}) {
+  const def = ENTITIES[entityKey];
+  if (!def) return entityFolder(entityKey);
+  const pattern = def.locationPattern || def.location_pattern || '';
+  const resolved = resolveLocationPatternFolder(pattern, def, Object.assign({}, context, { rawName }));
+  return resolved || entityFolder(entityKey);
+}
+
+function normalizeTemplateSpec(template) {
+  if (!template) return null;
+  if (typeof template === 'string') return { body: template };
+  if (typeof template === 'object' && !Array.isArray(template)) return template;
+  return null;
+}
+
+function applyTemplatePlaceholders(value, context = {}) {
+  if (typeof value !== 'string') return value;
+  return value.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
+    const lookup = String(key || '').trim();
+    if (!lookup) return '';
+    const candidates = [lookup, lookup.toLowerCase(), lookup.replace(/\s+/g, '_').toLowerCase()];
+    for (const candidate of candidates) {
+      if (Object.prototype.hasOwnProperty.call(context, candidate) && context[candidate] != null) {
+        return String(context[candidate]);
+      }
+    }
+    return '';
+  });
+}
+
+function renderTemplateFrontmatter(frontmatter, context = {}) {
+  const result = {};
+  Object.entries(frontmatter || {}).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      result[key] = value.map((item) => applyTemplatePlaceholders(item, context));
+      return;
+    }
+    if (value && typeof value === 'object') {
+      result[key] = renderTemplateFrontmatter(value, context);
+      return;
+    }
+    result[key] = applyTemplatePlaceholders(value, context);
+  });
+  return result;
+}
+
+function renderTemplateBody(body, context = {}) {
+  const lines = Array.isArray(body) ? body : String(body || '').split('\n');
+  return lines.map((line) => applyTemplatePlaceholders(line, context)).join('\n');
+}
+
+function renderTemplateDocument(template, context = {}, fallback = null) {
+  const spec = normalizeTemplateSpec(template);
+  const body = spec?.body != null ? spec.body : fallback?.body;
+  const frontmatter = spec?.frontmatter != null ? spec.frontmatter : fallback?.frontmatter;
+  const fm = renderTemplateFrontmatter(frontmatter || {}, context);
+  const fmLines = ['---'];
+  Object.entries(fm).forEach(([key, value]) => {
+    fmLines.push(obsidian.stringifyYaml({ [key]: value }).trim() || `${key}:`);
+  });
+  fmLines.push('---', '');
+  const renderedBody = renderTemplateBody(body != null ? body : '', context);
+  return [fmLines.join('\n'), renderedBody].filter(Boolean).join('\n');
+}
+
 /* ─────────── Custom entity loader ───────────
    Reads Cadence/entities.json from the vault and merges definitions into
    ENTITIES at runtime. New keys get a nav item; existing keys get field/column
@@ -1260,6 +1429,9 @@ async function saveEntitiesConfig(app, jsonText) {
 function validateWorkspaceConfig(config) {
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
     throw new Error('Must be a JSON object');
+  }
+  if (config.settings != null && (typeof config.settings !== 'object' || Array.isArray(config.settings))) {
+    throw new Error('settings must be an object');
   }
   const navigation = config.navigation;
   if (navigation != null && (typeof navigation !== 'object' || Array.isArray(navigation))) {
@@ -1325,6 +1497,73 @@ function validateWorkspaceConfig(config) {
     workbookGroupIds.add(group.id);
   }
   return config;
+}
+
+const WORKSPACE_OWNED_SETTING_KEYS = [
+  'currency',
+  'modules',
+  'disabledSurfaces',
+  'showSecondaryNav',
+  'showSetupNav',
+  'teamPersonCategories',
+  'taskMode',
+  'taskNotesFolder',
+  'taskNotesArchiveFolder',
+  'workbookExportFolder',
+  'baseFiles',
+  'baseViews',
+  'schemasFolder',
+  'useSchemas',
+  'folderContacts',
+  'folderCompanies',
+  'folderClients',
+  'folderSuppliers',
+  'folderPipeline',
+  'folderPartners',
+  'folderRegistrations',
+  'folderCommissions',
+  'folderLeads',
+  'folderCertifications',
+  'folderActivities',
+  'folderSequences',
+  'folderCampaigns',
+  'folderProjects',
+  'folderPlaybooks',
+  'folderSkills',
+  'projectFolders',
+];
+
+function workspaceOwnedSettings(settings = {}) {
+  const owned = {};
+  WORKSPACE_OWNED_SETTING_KEYS.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(settings, key)) owned[key] = cloneConfig(settings[key]);
+  });
+  return owned;
+}
+
+function applyWorkspaceOwnedSettings(settings = {}) {
+  const merged = Object.assign({}, settings);
+  const workspaceSettings = WORKSPACE_CONFIG.settings || {};
+  WORKSPACE_OWNED_SETTING_KEYS.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(workspaceSettings, key) && workspaceSettings[key] != null) {
+      merged[key] = cloneConfig(workspaceSettings[key]);
+    }
+  });
+  return merged;
+}
+
+function persistedWorkspaceOwnedSettings(settings = {}) {
+  const existing = WORKSPACE_CONFIG.settings || {};
+  const persisted = {};
+  WORKSPACE_OWNED_SETTING_KEYS.forEach((key) => {
+    if (!Object.prototype.hasOwnProperty.call(settings, key)) return;
+    const current = settings[key];
+    const defaultValue = DEFAULT_SETTINGS[key];
+    const shouldPersist = Object.prototype.hasOwnProperty.call(existing, key)
+      || JSON.stringify(current) !== JSON.stringify(defaultValue);
+    if (shouldPersist) persisted[key] = cloneConfig(current);
+  });
+  return persisted;
 }
 
 async function saveWorkspaceConfig(app, jsonText) {
@@ -1470,6 +1709,7 @@ async function applyEntityDefinitions(app, settings = {}, config = {}, injectNav
       if (def.typeFilters) ENTITIES[key].typeFilters = def.typeFilters;
       ['stageField','valueField','closeByField','wonStages','lostStages',
        'detailMetaFields','detailSections','terminalStatuses','stageConfidence',
+       'template',
        'folders','dateField','titleField','fieldAliases','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters'].forEach((k) => {
         if (def[k] != null) ENTITIES[key][k] = def[k];
       });
@@ -1526,6 +1766,7 @@ async function applyEntityDefinitions(app, settings = {}, config = {}, injectNav
       // Per-entity config overrides
       ['stageField','valueField','closeByField','wonStages','lostStages',
        'detailMetaFields','detailSections','terminalStatuses','stageConfidence',
+       'template',
        'folders','dateField','titleField','fieldAliases','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters'].forEach((k) => {
         if (!Object.prototype.hasOwnProperty.call(def, k)) return;
         if (def[k] != null) ENTITIES[key][k] = def[k];
@@ -1668,6 +1909,7 @@ async function applySchemas(app, settings = {}) {
     if (schema.plural) ENTITIES[entityKey].plural = schema.plural;
     if (schema.icon) ENTITIES[entityKey].icon = schema.icon;
     if (schema.field_aliases) ENTITIES[entityKey].fieldAliases = JSON.parse(JSON.stringify(schema.field_aliases));
+    if (schema.location_pattern) ENTITIES[entityKey].locationPattern = schema.location_pattern;
 
     // Derive folders from location_pattern. Handles single, ` or `-joined, and `{placeholder}` patterns.
     //   "30-CLIENTS/{client-id}/00-PROFILE/"          -> ["30-CLIENTS"]
@@ -2113,11 +2355,13 @@ function workspaceConfigTemplate(settings = {}) {
   });
   return JSON.stringify({
     _comment: 'This file controls no-code workspace composition. Canonical entity definitions are in schema YAML; existing built-in surface IDs keep their specialized renderers.',
+    settings: workspaceOwnedSettings(settings),
     schemas: {
       enabled: !!settings.useSchemas,
       folder: settings.schemasFolder || SCHEMA_FOLDER_DEFAULT,
     },
     bases,
+    templates: {},
     navigation: {
       groups: NAV_GROUPS,
       secondaryTabs: SECONDARY_TABS,
@@ -2873,9 +3117,34 @@ function yamlTemplateLine(key, value) {
 }
 
 function entityTemplate(entityKey, name) {
+  const def = ENTITIES[entityKey];
+  const template = def?.template || WORKSPACE_CONFIG?.templates?.[entityKey];
+  if (template) {
+    const fields = Array.isArray(def?.fields) ? def.fields : [];
+    const context = {
+      name,
+      title: name,
+      today: ymd(),
+      entityKey,
+      label: def?.label || entityKey,
+      plural: def?.plural || pluralizeEntityLabel(def?.label || entityKey),
+    };
+    return renderTemplateDocument(template, context, {
+      frontmatter: (() => {
+        const fallback = {};
+        const hasTypeField = fields.some((f) => f.key === 'type');
+        if (!hasTypeField) fallback.type = def.typeFilter || entityKey;
+        fields.forEach((f) => {
+          fallback[f.key] = templateFieldValue(f, f.key === primaryFieldKey(def), name);
+        });
+        return fallback;
+      })(),
+      body: `# ${name}\n`,
+    });
+  }
+
   if (entityKey === 'project') return projectTemplate(name);
 
-  const def = ENTITIES[entityKey];
   const lines = ['---'];
   // Only write the meta `type: <entityKey>` tag if the entity doesn't already
   // define a `type` field of its own (e.g. Activity has type=Call/Email/...).
@@ -2893,6 +3162,60 @@ function entityTemplate(entityKey, name) {
 }
 
 function projectTemplate(name) {
+  const def = ENTITIES.project || {};
+  const template = def.template || WORKSPACE_CONFIG?.templates?.project;
+  if (template) {
+    return renderTemplateDocument(template, {
+      name,
+      title: name,
+      today: ymd(),
+      entityKey: 'project',
+      label: def.label || 'Project',
+      plural: def.plural || 'Projects',
+    }, {
+      frontmatter: {
+        type: 'project',
+        name,
+        status: 'active',
+        priority: 'medium',
+        owner: '',
+        started: ymd(),
+        due: '',
+        tags: [],
+        related_deals: [],
+        related_partners: [],
+      },
+      body: [
+        `# ${name}`,
+        '',
+        '## Brief',
+        '_The outcome we want, why now._',
+        '',
+        '## Scope',
+        '**In scope:**',
+        '- ',
+        '',
+        '**Out of scope:**',
+        '- ',
+        '',
+        '## Milestones',
+        `- [ ] ${ymd()} — First milestone`,
+        '',
+        '## Tasks',
+        '- [ ] ',
+        '',
+        '## Risks',
+        '- ',
+        '',
+        '## Stakeholders',
+        '- ',
+        '',
+        '## Notes',
+        '',
+        '',
+      ],
+    });
+  }
   const today = ymd(new Date());
   return [
     '---',
@@ -3029,6 +3352,40 @@ function stringifyTasks(items) {
 
 /* ─── TaskNote helpers (used when taskMode !== 'checkbox') ─── */
 function taskNoteTemplate(title) {
+  const template = normalizeTemplateSpec(WORKSPACE_CONFIG?.templates?.taskNote || ENTITIES.task?.template);
+  if (template) {
+    return renderTemplateDocument(template, {
+      title,
+      name: title,
+      today: ymd(),
+      entityKey: 'task',
+      label: 'Task',
+      plural: 'Tasks',
+    }, {
+      frontmatter: {
+        title,
+        type: 'task',
+        status: 'open',
+        priority: 'normal',
+        size: 'M',
+        due: '',
+        scheduled: '',
+        dateCreated: ymd(),
+        dateModified: ymd(),
+        tags: [],
+        assignee: [],
+        cluster: '',
+      },
+      body: [
+        `# ${title}`,
+        '',
+        '## Scope',
+        '',
+        '## Notes',
+        '',
+      ],
+    });
+  }
   const now = ymd();
   return [
     '---',
@@ -3143,9 +3500,9 @@ async function readProjectMeta(app, file) {
   return { content, sections, milestones, total, done, percent, next, today };
 }
 
-async function createEntity(app, entityKey, rawName) {
+async function createEntity(app, entityKey, rawName, context = {}) {
   const def = ENTITIES[entityKey];
-  const folder = entityFolder(entityKey);
+  const folder = resolveEntityCreateFolder(entityKey, rawName, context);
   await ensureFolderSync(app, folder);
   const safeName = (rawName || `Untitled ${def.label}`).replace(/[\\/:*?"<>|]/g, '-').trim() || 'Untitled';
   let path = `${folder}/${safeName}.md`;
@@ -3925,7 +4282,7 @@ async function importEntityRows(app, entityKey, rows) {
       const explicitPath = String(rowValue(row, 'file_path') || '').trim();
       let file = explicitPath ? app.vault.getAbstractFileByPath(explicitPath) : null;
       let isUpdate = file instanceof obsidian.TFile;
-      if (!isUpdate) file = await createEntity(app, entityKey, primaryValue);
+      if (!isUpdate) file = await createEntity(app, entityKey, primaryValue, { values: row });
       await app.fileManager.processFrontMatter(file, (fm) => {
         def.fields.forEach((field) => {
           if (field.key === primary.key) return;
@@ -4393,7 +4750,14 @@ class CadenceImportModal extends obsidian.Modal {
       const primaryValue = String(row[primaryColIdx] || '').trim();
       if (!primaryValue) { failed++; continue; }
       try {
-        const file = await createEntity(this.app, this.entityKey, primaryValue);
+        const contextValues = {};
+        Object.entries(this.mapping).forEach(([header, key]) => {
+          if (!key) return;
+          const idx = this.headers.indexOf(header);
+          const val = String(row[idx] || '').trim();
+          if (val) contextValues[key] = val;
+        });
+        const file = await createEntity(this.app, this.entityKey, primaryValue, { values: contextValues });
         const extras = {};
         Object.entries(this.mapping).forEach(([header, key]) => {
           if (!key || key === primaryKey) return;
@@ -8633,7 +8997,7 @@ class CadenceAppView extends obsidian.ItemView {
       onSubmit: async (result) => {
         if (!result) return;
         try {
-          const file = await createEntity(this.app, entityKey, result.name);
+          const file = await createEntity(this.app, entityKey, result.name, { values: result.values });
           // Patch frontmatter with whatever else the user filled in (skip primary key — already set by template).
           const primaryKey = primaryFieldKey(def);
           const extras = Object.assign({}, result.values);
@@ -8980,7 +9344,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     /* ─── Workspace configuration (workspace.json) ─── */
     containerEl.createEl('h3', { text: 'Workspace definition' });
     const workspaceDesc = containerEl.createEl('p', { cls: 'setting-item-description' });
-    workspaceDesc.appendText('Define schema loading, Base/view associations, navigation groups, surfaces, secondary tabs and workbook groups in ');
+    workspaceDesc.appendText('Define schema loading, Base/view associations, templates, navigation groups, surfaces, secondary tabs and workbook groups in ');
     workspaceDesc.createEl('code', { text: 'workspace.json' });
     workspaceDesc.appendText(' next to plugin data. Entity-backed surfaces are rendered automatically; existing built-in surface IDs retain their specialized views.');
 
@@ -11094,11 +11458,23 @@ class CadencePlugin extends obsidian.Plugin {
     this.settings.baseViews = Object.assign({}, DEFAULT_SETTINGS.baseViews || {}, data?.baseViews || {});
     this.settings.modules = Object.assign({}, DEFAULT_SETTINGS.modules || {}, data?.modules || {});
     this.settings.collapsedGroups = Object.assign({}, DEFAULT_SETTINGS.collapsedGroups || {}, data?.collapsedGroups || {});
+    await loadWorkspaceConfig(this.app);
+    this.settings = applyWorkspaceOwnedSettings(this.settings);
     CURRENT_CURRENCY = this.settings.currency || 'USD';
     syncEntityFolders(this.settings);
   }
   async saveSettings() {
-    await this.saveData(this.settings);
+    const workspaceSettings = persistedWorkspaceOwnedSettings(this.settings);
+    const dataToSave = Object.assign({}, this.settings);
+    WORKSPACE_OWNED_SETTING_KEYS.forEach((key) => {
+      delete dataToSave[key];
+    });
+    await this.saveData(dataToSave);
+    const workspaceConfig = validateWorkspaceConfig(Object.assign({}, WORKSPACE_CONFIG, { settings: workspaceSettings }));
+    WORKSPACE_CONFIG = workspaceConfig;
+    if (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH) || Object.keys(workspaceSettings).length) {
+      await saveWorkspaceConfig(this.app, JSON.stringify(workspaceConfig, null, 2));
+    }
     CURRENT_CURRENCY = this.settings.currency || 'USD';
     syncEntityFolders(this.settings);
   }
