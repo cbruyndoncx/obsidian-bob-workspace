@@ -2640,12 +2640,97 @@ async function regenerateSchemaOutputs(app, settings = {}) {
       removed++;
     }
   }
+  const sortedSchemas = [...loaded.schemas].sort((a, b) =>
+    (a.schema.label || a.schema.entity).localeCompare(b.schema.label || b.schema.entity));
+  let datamodelUpdated = 0;
+  if (await injectGeneratedSection(app, 'DATAMODEL.md',
+    '<!-- BEGIN GENERATED: ENTITY TYPES -->', '<!-- END GENERATED: ENTITY TYPES -->',
+    generateEntityTypesTable(sortedSchemas))) datamodelUpdated++;
+  if (await injectGeneratedSection(app, 'DATAMODEL-FULL.md',
+    '<!-- BEGIN GENERATED: ENTITY DEFINITIONS -->', '<!-- END GENERATED: ENTITY DEFINITIONS -->',
+    generateEntityDefinitionsSection(sortedSchemas))) datamodelUpdated++;
   return {
     count: loaded.schemas.length,
     removed,
     fileClassFolder,
     jsonFolder,
+    datamodelUpdated,
   };
+}
+
+async function injectGeneratedSection(app, filePath, beginMarker, endMarker, content) {
+  if (!await app.vault.adapter.exists(filePath)) return false;
+  const text = await app.vault.adapter.read(filePath);
+  const beginIdx = text.indexOf(beginMarker);
+  const endIdx = text.indexOf(endMarker);
+  if (beginIdx === -1 || endIdx === -1 || endIdx <= beginIdx) return false;
+  const updated = text.slice(0, beginIdx + beginMarker.length) + '\n' + content + '\n' + text.slice(endIdx);
+  await app.vault.adapter.write(filePath, updated);
+  return true;
+}
+
+function schemaFieldDocType(field) {
+  if (Array.isArray(field.enum)) return 'enum';
+  if (field.format === 'date' || field.bob_type === 'date') return 'date';
+  if (field.bob_type === 'currency') return 'currency';
+  if (field.bob_type === 'tags' || field.type === 'array') return 'array';
+  return field.type || 'string';
+}
+
+function generateEntityTypesTable(schemas) {
+  const header = '| Entity | `type:` value | Location | Key Fields |\n|--------|--------------|----------|------------|';
+  const rows = schemas.map(({ schema }) => {
+    const label = schema.label || schema.entity;
+    const typeValue = schema.type_value ? `\`${schema.type_value}\`` : '_(filename-backed)_';
+    const location = schema.location_pattern || '—';
+    const keyFields = (schema.key_fields || []).map((k) => `\`${k}\``).join(', ') || '—';
+    return `| ${label} | ${typeValue} | ${location} | ${keyFields} |`;
+  });
+  return `${header}\n${rows.join('\n')}`;
+}
+
+function generateEntityDefinitionsSection(schemas) {
+  return schemas.map(({ schema }) => {
+    const label = schema.label || schema.entity;
+    const typeValue = schema.type_value || '_(filename-backed)_';
+    const location = schema.location_pattern || '—';
+    const definition = schema.description || '—';
+    const scope = schema.scope || '';
+
+    let attrTable = '| Attribute | Value |\n|-----------|-------|\n';
+    attrTable += `| **Definition** | ${definition} |\n`;
+    attrTable += `| **\`type:\`** | \`${typeValue}\` |\n`;
+    attrTable += `| **Location** | \`${location}\` |`;
+    if (scope) attrTable += `\n| **Scope** | ${scope} |`;
+
+    const dataFields = (schema.fields || []).filter((f) => f.name !== 'type');
+    let fieldTable = '';
+    if (dataFields.length) {
+      fieldTable = '\n\n| Field | Required | Type | Allowed Values / Notes |\n|-------|----------|------|------------------------|\n';
+      fieldTable += dataFields.map((field) => {
+        const req = field.required ? 'yes' : 'no';
+        const type = schemaFieldDocType(field);
+        let notes = field.description || '';
+        if (Array.isArray(field.enum)) {
+          const enumList = field.enum.map((v) => `\`${v}\``).join(', ');
+          notes = notes ? `${notes} — ${enumList}` : enumList;
+        }
+        return `| \`${field.name}\` | ${req} | ${type} | ${notes || '—'} |`;
+      }).join('\n');
+    }
+
+    let extra = '';
+    if (Array.isArray(schema.co_required) && schema.co_required.length) {
+      extra += '\n\n' + schema.co_required.map((pair) =>
+        `**Co-required**: \`${pair.map((n) => `\`${n}\``).join(' and ')}\` must be set together.`
+      ).join(' ');
+    }
+    if (Array.isArray(schema.status_lifecycle) && schema.status_lifecycle.length) {
+      extra += `\n\n**Lifecycle**: ${schema.status_lifecycle.map((s) => `\`${s}\``).join(' → ')}`;
+    }
+
+    return `### ${label}\n\n${attrTable}${fieldTable}${extra}\n\n---`;
+  }).join('\n\n');
 }
 
 
@@ -10384,7 +10469,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         .onClick(async () => {
           try {
             const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
-            new obsidian.Notice(`BOB Workspace: generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s).`);
+            new obsidian.Notice(`BOB Workspace: generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s)${result.datamodelUpdated ? `; updated ${result.datamodelUpdated} DATAMODEL section(s)` : ''}.`);
             await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
             this.plugin.refreshOpenViews();
           } catch (e) {
@@ -10502,7 +10587,11 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       renderSchemaIcon();
       textControl(identity, 'Type value', sourceSchema.type_value, (value) => { sourceSchema.type_value = value.trim(); });
       textControl(identity, 'Location pattern', sourceSchema.location_pattern, (value) => { sourceSchema.location_pattern = value.trim(); });
-      textControl(identity, 'Description', sourceSchema.description, (value) => { sourceSchema.description = value; }, true);
+      textControl(identity, 'Definition', sourceSchema.description, (value) => { sourceSchema.description = value; }, true);
+      textControl(identity, 'Scope', sourceSchema.scope, (value) => {
+        if (value && value.trim()) sourceSchema.scope = value.trim();
+        else delete sourceSchema.scope;
+      });
       textControl(identity, 'Key fields', commaList(sourceSchema.key_fields), (value) => { sourceSchema.key_fields = parseList(value); });
       textControl(identity, 'Lifecycle', commaList(sourceSchema.status_lifecycle), (value) => { sourceSchema.status_lifecycle = parseList(value); });
       textControl(identity, 'Co-required pairs', (sourceSchema.co_required || []).map((pair) => pair.join(', ')).join('\n'), (value) => {
@@ -10716,7 +10805,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         let outputText = '';
         if (regenerate) {
           const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
-          outputText = ` Generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s).`;
+          outputText = ` Generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s)${result.datamodelUpdated ? `; updated ${result.datamodelUpdated} DATAMODEL section(s)` : ''}.`;
         }
         schemaDirty = false;
         this._schemaDesignerSelectedPath = sourceSchemaPath;
