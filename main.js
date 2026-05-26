@@ -10505,9 +10505,49 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       schemaStatus.toggleClass('cad-status-ok', !!ok);
       schemaStatus.toggleClass('cad-status-err', !ok);
     };
+    const highlightSaveButtons = (on) => {
+      schemaSave.toggleClass('cad-schema-save-needed', on);
+      schemaSaveGenerate.toggleClass('cad-schema-save-needed', on);
+    };
+    let autoSaveTimer = null;
+    const autoSaveSchema = async () => {
+      if (!sourceSchema || !sourceSchemaPath) return;
+      try { validateSourceSchemaDefinition(sourceSchema); } catch (e) {
+        setSchemaStatus(`Fix before saving: ${e.message}`, false);
+        highlightSaveButtons(true);
+        return;
+      }
+      const renamedPath = `${schemaFolder}/${sourceSchema.entity}.yaml`;
+      if (sourceSchemaPath !== renamedPath && await adapter.exists(sourceSchemaPath)) {
+        setSchemaStatus('Entity key changed — use Save to rename the file', false);
+        highlightSaveButtons(true);
+        return;
+      }
+      try {
+        const targetPath = (await adapter.exists(sourceSchemaPath)) ? sourceSchemaPath : renamedPath;
+        await ensureFolderSync(this.plugin.app, schemaFolder);
+        if (await adapter.exists(targetPath)) {
+          await adapter.write(`${targetPath}.backup`, await adapter.read(targetPath));
+        }
+        await adapter.write(targetPath, obsidian.stringifyYaml(sourceSchema));
+        sourceSchemaPath = targetPath;
+        schemaDirty = false;
+        highlightSaveButtons(false);
+        this._schemaDesignerSelectedPath = sourceSchemaPath;
+        if (!schemaFiles.includes(sourceSchemaPath)) schemaFiles.push(sourceSchemaPath);
+        setSchemaStatus('Saved', true);
+        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        this.plugin.refreshOpenViews();
+      } catch (e) {
+        setSchemaStatus(`Auto-save failed: ${e.message}`, false);
+        highlightSaveButtons(true);
+      }
+    };
     const markSchemaDirty = () => {
       schemaDirty = true;
-      setSchemaStatus('Unsaved schema changes', true);
+      setSchemaStatus('Saving…', true);
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(autoSaveSchema, 700);
     };
     const commaList = (value) => Array.isArray(value) ? value.join(', ') : '';
     const parseList = (value) => String(value || '').split(/[\n,]/).map((item) => item.trim()).filter(Boolean);

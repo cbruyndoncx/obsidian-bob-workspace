@@ -1566,6 +1566,14 @@ select.cad-create-input {
 .cad-schema-designer-status.cad-status-err {
   color: var(--text-error);
 }
+.cad-schema-save-needed {
+  box-shadow: 0 0 0 2px var(--color-accent);
+  animation: cad-save-pulse 1.6s ease-in-out infinite;
+}
+@keyframes cad-save-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--color-accent); }
+  50%       { box-shadow: 0 0 0 4px var(--color-accent); }
+}
 .cad-schema-designer-section {
   margin-top: 10px;
   padding: 10px;
