@@ -1377,53 +1377,18 @@ function renderTemplateDocument(template, context = {}, fallback = null) {
   return [fmLines.join('\n'), renderedBody].filter(Boolean).join('\n');
 }
 
-/* ─────────── Custom entity loader ───────────
-   Reads Cadence/entities.json from the vault and merges definitions into
-   ENTITIES at runtime. New keys get a nav item; existing keys get field/column
-   overrides. Call applyCustomEntities() on load and on file-change. */
 let PLUGIN_DIR = '';
-let ENTITIES_CONFIG_PATH = 'Cadence/entities.json';   // overridden in onload to plugin dir
-let ENTITIES_BACKUP_PATH = 'Cadence/entities.backup.json';
-const ENTITIES_LEGACY_PATH = 'Cadence/entities.json';
 let WORKSPACE_CONFIG_PATH = 'Cadence/workspace.json';
 let WORKSPACE_BACKUP_PATH = 'Cadence/workspace.backup.json';
 let WORKSPACE_CONFIG = {};
 let WORKSPACE_HAS_NAVIGATION = false;
-let CUSTOM_ENTITY_KEYS = new Set();
 let CONFIGURED_BASE_ENTITY_KEYS = new Set();
 
-function initEntitiesPaths(plugin) {
+function initPluginPaths(plugin) {
   const dir = (plugin.manifest && plugin.manifest.dir) || `.obsidian/plugins/${plugin.manifest.id}`;
   PLUGIN_DIR = dir;
-  ENTITIES_CONFIG_PATH = `${dir}/entities.json`;
-  ENTITIES_BACKUP_PATH = `${dir}/entities.backup.json`;
   WORKSPACE_CONFIG_PATH = `${dir}/workspace.json`;
   WORKSPACE_BACKUP_PATH = `${dir}/workspace.backup.json`;
-}
-
-async function migrateLegacyEntitiesConfig(app) {
-  const adapter = app.vault.adapter;
-  if (await adapter.exists(ENTITIES_CONFIG_PATH)) return false;
-  if (!(await adapter.exists(ENTITIES_LEGACY_PATH))) return false;
-  const raw = await adapter.read(ENTITIES_LEGACY_PATH);
-  await adapter.write(ENTITIES_CONFIG_PATH, raw);
-  new obsidian.Notice(`BOB Workspace: migrated entities.json → ${ENTITIES_CONFIG_PATH}. Legacy vault copy retained at ${ENTITIES_LEGACY_PATH}.`);
-  return null;
-}
-
-/** Validate + write entities.json with backup. Throws on invalid JSON. */
-async function saveEntitiesConfig(app, jsonText) {
-  const parsed = JSON.parse(jsonText);   // throws SyntaxError
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('Must be a JSON object keyed by entity type');
-  }
-  const adapter = app.vault.adapter;
-  if (await adapter.exists(ENTITIES_CONFIG_PATH)) {
-    const prev = await adapter.read(ENTITIES_CONFIG_PATH);
-    await adapter.write(ENTITIES_BACKUP_PATH, prev);
-  }
-  await adapter.write(ENTITIES_CONFIG_PATH, jsonText);
-  return parsed;
 }
 
 function validateWorkspaceConfig(config) {
@@ -1642,22 +1607,7 @@ function entityBaseViewName(settings = {}, entityKey) {
   return base?.view || base?.baseView || (settings.baseViews || {})[entityKey] || '';
 }
 
-function clearCustomEntities() {
-  const customSurfaceIds = new Set([...CUSTOM_ENTITY_KEYS].map((key) => `custom.${key}`));
-  for (const key of CUSTOM_ENTITY_KEYS) {
-    delete ENTITIES[key];
-    delete ENTITY_FOLDERS[key];
-    customSurfaceIds.add(`custom.${key}`);
-  }
-  customSurfaceIds.forEach((id) => BUILT_SURFACES.delete(id));
-  CUSTOM_ENTITY_KEYS.clear();
-  NAV_GROUPS.forEach((group) => {
-    group.items = group.items.filter((item) => !customSurfaceIds.has(item.id));
-  });
-}
-
 function resetEntityRegistry(settings = {}) {
-  clearCustomEntities();
   CONFIGURED_BASE_ENTITY_KEYS.clear();
   Object.keys(ENTITIES).forEach((key) => {
     if (!BUILTIN_ENTITY_DEFAULTS[key]) delete ENTITIES[key];
@@ -1672,7 +1622,7 @@ async function applyEntityDefinitions(app, settings = {}, config = {}, injectNav
   for (let [key, def] of Object.entries(config)) {
     if (!def || typeof def !== 'object') continue;
 
-    // Compatibility layer for entities.json and deprecated workspace entities.
+    // Compatibility layer for deprecated workspace.json entities block.
     // Canonical entity structure is derived from schema source YAML.
     const basePath = configOwnsBase
       ? (def.base || (settings.baseFiles || {})[key])
@@ -1720,7 +1670,6 @@ async function applyEntityDefinitions(app, settings = {}, config = {}, injectNav
         if (def[k] != null) ENTITIES[key][k] = def[k];
       });
       ENTITY_FOLDERS[key] = folder;
-      CUSTOM_ENTITY_KEYS.add(key);
 
       if (injectNavigation) {
         const surfaceId = `custom.${key}`;
@@ -1782,18 +1731,6 @@ async function applyEntityDefinitions(app, settings = {}, config = {}, injectNav
   }
 }
 
-async function applyCustomEntities(app, settings = {}) {
-  if (!await app.vault.adapter.exists(ENTITIES_CONFIG_PATH)) return;
-  try {
-    const config = JSON.parse(await app.vault.adapter.read(ENTITIES_CONFIG_PATH));
-    if (!config || typeof config !== 'object' || Array.isArray(config)) {
-      throw new Error('must be a JSON object keyed by entity type');
-    }
-    await applyEntityDefinitions(app, settings, config, !WORKSPACE_HAS_NAVIGATION);
-  } catch (e) {
-    new obsidian.Notice(`BOB Workspace: entities.json error - ${e.message}`);
-  }
-}
 
 /* ─── Schema YAML config loader ─────────────────────────────────────────────
    Reads 00-CORE/Schemas/source/*.yaml files (Metadata Menu schema source) and
@@ -1972,7 +1909,7 @@ async function applySchemas(app, settings = {}) {
 
 /* ─── Base file config parser ───────────────────────────────────────────────
    Reads a .base file and translates its filters/properties into an entity
-   config fragment compatible with applyCustomEntities().
+   config fragment compatible with applyEntityDefinitions().
 
    Supported filter translations:
      note.type == "x"                → typeFilter: "x"
@@ -2325,7 +2262,6 @@ async function reloadEntityConfiguration(app, settings = {}) {
     await applyEntityDefinitions(app, settings, WORKSPACE_CONFIG.entities, !WORKSPACE_HAS_NAVIGATION);
   }
   if (effectiveSettings.useSchemas) await applySchemas(app, effectiveSettings);
-  await applyCustomEntities(app, settings);
   if (WORKSPACE_CONFIG.entities) {
     await applyEntityDefinitions(app, settings, WORKSPACE_CONFIG.entities, false);
   }
@@ -2334,23 +2270,6 @@ async function reloadEntityConfiguration(app, settings = {}) {
   rebuildSurfaceLookups();
 }
 
-const ENTITIES_JSON_TEMPLATE = JSON.stringify({
-  _comment: "Add new entity types or override fields on existing ones. Remove this _comment key before saving.",
-  order: {
-    label: "Order",
-    plural: "Orders",
-    folder: "Cadence/Orders",
-    icon: "shopping-cart",
-    fields: [
-      { key: "title",    label: "Title",    primary: true },
-      { key: "customer", label: "Customer" },
-      { key: "value",    label: "Value",    type: "currency" },
-      { key: "status",   label: "Status",   type: "enum", options: ["Draft", "Pending", "Fulfilled", "Cancelled"] },
-      { key: "due",      label: "Due",      type: "date" }
-    ],
-    columns: ["title", "customer", "status", "value", "due"]
-  }
-}, null, 2);
 
 function workspaceConfigTemplate(settings = {}) {
   const bases = {};
@@ -2729,67 +2648,6 @@ async function regenerateSchemaOutputs(app, settings = {}) {
   };
 }
 
-async function migrateLegacyEntityOverridesToSchemas(app, settings = {}) {
-  if (!await app.vault.adapter.exists(ENTITIES_CONFIG_PATH)) return { migrated: 0, remaining: 0 };
-  const legacy = JSON.parse(await app.vault.adapter.read(ENTITIES_CONFIG_PATH));
-  const loaded = await loadCanonicalSchemaSources(app, settings);
-  if (loaded.errors.length) throw new Error(`Fix schema validation before migration: ${loaded.errors.join('; ')}`);
-  const schemaByEntityKey = new Map(loaded.schemas.map((item) => [
-    SCHEMA_TO_ENTITY_KEY[item.schema.entity] || item.schema.entity,
-    item,
-  ]));
-  const behaviorKeys = [
-    'stageField', 'valueField', 'closeByField', 'wonStages', 'lostStages',
-    'detailMetaFields', 'detailSections', 'terminalStatuses', 'stageConfidence',
-    'dateField', 'titleField',
-  ];
-  const remaining = {};
-  let migrated = 0;
-  for (const [entityKey, def] of Object.entries(legacy || {})) {
-    if (entityKey.startsWith('_') || !def || typeof def !== 'object') {
-      remaining[entityKey] = def;
-      continue;
-    }
-    const source = schemaByEntityKey.get(entityKey);
-    if (!source) {
-      remaining[entityKey] = def;
-      continue;
-    }
-    const schema = source.schema;
-    if (def.label) schema.label = def.label;
-    if (def.plural) schema.plural = def.plural;
-    if (def.icon) schema.icon = def.icon;
-    if (def.fieldAliases && typeof def.fieldAliases === 'object') {
-      schema.field_aliases = JSON.parse(JSON.stringify(def.fieldAliases));
-    }
-    const sourceFields = new Map((schema.fields || []).map((field) => [field.name, field]));
-    (def.fields || []).forEach((field) => {
-      if (!field?.key) return;
-      let canonical = sourceFields.get(field.key);
-      if (!canonical) {
-        canonical = schemaFieldFromEntityField(field);
-        schema.fields.push(canonical);
-        sourceFields.set(field.key, canonical);
-      }
-      if (field.label && field.label !== schemaFieldLabel(field.key)) canonical.label = field.label;
-      if (field.primary) canonical.primary = true;
-      if (field.type) canonical.bob_type = field.type;
-      if (field.type === 'enum' && Array.isArray(field.options)) canonical.enum = field.options;
-    });
-    const bob = Object.assign({}, schema.bob || {});
-    behaviorKeys.forEach((key) => {
-      if (Object.prototype.hasOwnProperty.call(def, key)) bob[key] = def[key];
-    });
-    if (Array.isArray(def.columns)) bob.columns = def.columns;
-    if (Object.keys(bob).length) schema.bob = bob;
-    validateSourceSchemaDefinition(schema);
-    await app.vault.adapter.write(`${source.path}.backup`, await app.vault.adapter.read(source.path));
-    await app.vault.adapter.write(source.path, obsidian.stringifyYaml(schema));
-    migrated++;
-  }
-  await saveEntitiesConfig(app, `${JSON.stringify(remaining, null, 2)}\n`);
-  return { migrated, remaining: Object.keys(remaining).filter((key) => !key.startsWith('_')).length };
-}
 
 const CURRENCY_OPTIONS = [
   { code: 'USD', label: 'USD — US Dollar' },
@@ -9343,7 +9201,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       text: 'Cadence Planner',
       href: 'https://github.com/iotool/obsidian-cadence-planner',
     }).setAttribute('target', '_blank');
-    fork.appendText(' Obsidian plugin, extended with canonical schema editing, .base files, vault-aware entity mapping, configurable folders, and compatibility migration for entities.json. ');
+    fork.appendText(' Obsidian plugin, extended with canonical schema editing, .base files, vault-aware entity mapping, and configurable folders. ');
     fork.createEl('strong', { text: 'Folder-structure compatibility with upstream Cadence is intended but not yet fully verified' });
     fork.appendText(' — if you switch between forks, back up your vault first.');
 
@@ -10157,7 +10015,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           if (moduleDisabled) t.setDisabled(true);
         });
 
-        // Folder text input (if this surface has a folderKey and isn't overridden by schema/.base/entities.json)
+        // Folder text input (if this surface has a folderKey and isn't overridden by schema or .base)
         if (surface.folderKey && !overridden) {
           const placeholder = eDef?.folders?.[0] || DEFAULT_SETTINGS[surface.folderKey] || '';
           s.addText((t) => {
@@ -10485,107 +10343,6 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       });
       d.setValue(this.plugin.settings.defaultTab || 'planner.today');
       d.onChange(async (v) => { this.plugin.settings.defaultTab = v; await this.plugin.saveSettings(); });
-    });
-
-    /* ─── Custom entities (entities.json) ─── */
-    pData.createEl('h3', { text: 'Custom entities' });
-    const entDesc = pData.createEl('p', { cls: 'setting-item-description' });
-    entDesc.appendText('Legacy compatibility overrides. For schema-enabled vaults, migrate matching fields and display behavior into canonical schema sources. Stored in plugin folder as ');
-    entDesc.createEl('code', { text: 'entities.json' });
-    entDesc.appendText(' (next to data.json). A backup of the previous version is written to ');
-    entDesc.createEl('code', { text: 'entities.backup.json' });
-    entDesc.appendText(' on each save.');
-
-    const entWrap = pData.createDiv({ cls: 'cad-settings-entities' });
-    const entStatus = entWrap.createDiv({ cls: 'cad-settings-entities-status' });
-    const entTa = entWrap.createEl('textarea', { cls: 'cad-settings-entities-textarea' });
-    entTa.rows = 20;
-    entTa.spellcheck = false;
-    entTa.style.width = '100%';
-    entTa.style.fontFamily = 'var(--font-monospace)';
-    entTa.style.fontSize = '12px';
-
-    (async () => {
-      try {
-        if (await adapter.exists(ENTITIES_CONFIG_PATH)) {
-          entTa.value = await adapter.read(ENTITIES_CONFIG_PATH);
-        } else {
-          entTa.value = ENTITIES_JSON_TEMPLATE;
-          entStatus.setText('No entities.json yet — edit and Save to create.');
-        }
-      } catch (e) {
-        entStatus.setText(`Read error: ${e.message}`);
-      }
-    })();
-
-    const setStatus = (msg, ok) => {
-      entStatus.setText(msg);
-      entStatus.style.color = ok ? 'var(--text-success)' : 'var(--text-error)';
-    };
-
-    entTa.addEventListener('input', () => {
-      const v = entTa.value.trim();
-      if (!v) { setStatus('Empty', false); return; }
-      try {
-        const p = JSON.parse(v);
-        if (!p || typeof p !== 'object' || Array.isArray(p)) throw new Error('must be a JSON object');
-        setStatus(`Valid · ${Object.keys(p).length} entit${Object.keys(p).length === 1 ? 'y' : 'ies'}`, true);
-      } catch (e) {
-        setStatus(`Invalid JSON: ${e.message}`, false);
-      }
-    });
-
-    const entBtns = entWrap.createDiv({ cls: 'cad-settings-entities-btns' });
-    entBtns.style.display = 'flex';
-    entBtns.style.gap = '8px';
-    entBtns.style.marginTop = '8px';
-
-    const formatBtn = entBtns.createEl('button', { text: 'Format' });
-    formatBtn.addEventListener('click', () => {
-      try {
-        entTa.value = JSON.stringify(JSON.parse(entTa.value), null, 2);
-        setStatus('Formatted', true);
-      } catch (e) { setStatus(`Cannot format: ${e.message}`, false); }
-    });
-
-    const saveBtn = entBtns.createEl('button', { text: 'Save', cls: 'mod-cta' });
-    saveBtn.addEventListener('click', async () => {
-      try {
-        await saveEntitiesConfig(this.plugin.app, entTa.value);
-        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
-        this.plugin.refreshOpenViews();
-        setStatus('Saved · entities reloaded', true);
-        new obsidian.Notice('BOB Workspace: entities.json saved.');
-      } catch (e) {
-        setStatus(`Save failed: ${e.message}`, false);
-        new obsidian.Notice(`BOB Workspace: save failed — ${e.message}`);
-      }
-    });
-
-    const restoreBtn = entBtns.createEl('button', { text: 'Restore backup' });
-    restoreBtn.addEventListener('click', async () => {
-      try {
-        if (!(await adapter.exists(ENTITIES_BACKUP_PATH))) {
-          setStatus('No backup file found', false);
-          return;
-        }
-        entTa.value = await adapter.read(ENTITIES_BACKUP_PATH);
-        setStatus('Backup loaded into editor — click Save to apply', true);
-      } catch (e) { setStatus(`Restore failed: ${e.message}`, false); }
-    });
-    const migrateEntitiesBtn = entBtns.createEl('button', { text: 'Migrate into schemas' });
-    migrateEntitiesBtn.addEventListener('click', async () => {
-      if (!confirm('Move legacy entity field/display overrides into matching canonical schema YAML sources? Schema and entities backups will be written first.')) return;
-      try {
-        const result = await migrateLegacyEntityOverridesToSchemas(this.plugin.app, this.plugin.settings);
-        entTa.value = await adapter.read(ENTITIES_CONFIG_PATH);
-        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
-        this.plugin.refreshOpenViews();
-        setStatus(`Migrated ${result.migrated} schema(s); ${result.remaining} unmatched entity override(s) retained`, true);
-        new obsidian.Notice(`BOB Workspace: migrated ${result.migrated} entity override(s) into schema sources.`);
-      } catch (e) {
-        setStatus(`Migration failed: ${e.message}`, false);
-      }
     });
 
     /* ─── Schemas ─── */
@@ -11167,8 +10924,7 @@ class CadencePlaybookRunnerView extends (obsidian.BasesView || class {}) {
 class CadencePlugin extends obsidian.Plugin {
   async onload() {
     await this.loadSettings();
-    initEntitiesPaths(this);
-    await migrateLegacyEntitiesConfig(this.app);
+    initPluginPaths(this);
     await reloadEntityConfiguration(this.app, this.settings);
 
     this.registerView(
@@ -11307,32 +11063,6 @@ class CadencePlugin extends obsidian.Plugin {
         await reloadEntityConfiguration(this.app, this.settings);
         this.refreshOpenViews();
         new obsidian.Notice('BOB Workspace: workspace configuration reloaded.');
-      },
-    });
-
-    // entities.json lives in the plugin folder (next to data.json) — edit it
-    // via Settings → Cadence → Custom entities, or use the template command.
-
-    this.addCommand({
-      id: 'create-entities-config',
-      name: 'Create entities.json template',
-      callback: async () => {
-        if (await this.app.vault.adapter.exists(ENTITIES_CONFIG_PATH)) {
-          new obsidian.Notice(`entities.json already exists at ${ENTITIES_CONFIG_PATH}`);
-          return;
-        }
-        await this.app.vault.adapter.write(ENTITIES_CONFIG_PATH, ENTITIES_JSON_TEMPLATE);
-        new obsidian.Notice(`Created ${ENTITIES_CONFIG_PATH} — edit it via Settings → BOB Workspace → Custom entities.`);
-      },
-    });
-
-    this.addCommand({
-      id: 'reload-entities-config',
-      name: 'Reload entities.json',
-      callback: async () => {
-        await reloadEntityConfiguration(this.app, this.settings);
-        this.refreshOpenViews();
-        new obsidian.Notice('BOB Workspace: entities reloaded.');
       },
     });
 

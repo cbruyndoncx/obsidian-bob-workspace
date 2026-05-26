@@ -26,19 +26,14 @@ The plugin has several layers. Later layers should refine or override earlier la
    - Defines view behavior: visible columns, filters, sort, groupBy, and special Base views.
    - The workspace should reuse these views where practical instead of duplicating view logic.
 
-4. **Custom entity layer**
-   - `entities.json` in the plugin folder next to Obsidian's `data.json`.
-   - Compatibility input for pre-schema configurations.
-   - Existing overrides can be migrated into schema YAML from Settings.
-
-5. **Workspace definition layer**
+4. **Workspace definition layer**
    - `workspace.json` in the plugin folder next to `data.json`.
    - Owns schema enablement, Base/view associations, navigation groups,
      surfaces, secondary tabs, and workbook export groups.
    - Managed from Settings -> BOB Workspace -> Workspace definition, or
      reloaded with the `Reload workspace.json` command.
 
-6. **Import alias layer**
+5. **Import alias layer**
    - Maps spreadsheet/frontmatter aliases to canonical field keys.
    - Useful when importing from Cadence, another CRM, or another vault.
    - Defined per schema as `field_aliases` and edited in the Data model designer.
@@ -303,36 +298,6 @@ Some workspace screens are derived views over existing entities rather than sepa
 
 This keeps the vault model DRY: derived views should compose existing entity schemas instead of introducing duplicate entity types.
 
-## Custom Entities
-
-`entities.json` is a compatibility layer for vaults that have not migrated to
-canonical schemas. For schema-enabled vaults, use **Migrate into schemas** in
-Settings; unmatched legacy records are retained rather than discarded.
-
-Example:
-
-```json
-{
-  "deal": {
-    "folder": "30-CLIENTS",
-    "typeFilter": "deal",
-    "label": "Deal",
-    "plural": "Deals",
-    "fields": [
-      { "key": "title", "label": "Title", "primary": true },
-      { "key": "stage", "label": "Stage", "type": "enum", "options": ["lead", "qualified", "proposal", "won", "lost"] },
-      { "key": "deal_value", "label": "Deal Value", "type": "currency" },
-      { "key": "expected_close", "label": "Expected Close", "type": "date" }
-    ],
-    "columns": ["title", "stage", "deal_value", "expected_close"]
-  }
-}
-```
-
-Do not add new model definitions here in a schema-enabled vault. Canonical
-field definitions, labels, display hints and BOB behavior belong in schema
-YAML.
-
 ## Field Aliases
 
 Field aliases are the bridge between old Cadence names, spreadsheet headers, and canonical BOB field names.
@@ -377,13 +342,6 @@ For a BOB vault:
 3. Arrange the entity in navigation or a secondary tab using the Navigation designer.
 4. Associate a Base/view in Settings; it is stored in `workspace.json.bases`.
 5. Test create, list, workbook export, workbook import, and Base view switching.
-
-For a non-BOB vault:
-
-1. Define the entity in `entities.json`.
-2. Point it to the vault's folder/type fields.
-3. Add fields and columns.
-4. Add `field_aliases` for old spreadsheet column names when required.
 
 ## What Requires Code
 

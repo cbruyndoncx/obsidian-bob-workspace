@@ -25,7 +25,6 @@ Plugin ID: `bob-workspace` (not `cadence-planner` — the upstream Cadence ID).
   - Entity registry: `ENTITIES`, `BUILTIN_ENTITY_DEFAULTS`, `DEAL_STAGES`, deal/activity field accessor functions
   - Settings: `DEFAULT_SETTINGS`, `CURRENT_CURRENCY`, `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`
   - Schema loader: `applySchemas()` — reads Metadata Menu YAML schema files into `ENTITIES` at runtime
-  - Custom entity loader: `CUSTOM_ENTITY_KEYS`, `applyCustomEntities()`, `clearCustomEntities()`
   - XLSX export: `getXLSX()`, `exportEntitiesXLSX()` via bundled `vendor/xlsx.full.min.js`
   - Utility functions: date/time, file I/O, parsing, formatting
   - Modal classes: `CadenceCaptureModal`, `CadenceReminderEditModal`, `CadenceImportModal`, `CadenceEntityCreateModal`, `CadencePromptModal`
@@ -97,7 +96,7 @@ const ENTITIES = {
 
 **Frontmatter** is always written via Obsidian's `processFrontMatter()` — never manual string manipulation.
 
-**`BUILTIN_ENTITY_DEFAULTS`** — deep-clone of `ENTITIES` taken at startup; used to reset to defaults when custom entities or schemas are cleared.
+**`BUILTIN_ENTITY_DEFAULTS`** — deep-clone of `ENTITIES` taken at startup; used to reset to defaults when schemas are reloaded.
 
 **Built-in entity keys (40+):** `contact`, `company`, `client`, `supplier`, `partner`, `registration`, `commission`, `lead`, `certification`, `activity`, `meeting`, `comms-thread`, `deliverable`, `feedback`, `survey`, `testimonial`, `decision`, `campaign`, `sequence`, `project`, `task`, `accounting-period`, `bank-account`, `bank-reconciliation`, `chart-of-accounts`, `financial-statement`, `fs-notes`, `fx-rates-table`, `inventory`, `invoice`, `journal-entry`, `purchase-order`, `purchase-requisition`, `supplier-invoice`, `trial-balance`, `vat-return`, `corporate-tax-return`, `deferred-tax`, `transfer-pricing`, `free-zone-status`, `legal-rule`, `document-retention`, `deal`
 
@@ -125,7 +124,7 @@ New entities created via BOB Workspace get their `type:` frontmatter set from `t
 
 Entity folders are resolved at runtime via `ENTITY_FOLDERS` (a module-level object). The full chain:
 
-1. `ENTITIES[key].folders[0]` — wins if a `folders` array is set (schema/entities.json override)
+1. `ENTITIES[key].folders[0]` — wins if a `folders` array is set (schema override)
 2. `ENTITY_FOLDERS[key]` — set by `syncEntityFolders(settings)` on every load/save
 3. `ENTITIES[key].folder` — hardcoded default in source
 
@@ -136,35 +135,6 @@ Entity folders are resolved at runtime via `ENTITY_FOLDERS` (a module-level obje
 ### Schema Loading (`applySchemas`)
 
 When `settings.useSchemas = true`, `applySchemas(app, settings)` reads YAML schema files from `settings.schemasFolder` (default `00-CORE/Schemas/source`) and merges field/column definitions into `ENTITIES` at runtime. This lets Metadata Menu schema files drive the entity model without editing source.
-
-### Custom Entity Types (`entities.json`)
-
-Users can add new entity types (or override fields on existing ones) by editing `entities.json` in the plugin folder (`.obsidian/plugins/bob-workspace/entities.json`, next to `data.json`). Edit via **Settings → BOB Workspace → Custom entities** (JSON-validated textarea, with backup), or use the command palette → **"Cadence: Create entities.json template"** to scaffold it. A legacy copy at `Cadence/entities.json` in the vault is auto-migrated on first load and retained as a safety copy.
-
-```json
-{
-  "order": {
-    "label": "Order",
-    "plural": "Orders",
-    "folder": "Cadence/Orders",
-    "icon": "shopping-cart",
-    "module": "crm",
-    "fields": [
-      { "key": "title",    "label": "Title",    "primary": true },
-      { "key": "customer", "label": "Customer" },
-      { "key": "status",   "label": "Status",   "type": "enum", "options": ["Draft", "Pending", "Fulfilled"] }
-    ],
-    "columns": ["title", "customer", "status"]
-  }
-}
-```
-
-- **New key** → entity added to `ENTITIES`, nav item injected into the `module` group (or a "Custom" group), generic list view auto-wired
-- **Existing key** (e.g. `"contact"`) → overrides `fields`, `columns`, `label`, `plural`, `folder` on the built-in entity
-- **Reload** — saving via the settings UI re-applies immediately; if you edit the file directly on disk, run **"Cadence: Reload entities.json"** from the command palette
-- **`module`** — optional; slots nav item into `crm`, `prm`, `planner`, `client-work`, `finance`, or `procurement`; defaults to a "Custom" group
-
-Internally: `applyCustomEntities(app)` reads the file, calls `clearCustomEntities()` first (removes previous custom keys from `ENTITIES`, `ENTITY_FOLDERS`, `BUILT_SURFACES`, and nav group items), then injects new ones. Custom surface IDs follow the `custom.{key}` pattern and are handled by a fallback branch in the route dispatch inside `CadenceAppView.render()`.
 
 ### Surfaces (Views)
 
@@ -188,7 +158,6 @@ Tab-based internal nav. Surfaces are dispatched in `CadenceAppView.render()` via
 | `prm.analytics` | `renderPRMAnalytics()` |
 | `finance.*` / `tax.*` / `procurement.*` | secondary tabs + `renderEntityList()` |
 | `reports.*` | dedicated report renderers |
-| `custom.{key}` | `renderEntityList()` (fallback for custom entities) |
 
 **Specialised views** (Pipeline kanban, CRM Dashboard, Reports) hardcode field names like `stage`, `deal_value`, `expected_close` — they use the deal field accessor functions and don't auto-adapt to arbitrary schema changes.
 
@@ -255,7 +224,7 @@ weekDates(anchor, weekStartsOn) // [Mon, Tue, ..., Sun] as Date[]
 7. Add a `baseFiles` entry in `DEFAULT_SETTINGS` pointing to the `.base` file path
 8. Add to `WORKBOOK_EXPORT_GROUPS` in the appropriate group's `entityKeys` array
 
-For user-defined entity types without touching source, use `entities.json` instead.
+For vault-configured entity types without touching source, use a schema YAML file instead.
 
 ### Adding a new surface with custom rendering
 
@@ -297,8 +266,6 @@ await app.vault.modify(file, replaceSection(content, settings.tasksHeading, stri
 **New entity type lists nothing.** Check `entityFolder(key)` returns the correct path and the `primary` field is set.
 
 **Moving entity folders.** Rename the folder in the vault first, then update the path in Settings → BOB Workspace → Folders. Files are not moved automatically.
-
-**`entities.json` changes not picked up.** The active file lives in the plugin folder, not the vault. Save through Settings → BOB Workspace → Custom entities, or run **Cadence: Reload entities.json** after direct disk edits.
 
 **XLSX export fails.** Ensure `vendor/xlsx.full.min.js` was copied alongside `main.js` to the plugin folder.
 

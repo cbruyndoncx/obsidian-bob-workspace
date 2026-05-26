@@ -44,8 +44,7 @@ to change product identity or remove functionality.
   YAML describes record types and `.base` files describe display behavior.
 - Prefer extending schemas, Bases, or plugin-folder `workspace.json` when a
   requested change is data-model/navigation configuration rather than
-  application logic. `entities.json` remains supported for entity-only legacy
-  overrides.
+  application logic.
 
 Some supporting documents can lag the implementation. In particular, verify
 navigation and release behavior in `main.js`, `manifest.json`, and
@@ -76,7 +75,7 @@ publishing text.
 - Entity model: `ENTITIES`, `BUILTIN_ENTITY_DEFAULTS`, deal/activity accessors
 - Settings and folders: `DEFAULT_SETTINGS`, `CURRENT_CURRENCY`,
   `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`
-- Runtime configuration layers: `applySchemas()`, `applyCustomEntities()`,
+- Runtime configuration layers: `applySchemas()`,
   `applyBaseOverrides()`, workspace registry loading, `reloadEntityConfiguration()`
 - Base parsing/evaluation: `parseBaseFile()`, Base filter helpers, grouping and
   sorting helpers
@@ -94,7 +93,7 @@ Key classes:
 - `CadenceAppView` renders the application shell, responsive nav, all internal
   surfaces, generic tables, detail forms, dashboards, reports, and kanban.
 - `CadenceSettingTab` configures modules, surfaces, folders, Bases, schemas,
-  tasks, reminders, export/import, `workspace.json`, and `entities.json`.
+  tasks, reminders, export/import, and `workspace.json`.
 - `CadenceCaptureModal`, `CadenceReminderEditModal`, `CadenceImportModal`,
   `CadenceEntityCreateModal`, and `CadencePromptModal` handle modal workflows.
 - `CadencePlaybookRunnerView` registers `agent-client-playbook-runner` as an
@@ -177,8 +176,7 @@ await app.vault.modify(file, updated);
 3. Apply configured groups/tabs/export groups.
 4. If enabled, load canonical schema YAML using `applySchemas()`; a schema can
    introduce a generic record type without plugin code.
-5. Merge legacy plugin-folder `entities.json` and deprecated
-   `workspace.json.entities` only for backward compatibility.
+5. Apply deprecated `workspace.json.entities` block only for backward compatibility.
 6. Merge `workspace.json.bases` behavior, then settings-selected `.base`
    behavior for entities not controlled by workspace composition.
 
@@ -240,15 +238,6 @@ implementing it first; it is not part of current `listEntityFiles()` behavior.
   schema-defined fields from entity creation or import behavior.
 - Unsupported Base filters are surfaced in UI warnings; preserve that
   transparency when extending Base support.
-- `entities.json` lives in the active plugin folder next to `data.json`, with
-  `entities.backup.json` written on save.
-- On first load without a plugin-folder config, legacy
-  `Cadence/entities.json` is migrated into the plugin folder and retained.
-- Direct disk edits to plugin-folder `entities.json` require `Reload
-  entities.json`, unless saved through Settings -> BOB Workspace -> Custom
-  entities.
-- In schema-enabled vaults, use the Settings migration action to move matching
-  legacy entity presentation/behavior overrides into source YAML.
 
 ## Task, Import, And Export Behavior
 
