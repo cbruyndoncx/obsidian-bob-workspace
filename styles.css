@@ -1109,6 +1109,82 @@ select.cad-create-input {
 .cad-setting-disabled .setting-item-description {
   color: var(--text-faint);
 }
+/* Settings tab bar */
+.cad-settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 16px 0 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 6px;
+}
+.cad-settings-tab {
+  padding: 5px 14px;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.12s, color 0.12s;
+  margin-bottom: -1px;
+}
+.cad-settings-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.cad-settings-tab.is-active {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  border-color: var(--background-modifier-border);
+  border-bottom-color: var(--background-primary);
+  font-weight: 600;
+}
+.cad-settings-tab-panel {
+  padding-top: 4px;
+}
+/* Module collapsible cards */
+.cad-module-card {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  background: var(--background-secondary);
+}
+.cad-module-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  transition: background 0.1s;
+}
+.cad-module-card-head:hover {
+  background: var(--background-modifier-hover);
+}
+.cad-module-card-label {
+  font-weight: 600;
+  font-size: 13px;
+}
+.cad-module-card-chevron {
+  font-size: 16px;
+  color: var(--text-muted);
+  line-height: 1;
+  transition: transform 0.15s;
+}
+.cad-module-card.is-collapsed .cad-module-card-body {
+  display: none;
+}
+.cad-module-card.is-off .cad-module-card-head {
+  opacity: 0.65;
+}
+.cad-module-card-body .setting-group {
+  background: var(--background-primary);
+}
 .cad-settings-panel-off { opacity: 0.6; }
 .cad-settings-section {
   margin-bottom: 18px;

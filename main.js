@@ -9347,14 +9347,44 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     fork.createEl('strong', { text: 'Folder-structure compatibility with upstream Cadence is intended but not yet fully verified' });
     fork.appendText(' — if you switch between forks, back up your vault first.');
 
+    /* ─── Settings tab bar ─── */
+    const TAB_IDS = ['workspace', 'modules', 'data-model', 'planner', 'app', 'data'];
+    const TAB_LABELS = ['Workspace', 'Modules', 'Data model', 'Planner', 'App', 'Data'];
+    if (!this._activeSettingsTab) this._activeSettingsTab = 'workspace';
+    if (!this._collapsedModules) this._collapsedModules = new Set();
+    const tabBar = containerEl.createDiv({ cls: 'cad-settings-tabs' });
+    const tabPanels = {};
+    const tabBtns = {};
+    TAB_IDS.forEach((id, i) => {
+      const btn = tabBar.createEl('button', { cls: 'cad-settings-tab', text: TAB_LABELS[i] });
+      if (id === this._activeSettingsTab) btn.addClass('is-active');
+      btn.addEventListener('click', () => {
+        TAB_IDS.forEach((tid) => {
+          tabPanels[tid].style.display = tid === id ? '' : 'none';
+          tabBtns[tid].toggleClass('is-active', tid === id);
+        });
+        this._activeSettingsTab = id;
+      });
+      tabBtns[id] = btn;
+      const panel = containerEl.createDiv({ cls: 'cad-settings-tab-panel' });
+      if (id !== this._activeSettingsTab) panel.style.display = 'none';
+      tabPanels[id] = panel;
+    });
+    const pWs = tabPanels['workspace'];
+    const pMod = tabPanels['modules'];
+    const pDm = tabPanels['data-model'];
+    const pPlanner = tabPanels['planner'];
+    const pApp = tabPanels['app'];
+    const pData = tabPanels['data'];
+
     /* ─── Workspace configuration (workspace.json) ─── */
-    containerEl.createEl('h3', { text: 'Workspace definition' });
-    const workspaceDesc = containerEl.createEl('p', { cls: 'setting-item-description' });
+    pWs.createEl('h3', { text: 'Workspace definition' });
+    const workspaceDesc = pWs.createEl('p', { cls: 'setting-item-description' });
     workspaceDesc.appendText('Define schema loading, Base/view associations, templates, navigation groups, surfaces, secondary tabs and workbook groups in ');
     workspaceDesc.createEl('code', { text: 'workspace.json' });
     workspaceDesc.appendText(' next to plugin data. Entity-backed surfaces are rendered automatically; existing built-in surface IDs retain their specialized views.');
 
-    const workspaceWrap = containerEl.createDiv({ cls: 'cad-settings-entities' });
+    const workspaceWrap = pWs.createDiv({ cls: 'cad-settings-entities' });
     const workspaceStatus = workspaceWrap.createDiv({ cls: 'cad-settings-entities-status' });
     const workspaceTa = workspaceWrap.createEl('textarea', { cls: 'cad-settings-entities-textarea' });
     workspaceTa.rows = 18;
@@ -9452,7 +9482,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       }
     });
 
-    const navDesigner = containerEl.createDiv({ cls: 'cad-nav-designer' });
+    const navDesigner = pWs.createDiv({ cls: 'cad-nav-designer' });
     const navDesignerHead = navDesigner.createDiv({ cls: 'cad-nav-designer-head' });
     navDesignerHead.createEl('h4', { text: 'Navigation designer' });
     navDesignerHead.createEl('p', {
@@ -9460,7 +9490,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       text: 'Drag unassigned tabs or record types into groups and move existing menu items between groups. Choose icons from Obsidian\'s registered icon library. Remove an item to return it to its available pool. Changes update the workspace JSON draft; use Save and apply above to persist them.',
     });
     const navDesignerBody = navDesigner.createDiv({ cls: 'cad-nav-designer-body' });
-    const workbookDesigner = containerEl.createDiv({ cls: 'cad-workbook-designer' });
+    const workbookDesigner = pWs.createDiv({ cls: 'cad-workbook-designer' });
     const workbookDesignerHead = workbookDesigner.createDiv({ cls: 'cad-nav-designer-head' });
     workbookDesignerHead.createEl('h4', { text: 'Workbook export groups' });
     workbookDesignerHead.createEl('p', {
@@ -10006,8 +10036,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     setTimeout(renderConfigurationDesigners, 0);
 
     /* ─── Modules (consolidated: toggle + surfaces + folders + base files) ─── */
-    containerEl.createEl('h3', { text: 'Modules' });
-    containerEl.createEl('p', {
+    pMod.createEl('p', {
       text: 'Each module groups its toggle, the surfaces it contains, and the folders/.base files that back them. Disable a module to hide its whole section; disable an individual surface to hide just that nav item.',
       cls: 'setting-item-description',
     });
@@ -10053,8 +10082,25 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
 
       const moduleDisabled = isModuleGroup && ensureMods()[group.module] === false;
 
-      containerEl.createEl('h3', { text: headingText });
-      const settingGroup = containerEl.createDiv({ cls: 'setting-group' + (moduleDisabled ? ' cad-settings-panel-off' : '') });
+      const cardKey = group.module || group.id;
+      const isCollapsed = this._collapsedModules.has(cardKey);
+      const card = pMod.createDiv({ cls: 'cad-module-card' + (moduleDisabled ? ' is-off' : '') + (isCollapsed ? ' is-collapsed' : '') });
+      const cardHead = card.createDiv({ cls: 'cad-module-card-head' });
+      cardHead.createSpan({ text: headingText, cls: 'cad-module-card-label' });
+      const chevron = cardHead.createSpan({ cls: 'cad-module-card-chevron', text: isCollapsed ? '›' : '⌄' });
+      cardHead.addEventListener('click', () => {
+        if (this._collapsedModules.has(cardKey)) {
+          this._collapsedModules.delete(cardKey);
+          card.removeClass('is-collapsed');
+          chevron.setText('⌄');
+        } else {
+          this._collapsedModules.add(cardKey);
+          card.addClass('is-collapsed');
+          chevron.setText('›');
+        }
+      });
+      const cardBody = card.createDiv({ cls: 'cad-module-card-body' });
+      const settingGroup = cardBody.createDiv({ cls: 'setting-group' + (moduleDisabled ? ' cad-settings-panel-off' : '') });
       const panel = settingGroup.createDiv({ cls: 'setting-items' });
 
       // Module enable/disable toggle (only for groups with a module ID)
@@ -10234,8 +10280,8 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       }
     });
 
-    containerEl.createEl('h3', { text: 'Reminders' });
-    const remindersGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section' });
+    pApp.createEl('h3', { text: 'Reminders' });
+    const remindersGroup = pApp.createDiv({ cls: 'setting-group cad-settings-section' });
     const remindersPanel = remindersGroup.createDiv({ cls: 'setting-items' });
     new obsidian.Setting(remindersPanel)
       .setName('Desktop notifications')
@@ -10271,9 +10317,11 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       }));
 
     /* ─── App ─── */
-    containerEl.createEl('h3', { text: 'App' });
-    const appGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section' });
+    const appGroup = pApp.createDiv({ cls: 'setting-group cad-settings-section' });
     const appPanel = appGroup.createDiv({ cls: 'setting-items' });
+    /* ─── Planner settings ─── */
+    const plannerGroup = pPlanner.createDiv({ cls: 'setting-group cad-settings-section' });
+    const plannerPanel = plannerGroup.createDiv({ cls: 'setting-items' });
 
     new obsidian.Setting(appPanel)
       .setName('Show secondary screens in left navigation')
@@ -10329,7 +10377,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       });
     });
 
-    new obsidian.Setting(appPanel)
+    new obsidian.Setting(plannerPanel)
       .setName('Daily note folder')
       .setDesc('Folder under which daily notes live, e.g. "daily" or "Journal/Daily".')
       .addText((t) => t
@@ -10338,7 +10386,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         .onChange(async (v) => { this.plugin.settings.dailyNoteFolder = v; await this.plugin.saveSettings(); }));
 
     /* ── Task mode ── */
-    const taskModeEl = new obsidian.Setting(appPanel)
+    const taskModeEl = new obsidian.Setting(plannerPanel)
       .setName('Task mode')
       .setDesc('How tasks are stored and displayed in the Planner.')
       .addDropdown((d) => d
@@ -10354,7 +10402,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         }));
 
     if ((this.plugin.settings.taskMode || 'checkbox') !== 'checkbox') {
-      new obsidian.Setting(appPanel)
+      new obsidian.Setting(plannerPanel)
         .setName('TaskNotes folder')
         .setDesc('Vault path where TaskNote files are stored.')
         .addText((t) => t
@@ -10364,7 +10412,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
             this.plugin.settings.taskNotesFolder = v.trim() || '00-CORE/TaskNotes/Tasks';
             await this.plugin.saveSettings();
           }));
-      new obsidian.Setting(appPanel)
+      new obsidian.Setting(plannerPanel)
         .setName('TaskNotes archive folder')
         .setDesc('Vault path where archived TaskNote files are stored and included in productivity history.')
         .addText((t) => t
@@ -10376,14 +10424,14 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           }));
     }
 
-    new obsidian.Setting(appPanel)
+    new obsidian.Setting(plannerPanel)
       .setName('Tasks heading')
       .setDesc('The H2 inside each daily note where tasks live. Default "## Today".')
       .addText((t) => t
         .setValue(this.plugin.settings.tasksHeading)
         .onChange(async (v) => { this.plugin.settings.tasksHeading = v; await this.plugin.saveSettings(); }));
 
-    new obsidian.Setting(appPanel)
+    new obsidian.Setting(plannerPanel)
       .setName('Journal heading')
       .setDesc('The H2 where today\'s journal entry lives. Default "## Journal".')
       .addText((t) => t
@@ -10440,15 +10488,15 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     });
 
     /* ─── Custom entities (entities.json) ─── */
-    containerEl.createEl('h3', { text: 'Custom entities' });
-    const entDesc = containerEl.createEl('p', { cls: 'setting-item-description' });
+    pData.createEl('h3', { text: 'Custom entities' });
+    const entDesc = pData.createEl('p', { cls: 'setting-item-description' });
     entDesc.appendText('Legacy compatibility overrides. For schema-enabled vaults, migrate matching fields and display behavior into canonical schema sources. Stored in plugin folder as ');
     entDesc.createEl('code', { text: 'entities.json' });
     entDesc.appendText(' (next to data.json). A backup of the previous version is written to ');
     entDesc.createEl('code', { text: 'entities.backup.json' });
     entDesc.appendText(' on each save.');
 
-    const entWrap = containerEl.createDiv({ cls: 'cad-settings-entities' });
+    const entWrap = pData.createDiv({ cls: 'cad-settings-entities' });
     const entStatus = entWrap.createDiv({ cls: 'cad-settings-entities-status' });
     const entTa = entWrap.createEl('textarea', { cls: 'cad-settings-entities-textarea' });
     entTa.rows = 20;
@@ -10541,8 +10589,8 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     });
 
     /* ─── Schemas ─── */
-    containerEl.createEl('h3', { text: 'Schemas' });
-    const schemasGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section' });
+    pDm.createEl('h3', { text: 'Data model' });
+    const schemasGroup = pDm.createDiv({ cls: 'setting-group cad-settings-section' });
     const schemasPanel = schemasGroup.createDiv({ cls: 'setting-items' });
     const configuredSchemas = WORKSPACE_CONFIG.schemas || {};
     const schemaSettings = effectiveSchemaSettings(this.plugin.settings);
@@ -10947,8 +10995,8 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     });
     setTimeout(() => refreshSchemaSelect(initialSchemaPath), 0);
 
-    containerEl.createEl('h3', { text: 'Data import/export' });
-    const dataGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section' });
+    pData.createEl('h3', { text: 'Data import/export' });
+    const dataGroup = pData.createDiv({ cls: 'setting-group cad-settings-section' });
     const dataPanel = dataGroup.createDiv({ cls: 'setting-items' });
     new obsidian.Setting(dataPanel)
       .setName('Workbook export folder')
@@ -10999,8 +11047,8 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           await promptImportWorkbook(this.plugin.app, async () => this.plugin.refreshOpenViews());
         }));
 
-    containerEl.createEl('h3', { text: 'Cloud sync — coming soon' });
-    const syncGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section cad-settings-panel-off cad-sync-disabled' });
+    pData.createEl('h3', { text: 'Cloud sync — coming soon' });
+    const syncGroup = pData.createDiv({ cls: 'setting-group cad-settings-section cad-settings-panel-off cad-sync-disabled' });
     const syncPanel = syncGroup.createDiv({ cls: 'setting-items' });
     const cloudDesc = syncPanel.createEl('p', { cls: 'setting-item-description cad-sync-disabled-desc' });
     cloudDesc.appendText('Future option to two-way sync your vault with a live BOB Workspace / Cadence backend, so contacts, deals and partners stay aligned across desktop and mobile. ');
