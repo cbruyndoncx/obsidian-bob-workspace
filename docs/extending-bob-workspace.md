@@ -230,6 +230,14 @@ field_aliases:
 
 When schemas are enabled, BOB Workspace uses these fields to enrich built-in entities. That means workbook export/import, create forms, and entity tables can use the vault's field names instead of Cadence's original names.
 
+`location_pattern` also participates in creation-time folder resolution. When a new record has enough filled values to satisfy a placeholder path, BOB Workspace creates the note under that resolved folder; otherwise it falls back to the entity's configured default folder prefix.
+
+Entity note bodies can also be configured without code. Put a `template` object inside the schema's `bob` block to override the note frontmatter and body for that entity. Use `frontmatter` for default keys and `body` for the markdown body. Values support simple `{{name}}`, `{{title}}`, `{{today}}`, and similar placeholders.
+
+For the built-in task-note mode, use `workspace.json.templates.taskNote` to define the same `frontmatter` and `body` structure.
+
+Workspace-owned plugin settings also live under `workspace.json.settings`. That block carries the portable knobs that should travel with the vault, including schema enablement, Base mappings, navigation visibility, modules, task-note mode, task-note folders, workbook export folders, icon-driven workspace layout and entity folder configuration.
+
 The Data model designer supports creating entity schema sources and editing
 identity, icon, type value, location pattern, key fields, lifecycle values,
 co-required relationships, discriminators, import field aliases, ordered
