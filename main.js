@@ -1440,14 +1440,14 @@ async function applyEntityDefinitions(app, settings = {}, config = {}, injectNav
     // New entities require label + fields; existing entities accept partial overrides
     if (!ENTITIES[key] && (!def.label || !Array.isArray(def.fields))) continue;
 
-    const folder = (def.folder || `Cadence/${def.plural || `${def.label}s`}`).trim();
+    const folder = (def.folder || `Cadence/${def.plural || pluralizeEntityLabel(def.label)}`).trim();
     const isNew = !ENTITIES[key];
 
     if (isNew) {
       ENTITIES[key] = {
         folder,
         label: def.label,
-        plural: def.plural || `${def.label}s`,
+        plural: def.plural || pluralizeEntityLabel(def.label),
         fields: def.fields,
         columns: def.columns || def.fields.slice(0, 5).map((f) => f.key),
       };
@@ -1455,7 +1455,7 @@ async function applyEntityDefinitions(app, settings = {}, config = {}, injectNav
       if (def.typeFilters) ENTITIES[key].typeFilters = def.typeFilters;
       ['stageField','valueField','closeByField','wonStages','lostStages',
        'detailMetaFields','detailSections','terminalStatuses','stageConfidence',
-       'folders','dateField','titleField','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters'].forEach((k) => {
+       'folders','dateField','titleField','fieldAliases','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters'].forEach((k) => {
         if (def[k] != null) ENTITIES[key][k] = def[k];
       });
       ENTITY_FOLDERS[key] = folder;
@@ -1477,12 +1477,12 @@ async function applyEntityDefinitions(app, settings = {}, config = {}, injectNav
         }
         targetGroup.items.push({
           id: surfaceId,
-          label: def.plural || `${def.label}s`,
+          label: def.plural || pluralizeEntityLabel(def.label),
           icon: def.icon || 'file-text',
           module: def.module,
           entityKey: key,
           folderKey: def.folderKey,
-          desc: def.desc || `${def.plural || `${def.label}s`} - custom entity`,
+          desc: def.desc || `${def.plural || pluralizeEntityLabel(def.label)} - custom entity`,
         });
         rebuildSurfaceLookups();
       }
@@ -1511,7 +1511,7 @@ async function applyEntityDefinitions(app, settings = {}, config = {}, injectNav
       // Per-entity config overrides
       ['stageField','valueField','closeByField','wonStages','lostStages',
        'detailMetaFields','detailSections','terminalStatuses','stageConfidence',
-       'folders','dateField','titleField','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters'].forEach((k) => {
+       'folders','dateField','titleField','fieldAliases','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters'].forEach((k) => {
         if (!Object.prototype.hasOwnProperty.call(def, k)) return;
         if (def[k] != null) ENTITIES[key][k] = def[k];
         else delete ENTITIES[key][k];
@@ -1563,6 +1563,21 @@ function schemaFieldLabel(name) {
     .replace(/_/g, ' ')
     .replace(/-/g, ' ')
     .replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
+function pluralizeEntityLabel(label) {
+  const value = String(label || '').trim();
+  if (!value) return '';
+  const irregular = {
+    analysis: 'Analyses',
+    person: 'People',
+  };
+  const irregularPlural = irregular[value.toLowerCase()];
+  if (irregularPlural) return irregularPlural;
+  if (/analysis$/i.test(value)) return value.replace(/analysis$/i, 'Analyses');
+  if (/[^aeiou]y$/i.test(value)) return `${value.slice(0, -1)}ies`;
+  if (/(s|x|z|ch|sh)$/i.test(value)) return `${value}es`;
+  return `${value}s`;
 }
 
 function fieldsFromSchema(schema, existingFields = []) {
@@ -1626,7 +1641,7 @@ async function applySchemas(app, settings = {}) {
         folder: '',
         typeFilter: schema.type_value || entityKey,
         label,
-        plural: schema.plural || `${label}s`,
+        plural: schema.plural || pluralizeEntityLabel(label),
         icon: schema.icon || 'file-text',
         fields: schemaFields,
         columns: schemaFields.slice(0, 5).map((field) => field.key),
@@ -1635,6 +1650,7 @@ async function applySchemas(app, settings = {}) {
     if (schema.label) ENTITIES[entityKey].label = schema.label;
     if (schema.plural) ENTITIES[entityKey].plural = schema.plural;
     if (schema.icon) ENTITIES[entityKey].icon = schema.icon;
+    if (schema.field_aliases) ENTITIES[entityKey].fieldAliases = JSON.parse(JSON.stringify(schema.field_aliases));
 
     // Derive folders from location_pattern. Handles single, ` or `-joined, and `{placeholder}` patterns.
     //   "30-CLIENTS/{client-id}/00-PROFILE/"          -> ["30-CLIENTS"]
@@ -1986,14 +2002,15 @@ function mergeBaseConfigIntoEntity(entityKey, baseConfig) {
   if (!entity || !baseConfig) return;
   if (baseConfig.fields?.length) {
     const existingByKey = new Map((entity.fields || []).map((f) => [f.key, f]));
-    entity.fields = baseConfig.fields.map((field) => (
+    const visibleFields = baseConfig.fields.map((field) => (
       existingByKey.has(field.key)
         ? Object.assign({}, existingByKey.get(field.key), field)
         : field
     ));
-    (entity.fields || []).forEach((field) => existingByKey.delete(field.key));
+    visibleFields.forEach((field) => existingByKey.delete(field.key));
+    entity.fields = visibleFields;
     for (const field of existingByKey.values()) {
-      if (field.primary) entity.fields.push(field);
+      entity.fields.push(field);
     }
     entity.columns = baseConfig.columns || entity.fields.slice(0, 5).map((f) => f.key);
     const primary = entity.fields.find((field) => field.primary);
@@ -2215,6 +2232,32 @@ function validateSourceSchemaDefinition(schema) {
       (!schema.discriminator || typeof schema.discriminator !== 'object' || Array.isArray(schema.discriminator))) {
     throw new Error('discriminator must be an object');
   }
+  if (schema.field_aliases != null) {
+    if (!schema.field_aliases || typeof schema.field_aliases !== 'object' || Array.isArray(schema.field_aliases)) {
+      throw new Error('field_aliases must be an object keyed by field name');
+    }
+    const normalizedAliases = new Map();
+    schema.fields.forEach((field) => {
+      [field.name, field.label].filter(Boolean).forEach((name) => {
+        const normalized = String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (normalized && !normalizedAliases.has(normalized)) normalizedAliases.set(normalized, field.name);
+      });
+    });
+    Object.entries(schema.field_aliases).forEach(([name, aliases]) => {
+      if (!fieldNames.has(name)) throw new Error(`Field aliases reference undefined field "${name}"`);
+      if (!Array.isArray(aliases) || aliases.some((alias) => !String(alias || '').trim())) {
+        throw new Error(`Field aliases for "${name}" must be a list of non-empty names`);
+      }
+      aliases.forEach((alias) => {
+        const normalized = String(alias).toLowerCase().replace(/[^a-z0-9]/g, '');
+        const existing = normalizedAliases.get(normalized);
+        if (existing && existing !== name) {
+          throw new Error(`Field alias "${alias}" conflicts with field "${existing}"`);
+        }
+        normalizedAliases.set(normalized, name);
+      });
+    });
+  }
   if (schema.bob != null && (!schema.bob || typeof schema.bob !== 'object' || Array.isArray(schema.bob))) {
     throw new Error('BOB behavior JSON must be a JSON object');
   }
@@ -2406,6 +2449,9 @@ async function migrateLegacyEntityOverridesToSchemas(app, settings = {}) {
     if (def.label) schema.label = def.label;
     if (def.plural) schema.plural = def.plural;
     if (def.icon) schema.icon = def.icon;
+    if (def.fieldAliases && typeof def.fieldAliases === 'object') {
+      schema.field_aliases = JSON.parse(JSON.stringify(def.fieldAliases));
+    }
     const sourceFields = new Map((schema.fields || []).map((field) => [field.name, field]));
     (def.fields || []).forEach((field) => {
       if (!field?.key) return;
@@ -3739,9 +3785,34 @@ async function exportAllEntitiesXLSX(app, settings = {}) {
 }
 
 function rowValue(row, key) {
-  const target = String(key).toLowerCase();
+  const target = normalizedImportHeader(key);
   for (const [k, v] of Object.entries(row)) {
-    if (String(k).toLowerCase() === target) return v;
+    if (normalizedImportHeader(k) === target) return v;
+  }
+  return '';
+}
+
+function normalizedImportHeader(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function configuredFieldAliases(def) {
+  const aliases = {};
+  Object.entries(def?.fieldAliases || {}).forEach(([fieldKey, values]) => {
+    if (!Array.isArray(values) || !def.fields?.some((field) => field.key === fieldKey)) return;
+    values.forEach((value) => {
+      const normalized = normalizedImportHeader(value);
+      if (normalized) aliases[normalized] = fieldKey;
+    });
+  });
+  return aliases;
+}
+
+function rowValueForField(row, field, def) {
+  const candidates = [field.key, field.label, ...(def?.fieldAliases?.[field.key] || [])];
+  for (const candidate of candidates) {
+    const value = rowValue(row, candidate);
+    if (value !== '') return value;
   }
   return '';
 }
@@ -3776,7 +3847,7 @@ async function importEntityRows(app, entityKey, rows) {
   let updated = 0;
   let failed = 0;
   for (const row of rows) {
-    const primaryValue = String(rowValue(row, primary.key) || rowValue(row, primary.label) || '').trim();
+    const primaryValue = String(rowValueForField(row, primary, def) || '').trim();
     if (!primaryValue) { failed++; continue; }
     try {
       const explicitPath = String(rowValue(row, 'file_path') || '').trim();
@@ -3786,7 +3857,7 @@ async function importEntityRows(app, entityKey, rows) {
       await app.fileManager.processFrontMatter(file, (fm) => {
         def.fields.forEach((field) => {
           if (field.key === primary.key) return;
-          const imported = normalizeImportValue(rowValue(row, field.key), field);
+          const imported = normalizeImportValue(rowValueForField(row, field, def), field);
           if (imported == null || imported === '') return;
           if (Array.isArray(imported) && !imported.length) return;
           fm[field.key] = imported;
@@ -3993,6 +4064,7 @@ class CadenceImportModal extends obsidian.Modal {
       const meta = [f.type || 'text'];
       if (required) meta.push('required');
       if (f.type === 'enum' && f.options?.length) meta.push(f.options.join(' / '));
+      if (def.fieldAliases?.[f.key]?.length) meta.push(`aliases: ${def.fieldAliases[f.key].join(' / ')}`);
       item.createDiv({ cls: 'cad-import-field-meta', text: meta.join(' · ') });
     });
   }
@@ -4083,11 +4155,14 @@ class CadenceImportModal extends obsidian.Modal {
     const def = ENTITIES[this.entityKey];
     if (!def || !this.headers.length) return;
 
-    const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const norm = normalizedImportHeader;
     const keyByNorm = {};
     def.fields.forEach((f) => {
       keyByNorm[norm(f.key)] = f.key;
       keyByNorm[norm(f.label)] = f.key;
+    });
+    Object.entries(configuredFieldAliases(def)).forEach(([header, fieldKey]) => {
+      if (!keyByNorm[header]) keyByNorm[header] = fieldKey;
     });
     // Common synonyms
     const synonyms = {
@@ -9049,10 +9124,10 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         if (surface) removeSurfaceFromGroups(groups, surface.id);
         else surface = {
           id: `records.${payload.entityKey}`,
-          label: def.plural || `${def.label}s`,
+          label: def.plural || pluralizeEntityLabel(def.label),
           icon: def.icon || 'file-text',
           entityKey: payload.entityKey,
-          desc: def.desc || `${def.plural || `${def.label}s`} records`,
+          desc: def.desc || `${def.plural || pluralizeEntityLabel(def.label)} records`,
         };
         delete surface.navLevel;
         delete surface.parent;
@@ -9093,7 +9168,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         const def = Object.assign({}, ENTITIES[payload.entityKey] || {});
         if (!def.label || targetTabs.some((candidate) => candidate.entityKey === payload.entityKey)) return false;
         tab = {
-          label: def.plural || `${def.label}s`,
+          label: def.plural || pluralizeEntityLabel(def.label),
           entityKey: payload.entityKey,
           icon: def.icon,
         };
@@ -9234,7 +9309,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         if (existing || tabEntityKeys.has(entityKey)) return;
         const chip = entityChips.createDiv({ cls: 'cad-nav-designer-tab' });
         chip.draggable = true;
-        chip.createSpan({ text: def.plural || `${def.label}s` });
+        chip.createSpan({ text: def.plural || pluralizeEntityLabel(def.label) });
         chip.addEventListener('dragstart', (event) => dragPayload(event, { type: 'entity', entityKey }));
         chip.addEventListener('dragend', clearDragPayload);
       });
@@ -10027,6 +10102,20 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       });
       return parsed;
     };
+    const fieldAliasesText = (value) => Object.entries(value || {})
+      .map(([key, aliases]) => `${key}: ${(Array.isArray(aliases) ? aliases : []).join(', ')}`)
+      .join('\n');
+    const parseFieldAliases = (value) => {
+      const parsed = {};
+      String(value || '').split(/\n/).forEach((line) => {
+        const separator = line.indexOf(':');
+        if (separator < 0) return;
+        const key = line.slice(0, separator).trim();
+        const aliases = parseList(line.slice(separator + 1));
+        if (key && aliases.length) parsed[key] = aliases;
+      });
+      return parsed;
+    };
     const fieldRow = (parent, label) => {
       const row = parent.createDiv({ cls: 'cad-schema-designer-row' });
       row.createDiv({ cls: 'cad-schema-designer-label', text: label });
@@ -10088,6 +10177,11 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         const discriminator = parseDiscriminator(value);
         if (Object.keys(discriminator).length) sourceSchema.discriminator = discriminator;
         else delete sourceSchema.discriminator;
+      }, true);
+      textControl(identity, 'Import field aliases', fieldAliasesText(sourceSchema.field_aliases), (value) => {
+        const aliases = parseFieldAliases(value);
+        if (Object.keys(aliases).length) sourceSchema.field_aliases = aliases;
+        else delete sourceSchema.field_aliases;
       }, true);
       textControl(identity, 'BOB behavior JSON', sourceSchema.bob ? JSON.stringify(sourceSchema.bob, null, 2) : '', (value) => {
         if (!value.trim()) {
@@ -10251,6 +10345,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
             fields: [{ name: 'type', type: 'string', required: true, enum: [entity] }],
             status_lifecycle: [],
           };
+          sourceSchema.plural = pluralizeEntityLabel(sourceSchema.label);
           schemaDirty = true;
           setSchemaStatus(`New schema draft: ${path}`, true);
           renderSourceSchema();

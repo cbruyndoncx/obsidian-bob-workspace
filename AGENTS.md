@@ -221,13 +221,17 @@ implementing it first; it is not part of current `listEntityFiles()` behavior.
 - Schema YAML defaults to `00-CORE/Schemas/source` when `useSchemas` is enabled.
 - Settings includes a Data model designer for canonical schema YAML. It creates
   entity source files and edits identity/location, icons, discriminators,
-  co-required relationships, display hints and ordered fields, writing
+  co-required relationships, import `field_aliases`, display hints and ordered fields, writing
   `<schema>.backup` before save and reloading runtime configuration immediately.
+- Schema `field_aliases` are keyed by canonical field name and list accepted
+  CSV/XLSX header names; both import paths consume them.
 - **Save and regenerate** produces derived Metadata Menu FileClasses and JSON
   Schemas from canonical YAML, using `type_value` for JSON Schema filenames
   where present and pruning stale derived output files.
 - Base/view mappings are composition and belong in `workspace.json.bases`.
   Settings can import older `data.json` Base selections into that mapping.
+- A selected Base/view can order visible columns, but must not remove
+  schema-defined fields from entity creation or import behavior.
 - Unsupported Base filters are surfaced in UI warnings; preserve that
   transparency when extending Base support.
 - `entities.json` lives in the active plugin folder next to `data.json`, with

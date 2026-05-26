@@ -203,14 +203,19 @@ fields:
   - personal-contact
   - prospect
   - other
+field_aliases:
+  name:
+  - full name
+  - displayName
 ```
 
 When schemas are enabled, BOB Workspace uses these fields to enrich built-in entities. That means workbook export/import, create forms, and entity tables can use the vault's field names instead of Cadence's original names.
 
 The Data model designer supports creating entity schema sources and editing
 identity, icon, type value, location pattern, key fields, lifecycle values,
-co-required relationships, discriminators, ordered fields, field types,
-required flags, enum options, display hints and advanced BOB behavior. A save
+co-required relationships, discriminators, import field aliases, ordered
+fields, field types, required flags, enum options, display hints and advanced
+BOB behavior. A save
 writes a sibling `.backup` file before updating source YAML and reloads BOB
 Workspace immediately. **Save and regenerate** validates all source schemas
 and writes Metadata Menu FileClasses and JSON Schemas as derived outputs.
@@ -250,6 +255,9 @@ BOB Workspace should treat Bases as the view source of truth where possible:
 - sort
 - groupBy
 - special Base view types
+
+Base column order controls presentation only; it must not remove canonical
+schema fields from create or import workflows.
 
 If the plugin cannot support a Base feature directly, it should show the unsupported filter/view information rather than silently pretending it is applied.
 
@@ -307,22 +315,26 @@ Examples:
 | `lastContact` | `last_contact` |
 | `phone number` | `phone` |
 
-Today, some aliases are hardcoded in the import mapper. The intended direction is to make aliases configurable per entity, for example:
+Define aliases in the canonical schema source. Keys are canonical fields and
+values are incoming spreadsheet column names accepted by CSV and workbook
+imports:
 
-```json
-{
-  "deal": {
-    "fieldAliases": {
-      "value": "deal_value",
-      "closeBy": "expected_close",
-      "close_date": "expected_close",
-      "company": "client_id"
-    }
-  }
-}
+```yaml
+field_aliases:
+  deal_value:
+  - value
+  - amount
+  expected_close:
+  - closeBy
+  - close date
+  client_id:
+  - company
 ```
 
-Until `fieldAliases` is implemented as configuration, prefer using canonical field keys in schemas, Bases, and templates. Add import synonyms only for real migration needs.
+The Settings **Data model designer** edits this as one field per line, for
+example `expected_close: closeBy, close date`. Field aliases must point to
+defined schema fields and cannot conflict with another canonical field. The
+legacy built-in importer synonyms remain as compatibility fallbacks.
 
 ## Adding A New Entity
 
@@ -339,7 +351,7 @@ For a non-BOB vault:
 1. Define the entity in `entities.json`.
 2. Point it to the vault's folder/type fields.
 3. Add fields and columns.
-4. Add aliases for old spreadsheet/frontmatter names once alias config exists.
+4. Add `field_aliases` for old spreadsheet column names when required.
 
 ## What Requires Code
 
@@ -360,7 +372,6 @@ The plugin still contains some legacy Cadence fallback fields. This is acceptabl
 
 Known cleanup direction:
 
-- Make `fieldAliases` configurable.
 - Reduce built-in entity definitions to minimal fallbacks.
 - Prefer schema-derived field definitions for import/export.
 - Keep Base view support DRY rather than duplicating special views in plugin code.
