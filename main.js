@@ -14,7 +14,7 @@ const VIEW_TYPE_CADENCE_APP = 'cadence-app';
 /* Mirrors the Cadence web-app left nav exactly. Groups can be collapsed.
    Built surfaces have a render method; the rest fall through to the
    coming-soon placeholder, which describes what each surface will do. */
-const NAV_GROUPS = [
+const BUILTIN_NAV_GROUPS = [
   {
     id: 'home_group', label: '',
     items: [
@@ -129,11 +129,7 @@ const NAV_GROUPS = [
   },
 ];
 
-// Convenience flat lookup
-const ALL_SURFACES = NAV_GROUPS.flatMap((g) => g.items);
-const SURFACE_BY_ID = Object.fromEntries(ALL_SURFACES.map((s) => [s.id, s]));
-const SURFACES_BY_ENTITY_KEY = Object.fromEntries(ALL_SURFACES.filter((s) => s.entityKey).map((s) => [s.entityKey, s]));
-const SECONDARY_TABS = {
+const BUILTIN_SECONDARY_TABS = {
   'crm.campaigns': [
     { label: 'Overview', route: 'crm.campaigns.overview' },
     { label: 'Campaigns', entityKey: 'campaign' },
@@ -194,7 +190,7 @@ const SECONDARY_TABS = {
     { label: 'Document Retention', entityKey: 'document-retention' },
   ],
 };
-const WORKBOOK_EXPORT_GROUPS = [
+const BUILTIN_WORKBOOK_EXPORT_GROUPS = [
   { id: 'planner', label: 'Planner', entityKeys: ['task', 'project'] },
   { id: 'crm', label: 'CRM', entityKeys: ['deal', 'contact', 'client', 'company', 'lead', 'campaign', 'sequence', 'activity'] },
   { id: 'client-work', label: 'Client Work', entityKeys: ['meeting', 'comms-thread', 'deliverable', 'feedback', 'survey', 'testimonial', 'decision'] },
@@ -203,6 +199,27 @@ const WORKBOOK_EXPORT_GROUPS = [
   { id: 'procurement', label: 'Suppliers & Procurement', entityKeys: ['supplier', 'supplier-invoice', 'purchase-requisition', 'purchase-order'] },
   { id: 'ai', label: 'AI Workspace', entityKeys: ['playbook', 'skill'] },
 ];
+
+function cloneConfig(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+let NAV_GROUPS = cloneConfig(BUILTIN_NAV_GROUPS);
+let ALL_SURFACES = [];
+let SURFACE_BY_ID = {};
+let SURFACES_BY_ENTITY_KEY = {};
+let SECONDARY_TABS = cloneConfig(BUILTIN_SECONDARY_TABS);
+let WORKBOOK_EXPORT_GROUPS = cloneConfig(BUILTIN_WORKBOOK_EXPORT_GROUPS);
+
+function rebuildSurfaceLookups() {
+  ALL_SURFACES = NAV_GROUPS.flatMap((group) => group.items || []);
+  SURFACE_BY_ID = Object.fromEntries(ALL_SURFACES.map((surface) => [surface.id, surface]));
+  SURFACES_BY_ENTITY_KEY = Object.fromEntries(
+    ALL_SURFACES.filter((surface) => surface.entityKey).map((surface) => [surface.entityKey, surface])
+  );
+}
+
+rebuildSurfaceLookups();
 
 /* ─────────── Entity registry ───────────
    Each entity = a folder of markdown notes with a known frontmatter shape.
@@ -1040,6 +1057,7 @@ const BUILT_SURFACES = new Set([
   'team', 'settings',
   'ai.playbooks', 'ai.skills',
 ]);
+const BUILTIN_SURFACE_IDS = new Set(BUILT_SURFACES);
 
 /* ─────────── Settings ─────────── */
 const DEFAULT_SETTINGS = {
@@ -1198,13 +1216,20 @@ let PLUGIN_DIR = '';
 let ENTITIES_CONFIG_PATH = 'Cadence/entities.json';   // overridden in onload to plugin dir
 let ENTITIES_BACKUP_PATH = 'Cadence/entities.backup.json';
 const ENTITIES_LEGACY_PATH = 'Cadence/entities.json';
+let WORKSPACE_CONFIG_PATH = 'Cadence/workspace.json';
+let WORKSPACE_BACKUP_PATH = 'Cadence/workspace.backup.json';
+let WORKSPACE_CONFIG = {};
+let WORKSPACE_HAS_NAVIGATION = false;
 let CUSTOM_ENTITY_KEYS = new Set();
+let CONFIGURED_BASE_ENTITY_KEYS = new Set();
 
 function initEntitiesPaths(plugin) {
   const dir = (plugin.manifest && plugin.manifest.dir) || `.obsidian/plugins/${plugin.manifest.id}`;
   PLUGIN_DIR = dir;
   ENTITIES_CONFIG_PATH = `${dir}/entities.json`;
   ENTITIES_BACKUP_PATH = `${dir}/entities.backup.json`;
+  WORKSPACE_CONFIG_PATH = `${dir}/workspace.json`;
+  WORKSPACE_BACKUP_PATH = `${dir}/workspace.backup.json`;
 }
 
 async function migrateLegacyEntitiesConfig(app) {
@@ -1232,6 +1257,131 @@ async function saveEntitiesConfig(app, jsonText) {
   return parsed;
 }
 
+function validateWorkspaceConfig(config) {
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    throw new Error('Must be a JSON object');
+  }
+  const navigation = config.navigation;
+  if (navigation != null && (typeof navigation !== 'object' || Array.isArray(navigation))) {
+    throw new Error('navigation must be an object');
+  }
+  if (navigation?.groups != null && !Array.isArray(navigation.groups)) {
+    throw new Error('navigation.groups must be an array');
+  }
+  const surfaceIds = new Set();
+  for (const group of navigation?.groups || []) {
+    if (!group || typeof group !== 'object' || !group.id || !Array.isArray(group.items)) {
+      throw new Error('Every navigation group needs an id and items array');
+    }
+    for (const surface of group.items) {
+      if (!surface || !surface.id || !surface.label) {
+        throw new Error(`Navigation group "${group.id}" has an item without id/label`);
+      }
+      if (surface.placement != null && surface.placement !== 'navigation') {
+        throw new Error(`Navigation item "${surface.id}" has unsupported placement "${surface.placement}"`);
+      }
+      if (surfaceIds.has(surface.id)) throw new Error(`Duplicate surface id "${surface.id}"`);
+      surfaceIds.add(surface.id);
+    }
+  }
+  if (navigation?.secondaryTabs != null && (typeof navigation.secondaryTabs !== 'object' || Array.isArray(navigation.secondaryTabs))) {
+    throw new Error('navigation.secondaryTabs must be an object keyed by parent surface id');
+  }
+  for (const [parentId, tabs] of Object.entries(navigation?.secondaryTabs || {})) {
+    if (!Array.isArray(tabs)) throw new Error(`secondaryTabs "${parentId}" must be an array`);
+    for (const tab of tabs) {
+      if (!tab || !tab.label || (!tab.entityKey && !tab.route && !Array.isArray(tab.children))) {
+        throw new Error(`secondaryTabs "${parentId}" has a tab without label and entityKey/route/children`);
+      }
+    }
+  }
+  if (config.entities != null && (typeof config.entities !== 'object' || Array.isArray(config.entities))) {
+    throw new Error('entities must be an object keyed by entity type');
+  }
+  if (config.bases != null && (typeof config.bases !== 'object' || Array.isArray(config.bases))) {
+    throw new Error('bases must be an object keyed by entity type');
+  }
+  for (const [entityKey, base] of Object.entries(config.bases || {})) {
+    if (!base || typeof base !== 'object' || Array.isArray(base) || !String(base.file || base.base || '').trim()) {
+      throw new Error(`bases "${entityKey}" needs a file path`);
+    }
+  }
+  if (config.workbookGroups != null && !Array.isArray(config.workbookGroups)) {
+    throw new Error('workbookGroups must be an array');
+  }
+  return config;
+}
+
+async function saveWorkspaceConfig(app, jsonText) {
+  const parsed = validateWorkspaceConfig(JSON.parse(jsonText));
+  const adapter = app.vault.adapter;
+  if (await adapter.exists(WORKSPACE_CONFIG_PATH)) {
+    await adapter.write(WORKSPACE_BACKUP_PATH, await adapter.read(WORKSPACE_CONFIG_PATH));
+  }
+  await adapter.write(WORKSPACE_CONFIG_PATH, jsonText);
+  return parsed;
+}
+
+async function loadWorkspaceConfig(app) {
+  WORKSPACE_CONFIG = {};
+  WORKSPACE_HAS_NAVIGATION = false;
+  if (!(await app.vault.adapter.exists(WORKSPACE_CONFIG_PATH))) return WORKSPACE_CONFIG;
+  try {
+    WORKSPACE_CONFIG = validateWorkspaceConfig(JSON.parse(await app.vault.adapter.read(WORKSPACE_CONFIG_PATH)));
+    WORKSPACE_HAS_NAVIGATION = Array.isArray(WORKSPACE_CONFIG.navigation?.groups);
+  } catch (e) {
+    new obsidian.Notice(`BOB Workspace: workspace.json error - ${e.message}`);
+    WORKSPACE_CONFIG = {};
+  }
+  return WORKSPACE_CONFIG;
+}
+
+function resetWorkspaceRegistries() {
+  NAV_GROUPS = cloneConfig(BUILTIN_NAV_GROUPS);
+  SECONDARY_TABS = cloneConfig(BUILTIN_SECONDARY_TABS);
+  WORKBOOK_EXPORT_GROUPS = cloneConfig(BUILTIN_WORKBOOK_EXPORT_GROUPS);
+  for (const id of [...BUILT_SURFACES]) {
+    if (!BUILTIN_SURFACE_IDS.has(id)) BUILT_SURFACES.delete(id);
+  }
+  rebuildSurfaceLookups();
+}
+
+function applyWorkspaceRegistries(config = {}) {
+  const navigation = config.navigation || {};
+  if (Array.isArray(navigation.groups)) NAV_GROUPS = cloneConfig(navigation.groups);
+  if (navigation.secondaryTabs && typeof navigation.secondaryTabs === 'object') {
+    SECONDARY_TABS = cloneConfig(navigation.secondaryTabs);
+  }
+  normalizeStandaloneNavigationSurfaces(NAV_GROUPS, SECONDARY_TABS, Array.isArray(navigation.groups));
+  if (Array.isArray(config.workbookGroups)) WORKBOOK_EXPORT_GROUPS = cloneConfig(config.workbookGroups);
+  NAV_GROUPS.flatMap((group) => group.items || []).forEach((surface) => {
+    if (surface.entityKey || SECONDARY_TABS[surface.id]) BUILT_SURFACES.add(surface.id);
+  });
+  rebuildSurfaceLookups();
+}
+
+function effectiveSchemaSettings(settings = {}) {
+  const schemaConfig = WORKSPACE_CONFIG.schemas || {};
+  return Object.assign({}, settings, {
+    useSchemas: schemaConfig.enabled == null ? settings.useSchemas : !!schemaConfig.enabled,
+    schemasFolder: schemaConfig.folder || settings.schemasFolder,
+  });
+}
+
+function configuredBaseDefinition(entityKey) {
+  return WORKSPACE_CONFIG.bases?.[entityKey] || null;
+}
+
+function entityBasePath(settings = {}, entityKey) {
+  const base = configuredBaseDefinition(entityKey);
+  return base?.file || base?.base || (settings.baseFiles || {})[entityKey] || '';
+}
+
+function entityBaseViewName(settings = {}, entityKey) {
+  const base = configuredBaseDefinition(entityKey);
+  return base?.view || base?.baseView || (settings.baseViews || {})[entityKey] || '';
+}
+
 function clearCustomEntities() {
   const customSurfaceIds = new Set([...CUSTOM_ENTITY_KEYS].map((key) => `custom.${key}`));
   for (const key of CUSTOM_ENTITY_KEYS) {
@@ -1248,6 +1398,7 @@ function clearCustomEntities() {
 
 function resetEntityRegistry(settings = {}) {
   clearCustomEntities();
+  CONFIGURED_BASE_ENTITY_KEYS.clear();
   Object.keys(ENTITIES).forEach((key) => {
     if (!BUILTIN_ENTITY_DEFAULTS[key]) delete ENTITIES[key];
   });
@@ -1257,29 +1408,19 @@ function resetEntityRegistry(settings = {}) {
   syncEntityFolders(settings);
 }
 
-async function applyCustomEntities(app, settings = {}) {
-  clearCustomEntities();
-  if (!await app.vault.adapter.exists(ENTITIES_CONFIG_PATH)) return;
-
-  let config;
-  try {
-    const raw = await app.vault.adapter.read(ENTITIES_CONFIG_PATH);
-    config = JSON.parse(raw);
-  } catch (e) {
-    new obsidian.Notice(`BOB Workspace: entities.json error — ${e.message}`);
-    return;
-  }
-  if (typeof config !== 'object' || Array.isArray(config)) {
-    new obsidian.Notice('BOB Workspace: entities.json must be a JSON object keyed by entity type');
-    return;
-  }
-
+async function applyEntityDefinitions(app, settings = {}, config = {}, injectNavigation = true, configOwnsBase = false) {
   for (let [key, def] of Object.entries(config)) {
     if (!def || typeof def !== 'object') continue;
 
-    // Base file: settings UI takes priority, then entities.json def.base
-    const basePath = (settings.baseFiles || {})[key] || def.base;
-    const baseView = (settings.baseViews || {})[key] || def.baseView;
+    // Compatibility layer for entities.json and deprecated workspace entities.
+    // Canonical entity structure is derived from schema source YAML.
+    const basePath = configOwnsBase
+      ? (def.base || (settings.baseFiles || {})[key])
+      : ((settings.baseFiles || {})[key] || def.base);
+    const baseView = configOwnsBase
+      ? (def.baseView || (settings.baseViews || {})[key])
+      : ((settings.baseViews || {})[key] || def.baseView);
+    if (configOwnsBase && def.base) CONFIGURED_BASE_ENTITY_KEYS.add(key);
     if (basePath) {
       const baseConfig = await parseBaseFile(app, basePath, baseView);
       if (baseConfig) {
@@ -1320,28 +1461,31 @@ async function applyCustomEntities(app, settings = {}) {
       ENTITY_FOLDERS[key] = folder;
       CUSTOM_ENTITY_KEYS.add(key);
 
-      const surfaceId = `custom.${key}`;
-      BUILT_SURFACES.add(surfaceId);
+      if (injectNavigation) {
+        const surfaceId = `custom.${key}`;
+        BUILT_SURFACES.add(surfaceId);
 
-      // Inject nav item — into named module group if specified, else "Custom"
-      let targetGroup = def.module ? NAV_GROUPS.find((g) => g.id === def.module) : null;
-      if (!targetGroup) {
-        targetGroup = NAV_GROUPS.find((g) => g.id === 'custom');
+        // Inject nav item - into named module group if specified, else "Custom".
+        let targetGroup = def.module ? NAV_GROUPS.find((g) => g.id === def.module) : null;
         if (!targetGroup) {
-          targetGroup = { id: 'custom', label: 'Custom', items: [] };
-          const miscIdx = NAV_GROUPS.findIndex((g) => g.id === 'misc');
-          NAV_GROUPS.splice(miscIdx >= 0 ? miscIdx : NAV_GROUPS.length, 0, targetGroup);
+          targetGroup = NAV_GROUPS.find((g) => g.id === 'custom');
+          if (!targetGroup) {
+            targetGroup = { id: 'custom', label: 'Custom', items: [] };
+            const miscIdx = NAV_GROUPS.findIndex((g) => g.id === 'misc');
+            NAV_GROUPS.splice(miscIdx >= 0 ? miscIdx : NAV_GROUPS.length, 0, targetGroup);
+          }
         }
+        targetGroup.items.push({
+          id: surfaceId,
+          label: def.plural || `${def.label}s`,
+          icon: def.icon || 'file-text',
+          module: def.module,
+          entityKey: key,
+          folderKey: def.folderKey,
+          desc: def.desc || `${def.plural || `${def.label}s`} - custom entity`,
+        });
+        rebuildSurfaceLookups();
       }
-      targetGroup.items.push({
-        id: surfaceId,
-        label: def.plural || `${def.label}s`,
-        icon: def.icon || 'file-text',
-        module: def.module,
-        entityKey: key,
-        folderKey: def.folderKey,
-        desc: def.desc || `${def.plural || `${def.label}s`} — custom entity`,
-      });
     } else {
       // Merge fields by key (preserves schema-derived enum/options, adds entities.json type/primary)
       if (def.fields) {
@@ -1373,6 +1517,19 @@ async function applyCustomEntities(app, settings = {}) {
         else delete ENTITIES[key][k];
       });
     }
+  }
+}
+
+async function applyCustomEntities(app, settings = {}) {
+  if (!await app.vault.adapter.exists(ENTITIES_CONFIG_PATH)) return;
+  try {
+    const config = JSON.parse(await app.vault.adapter.read(ENTITIES_CONFIG_PATH));
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+      throw new Error('must be a JSON object keyed by entity type');
+    }
+    await applyEntityDefinitions(app, settings, config, !WORKSPACE_HAS_NAVIGATION);
+  } catch (e) {
+    new obsidian.Notice(`BOB Workspace: entities.json error - ${e.message}`);
   }
 }
 
@@ -1413,12 +1570,13 @@ function fieldsFromSchema(schema, existingFields = []) {
   const existingByKey = new Map((existingFields || []).map((f) => [f.key, f]));
   const schemaFields = schema.fields.filter((sf) => sf && sf.name && sf.name !== 'type');
   if (!schemaFields.length) return null;
-  const primaryKey = (schema.key_fields || []).find((key) => key && key !== 'type') || schemaFields[0].name;
+  const primaryKey = schemaFields.find((field) => field.primary)?.name ||
+    (schema.key_fields || []).find((key) => key && key !== 'type') || schemaFields[0].name;
   const fields = schemaFields.map((sf) => {
     const existing = existingByKey.get(sf.name) || {};
     const field = Object.assign({}, existing, {
       key: sf.name,
-      label: existing.label || schemaFieldLabel(sf.name),
+      label: sf.label || existing.label || schemaFieldLabel(sf.name),
     });
     if (sf.required === true) field.required = true;
     if (sf.name === primaryKey) field.primary = true;
@@ -1431,6 +1589,7 @@ function fieldsFromSchema(schema, existingFields = []) {
       if (fieldType) field.type = fieldType;
       else if (field.type && !existing.type) delete field.type;
     }
+    if (sf.bob_type) field.type = sf.bob_type;
     return field;
   });
   (existingFields || []).forEach((field) => {
@@ -1460,7 +1619,22 @@ async function applySchemas(app, settings = {}) {
     if (!schema || typeof schema !== 'object' || !schema.entity) continue;
 
     const entityKey = SCHEMA_TO_ENTITY_KEY[schema.entity] || schema.entity;
-    if (!ENTITIES[entityKey]) continue;   // only enrich built-in entities; skip unknown
+    if (!ENTITIES[entityKey]) {
+      const label = schema.label || schemaFieldLabel(entityKey);
+      const schemaFields = fieldsFromSchema(schema, []) || [];
+      ENTITIES[entityKey] = {
+        folder: '',
+        typeFilter: schema.type_value || entityKey,
+        label,
+        plural: schema.plural || `${label}s`,
+        icon: schema.icon || 'file-text',
+        fields: schemaFields,
+        columns: schemaFields.slice(0, 5).map((field) => field.key),
+      };
+    }
+    if (schema.label) ENTITIES[entityKey].label = schema.label;
+    if (schema.plural) ENTITIES[entityKey].plural = schema.plural;
+    if (schema.icon) ENTITIES[entityKey].icon = schema.icon;
 
     // Derive folders from location_pattern. Handles single, ` or `-joined, and `{placeholder}` patterns.
     //   "30-CLIENTS/{client-id}/00-PROFILE/"          -> ["30-CLIENTS"]
@@ -1508,6 +1682,9 @@ async function applySchemas(app, settings = {}) {
           f.key === targetKey ? Object.assign({}, f, { type: 'enum', options: schema.status_lifecycle }) : f
         );
       }
+    }
+    if (schema.bob && typeof schema.bob === 'object' && !Array.isArray(schema.bob)) {
+      await applyEntityDefinitions(app, settings, { [entityKey]: schema.bob }, false);
     }
   }
 }
@@ -1839,17 +2016,40 @@ async function applyBaseOverrides(app, settings = {}) {
   const baseFiles = settings.baseFiles || {};
   const baseViews = settings.baseViews || {};
   for (const [entityKey, basePath] of Object.entries(baseFiles)) {
-    if (!basePath || !ENTITIES[entityKey]) continue;
+    if (!basePath || !ENTITIES[entityKey] || CONFIGURED_BASE_ENTITY_KEYS.has(entityKey)) continue;
     const baseConfig = await parseBaseFile(app, basePath, baseViews[entityKey]);
     mergeBaseConfigIntoEntity(entityKey, baseConfig);
   }
 }
 
+async function applyConfiguredBaseOverrides(app) {
+  for (const [entityKey, def] of Object.entries(WORKSPACE_CONFIG.bases || {})) {
+    const basePath = def?.file || def?.base;
+    if (!basePath || !ENTITIES[entityKey]) continue;
+    CONFIGURED_BASE_ENTITY_KEYS.add(entityKey);
+    const baseConfig = await parseBaseFile(app, basePath, def.view || def.baseView);
+    mergeBaseConfigIntoEntity(entityKey, baseConfig);
+  }
+}
+
 async function reloadEntityConfiguration(app, settings = {}) {
+  resetWorkspaceRegistries();
+  await loadWorkspaceConfig(app);
   resetEntityRegistry(settings);
-  if (settings.useSchemas) await applySchemas(app, settings);
+  applyWorkspaceRegistries(WORKSPACE_CONFIG);
+  const effectiveSettings = effectiveSchemaSettings(settings);
+  // Deprecated compatibility input: new record definitions belong in schemas.
+  if (WORKSPACE_CONFIG.entities) {
+    await applyEntityDefinitions(app, settings, WORKSPACE_CONFIG.entities, !WORKSPACE_HAS_NAVIGATION);
+  }
+  if (effectiveSettings.useSchemas) await applySchemas(app, effectiveSettings);
   await applyCustomEntities(app, settings);
+  if (WORKSPACE_CONFIG.entities) {
+    await applyEntityDefinitions(app, settings, WORKSPACE_CONFIG.entities, false);
+  }
+  await applyConfiguredBaseOverrides(app);
   await applyBaseOverrides(app, settings);
+  rebuildSurfaceLookups();
 }
 
 const ENTITIES_JSON_TEMPLATE = JSON.stringify({
@@ -1869,6 +2069,371 @@ const ENTITIES_JSON_TEMPLATE = JSON.stringify({
     columns: ["title", "customer", "status", "value", "due"]
   }
 }, null, 2);
+
+function workspaceConfigTemplate(settings = {}) {
+  const bases = {};
+  Object.entries(settings.baseFiles || {}).forEach(([entityKey, file]) => {
+    if (!file) return;
+    bases[entityKey] = { file };
+    if ((settings.baseViews || {})[entityKey]) bases[entityKey].view = settings.baseViews[entityKey];
+  });
+  return JSON.stringify({
+    _comment: 'This file controls no-code workspace composition. Canonical entity definitions are in schema YAML; existing built-in surface IDs keep their specialized renderers.',
+    schemas: {
+      enabled: !!settings.useSchemas,
+      folder: settings.schemasFolder || SCHEMA_FOLDER_DEFAULT,
+    },
+    bases,
+    navigation: {
+      groups: NAV_GROUPS,
+      secondaryTabs: SECONDARY_TABS,
+    },
+    workbookGroups: WORKBOOK_EXPORT_GROUPS,
+  }, null, 2);
+}
+
+function surfaceMatchesTab(surface, tab) {
+  return !!surface && !!tab && (
+    (tab.entityKey && surface.entityKey === tab.entityKey) ||
+    (tab.route && surface.id === tab.route)
+  );
+}
+
+function isTabBackedSurface(surface, tabsByParent = SECONDARY_TABS) {
+  if (!surface?.parent) return false;
+  return (tabsByParent[surface.parent] || []).some((tab) =>
+    surfaceMatchesTab(surface, tab) ||
+    (tab.children || []).some((child) => surfaceMatchesTab(surface, child))
+  );
+}
+
+function makeNavigationSurfacePrimary(surface) {
+  if (!surface) return;
+  delete surface.navLevel;
+  delete surface.parent;
+  delete surface.placement;
+}
+
+function normalizeStandaloneNavigationSurfaces(groups, tabsByParent = SECONDARY_TABS, normalizeSetup = false) {
+  let changed = false;
+  (groups || []).forEach((group) => {
+    (group.items || []).forEach((surface) => {
+      const canNormalizeLevel = surface.navLevel === 'secondary' ||
+        (normalizeSetup && surface.navLevel === 'setup');
+      if (canNormalizeLevel && surface.parent &&
+          !isTabBackedSurface(surface, tabsByParent)) {
+        makeNavigationSurfacePrimary(surface);
+        changed = true;
+      }
+    });
+  });
+  return changed;
+}
+
+function navigationSurfaceFromTab(parentId, tab, existingSurfaces = []) {
+  const match = existingSurfaces.find((surface) =>
+    surfaceMatchesTab(surface, tab)
+  );
+  if (match) {
+    return Object.assign({}, match, {
+      navLevel: 'secondary',
+      parent: parentId,
+      placement: 'navigation',
+    });
+  }
+  const seed = tab.entityKey || tab.route || tab.label || 'tab';
+  const slug = String(seed).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tab';
+  return {
+    id: tab.route || `${parentId}.${slug}`,
+    label: tab.label,
+    icon: tab.icon || 'file-text',
+    entityKey: tab.entityKey,
+    navLevel: 'secondary',
+    parent: parentId,
+    placement: 'navigation',
+    desc: tab.desc || `${tab.label} records`,
+  };
+}
+
+function removeSurfaceFromGroups(groups, surfaceId) {
+  for (const group of groups) {
+    const index = (group.items || []).findIndex((surface) => surface.id === surfaceId);
+    if (index >= 0) return group.items.splice(index, 1)[0];
+  }
+  return null;
+}
+
+function schemaFieldFromEntityField(field) {
+  const result = {
+    name: field.key,
+    type: field.type === 'number' || field.type === 'currency' ? 'number'
+      : field.type === 'tags' ? 'array'
+      : 'string',
+    required: !!field.primary,
+  };
+  if (field.type === 'date') result.format = 'date';
+  if (field.type === 'enum' && Array.isArray(field.options)) result.enum = field.options;
+  return result;
+}
+
+function validateSourceSchemaDefinition(schema) {
+  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
+    throw new Error('Schema must be an object');
+  }
+  ['entity', 'label', 'location_pattern'].forEach((key) => {
+    if (!String(schema[key] || '').trim()) throw new Error(`Schema needs ${key}`);
+  });
+  const entityKey = SCHEMA_TO_ENTITY_KEY[schema.entity] || schema.entity;
+  if (!String(schema.type_value || '').trim() && !ENTITIES[entityKey]?.filenameFilter) {
+    throw new Error('Schema needs type_value unless the record type is filename-backed');
+  }
+  if (!Array.isArray(schema.fields) || !schema.fields.length) {
+    throw new Error('Schema needs at least one field');
+  }
+  const fieldNames = new Set();
+  schema.fields.forEach((field, index) => {
+    const name = String(field?.name || '').trim();
+    if (!name) throw new Error(`Field ${index + 1} needs a name`);
+    if (fieldNames.has(name)) throw new Error(`Duplicate field "${name}"`);
+    fieldNames.add(name);
+    if (!['string', 'number', 'integer', 'boolean', 'array'].includes(field.type)) {
+      throw new Error(`Field "${name}" has unsupported type "${field.type}"`);
+    }
+    if (field.enum != null && !Array.isArray(field.enum)) {
+      throw new Error(`Field "${name}" enum must be a list`);
+    }
+  });
+  (schema.key_fields || []).forEach((name) => {
+    if (!fieldNames.has(name)) throw new Error(`Key field "${name}" is not defined in fields`);
+  });
+  (schema.co_required || []).forEach((pair) => {
+    if (!Array.isArray(pair) || pair.length < 2 || pair.some((name) => !fieldNames.has(name))) {
+      throw new Error('Every co-required relationship must name two or more defined fields');
+    }
+  });
+  if (schema.discriminator != null &&
+      (!schema.discriminator || typeof schema.discriminator !== 'object' || Array.isArray(schema.discriminator))) {
+    throw new Error('discriminator must be an object');
+  }
+  if (schema.bob != null && (!schema.bob || typeof schema.bob !== 'object' || Array.isArray(schema.bob))) {
+    throw new Error('BOB behavior JSON must be a JSON object');
+  }
+  return schema;
+}
+
+function editableSchemaFieldType(field) {
+  if (Array.isArray(field.enum)) return 'enum';
+  if (field.type === 'string' && field.format === 'date') return 'date';
+  if (field.type === 'string' && field.format === 'date-time') return 'datetime';
+  return field.type || 'string';
+}
+
+function applyEditableSchemaFieldType(field, value) {
+  delete field.format;
+  if (value !== 'enum') delete field.enum;
+  if (value === 'enum') {
+    field.type = 'string';
+    if (!Array.isArray(field.enum)) field.enum = [];
+  } else if (value === 'date' || value === 'datetime') {
+    field.type = 'string';
+    field.format = value === 'date' ? 'date' : 'date-time';
+  } else {
+    field.type = value;
+  }
+}
+
+async function loadCanonicalSchemaSources(app, settings = {}) {
+  const folder = (WORKSPACE_CONFIG.schemas?.folder || settings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
+  if (!await app.vault.adapter.exists(folder)) return { folder, schemas: [], errors: [] };
+  const listed = await app.vault.adapter.list(folder);
+  const schemas = [];
+  const errors = [];
+  for (const path of (listed.files || []).filter((file) => /\.ya?ml$/i.test(file))) {
+    try {
+      const schema = validateSourceSchemaDefinition(obsidian.parseYaml(await app.vault.adapter.read(path)));
+      schemas.push({ path, schema });
+    } catch (e) {
+      errors.push(`${path}: ${e.message}`);
+    }
+  }
+  return { folder, schemas, errors };
+}
+
+function stableSchemaId(value) {
+  let hash = 5381;
+  for (const character of String(value || '')) hash = ((hash << 5) + hash) ^ character.charCodeAt(0);
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function metadataMenuFieldType(field) {
+  if (Array.isArray(field.enum)) return 'Select';
+  if (field.type === 'array') return 'Multi';
+  if (field.type === 'boolean') return 'Boolean';
+  if (field.type === 'number' || field.type === 'integer') return 'Number';
+  if (field.format === 'date') return 'Date';
+  return 'Input';
+}
+
+function sourceSchemaToJsonSchema(schema) {
+  const schemaId = schema.type_value || schema.entity;
+  const properties = {};
+  const required = [];
+  (schema.fields || []).forEach((field) => {
+    const property = { type: field.type || 'string' };
+    if (field.format) property.format = field.format;
+    if (Array.isArray(field.enum) && field.enum.length) property.enum = field.enum;
+    if (field.description) property.description = field.description;
+    if (field.type === 'array') property.items = { type: 'string' };
+    properties[field.name] = property;
+    if (field.required) required.push(field.name);
+  });
+  if (schema.type_value && properties.type) properties.type = { const: schema.type_value };
+  if (schema.discriminator) Object.entries(schema.discriminator).forEach(([key, value]) => {
+    properties[key] = Object.assign({}, properties[key] || { type: 'string' }, { const: value });
+    if (!required.includes(key)) required.push(key);
+  });
+  return {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: `https://brn.cx/schemas/${schemaId}.schema.json`,
+    title: `${schemaId} frontmatter schema`,
+    type: 'object',
+    properties,
+    required,
+    additionalProperties: true,
+    ...(Array.isArray(schema.co_required) && schema.co_required.length
+      ? {
+          dependentRequired: Object.assign({}, ...schema.co_required.flatMap((pair) =>
+            pair.map((field) => ({ [field]: pair.filter((other) => other !== field) }))
+          )),
+        }
+      : {}),
+  };
+}
+
+function sourceSchemaToFileClass(schema) {
+  const fields = (schema.fields || []).map((field) => {
+    const config = {
+      name: field.name,
+      type: metadataMenuFieldType(field),
+      id: stableSchemaId(`${schema.entity}:${field.name}`),
+      path: '',
+    };
+    if (Array.isArray(field.enum) && field.enum.length) {
+      config.options = field.enum.map((value, index) => ({ [index]: value }));
+    }
+    if (field.required) config.required = true;
+    return config;
+  });
+  const yaml = {
+    fileClass: schema.entity,
+    version: '1.0',
+    mapWithTag: false,
+    filesPaths: [schema.location_pattern],
+    fields,
+    ...(schema.description ? { description: schema.description } : {}),
+  };
+  return `---\n${obsidian.stringifyYaml(yaml)}---\n\n# ${schema.label}\n\nGenerated from canonical schema source. Edit the source YAML in BOB Workspace settings.\n`;
+}
+
+async function regenerateSchemaOutputs(app, settings = {}) {
+  const loaded = await loadCanonicalSchemaSources(app, settings);
+  if (loaded.errors.length) throw new Error(`Schema validation failed: ${loaded.errors.join('; ')}`);
+  const root = loaded.folder.replace(/\/source$/, '');
+  const fileClassFolder = `${root}/fileClasses`;
+  const jsonFolder = `${root}/json-schema`;
+  await ensureFolderSync(app, fileClassFolder);
+  await ensureFolderSync(app, jsonFolder);
+  const expectedFileClasses = new Set();
+  const expectedJsonSchemas = new Set();
+  for (const { schema } of loaded.schemas) {
+    const fileClassPath = `${fileClassFolder}/${schema.entity}.md`;
+    const jsonSchemaPath = `${jsonFolder}/${schema.type_value || schema.entity}.schema.json`;
+    expectedFileClasses.add(fileClassPath);
+    expectedJsonSchemas.add(jsonSchemaPath);
+    await app.vault.adapter.write(fileClassPath, sourceSchemaToFileClass(schema));
+    await app.vault.adapter.write(
+      jsonSchemaPath,
+      `${JSON.stringify(sourceSchemaToJsonSchema(schema), null, 2)}\n`
+    );
+  }
+  let removed = 0;
+  for (const folder of [
+    { path: fileClassFolder, expected: expectedFileClasses, suffix: '.md' },
+    { path: jsonFolder, expected: expectedJsonSchemas, suffix: '.schema.json' },
+  ]) {
+    const listed = await app.vault.adapter.list(folder.path);
+    for (const path of listed.files || []) {
+      if (!path.endsWith(folder.suffix) || folder.expected.has(path)) continue;
+      await app.vault.adapter.remove(path);
+      removed++;
+    }
+  }
+  return {
+    count: loaded.schemas.length,
+    removed,
+    fileClassFolder,
+    jsonFolder,
+  };
+}
+
+async function migrateLegacyEntityOverridesToSchemas(app, settings = {}) {
+  if (!await app.vault.adapter.exists(ENTITIES_CONFIG_PATH)) return { migrated: 0, remaining: 0 };
+  const legacy = JSON.parse(await app.vault.adapter.read(ENTITIES_CONFIG_PATH));
+  const loaded = await loadCanonicalSchemaSources(app, settings);
+  if (loaded.errors.length) throw new Error(`Fix schema validation before migration: ${loaded.errors.join('; ')}`);
+  const schemaByEntityKey = new Map(loaded.schemas.map((item) => [
+    SCHEMA_TO_ENTITY_KEY[item.schema.entity] || item.schema.entity,
+    item,
+  ]));
+  const behaviorKeys = [
+    'stageField', 'valueField', 'closeByField', 'wonStages', 'lostStages',
+    'detailMetaFields', 'detailSections', 'terminalStatuses', 'stageConfidence',
+    'dateField', 'titleField',
+  ];
+  const remaining = {};
+  let migrated = 0;
+  for (const [entityKey, def] of Object.entries(legacy || {})) {
+    if (entityKey.startsWith('_') || !def || typeof def !== 'object') {
+      remaining[entityKey] = def;
+      continue;
+    }
+    const source = schemaByEntityKey.get(entityKey);
+    if (!source) {
+      remaining[entityKey] = def;
+      continue;
+    }
+    const schema = source.schema;
+    if (def.label) schema.label = def.label;
+    if (def.plural) schema.plural = def.plural;
+    if (def.icon) schema.icon = def.icon;
+    const sourceFields = new Map((schema.fields || []).map((field) => [field.name, field]));
+    (def.fields || []).forEach((field) => {
+      if (!field?.key) return;
+      let canonical = sourceFields.get(field.key);
+      if (!canonical) {
+        canonical = schemaFieldFromEntityField(field);
+        schema.fields.push(canonical);
+        sourceFields.set(field.key, canonical);
+      }
+      if (field.label && field.label !== schemaFieldLabel(field.key)) canonical.label = field.label;
+      if (field.primary) canonical.primary = true;
+      if (field.type) canonical.bob_type = field.type;
+      if (field.type === 'enum' && Array.isArray(field.options)) canonical.enum = field.options;
+    });
+    const bob = Object.assign({}, schema.bob || {});
+    behaviorKeys.forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(def, key)) bob[key] = def[key];
+    });
+    if (Array.isArray(def.columns)) bob.columns = def.columns;
+    if (Object.keys(bob).length) schema.bob = bob;
+    validateSourceSchemaDefinition(schema);
+    await app.vault.adapter.write(`${source.path}.backup`, await app.vault.adapter.read(source.path));
+    await app.vault.adapter.write(source.path, obsidian.stringifyYaml(schema));
+    migrated++;
+  }
+  await saveEntitiesConfig(app, `${JSON.stringify(remaining, null, 2)}\n`);
+  return { migrated, remaining: Object.keys(remaining).filter((key) => !key.startsWith('_')).length };
+}
 
 const CURRENCY_OPTIONS = [
   { code: 'USD', label: 'USD — US Dollar' },
@@ -3932,6 +4497,50 @@ class CadencePromptModal extends obsidian.Modal {
   }
 }
 
+/* ─────────── Obsidian icon picker ─────────── */
+class CadenceIconPickerModal extends obsidian.SuggestModal {
+  constructor(app, currentIcon, onChoose) {
+    super(app);
+    this.currentIcon = currentIcon || '';
+    this.onChoose = onChoose;
+    this.iconIds = typeof obsidian.getIconIds === 'function'
+      ? obsidian.getIconIds().slice().sort()
+      : [];
+    this.setPlaceholder('Search Obsidian icons by name...');
+  }
+
+  getSuggestions(query) {
+    const q = String(query || '').trim().toLowerCase();
+    const matches = this.iconIds
+      .filter((iconId) => !q || iconId.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const aStarts = q && a.toLowerCase().startsWith(q) ? 0 : 1;
+        const bStarts = q && b.toLowerCase().startsWith(q) ? 0 : 1;
+        return aStarts - bStarts || a.localeCompare(b);
+      })
+      .slice(0, 150)
+      .map((iconId) => ({ iconId }));
+    if (!q || 'none'.includes(q) || 'clear'.includes(q) || 'remove'.includes(q)) {
+      matches.unshift({ iconId: '', clear: true });
+    }
+    return matches;
+  }
+
+  renderSuggestion(item, el) {
+    el.addClass('cad-icon-picker-result');
+    const preview = el.createSpan({ cls: 'cad-icon-picker-preview' });
+    try { obsidian.setIcon(preview, item.clear ? 'circle-x' : item.iconId); } catch (_) {}
+    el.createSpan({ cls: 'cad-icon-picker-name', text: item.clear ? 'No icon' : item.iconId });
+    if (!item.clear && item.iconId === this.currentIcon) {
+      el.createSpan({ cls: 'cad-icon-picker-current', text: 'current' });
+    }
+  }
+
+  onChooseSuggestion(item) {
+    if (this.onChoose) this.onChoose(item.iconId || '');
+  }
+}
+
 /* ─────────── The unified Cadence app view ─────────── */
 class CadenceAppView extends obsidian.ItemView {
   constructor(leaf, plugin) {
@@ -3987,7 +4596,7 @@ class CadenceAppView extends obsidian.ItemView {
     if (id === 'planner') return 'planner.calendar';
     if (id === 'srm.suppliers') return 'procurement.suppliers';
     if (id === 'finance.supplier-invoices') return 'procurement.supplier-invoices';
-    return SURFACE_BY_ID[id] ? id : 'home';
+    return SURFACE_BY_ID[id] ? id : (SURFACE_BY_ID.home ? 'home' : (ALL_SURFACES[0]?.id || 'home'));
   }
 
   /* Toggle Cadence-app dark mode. Scoped to `.cadence-app` only —
@@ -4009,6 +4618,8 @@ class CadenceAppView extends obsidian.ItemView {
         const items = g.items.filter((it) => {
           if (it.module && mods[it.module] === false) return false;
           if (disabled.has(it.id)) return false;
+          if (it.placement === 'navigation') return true;
+          if (WORKSPACE_HAS_NAVIGATION && isTabBackedSurface(it)) return false;
           if (it.navLevel === 'secondary' && !showSecondary) return false;
           if (it.navLevel === 'setup' && !showSetup) return false;
           return true;
@@ -4164,7 +4775,10 @@ class CadenceAppView extends obsidian.ItemView {
     root.addClass('cadence-app');
     root.toggleClass('cad-dark', !!this.plugin.settings.cadenceAppDark);
 
-    const active = SURFACE_BY_ID[this.mode] || SURFACE_BY_ID['planner.today'];
+    if (!SURFACE_BY_ID[this.mode]) this.mode = this._migrateModeId(this.mode);
+    const active = SURFACE_BY_ID[this.mode] || SURFACE_BY_ID.home || ALL_SURFACES[0] || {
+      id: 'home', label: 'Workspace', icon: 'layout-dashboard', desc: 'No configured surfaces.',
+    };
     const activeParentId = active?.parent || null;
 
     /* ── Top brand bar ──────────────────────── */
@@ -4211,6 +4825,10 @@ class CadenceAppView extends obsidian.ItemView {
         const head = groupEl.createDiv({ cls: 'cad-nav-group-head' });
         const chev = head.createSpan({ cls: 'cad-nav-group-chev' });
         try { obsidian.setIcon(chev, isCollapsed ? 'chevron-right' : 'chevron-down'); } catch (_) {}
+        if (group.icon) {
+          const groupIcon = head.createSpan({ cls: 'cad-nav-group-icon' });
+          try { obsidian.setIcon(groupIcon, group.icon); } catch (_) {}
+        }
         head.createSpan({ cls: 'cad-nav-group-label', text: group.label.toUpperCase() });
         head.addEventListener('click', () => this.toggleGroup(group.id));
       }
@@ -4299,6 +4917,9 @@ class CadenceAppView extends obsidian.ItemView {
 	    };
     if (route[this.mode]) {
       await route[this.mode]();
+    } else if (SECONDARY_TABS[this.mode]?.length) {
+      const firstTab = this._tabsForParent(this.mode)[0] || {};
+      await this.renderEntityTabs(content, this.mode, firstTab.entityKey || firstTab.route);
     } else if (active && active.entityKey && ENTITIES[active.entityKey]) {
       await this.renderEntityList(content, active.entityKey);
     } else if (this.mode && this.mode.startsWith('custom.')) {
@@ -4337,7 +4958,7 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   _renderEntityViewSelect(container, entityKey) {
-    const basePath = (this.plugin.settings.baseFiles || {})[entityKey];
+    const basePath = entityBasePath(this.plugin.settings, entityKey);
     if (!basePath) return;
 
     const select = container.createEl('select', {
@@ -4348,7 +4969,7 @@ class CadenceAppView extends obsidian.ItemView {
     select.createEl('option', { value: '', text: 'Loading views...' });
     select.disabled = true;
 
-    const currentView = (this.plugin.settings.baseViews || {})[entityKey] || '';
+    const currentView = entityBaseViewName(this.plugin.settings, entityKey);
     const baseFile = this.app.vault.getAbstractFileByPath(basePath);
     if (!(baseFile instanceof obsidian.TFile)) {
       select.empty();
@@ -4383,9 +5004,9 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   async _openEntityBase(entityKey) {
-    const basePath = (this.plugin.settings.baseFiles || {})[entityKey] || ENTITIES[entityKey]?.externalBaseView?.basePath;
+    const basePath = entityBasePath(this.plugin.settings, entityKey) || ENTITIES[entityKey]?.externalBaseView?.basePath;
     if (!basePath) return;
-    const viewName = (this.plugin.settings.baseViews || {})[entityKey] || ENTITIES[entityKey]?.baseView?.name || '';
+    const viewName = entityBaseViewName(this.plugin.settings, entityKey) || ENTITIES[entityKey]?.baseView?.name || '';
     const baseFile = this.app.vault.getAbstractFileByPath(basePath);
     if (!(baseFile instanceof obsidian.TFile)) {
       new obsidian.Notice(`BOB Workspace: Base not found: ${basePath}`);
@@ -4804,6 +5425,9 @@ class CadenceAppView extends obsidian.ItemView {
     return tabs.flatMap((tab) => {
       if (!tab.children) return [tab];
       return tab.children.map((child) => Object.assign({}, child, { label: `${tab.label} · ${child.label}` }));
+    }).filter((tab) => {
+      const surface = ALL_SURFACES.find((item) => item.parent === parentId && surfaceMatchesTab(item, tab));
+      return surface?.placement !== 'navigation';
     });
   }
 
@@ -8206,9 +8830,573 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       text: 'Cadence Planner',
       href: 'https://github.com/iotool/obsidian-cadence-planner',
     }).setAttribute('target', '_blank');
-    fork.appendText(' Obsidian plugin, extended with schemas, .base files, vault-aware entity mapping, configurable folders, and an in-settings entities.json editor. ');
+    fork.appendText(' Obsidian plugin, extended with canonical schema editing, .base files, vault-aware entity mapping, configurable folders, and compatibility migration for entities.json. ');
     fork.createEl('strong', { text: 'Folder-structure compatibility with upstream Cadence is intended but not yet fully verified' });
     fork.appendText(' — if you switch between forks, back up your vault first.');
+
+    /* ─── Workspace configuration (workspace.json) ─── */
+    containerEl.createEl('h3', { text: 'Workspace definition' });
+    const workspaceDesc = containerEl.createEl('p', { cls: 'setting-item-description' });
+    workspaceDesc.appendText('Define schema loading, Base/view associations, navigation groups, surfaces, secondary tabs and workbook groups in ');
+    workspaceDesc.createEl('code', { text: 'workspace.json' });
+    workspaceDesc.appendText(' next to plugin data. Entity-backed surfaces are rendered automatically; existing built-in surface IDs retain their specialized views.');
+
+    const workspaceWrap = containerEl.createDiv({ cls: 'cad-settings-entities' });
+    const workspaceStatus = workspaceWrap.createDiv({ cls: 'cad-settings-entities-status' });
+    const workspaceTa = workspaceWrap.createEl('textarea', { cls: 'cad-settings-entities-textarea' });
+    workspaceTa.rows = 18;
+    workspaceTa.spellcheck = false;
+    workspaceTa.style.width = '100%';
+    workspaceTa.style.fontFamily = 'var(--font-monospace)';
+    workspaceTa.style.fontSize = '12px';
+    const adapter = this.plugin.app.vault.adapter;
+    (async () => {
+      try {
+        if (await adapter.exists(WORKSPACE_CONFIG_PATH)) {
+          workspaceTa.value = await adapter.read(WORKSPACE_CONFIG_PATH);
+          workspaceStatus.setText(`Loaded ${WORKSPACE_CONFIG_PATH}`);
+        } else {
+          workspaceTa.value = workspaceConfigTemplate(this.plugin.settings);
+          workspaceStatus.setText('No workspace.json yet - edit and Save to make navigation/config file-managed.');
+        }
+        renderNavDesigner();
+      } catch (e) {
+        workspaceStatus.setText(`Read error: ${e.message}`);
+      }
+    })();
+    const setWorkspaceStatus = (message, ok) => {
+      workspaceStatus.setText(message);
+      workspaceStatus.style.color = ok ? 'var(--text-success)' : 'var(--text-error)';
+    };
+    workspaceTa.addEventListener('input', () => {
+      try {
+        const parsed = validateWorkspaceConfig(JSON.parse(workspaceTa.value));
+        const count = parsed.navigation?.groups?.length || 0;
+        setWorkspaceStatus(`Valid - ${count} navigation group${count === 1 ? '' : 's'}`, true);
+      } catch (e) {
+        setWorkspaceStatus(`Invalid JSON/config: ${e.message}`, false);
+      }
+    });
+    const workspaceBtns = workspaceWrap.createDiv({ cls: 'cad-settings-entities-btns' });
+    workspaceBtns.style.display = 'flex';
+    workspaceBtns.style.gap = '8px';
+    workspaceBtns.style.marginTop = '8px';
+    const workspaceFormatBtn = workspaceBtns.createEl('button', { text: 'Format' });
+    workspaceFormatBtn.addEventListener('click', () => {
+      try {
+        workspaceTa.value = JSON.stringify(validateWorkspaceConfig(JSON.parse(workspaceTa.value)), null, 2);
+        setWorkspaceStatus('Formatted', true);
+      } catch (e) {
+        setWorkspaceStatus(`Cannot format: ${e.message}`, false);
+      }
+    });
+    const workspaceSaveBtn = workspaceBtns.createEl('button', { text: 'Save and apply', cls: 'mod-cta' });
+    workspaceSaveBtn.addEventListener('click', async () => {
+      try {
+        await saveWorkspaceConfig(this.plugin.app, workspaceTa.value);
+        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        this.plugin.refreshOpenViews();
+        new obsidian.Notice('BOB Workspace: workspace.json saved and applied.');
+        this.display();
+      } catch (e) {
+        setWorkspaceStatus(`Save failed: ${e.message}`, false);
+        new obsidian.Notice(`BOB Workspace: workspace.json save failed - ${e.message}`);
+      }
+    });
+    const workspaceRestoreBtn = workspaceBtns.createEl('button', { text: 'Restore backup' });
+    workspaceRestoreBtn.addEventListener('click', async () => {
+      try {
+        if (!(await adapter.exists(WORKSPACE_BACKUP_PATH))) {
+          setWorkspaceStatus('No workspace backup file found', false);
+          return;
+        }
+        workspaceTa.value = await adapter.read(WORKSPACE_BACKUP_PATH);
+        setWorkspaceStatus('Backup loaded into editor - click Save and apply', true);
+      } catch (e) {
+        setWorkspaceStatus(`Restore failed: ${e.message}`, false);
+      }
+    });
+    const workspaceMigrateBtn = workspaceBtns.createEl('button', { text: 'Import Bases from settings' });
+    workspaceMigrateBtn.addEventListener('click', () => {
+      try {
+        const config = validateWorkspaceConfig(JSON.parse(workspaceTa.value));
+        config.bases = config.bases || {};
+        Object.entries(this.plugin.settings.baseFiles || {}).forEach(([entityKey, file]) => {
+          if (!file) return;
+          config.bases[entityKey] = { file };
+          if ((this.plugin.settings.baseViews || {})[entityKey]) {
+            config.bases[entityKey].view = this.plugin.settings.baseViews[entityKey];
+          }
+        });
+        if (config.entities && !Object.keys(config.entities).length) delete config.entities;
+        workspaceTa.value = JSON.stringify(config, null, 2);
+        setWorkspaceStatus('Base associations imported into workspace draft - click Save and apply', true);
+        renderNavDesigner();
+      } catch (e) {
+        setWorkspaceStatus(`Import failed: ${e.message}`, false);
+      }
+    });
+
+    const navDesigner = containerEl.createDiv({ cls: 'cad-nav-designer' });
+    const navDesignerHead = navDesigner.createDiv({ cls: 'cad-nav-designer-head' });
+    navDesignerHead.createEl('h4', { text: 'Navigation designer' });
+    navDesignerHead.createEl('p', {
+      cls: 'setting-item-description',
+      text: 'Drag unassigned tabs or record types into groups and move existing menu items between groups. Choose icons from Obsidian\'s registered icon library. Remove an item to return it to its available pool. Changes update the workspace JSON draft; use Save and apply above to persist them.',
+    });
+    const navDesignerBody = navDesigner.createDiv({ cls: 'cad-nav-designer-body' });
+
+    const readWorkspaceDraft = () => validateWorkspaceConfig(JSON.parse(workspaceTa.value));
+    const updateWorkspaceDraft = (config, message) => {
+      workspaceTa.value = JSON.stringify(config, null, 2);
+      setWorkspaceStatus(message || 'Navigation changed - click Save and apply', true);
+      renderNavDesigner();
+    };
+    const saveWorkspaceBase = async (entityKey, file, view) => {
+      const config = readWorkspaceDraft();
+      config.bases = config.bases || {};
+      if (file) {
+        config.bases[entityKey] = { file };
+        if (view) config.bases[entityKey].view = view;
+      } else {
+        delete config.bases[entityKey];
+      }
+      if (config.entities && !Object.keys(config.entities).length) delete config.entities;
+      workspaceTa.value = JSON.stringify(config, null, 2);
+      await saveWorkspaceConfig(this.plugin.app, workspaceTa.value);
+      await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+      this.plugin.refreshOpenViews();
+    };
+    let activeDragPayload = null;
+    const parseDragData = (event) => {
+      if (activeDragPayload) return activeDragPayload;
+      try {
+        const raw = event.dataTransfer.getData('text/bob-workspace-nav') || event.dataTransfer.getData('text/plain');
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) {
+        return null;
+      }
+    };
+    const dragPayload = (event, payload) => {
+      activeDragPayload = payload;
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/bob-workspace-nav', JSON.stringify(payload));
+      event.dataTransfer.setData('text/plain', JSON.stringify(payload));
+    };
+    const clearDragPayload = () => {
+      activeDragPayload = null;
+      navDesigner.querySelectorAll('.drag-over').forEach((element) => element.removeClass('drag-over'));
+    };
+    const createIconPickerButton = (parent, initialIcon, onChange, emptyText = 'Choose icon') => {
+      let currentIcon = initialIcon || '';
+      const button = parent.createEl('button', {
+        cls: 'cad-nav-designer-icon-button',
+        attr: { type: 'button', title: 'Choose an Obsidian icon' },
+      });
+      button.draggable = false;
+      const render = () => {
+        button.empty();
+        const preview = button.createSpan({ cls: 'cad-nav-designer-icon-preview' });
+        try { obsidian.setIcon(preview, currentIcon || 'shapes'); } catch (_) {}
+        button.createSpan({ cls: 'cad-nav-designer-icon-name', text: currentIcon || emptyText });
+      };
+      button.addEventListener('mousedown', (event) => event.stopPropagation());
+      button.addEventListener('dragstart', (event) => event.stopPropagation());
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        new CadenceIconPickerModal(this.plugin.app, currentIcon, (iconId) => {
+          currentIcon = iconId;
+          render();
+          onChange(iconId);
+        }).open();
+      });
+      render();
+      return button;
+    };
+    const moveGroup = (config, sourceGroupIndex, targetGroupIndex) => {
+      if (sourceGroupIndex === targetGroupIndex) return false;
+      const groups = config.navigation.groups;
+      const moved = groups.splice(sourceGroupIndex, 1)[0];
+      if (!moved) return false;
+      let destination = targetGroupIndex;
+      if (sourceGroupIndex < targetGroupIndex) destination--;
+      groups.splice(destination, 0, moved);
+      return true;
+    };
+    const mutateGroupsForDrop = (config, payload, targetGroupIndex, targetItemIndex = null) => {
+      const groups = config.navigation.groups;
+      const target = groups[targetGroupIndex];
+      if (!target) return false;
+      let surface;
+      if (payload.type === 'item') {
+        const sourceGroup = groups[payload.groupIndex];
+        if (!sourceGroup?.items?.[payload.itemIndex]) return false;
+        surface = sourceGroup.items.splice(payload.itemIndex, 1)[0];
+        if (payload.groupIndex === targetGroupIndex && targetItemIndex != null && payload.itemIndex < targetItemIndex) {
+          targetItemIndex--;
+        }
+      } else if (payload.type === 'tab') {
+        const tab = config.navigation.secondaryTabs?.[payload.parentId]?.[payload.tabIndex];
+        if (!tab) return false;
+        const all = groups.flatMap((group) => group.items || []);
+        surface = navigationSurfaceFromTab(payload.parentId, tab, all);
+        removeSurfaceFromGroups(groups, surface.id);
+      } else if (payload.type === 'entity') {
+        const def = Object.assign({}, ENTITIES[payload.entityKey] || {});
+        if (!def.label) return false;
+        surface = groups.flatMap((group) => group.items || []).find((item) => item.entityKey === payload.entityKey);
+        if (surface) removeSurfaceFromGroups(groups, surface.id);
+        else surface = {
+          id: `records.${payload.entityKey}`,
+          label: def.plural || `${def.label}s`,
+          icon: def.icon || 'file-text',
+          entityKey: payload.entityKey,
+          desc: def.desc || `${def.plural || `${def.label}s`} records`,
+        };
+        delete surface.navLevel;
+        delete surface.parent;
+      } else {
+        return false;
+      }
+      if (target.module) surface.module = target.module;
+      else delete surface.module;
+      if (!Array.isArray(target.items)) target.items = [];
+      if (targetItemIndex == null || targetItemIndex > target.items.length) target.items.push(surface);
+      else target.items.splice(Math.max(0, targetItemIndex), 0, surface);
+      return true;
+    };
+    const movePayloadToTabs = (config, payload, targetParentId) => {
+      const tabsByParent = config.navigation.secondaryTabs || (config.navigation.secondaryTabs = {});
+      const targetTabs = tabsByParent[targetParentId] || (tabsByParent[targetParentId] = []);
+      let tab;
+      if (payload.type === 'item') {
+        const sourceGroup = config.navigation.groups[payload.groupIndex];
+        const surface = sourceGroup?.items?.[payload.itemIndex];
+        if (!surface || surface.id === targetParentId || !surface.entityKey) return false;
+        sourceGroup.items.splice(payload.itemIndex, 1);
+        for (const [parentId, tabs] of Object.entries(tabsByParent)) {
+          const existingIndex = tabs.findIndex((candidate) => surfaceMatchesTab(surface, candidate));
+          if (existingIndex >= 0) {
+            if (parentId === targetParentId) return true;
+            tab = tabs.splice(existingIndex, 1)[0];
+            break;
+          }
+        }
+        tab = tab || {
+          label: surface.label,
+          entityKey: surface.entityKey,
+          route: surface.entityKey ? undefined : surface.id,
+          icon: surface.icon,
+        };
+      } else if (payload.type === 'entity') {
+        const def = Object.assign({}, ENTITIES[payload.entityKey] || {});
+        if (!def.label || targetTabs.some((candidate) => candidate.entityKey === payload.entityKey)) return false;
+        tab = {
+          label: def.plural || `${def.label}s`,
+          entityKey: payload.entityKey,
+          icon: def.icon,
+        };
+      } else if (payload.type === 'tab') {
+        const sourceTabs = tabsByParent[payload.parentId];
+        if (!sourceTabs?.[payload.tabIndex] || payload.parentId === targetParentId) return false;
+        tab = sourceTabs.splice(payload.tabIndex, 1)[0];
+      } else {
+        return false;
+      }
+      if (!tab || targetTabs.some((candidate) =>
+        (tab.entityKey && candidate.entityKey === tab.entityKey) || (tab.route && candidate.route === tab.route)
+      )) return true;
+      targetTabs.push(tab);
+      return true;
+    };
+
+    const renderNavDesigner = () => {
+      navDesignerBody.empty();
+      let config;
+      try {
+        config = readWorkspaceDraft();
+      } catch (e) {
+        navDesignerBody.createDiv({ cls: 'setting-item-description', text: `Fix workspace JSON to use the designer: ${e.message}` });
+        return;
+      }
+      if (!config.navigation?.groups) {
+        navDesignerBody.createDiv({ cls: 'setting-item-description', text: 'Add navigation.groups to workspace.json to arrange navigation visually.' });
+        return;
+      }
+      const groups = config.navigation.groups;
+      if (normalizeStandaloneNavigationSurfaces(groups, config.navigation.secondaryTabs || {}, true)) {
+        workspaceTa.value = JSON.stringify(config, null, 2);
+        setWorkspaceStatus('Converted ungrouped secondary/setup items to primary navigation - click Save and apply', true);
+      }
+      const allSurfaces = groups.flatMap((group) => group.items || []);
+      const assignedSurfaces = allSurfaces.filter((surface) =>
+        !isTabBackedSurface(surface, config.navigation.secondaryTabs || {}) || surface.placement === 'navigation'
+      );
+      const addGroupRow = navDesignerBody.createDiv({ cls: 'cad-nav-designer-add-group' });
+      const newGroupInput = addGroupRow.createEl('input', { type: 'text', placeholder: 'New group label' });
+      let newGroupIcon = '';
+      createIconPickerButton(addGroupRow, '', (iconId) => { newGroupIcon = iconId; });
+      const addGroupBtn = addGroupRow.createEl('button', { text: '+ Add group' });
+      addGroupBtn.addEventListener('click', () => {
+        const label = newGroupInput.value.trim();
+        if (!label) return;
+        const seed = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'group';
+        let id = seed;
+        let suffix = 2;
+        while (groups.some((group) => group.id === id)) id = `${seed}-${suffix++}`;
+        const group = { id, label, module: id, items: [] };
+        if (newGroupIcon) group.icon = newGroupIcon;
+        groups.push(group);
+        updateWorkspaceDraft(config, `${label} group added - click Save and apply`);
+      });
+      const palette = navDesignerBody.createDiv({ cls: 'cad-nav-designer-tabs' });
+      palette.createDiv({ cls: 'cad-nav-designer-label', text: 'Tabs - drag a tab into navigation, or drop an item into a parent tab area' });
+      const tabParents = palette.createDiv({ cls: 'cad-nav-designer-tab-parents' });
+      const tabEntityKeys = new Set();
+      Object.entries(config.navigation.secondaryTabs || {}).forEach(([parentId, tabs]) => {
+        const parentSurface = allSurfaces.find((surface) => surface.id === parentId);
+        const parentEl = tabParents.createDiv({ cls: 'cad-nav-designer-tab-parent' });
+        const parentHead = parentEl.createDiv({ cls: 'cad-nav-designer-tab-parent-head' });
+        parentHead.createSpan({ text: parentSurface?.label || parentId });
+        if (!tabs.length) {
+          const removeTabs = parentHead.createEl('button', { cls: 'cad-nav-designer-action danger', text: 'Remove' });
+          removeTabs.addEventListener('click', () => {
+            delete config.navigation.secondaryTabs[parentId];
+            updateWorkspaceDraft(config, `${parentSurface?.label || parentId} tab area removed - click Save and apply`);
+          });
+        }
+        const tabChips = parentEl.createDiv({ cls: 'cad-nav-designer-tab-chips' });
+        tabs.forEach((tab, tabIndex) => {
+          if (tab.entityKey) tabEntityKeys.add(tab.entityKey);
+          const existing = assignedSurfaces.find((surface) =>
+            surface.id !== parentId &&
+            ((tab.entityKey && surface.entityKey === tab.entityKey) || (tab.route && surface.id === tab.route))
+          );
+          if (existing) return;
+          const chip = tabChips.createDiv({ cls: 'cad-nav-designer-tab' });
+          chip.draggable = true;
+          chip.createSpan({ text: tab.label });
+          const removeTab = chip.createEl('button', { cls: 'cad-nav-designer-tab-remove', text: '\u00d7' });
+          removeTab.type = 'button';
+          removeTab.title = `Remove ${tab.label} tab`;
+          removeTab.draggable = false;
+          removeTab.addEventListener('mousedown', (event) => event.stopPropagation());
+          removeTab.addEventListener('dragstart', (event) => event.stopPropagation());
+          removeTab.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            tabs.splice(tabIndex, 1);
+            const primarySurface = groups.flatMap((group) => group.items || []).find((surface) =>
+              surface.parent === parentId && surfaceMatchesTab(surface, tab)
+            );
+            makeNavigationSurfacePrimary(primarySurface);
+            updateWorkspaceDraft(config, primarySurface
+              ? `${tab.label} removed from ${parentSurface?.label || parentId} tabs and set as primary navigation - click Save and apply`
+              : `${tab.label} removed from ${parentSurface?.label || parentId} tabs - click Save and apply`);
+          });
+          chip.addEventListener('dragstart', (event) => dragPayload(event, { type: 'tab', parentId, tabIndex }));
+          chip.addEventListener('dragend', clearDragPayload);
+        });
+        if (!tabChips.childElementCount) tabChips.createSpan({ cls: 'cad-nav-designer-empty', text: 'Drop a child here' });
+        parentEl.addEventListener('dragover', (event) => {
+          const payload = parseDragData(event);
+          const itemSurface = payload?.type === 'item'
+            ? groups[payload.groupIndex]?.items?.[payload.itemIndex]
+            : null;
+          if (!payload || payload.type === 'group' ||
+              (payload.type === 'tab' && payload.parentId === parentId) ||
+              (payload.type === 'item' && (!itemSurface?.entityKey || itemSurface.id === parentId))) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          parentEl.addClass('drag-over');
+        });
+        parentEl.addEventListener('dragleave', () => parentEl.removeClass('drag-over'));
+        parentEl.addEventListener('drop', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          parentEl.removeClass('drag-over');
+          const payload = parseDragData(event);
+          if (payload && movePayloadToTabs(config, payload, parentId)) {
+            updateWorkspaceDraft(config, `Tabs for ${parentSurface?.label || parentId} updated - click Save and apply`);
+          }
+          clearDragPayload();
+        });
+      });
+      if (!tabParents.childElementCount) tabParents.createSpan({ cls: 'cad-nav-designer-empty', text: 'Create a tab area from a navigation parent to add tabs.' });
+      const entityPalette = navDesignerBody.createDiv({ cls: 'cad-nav-designer-tabs' });
+      entityPalette.createDiv({ cls: 'cad-nav-designer-label', text: 'Unassigned record types - drag into a navigation group' });
+      const entityChips = entityPalette.createDiv({ cls: 'cad-nav-designer-tab-chips' });
+      const entityDefs = Object.assign({}, ENTITIES);
+      Object.entries(entityDefs).forEach(([entityKey, def]) => {
+        if (!def || !def.label) return;
+        const existing = assignedSurfaces.find((surface) => surface.entityKey === entityKey);
+        if (existing || tabEntityKeys.has(entityKey)) return;
+        const chip = entityChips.createDiv({ cls: 'cad-nav-designer-tab' });
+        chip.draggable = true;
+        chip.createSpan({ text: def.plural || `${def.label}s` });
+        chip.addEventListener('dragstart', (event) => dragPayload(event, { type: 'entity', entityKey }));
+        chip.addEventListener('dragend', clearDragPayload);
+      });
+      if (!entityChips.childElementCount) entityChips.createSpan({ cls: 'cad-nav-designer-empty', text: 'All record types are assigned.' });
+
+      const removeZone = navDesignerBody.createDiv({ cls: 'cad-nav-designer-remove', text: 'Drop a navigation item here to remove it and return it to the available pool' });
+      removeZone.addEventListener('dragover', (event) => {
+        if (parseDragData(event)?.type !== 'item') return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        removeZone.addClass('drag-over');
+      });
+      removeZone.addEventListener('dragleave', () => removeZone.removeClass('drag-over'));
+      removeZone.addEventListener('drop', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        removeZone.removeClass('drag-over');
+        const payload = parseDragData(event);
+        const surface = payload?.type === 'item' ? groups[payload.groupIndex]?.items?.splice(payload.itemIndex, 1)[0] : null;
+        if (surface) updateWorkspaceDraft(config, `${surface.label} removed from navigation - click Save and apply`);
+        clearDragPayload();
+      });
+
+      const board = navDesignerBody.createDiv({ cls: 'cad-nav-designer-board' });
+      groups.forEach((group, groupIndex) => {
+        const groupEl = board.createDiv({ cls: 'cad-nav-designer-group' });
+        groupEl.dataset.groupIndex = String(groupIndex);
+        groupEl.addEventListener('dragover', (event) => {
+          if (!parseDragData(event)) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          groupEl.addClass('drag-over');
+        });
+        groupEl.addEventListener('dragleave', () => groupEl.removeClass('drag-over'));
+        groupEl.addEventListener('drop', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          groupEl.removeClass('drag-over');
+          const payload = parseDragData(event);
+          if (payload?.type === 'group') {
+            if (moveGroup(config, payload.groupIndex, groupIndex)) updateWorkspaceDraft(config);
+          } else if (payload && mutateGroupsForDrop(config, payload, groupIndex)) {
+            updateWorkspaceDraft(config);
+          }
+          clearDragPayload();
+        });
+        const groupHead = groupEl.createDiv({ cls: 'cad-nav-designer-group-head' });
+        groupHead.draggable = true;
+        groupHead.addEventListener('dragstart', (event) => {
+          event.stopPropagation();
+          dragPayload(event, { type: 'group', groupIndex });
+        });
+        groupHead.addEventListener('dragend', clearDragPayload);
+        groupHead.createSpan({ cls: 'cad-nav-designer-handle', text: '::' });
+        groupHead.createSpan({ cls: 'cad-nav-designer-group-title', text: group.label || group.id });
+        createIconPickerButton(groupHead, group.icon, (iconId) => {
+          if (iconId) group.icon = iconId;
+          else delete group.icon;
+          updateWorkspaceDraft(config, `${group.label || group.id} icon updated - click Save and apply`);
+        });
+        if (!(group.items || []).length) {
+          const removeGroup = groupHead.createEl('button', { cls: 'cad-nav-designer-action danger', text: 'Remove' });
+          removeGroup.draggable = false;
+          removeGroup.addEventListener('mousedown', (event) => event.stopPropagation());
+          removeGroup.addEventListener('click', (event) => {
+            event.stopPropagation();
+            groups.splice(groupIndex, 1);
+            updateWorkspaceDraft(config, `${group.label || group.id} group removed - click Save and apply`);
+          });
+        }
+        const groupItems = groupEl.createDiv({ cls: 'cad-nav-designer-items' });
+        (group.items || []).forEach((surface, itemIndex) => {
+          const isTabBacked = isTabBackedSurface(surface, config.navigation.secondaryTabs || {});
+          if (isTabBacked && surface.placement !== 'navigation') return;
+          const item = groupItems.createDiv({ cls: 'cad-nav-designer-item' });
+          item.draggable = true;
+          item.addEventListener('dragstart', (event) => {
+            event.stopPropagation();
+            dragPayload(event, { type: 'item', groupIndex, itemIndex });
+          });
+          item.addEventListener('dragend', clearDragPayload);
+          item.addEventListener('dragover', (event) => {
+            if (!parseDragData(event)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            event.dataTransfer.dropEffect = 'move';
+            item.addClass('drag-over');
+          });
+          item.addEventListener('dragleave', () => item.removeClass('drag-over'));
+          item.addEventListener('drop', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            item.removeClass('drag-over');
+            const payload = parseDragData(event);
+            if (payload?.type === 'group') {
+              if (moveGroup(config, payload.groupIndex, groupIndex)) updateWorkspaceDraft(config);
+            } else if (payload && mutateGroupsForDrop(config, payload, groupIndex, itemIndex)) {
+              updateWorkspaceDraft(config);
+            }
+            clearDragPayload();
+          });
+          item.createSpan({ cls: 'cad-nav-designer-handle', text: '::' });
+          const itemText = item.createSpan({ cls: 'cad-nav-designer-item-text', text: surface.label });
+          itemText.title = surface.id;
+          createIconPickerButton(item, surface.icon, (iconId) => {
+            if (iconId) surface.icon = iconId;
+            else delete surface.icon;
+            updateWorkspaceDraft(config, `${surface.label} icon updated - click Save and apply`);
+          });
+          if (surface.navLevel) item.createSpan({ cls: 'cad-nav-designer-level', text: surface.navLevel });
+          if (!surface.parent && !Object.prototype.hasOwnProperty.call(config.navigation.secondaryTabs || {}, surface.id)) {
+            const addTabs = item.createEl('button', { cls: 'cad-nav-designer-action', text: '+ Tabs' });
+            addTabs.draggable = false;
+            addTabs.addEventListener('mousedown', (event) => event.stopPropagation());
+            addTabs.addEventListener('click', (event) => {
+              event.stopPropagation();
+              if (!config.navigation.secondaryTabs) config.navigation.secondaryTabs = {};
+              config.navigation.secondaryTabs[surface.id] = surface.entityKey
+                ? [{ label: surface.label, entityKey: surface.entityKey, icon: surface.icon }]
+                : [];
+              updateWorkspaceDraft(config, `Tab area added for ${surface.label} - click Save and apply`);
+            });
+          }
+          const remove = item.createEl('button', {
+            cls: 'cad-nav-designer-action danger',
+            text: isTabBacked ? 'As tabs' : 'Remove',
+          });
+          remove.draggable = false;
+          remove.addEventListener('mousedown', (event) => event.stopPropagation());
+          remove.addEventListener('click', (event) => {
+            event.stopPropagation();
+            group.items.splice(itemIndex, 1);
+            updateWorkspaceDraft(config, isTabBacked
+              ? `${surface.label} moved to tabs - click Save and apply`
+              : `${surface.label} removed from navigation - click Save and apply`);
+          });
+        });
+        const empty = groupItems.createDiv({ cls: 'cad-nav-designer-dropzone', text: 'Drop available item here' });
+        empty.addEventListener('dragover', (event) => {
+          if (!parseDragData(event)) return;
+          event.preventDefault();
+          event.stopPropagation();
+          event.dataTransfer.dropEffect = 'move';
+          empty.addClass('drag-over');
+        });
+        empty.addEventListener('dragleave', () => empty.removeClass('drag-over'));
+        empty.addEventListener('drop', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          empty.removeClass('drag-over');
+          const payload = parseDragData(event);
+          if (payload?.type === 'group') {
+            if (moveGroup(config, payload.groupIndex, groupIndex)) updateWorkspaceDraft(config);
+          } else if (payload && mutateGroupsForDrop(config, payload, groupIndex)) {
+            updateWorkspaceDraft(config);
+          }
+          clearDragPayload();
+        });
+      });
+    };
+    workspaceTa.addEventListener('input', renderNavDesigner);
+    setTimeout(renderNavDesigner, 0);
 
     /* ─── Modules (consolidated: toggle + surfaces + folders + base files) ─── */
     containerEl.createEl('h3', { text: 'Modules' });
@@ -8225,6 +9413,9 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       if (this.plugin.settings.modules.finance == null) this.plugin.settings.modules.finance = true;
       if (this.plugin.settings.modules.procurement == null) this.plugin.settings.modules.procurement = true;
       if (this.plugin.settings.modules.tax == null) this.plugin.settings.modules.tax = true;
+      NAV_GROUPS.filter((group) => group.module).forEach((group) => {
+        if (this.plugin.settings.modules[group.module] == null) this.plugin.settings.modules[group.module] = true;
+      });
       return this.plugin.settings.modules;
     };
     const moduleLabels = {
@@ -8236,6 +9427,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       finance: 'Finance — periods, bank, journals, invoices, purchases, trial balances and statements.',
       procurement: 'Procurement — internal purchase requests and formal supplier purchase orders.',
       tax:     'Tax & Compliance — VAT, corporate tax, deferred tax, transfer pricing, legal rules and retention.',
+      ai:      'AI Workspace — playbooks and installed skills.',
     };
 
     const baseFiles = this.plugin.app.vault.getFiles()
@@ -8262,7 +9454,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       if (isModuleGroup) {
         new obsidian.Setting(panel)
           .setName(`Enable ${headingText}`)
-          .setDesc(moduleLabels[group.module] || '')
+          .setDesc(moduleLabels[group.module] || `${headingText} module defined in workspace.json.`)
           .addToggle((t) => t
             .setValue(ensureMods()[group.module] !== false)
             .onChange(async (v) => {
@@ -8291,6 +9483,8 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         } else {
           desc.push(surface.id);
         }
+        const managedBase = !!configuredBaseDefinition(surface.entityKey);
+        if (managedBase) desc.push('Base from workspace.json');
         const s = new obsidian.Setting(panel)
           .setName(`${surface.label} (${levelLabel})`)
           .setDesc(desc.join(' · '));
@@ -8330,8 +9524,8 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
 
         // Base file dropdown (for surfaces backed by an entity)
         if (surface.entityKey) {
-          const currentBase = (this.plugin.settings.baseFiles || {})[surface.entityKey] || '';
-          const currentView = (this.plugin.settings.baseViews || {})[surface.entityKey] || '';
+          const currentBase = entityBasePath(this.plugin.settings, surface.entityKey);
+          const currentView = entityBaseViewName(this.plugin.settings, surface.entityKey);
           s.addDropdown((dd) => {
             dd.addOption('', 'Loading bases...');
             dd.setValue('');
@@ -8352,14 +9546,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
               dd.setValue(currentBase);
             });
             dd.onChange(async (v) => {
-              if (!this.plugin.settings.baseFiles) this.plugin.settings.baseFiles = {};
-              if (!this.plugin.settings.baseViews) this.plugin.settings.baseViews = {};
-              if (v) this.plugin.settings.baseFiles[surface.entityKey] = v;
-              else   delete this.plugin.settings.baseFiles[surface.entityKey];
-              delete this.plugin.settings.baseViews[surface.entityKey];
-              await this.plugin.saveSettings();
-              await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
-              this.plugin.refreshOpenViews();
+              await saveWorkspaceBase(surface.entityKey, v, '');
               this.display();
             });
             if (moduleDisabled) dd.setDisabled(true);
@@ -8379,12 +9566,8 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
               });
             }
             dd.onChange(async (v) => {
-              if (!this.plugin.settings.baseViews) this.plugin.settings.baseViews = {};
-              if (v) this.plugin.settings.baseViews[surface.entityKey] = v;
-              else delete this.plugin.settings.baseViews[surface.entityKey];
-              await this.plugin.saveSettings();
-              await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
-              this.plugin.refreshOpenViews();
+              await saveWorkspaceBase(surface.entityKey, currentBase, v);
+              this.display();
             });
           });
         }
@@ -8652,7 +9835,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     /* ─── Custom entities (entities.json) ─── */
     containerEl.createEl('h3', { text: 'Custom entities' });
     const entDesc = containerEl.createEl('p', { cls: 'setting-item-description' });
-    entDesc.appendText('Define new entity types or override fields on built-in ones. Stored in plugin folder as ');
+    entDesc.appendText('Legacy compatibility overrides. For schema-enabled vaults, migrate matching fields and display behavior into canonical schema sources. Stored in plugin folder as ');
     entDesc.createEl('code', { text: 'entities.json' });
     entDesc.appendText(' (next to data.json). A backup of the previous version is written to ');
     entDesc.createEl('code', { text: 'entities.backup.json' });
@@ -8667,7 +9850,6 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     entTa.style.fontFamily = 'var(--font-monospace)';
     entTa.style.fontSize = '12px';
 
-    const adapter = this.plugin.app.vault.adapter;
     (async () => {
       try {
         if (await adapter.exists(ENTITIES_CONFIG_PATH)) {
@@ -8736,32 +9918,404 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         setStatus('Backup loaded into editor — click Save to apply', true);
       } catch (e) { setStatus(`Restore failed: ${e.message}`, false); }
     });
+    const migrateEntitiesBtn = entBtns.createEl('button', { text: 'Migrate into schemas' });
+    migrateEntitiesBtn.addEventListener('click', async () => {
+      if (!confirm('Move legacy entity field/display overrides into matching canonical schema YAML sources? Schema and entities backups will be written first.')) return;
+      try {
+        const result = await migrateLegacyEntityOverridesToSchemas(this.plugin.app, this.plugin.settings);
+        entTa.value = await adapter.read(ENTITIES_CONFIG_PATH);
+        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        this.plugin.refreshOpenViews();
+        setStatus(`Migrated ${result.migrated} schema(s); ${result.remaining} unmatched entity override(s) retained`, true);
+        new obsidian.Notice(`BOB Workspace: migrated ${result.migrated} entity override(s) into schema sources.`);
+      } catch (e) {
+        setStatus(`Migration failed: ${e.message}`, false);
+      }
+    });
 
     /* ─── Schemas ─── */
     containerEl.createEl('h3', { text: 'Schemas' });
     const schemasGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section' });
     const schemasPanel = schemasGroup.createDiv({ cls: 'setting-items' });
+    const configuredSchemas = WORKSPACE_CONFIG.schemas || {};
+    const schemaSettings = effectiveSchemaSettings(this.plugin.settings);
+    const schemasManaged = configuredSchemas.enabled != null || !!configuredSchemas.folder;
     new obsidian.Setting(schemasPanel)
       .setName('Use schema YAML files')
-      .setDesc('Read entity definitions (folders, type filters, field types, enum options) from Metadata Menu schema YAML files.')
-      .addToggle((t) => t
-        .setValue(this.plugin.settings.useSchemas)
-        .onChange(async (v) => {
+      .setDesc(`Read entity definitions (folders, type filters, field types, enum options) from Metadata Menu schema YAML files.${schemasManaged ? ' Managed by workspace.json.' : ''}`)
+      .addToggle((t) => {
+        t.setValue(!!schemaSettings.useSchemas);
+        if (schemasManaged) t.setDisabled(true);
+        return t.onChange(async (v) => {
           this.plugin.settings.useSchemas = v;
           await this.plugin.saveSettings();
           await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
           this.plugin.refreshOpenViews();
-        }));
+        });
+      });
     new obsidian.Setting(schemasPanel)
       .setName('Schemas folder')
-      .setDesc('Vault path where schema YAML files live (one per entity).')
-      .addText((t) => t
-        .setPlaceholder('00-CORE/Schemas/source')
-        .setValue(this.plugin.settings.schemasFolder)
-        .onChange(async (v) => {
+      .setDesc(`Vault path where schema YAML files live (one per entity).${schemasManaged ? ' Managed by workspace.json.' : ''}`)
+      .addText((t) => {
+        t.setPlaceholder('00-CORE/Schemas/source').setValue(schemaSettings.schemasFolder);
+        if (schemasManaged) t.setDisabled(true);
+        return t.onChange(async (v) => {
           this.plugin.settings.schemasFolder = v.trim() || '00-CORE/Schemas/source';
           await this.plugin.saveSettings();
+        });
+      });
+    new obsidian.Setting(schemasPanel)
+      .setName('Regenerate derived schema outputs')
+      .setDesc('Validate canonical YAML sources and regenerate Metadata Menu FileClasses and JSON Schemas.')
+      .addButton((button) => button
+        .setButtonText('Regenerate outputs')
+        .onClick(async () => {
+          try {
+            const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
+            new obsidian.Notice(`BOB Workspace: generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s).`);
+            await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+            this.plugin.refreshOpenViews();
+          } catch (e) {
+            new obsidian.Notice(`BOB Workspace: output generation failed - ${e.message}`);
+          }
         }));
+
+    const schemaDesigner = schemasPanel.createDiv({ cls: 'cad-schema-designer' });
+    const schemaDesignerHead = schemaDesigner.createDiv({ cls: 'cad-schema-designer-head' });
+    schemaDesignerHead.createEl('h4', { text: 'Data model designer' });
+    schemaDesignerHead.createEl('p', {
+      cls: 'setting-item-description',
+      text: 'Edit canonical entity schema YAML visually. Schema sources define record structure and BOB display hints; generated JSON Schemas and Metadata Menu FileClasses are derived with one click.',
+    });
+    const schemaToolbar = schemaDesigner.createDiv({ cls: 'cad-schema-designer-toolbar' });
+    const schemaSelect = schemaToolbar.createEl('select', { cls: 'dropdown' });
+    const schemaNew = schemaToolbar.createEl('button', { text: '+ New entity' });
+    const schemaReload = schemaToolbar.createEl('button', { text: 'Reload source' });
+    const schemaSave = schemaToolbar.createEl('button', { text: 'Save schema source', cls: 'mod-cta' });
+    const schemaSaveGenerate = schemaToolbar.createEl('button', { text: 'Save and regenerate', cls: 'mod-cta' });
+    const schemaDelete = schemaToolbar.createEl('button', { text: 'Archive source', cls: 'mod-warning' });
+    const schemaStatus = schemaDesigner.createDiv({ cls: 'cad-schema-designer-status setting-item-description' });
+    const schemaForm = schemaDesigner.createDiv({ cls: 'cad-schema-designer-form' });
+    let sourceSchema = null;
+    let sourceSchemaPath = '';
+    let schemaDirty = false;
+    let schemaFiles = [];
+    const initialSchemaPath = this._schemaDesignerSelectedPath || '';
+    const schemaFolder = (schemaSettings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
+
+    const setSchemaStatus = (text, ok = true) => {
+      schemaStatus.setText(text || '');
+      schemaStatus.toggleClass('cad-status-ok', !!ok);
+      schemaStatus.toggleClass('cad-status-err', !ok);
+    };
+    const markSchemaDirty = () => {
+      schemaDirty = true;
+      setSchemaStatus('Unsaved schema changes', true);
+    };
+    const commaList = (value) => Array.isArray(value) ? value.join(', ') : '';
+    const parseList = (value) => String(value || '').split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
+    const parsePairs = (value) => String(value || '').split(/\n/).map((line) => parseList(line)).filter((pair) => pair.length);
+    const discriminatorText = (value) => Object.entries(value || {}).map(([key, item]) => `${key}: ${item}`).join('\n');
+    const parseDiscriminator = (value) => {
+      const parsed = {};
+      String(value || '').split(/\n/).forEach((line) => {
+        const separator = line.indexOf(':');
+        if (separator < 0) return;
+        const key = line.slice(0, separator).trim();
+        const item = line.slice(separator + 1).trim();
+        if (key && item) parsed[key] = item;
+      });
+      return parsed;
+    };
+    const fieldRow = (parent, label) => {
+      const row = parent.createDiv({ cls: 'cad-schema-designer-row' });
+      row.createDiv({ cls: 'cad-schema-designer-label', text: label });
+      return row.createDiv({ cls: 'cad-schema-designer-control' });
+    };
+    const textControl = (parent, label, value, onInput, multiline = false) => {
+      const control = fieldRow(parent, label);
+      const input = multiline
+        ? control.createEl('textarea', { cls: 'cad-schema-designer-input' })
+        : control.createEl('input', { type: 'text', cls: 'cad-schema-designer-input' });
+      input.value = value || '';
+      if (multiline) input.rows = 2;
+      input.addEventListener('input', () => {
+        onInput(input.value);
+        markSchemaDirty();
+      });
+      return input;
+    };
+    const renderSourceSchema = () => {
+      schemaForm.empty();
+      if (!sourceSchema) {
+        schemaForm.createDiv({ cls: 'setting-item-description', text: 'Select an entity schema, or create a new one.' });
+        return;
+      }
+      const identity = schemaForm.createDiv({ cls: 'cad-schema-designer-section' });
+      identity.createEl('h5', { text: sourceSchemaPath || sourceSchema.entity });
+      textControl(identity, 'Entity key', sourceSchema.entity, (value) => { sourceSchema.entity = value.trim(); });
+      textControl(identity, 'Label', sourceSchema.label, (value) => { sourceSchema.label = value; });
+      textControl(identity, 'Plural label', sourceSchema.plural, (value) => {
+        if (value.trim()) sourceSchema.plural = value.trim();
+        else delete sourceSchema.plural;
+      });
+      const iconControl = fieldRow(identity, 'Default icon');
+      const iconButton = iconControl.createEl('button', { cls: 'cad-nav-designer-icon-button', attr: { type: 'button' } });
+      const renderSchemaIcon = () => {
+        iconButton.empty();
+        const preview = iconButton.createSpan({ cls: 'cad-nav-designer-icon-preview' });
+        try { obsidian.setIcon(preview, sourceSchema.icon || 'file-text'); } catch (_) {}
+        iconButton.createSpan({ cls: 'cad-nav-designer-icon-name', text: sourceSchema.icon || 'Choose icon' });
+      };
+      iconButton.addEventListener('click', () => new CadenceIconPickerModal(this.plugin.app, sourceSchema.icon, (iconId) => {
+        if (iconId) sourceSchema.icon = iconId;
+        else delete sourceSchema.icon;
+        markSchemaDirty();
+        renderSchemaIcon();
+      }).open());
+      renderSchemaIcon();
+      textControl(identity, 'Type value', sourceSchema.type_value, (value) => { sourceSchema.type_value = value.trim(); });
+      textControl(identity, 'Location pattern', sourceSchema.location_pattern, (value) => { sourceSchema.location_pattern = value.trim(); });
+      textControl(identity, 'Description', sourceSchema.description, (value) => { sourceSchema.description = value; }, true);
+      textControl(identity, 'Key fields', commaList(sourceSchema.key_fields), (value) => { sourceSchema.key_fields = parseList(value); });
+      textControl(identity, 'Lifecycle', commaList(sourceSchema.status_lifecycle), (value) => { sourceSchema.status_lifecycle = parseList(value); });
+      textControl(identity, 'Co-required pairs', (sourceSchema.co_required || []).map((pair) => pair.join(', ')).join('\n'), (value) => {
+        const pairs = parsePairs(value);
+        if (pairs.length) sourceSchema.co_required = pairs;
+        else delete sourceSchema.co_required;
+      }, true);
+      textControl(identity, 'Discriminator', discriminatorText(sourceSchema.discriminator), (value) => {
+        const discriminator = parseDiscriminator(value);
+        if (Object.keys(discriminator).length) sourceSchema.discriminator = discriminator;
+        else delete sourceSchema.discriminator;
+      }, true);
+      textControl(identity, 'BOB behavior JSON', sourceSchema.bob ? JSON.stringify(sourceSchema.bob, null, 2) : '', (value) => {
+        if (!value.trim()) {
+          delete sourceSchema.bob;
+          return;
+        }
+        try {
+          sourceSchema.bob = JSON.parse(value);
+        } catch (_) {
+          sourceSchema.bob = value;
+        }
+      }, true);
+
+      const fieldsSection = schemaForm.createDiv({ cls: 'cad-schema-designer-section' });
+      const fieldsHead = fieldsSection.createDiv({ cls: 'cad-schema-designer-fields-head' });
+      fieldsHead.createEl('h5', { text: 'Fields' });
+      const addField = fieldsHead.createEl('button', { text: '+ Add field' });
+      addField.addEventListener('click', () => {
+        if (!Array.isArray(sourceSchema.fields)) sourceSchema.fields = [];
+        sourceSchema.fields.push({ name: '', type: 'string', required: false });
+        markSchemaDirty();
+        renderSourceSchema();
+      });
+      (sourceSchema.fields || []).forEach((field, index) => {
+        const card = fieldsSection.createDiv({ cls: 'cad-schema-field' });
+        const row = card.createDiv({ cls: 'cad-schema-field-main' });
+        const nameInput = row.createEl('input', { type: 'text', cls: 'cad-schema-designer-input', placeholder: 'field_name' });
+        nameInput.value = field.name || '';
+        nameInput.addEventListener('input', () => { field.name = nameInput.value.trim(); markSchemaDirty(); });
+        const typeSelect = row.createEl('select', { cls: 'dropdown cad-schema-field-type' });
+        [['string', 'Text'], ['number', 'Number'], ['integer', 'Integer'], ['boolean', 'Boolean'], ['array', 'Array'], ['date', 'Date'], ['datetime', 'Date/time'], ['enum', 'Enum']].forEach(([value, label]) => {
+          typeSelect.createEl('option', { value, text: label });
+        });
+        typeSelect.value = editableSchemaFieldType(field);
+        typeSelect.addEventListener('change', () => {
+          applyEditableSchemaFieldType(field, typeSelect.value);
+          markSchemaDirty();
+          renderSourceSchema();
+        });
+        const requiredWrap = row.createEl('label', { cls: 'cad-schema-required' });
+        const required = requiredWrap.createEl('input', { type: 'checkbox' });
+        required.checked = !!field.required;
+        requiredWrap.appendText(' Required');
+        required.addEventListener('change', () => { field.required = required.checked; markSchemaDirty(); });
+        const up = row.createEl('button', { cls: 'cad-nav-designer-action', text: '\u2191', attr: { title: 'Move up' } });
+        up.disabled = index === 0;
+        up.addEventListener('click', () => {
+          if (index === 0) return;
+          [sourceSchema.fields[index - 1], sourceSchema.fields[index]] = [sourceSchema.fields[index], sourceSchema.fields[index - 1]];
+          markSchemaDirty();
+          renderSourceSchema();
+        });
+        const down = row.createEl('button', { cls: 'cad-nav-designer-action', text: '\u2193', attr: { title: 'Move down' } });
+        down.disabled = index === sourceSchema.fields.length - 1;
+        down.addEventListener('click', () => {
+          if (index >= sourceSchema.fields.length - 1) return;
+          [sourceSchema.fields[index], sourceSchema.fields[index + 1]] = [sourceSchema.fields[index + 1], sourceSchema.fields[index]];
+          markSchemaDirty();
+          renderSourceSchema();
+        });
+        const remove = row.createEl('button', { cls: 'cad-nav-designer-action danger', text: 'Remove' });
+        remove.addEventListener('click', () => {
+          sourceSchema.fields.splice(index, 1);
+          markSchemaDirty();
+          renderSourceSchema();
+        });
+        const detail = card.createDiv({ cls: 'cad-schema-field-detail' });
+        const displayControl = fieldRow(detail, 'BOB display');
+        const displayType = displayControl.createEl('select', { cls: 'dropdown cad-schema-field-type' });
+        [['', 'Derived'], ['text', 'Text'], ['email', 'Email'], ['currency', 'Currency'], ['tags', 'Tags'], ['date', 'Date'], ['enum', 'Enum'], ['number', 'Number']].forEach(([value, label]) => {
+          displayType.createEl('option', { value, text: label });
+        });
+        displayType.value = field.bob_type || '';
+        displayType.addEventListener('change', () => {
+          if (displayType.value) field.bob_type = displayType.value;
+          else delete field.bob_type;
+          markSchemaDirty();
+        });
+        if (typeSelect.value === 'enum') {
+          textControl(detail, 'Options', commaList(field.enum), (value) => { field.enum = parseList(value); });
+        }
+        textControl(detail, 'Description', field.description, (value) => {
+          if (value.trim()) field.description = value;
+          else delete field.description;
+        });
+      });
+    };
+    const loadSourceSchema = async (path) => {
+      if (!path) {
+        sourceSchema = null;
+        sourceSchemaPath = '';
+        schemaDirty = false;
+        renderSourceSchema();
+        return;
+      }
+      try {
+        sourceSchema = validateSourceSchemaDefinition(obsidian.parseYaml(await adapter.read(path)));
+        sourceSchemaPath = path;
+        this._schemaDesignerSelectedPath = path;
+        schemaDirty = false;
+        schemaSelect.value = path;
+        setSchemaStatus(`Loaded ${path}`, true);
+        renderSourceSchema();
+      } catch (e) {
+        sourceSchema = null;
+        sourceSchemaPath = path;
+        setSchemaStatus(`Cannot load ${path}: ${e.message}`, false);
+        renderSourceSchema();
+      }
+    };
+    const refreshSchemaSelect = async (preferredPath) => {
+      try {
+        const listed = await adapter.list(schemaFolder);
+        schemaFiles = (listed.files || [])
+          .filter((path) => /\.ya?ml$/i.test(path))
+          .sort((a, b) => a.localeCompare(b));
+      } catch (_) {
+        schemaFiles = [];
+      }
+      schemaSelect.empty();
+      schemaSelect.createEl('option', { value: '', text: '\u2014 select schema \u2014' });
+      schemaFiles.forEach((path) => schemaSelect.createEl('option', { value: path, text: path.slice(schemaFolder.length + 1) }));
+      const target = preferredPath || schemaFiles[0] || '';
+      schemaSelect.value = target;
+      await loadSourceSchema(target);
+    };
+    schemaSelect.addEventListener('change', async () => {
+      if (schemaDirty && !confirm('Discard unsaved schema changes?')) {
+        schemaSelect.value = sourceSchemaPath;
+        return;
+      }
+      await loadSourceSchema(schemaSelect.value);
+    });
+    schemaReload.addEventListener('click', async () => {
+      if (schemaDirty && !confirm('Discard unsaved schema changes?')) return;
+      await refreshSchemaSelect(sourceSchemaPath);
+    });
+    schemaNew.addEventListener('click', () => {
+      new CadencePromptModal(this.plugin.app, {
+        title: 'New entity schema',
+        placeholder: 'entity-key',
+        cta: 'Create',
+        onSubmit: async (value) => {
+          if (!value) return;
+          const entity = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          if (!entity) return;
+          const path = `${schemaFolder}/${entity}.yaml`;
+          if (await adapter.exists(path)) {
+            new obsidian.Notice(`BOB Workspace: schema already exists at ${path}.`);
+            await loadSourceSchema(path);
+            return;
+          }
+          sourceSchemaPath = path;
+          sourceSchema = {
+            entity,
+            label: entity.split('-').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+            type_value: entity,
+            location_pattern: `20-COMPANY/${entity.toUpperCase()}/`,
+            description: '',
+            key_fields: [],
+            fields: [{ name: 'type', type: 'string', required: true, enum: [entity] }],
+            status_lifecycle: [],
+          };
+          schemaDirty = true;
+          setSchemaStatus(`New schema draft: ${path}`, true);
+          renderSourceSchema();
+        },
+      }).open();
+    });
+    const saveSchemaSource = async (regenerate) => {
+      if (!sourceSchema || !sourceSchemaPath) return;
+      try {
+        validateSourceSchemaDefinition(sourceSchema);
+        await ensureFolderSync(this.plugin.app, schemaFolder);
+        const renamedPath = `${schemaFolder}/${sourceSchema.entity}.yaml`;
+        if (sourceSchemaPath !== renamedPath && await adapter.exists(sourceSchemaPath)) {
+          if (!confirm(`Rename schema source file to ${sourceSchema.entity}.yaml to match its entity key?`)) {
+            throw new Error('Entity key changes require renaming the canonical source file');
+          }
+          if (await adapter.exists(renamedPath)) throw new Error(`${renamedPath} already exists`);
+          await adapter.write(`${sourceSchemaPath}.backup`, await adapter.read(sourceSchemaPath));
+          await adapter.rename(sourceSchemaPath, renamedPath);
+          sourceSchemaPath = renamedPath;
+        } else if (!(await adapter.exists(sourceSchemaPath))) {
+          sourceSchemaPath = renamedPath;
+        }
+        if (await adapter.exists(sourceSchemaPath)) {
+          await adapter.write(`${sourceSchemaPath}.backup`, await adapter.read(sourceSchemaPath));
+        }
+        await adapter.write(sourceSchemaPath, obsidian.stringifyYaml(sourceSchema));
+        let outputText = '';
+        if (regenerate) {
+          const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
+          outputText = ` Generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s).`;
+        }
+        schemaDirty = false;
+        this._schemaDesignerSelectedPath = sourceSchemaPath;
+        if (!schemaFiles.includes(sourceSchemaPath)) schemaFiles.push(sourceSchemaPath);
+        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        this.plugin.refreshOpenViews();
+        new obsidian.Notice(`BOB Workspace: schema source saved and applied.${outputText}`);
+        this.display();
+      } catch (e) {
+        setSchemaStatus(`Save failed: ${e.message}`, false);
+        new obsidian.Notice(`BOB Workspace: schema source save failed - ${e.message}`);
+      }
+    };
+    schemaSave.addEventListener('click', async () => saveSchemaSource(false));
+    schemaSaveGenerate.addEventListener('click', async () => saveSchemaSource(true));
+    schemaDelete.addEventListener('click', async () => {
+      if (!sourceSchemaPath || !(await adapter.exists(sourceSchemaPath))) return;
+      if (!confirm(`Archive ${sourceSchemaPath}? It will stop loading as a record type and remain available as a timestamped backup.`)) return;
+      try {
+        const archivedPath = `${sourceSchemaPath}.archived-${Date.now()}`;
+        await adapter.rename(sourceSchemaPath, archivedPath);
+        sourceSchema = null;
+        sourceSchemaPath = '';
+        schemaDirty = false;
+        this._schemaDesignerSelectedPath = '';
+        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        this.plugin.refreshOpenViews();
+        new obsidian.Notice(`BOB Workspace: schema archived at ${archivedPath}.`);
+        this.display();
+      } catch (e) {
+        setSchemaStatus(`Archive failed: ${e.message}`, false);
+      }
+    });
+    setTimeout(() => refreshSchemaSelect(initialSchemaPath), 0);
 
     containerEl.createEl('h3', { text: 'Data import/export' });
     const dataGroup = containerEl.createDiv({ cls: 'setting-group cad-settings-section' });
@@ -9050,6 +10604,31 @@ class CadencePlugin extends obsidian.Plugin {
       name: 'Import entities from XLSX workbook',
       callback: async () => {
         await promptImportWorkbook(this.app, async () => this.refreshOpenViews());
+      },
+    });
+
+    this.addCommand({
+      id: 'create-workspace-config',
+      name: 'Create workspace.json template',
+      callback: async () => {
+        if (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH)) {
+          new obsidian.Notice(`workspace.json already exists at ${WORKSPACE_CONFIG_PATH}`);
+          return;
+        }
+        await this.app.vault.adapter.write(WORKSPACE_CONFIG_PATH, workspaceConfigTemplate(this.settings));
+        await reloadEntityConfiguration(this.app, this.settings);
+        this.refreshOpenViews();
+        new obsidian.Notice(`Created ${WORKSPACE_CONFIG_PATH} - edit it via Settings -> BOB Workspace -> Workspace definition.`);
+      },
+    });
+
+    this.addCommand({
+      id: 'reload-workspace-config',
+      name: 'Reload workspace.json',
+      callback: async () => {
+        await reloadEntityConfiguration(this.app, this.settings);
+        this.refreshOpenViews();
+        new obsidian.Notice('BOB Workspace: workspace configuration reloaded.');
       },
     });
 

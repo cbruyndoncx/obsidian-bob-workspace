@@ -40,10 +40,12 @@ to change product identity or remove functionality.
   and `VIEW_TYPE_CADENCE_APP` intentionally remain.
 - Markdown files and frontmatter remain the source of truth. The plugin is a
   workspace UI over vault data, not a parallel database.
-- Built-in entity definitions are fallbacks. For BOB vaults, schema YAML and
-  `.base` files are intended to describe the vault model and display behavior.
-- Prefer extending schemas, Bases, or plugin-folder `entities.json` when a
-  requested change is data-model configuration rather than application logic.
+- Built-in entity definitions are fallbacks. For BOB vaults, canonical schema
+  YAML describes record types and `.base` files describe display behavior.
+- Prefer extending schemas, Bases, or plugin-folder `workspace.json` when a
+  requested change is data-model/navigation configuration rather than
+  application logic. `entities.json` remains supported for entity-only legacy
+  overrides.
 
 Some supporting documents can lag the implementation. In particular, verify
 navigation and release behavior in `main.js`, `manifest.json`, and
@@ -75,7 +77,7 @@ publishing text.
 - Settings and folders: `DEFAULT_SETTINGS`, `CURRENT_CURRENCY`,
   `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`
 - Runtime configuration layers: `applySchemas()`, `applyCustomEntities()`,
-  `applyBaseOverrides()`, `reloadEntityConfiguration()`
+  `applyBaseOverrides()`, workspace registry loading, `reloadEntityConfiguration()`
 - Base parsing/evaluation: `parseBaseFile()`, Base filter helpers, grouping and
   sorting helpers
 - Data and import/export helpers, including XLSX workbook functions
@@ -92,7 +94,7 @@ Key classes:
 - `CadenceAppView` renders the application shell, responsive nav, all internal
   surfaces, generic tables, detail forms, dashboards, reports, and kanban.
 - `CadenceSettingTab` configures modules, surfaces, folders, Bases, schemas,
-  tasks, reminders, export/import, and `entities.json`.
+  tasks, reminders, export/import, `workspace.json`, and `entities.json`.
 - `CadenceCaptureModal`, `CadenceReminderEditModal`, `CadenceImportModal`,
   `CadenceEntityCreateModal`, and `CadencePromptModal` handle modal workflows.
 - `CadencePlaybookRunnerView` registers `agent-client-playbook-runner` as an
@@ -169,10 +171,16 @@ await app.vault.modify(file, updated);
 
 `reloadEntityConfiguration(app, settings)` applies configuration in this order:
 
-1. Reset to `BUILTIN_ENTITY_DEFAULTS` and current settings.
-2. If enabled, load Metadata Menu schema YAML using `applySchemas()`.
-3. Merge plugin-folder `entities.json` using `applyCustomEntities()`.
-4. Merge selected `.base` behavior using `applyBaseOverrides()`.
+1. Reset runtime navigation/export registries and load plugin-folder
+   `workspace.json` when present.
+2. Reset to `BUILTIN_ENTITY_DEFAULTS` and current settings.
+3. Apply configured groups/tabs/export groups.
+4. If enabled, load canonical schema YAML using `applySchemas()`; a schema can
+   introduce a generic record type without plugin code.
+5. Merge legacy plugin-folder `entities.json` and deprecated
+   `workspace.json.entities` only for backward compatibility.
+6. Merge `workspace.json.bases` behavior, then settings-selected `.base`
+   behavior for entities not controlled by workspace composition.
 
 Do not assume edits to `ENTITIES` alone control a BOB vault when schemas,
 custom overrides, or Bases are active.
@@ -198,9 +206,28 @@ implementing it first; it is not part of current `listEntityFiles()` behavior.
 
 ### Schemas, Bases, And Custom Entities
 
+- `workspace.json` is the preferred no-code composition file. It defines
+  `schemas`, `bases`, `navigation.groups`, `navigation.secondaryTabs`, and
+  `workbookGroups`; entity definitions belong in canonical schema YAML.
+  Deprecated `entities` content remains readable for migration compatibility.
+- The Settings navigation designer edits the same draft and supports adding
+  groups, moving unassigned record types or secondary tabs into groups,
+  choosing whether secondary children render as tabs or navigation-tree
+  entries, creating parent tab areas for newly configured children, editing
+  group/item icons through a searchable picker backed by Obsidian's registered
+  icon IDs, removing individual tabs or tree items back to their unassigned
+  pool, normalizing orphaned legacy secondary/setup children to primary
+  navigation in configured workspaces, and reordering groups/items.
 - Schema YAML defaults to `00-CORE/Schemas/source` when `useSchemas` is enabled.
-- Default Base mappings live in `DEFAULT_SETTINGS.baseFiles`; selected views
-  may contribute columns, filters, sort, group-by, or external view behavior.
+- Settings includes a Data model designer for canonical schema YAML. It creates
+  entity source files and edits identity/location, icons, discriminators,
+  co-required relationships, display hints and ordered fields, writing
+  `<schema>.backup` before save and reloading runtime configuration immediately.
+- **Save and regenerate** produces derived Metadata Menu FileClasses and JSON
+  Schemas from canonical YAML, using `type_value` for JSON Schema filenames
+  where present and pruning stale derived output files.
+- Base/view mappings are composition and belong in `workspace.json.bases`.
+  Settings can import older `data.json` Base selections into that mapping.
 - Unsupported Base filters are surfaced in UI warnings; preserve that
   transparency when extending Base support.
 - `entities.json` lives in the active plugin folder next to `data.json`, with
@@ -210,6 +237,8 @@ implementing it first; it is not part of current `listEntityFiles()` behavior.
 - Direct disk edits to plugin-folder `entities.json` require `Reload
   entities.json`, unless saved through Settings -> BOB Workspace -> Custom
   entities.
+- In schema-enabled vaults, use the Settings migration action to move matching
+  legacy entity presentation/behavior overrides into source YAML.
 
 ## Task, Import, And Export Behavior
 
@@ -248,8 +277,9 @@ CSV import, XLSX import/export, configured Bases, and schema-derived entities.
 ## Common Extension Tasks
 
 For a new entity that can be vault-configured, prefer a schema and/or
-`entities.json` over code. Code changes are justified for first-class nav,
-custom rendering, new widgets, or new import/export behavior.
+`workspace.json` over code. Code changes are justified for bespoke rendering,
+new widgets, or new import/export behavior; generic entity lists and tab/nav
+composition should be configured.
 
 When adding a built-in entity in code:
 

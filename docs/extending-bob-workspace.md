@@ -1,6 +1,6 @@
 # Extending BOB Workspace Without Code Changes
 
-BOB Workspace is still structurally based on the Cadence plugin, but the goal is not to make every vault adopt Cadence's original field names. The plugin should act as a workspace shell over markdown entities, while each vault defines its own data model through schemas, Bases, and optional JSON overrides.
+BOB Workspace is still structurally based on the Cadence plugin, but the goal is not to make every vault adopt Cadence's original field names. The plugin should act as a workspace shell over markdown entities, while each vault defines its own data model through canonical schemas and Bases.
 
 This guide explains the intended extension model.
 
@@ -16,8 +16,9 @@ The plugin has several layers. Later layers should refine or override earlier la
 
 2. **Schema layer**
    - YAML files in `00-CORE/Schemas/source/`.
-   - Primary source for BOB Workspace entity fields when schema support is enabled.
-   - Defines field keys, labels, types, enums, required flags, and type values.
+   - Canonical source for BOB Workspace entity definitions when schema support is enabled.
+   - Defines entity identity, location, field keys, types, enums, required flags, and lifecycles.
+   - Edited visually from Settings -> BOB Workspace -> Schemas -> Data model designer.
 
 3. **Base layer**
    - `.base` files in `00-CORE/Bases/`.
@@ -26,15 +27,110 @@ The plugin has several layers. Later layers should refine or override earlier la
 
 4. **Custom entity layer**
    - `entities.json` in the plugin folder next to Obsidian's `data.json`.
-   - Lets a vault add entities or override built-in entity fields without editing plugin code.
-   - Managed from Settings -> BOB Workspace -> Custom entities, or reloaded with the `Reload entities.json` command.
+   - Compatibility input for pre-schema configurations.
+   - Existing overrides can be migrated into schema YAML from Settings.
 
-5. **Import alias layer**
+5. **Workspace definition layer**
+   - `workspace.json` in the plugin folder next to `data.json`.
+   - Owns schema enablement, Base/view associations, navigation groups,
+     surfaces, secondary tabs, and workbook export groups.
+   - Managed from Settings -> BOB Workspace -> Workspace definition, or
+     reloaded with the `Reload workspace.json` command.
+
+6. **Import alias layer**
    - Maps spreadsheet/frontmatter aliases to canonical field keys.
    - Useful when importing from Cadence, another CRM, or another vault.
    - This is currently partly built in; long term it should be first-class configuration.
 
 The most important rule: **the vault data model should live in the vault, not in plugin code.**
+
+## Workspace Definition
+
+`workspace.json` is the no-code composition layer. When `navigation.groups`
+is present, it replaces the built-in left-navigation definition. Its
+`secondaryTabs` object replaces built-in inner tab definitions, and
+`workbookGroups` replaces export group choices.
+
+Entity-backed configured surfaces use the generic record table/detail UI.
+Existing built-in surface IDs such as `home` and `crm.pipeline` retain their
+specialized renderer when they are included in configured navigation. A new
+specialized dashboard still requires plugin code.
+
+Minimal example:
+
+```json
+{
+  "schemas": {
+    "enabled": true,
+    "folder": "00-CORE/Schemas/source"
+  },
+  "bases": {
+    "order": {
+      "file": "00-CORE/Bases/Orders.base",
+      "view": "Active Orders"
+    }
+  },
+  "navigation": {
+    "groups": [
+      {
+        "id": "operations",
+        "label": "Operations",
+        "icon": "blocks",
+        "module": "operations",
+        "items": [
+          { "id": "operations.orders", "label": "Orders", "icon": "package", "module": "operations", "entityKey": "order" }
+        ]
+      }
+    ],
+    "secondaryTabs": {}
+  },
+  "workbookGroups": [
+    { "id": "operations", "label": "Operations", "entityKeys": ["order"] }
+  ]
+}
+```
+
+Use `bases.<entity>.file` and optional `view` to make each Base selection part
+of the portable workspace definition. The surface Base selectors write this
+mapping directly, and **Import Bases from settings** migrates older choices.
+
+Navigation icons are presentation configuration and therefore live in
+`workspace.json`, except an entity's default icon can be set in canonical
+schema YAML. Set `navigation.groups[].icon` and each item's `icon` for the
+actual rendered group and menu-item icons. The Navigation designer provides a
+searchable preview picker sourced from the icon IDs registered by the running
+Obsidian application.
+
+Secondary tabs are a deeper navigation level. A tab defined under
+`navigation.secondaryTabs` stays in its parent's tab bar until it is dragged
+into a navigation group. The designer then adds its surface with
+`"placement": "navigation"` and renders it only in the tree. Choosing
+**As tabs** removes that tree placement and returns it to its parent tab bar.
+For a new parent surface, use **+ Tabs** on its navigation row, then drop a
+record type or an existing entity-backed navigation item into that parent's
+tab area.
+
+Settings also provides a **Navigation designer** over the same JSON draft:
+
+- Add groups without editing JSON.
+- The record type and secondary tab panels show only unassigned items; drag an
+  item into a group to expose it in navigation.
+- Use **+ Tabs** on a navigation parent and drop children into its tab area to
+  create deeper navigation without editing JSON.
+- Drag items between groups and drag group headers to reorder navigation.
+- Choose registered Obsidian icons for groups and menu items with searchable
+  previews.
+- Move secondary child items back to their parent tab bar with **As tabs**.
+- Remove an individual tab with the `x` on its tab chip. If that child already
+  exists in navigation, it becomes a primary item; otherwise an entity-backed
+  tab returns to the unassigned record type pool.
+- Legacy secondary or setup items copied into configured navigation are
+  normalized to primary items when they are not owned by an active tab area.
+- Remove other navigation items with their **Remove** button or the
+  drop-to-remove area; they return to the applicable unassigned panel.
+
+The designer updates the `workspace.json` editor draft. Click **Save and
+apply** to persist and activate its arrangement.
 
 ## Template Folders
 
@@ -50,6 +146,9 @@ Each entity type normally needs:
 - A folder or folder set where records usually live.
 - A field list.
 - Optional Base views.
+
+Filename-backed system records are an intentional exception; for example,
+`skill` records resolve `SKILL.md` files and do not require `type_value`.
 
 The plugin can find entity files by:
 
@@ -67,13 +166,18 @@ These filters are combined carefully:
 
 ## Schemas
 
-Schema files are the preferred way to define BOB Workspace fields.
+Schema files are the canonical way to define BOB Workspace record types. With
+schema support enabled, author `00-CORE/Schemas/source/*.yaml` through the
+Settings **Data model designer** or carefully as YAML source. Treat generated
+FileClasses, JSON Schemas and data-model documentation as downstream outputs.
 
 Example:
 
 ```yaml
 entity: person
 label: Person
+plural: People
+icon: users
 type_value: person
 location_pattern: 10-ME/10-PEOPLE/ or 30-CLIENTS/{id}/10-PEOPLE/
 key_fields:
@@ -102,6 +206,17 @@ fields:
 ```
 
 When schemas are enabled, BOB Workspace uses these fields to enrich built-in entities. That means workbook export/import, create forms, and entity tables can use the vault's field names instead of Cadence's original names.
+
+The Data model designer supports creating entity schema sources and editing
+identity, icon, type value, location pattern, key fields, lifecycle values,
+co-required relationships, discriminators, ordered fields, field types,
+required flags, enum options, display hints and advanced BOB behavior. A save
+writes a sibling `.backup` file before updating source YAML and reloads BOB
+Workspace immediately. **Save and regenerate** validates all source schemas
+and writes Metadata Menu FileClasses and JSON Schemas as derived outputs.
+JSON Schema filenames follow `type_value` where present, matching frontmatter
+identity; regeneration removes stale derived outputs after source rename or
+archive.
 
 ## Bases
 
@@ -150,7 +265,9 @@ This keeps the vault model DRY: derived views should compose existing entity sch
 
 ## Custom Entities
 
-Use `entities.json` when a vault does not use BOB schemas, or when a specific vault needs local overrides.
+`entities.json` is a compatibility layer for vaults that have not migrated to
+canonical schemas. For schema-enabled vaults, use **Migrate into schemas** in
+Settings; unmatched legacy records are retained rather than discarded.
 
 Example:
 
@@ -172,14 +289,9 @@ Example:
 }
 ```
 
-Recommended uses:
-
-- Add a new entity type.
-- Override fields for a built-in entity.
-- Change folder/type filters for another vault.
-- Add local labels or enum values.
-
-Avoid using `entities.json` for broad BOB model changes that should live in schemas.
+Do not add new model definitions here in a schema-enabled vault. Canonical
+field definitions, labels, display hints and BOB behavior belong in schema
+YAML.
 
 ## Field Aliases
 
@@ -218,8 +330,8 @@ For a BOB vault:
 
 1. Create a schema in `00-CORE/Schemas/source/{entity}.yaml`.
 2. Create a Base in `00-CORE/Bases/{Entity}.base` if the entity needs custom views.
-3. Add or enable a navigation item if the plugin already supports that nav group.
-4. Use `entities.json` only if the schema layer is not enough.
+3. Arrange the entity in navigation or a secondary tab using the Navigation designer.
+4. Associate a Base/view in Settings; it is stored in `workspace.json.bases`.
 5. Test create, list, workbook export, workbook import, and Base view switching.
 
 For a non-BOB vault:
@@ -233,14 +345,14 @@ For a non-BOB vault:
 
 Most entity and field changes should not require code. Code is only needed for:
 
-- new navigation groups or first-class surfaces
+- specialized non-generic surfaces
 - custom non-table UI behavior
 - new field widget types
 - new import/export formats
 - deeper Base feature support
 - new commands/settings
 
-If a change is just "this entity has a different field", it should be a schema or `entities.json` change, not a plugin code change.
+If a change is just "this entity has a different field", it should be a schema change, not a plugin code change.
 
 ## Current Maintenance Notes
 
