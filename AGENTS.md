@@ -224,10 +224,13 @@ implementing it first; it is not part of current `listEntityFiles()` behavior.
 - Schema YAML defaults to `00-CORE/Schemas/source` when `useSchemas` is enabled.
 - Settings includes a Data model designer for canonical schema YAML. It creates
   entity source files and edits identity/location, icons, discriminators,
-  co-required relationships, import `field_aliases`, display hints and ordered fields, writing
+  co-required relationships, import `field_aliases`, create `default` values,
+  display hints and ordered fields, writing
   `<schema>.backup` before save and reloading runtime configuration immediately.
 - Schema `field_aliases` are keyed by canonical field name and list accepted
   CSV/XLSX header names; both import paths consume them.
+- Schema field `default` values initialize new records; `{{today}}` is
+  resolved at creation time for date-like fields.
 - **Save and regenerate** produces derived Metadata Menu FileClasses and JSON
   Schemas from canonical YAML, using `type_value` for JSON Schema filenames
   where present and pruning stale derived output files.

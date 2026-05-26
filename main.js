@@ -937,7 +937,7 @@ const ENTITIES = {
       { key: 'project_id', label: 'Project ID' },
       { key: 'project', label: 'Project' },
       { key: 'owner', label: 'Owner' },
-      { key: 'stage',   label: 'Stage',   type: 'enum', options: ['lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'] },
+      { key: 'stage',   label: 'Stage',   type: 'enum', options: ['lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'], defaultValue: 'lead' },
       { key: 'deal_value', label: 'Deal Value', type: 'currency' },
       { key: 'deal_source', label: 'Source', type: 'enum', options: ['referral', 'inbound', 'outbound', 'event', 'partner'] },
       { key: 'probability', label: 'Probability', type: 'number' },
@@ -1620,6 +1620,8 @@ function fieldsFromSchema(schema, existingFields = []) {
       else if (field.type && !existing.type) delete field.type;
     }
     if (sf.bob_type) field.type = sf.bob_type;
+    if (Object.prototype.hasOwnProperty.call(sf, 'default')) field.defaultValue = cloneConfig(sf.default);
+    else delete field.defaultValue;
     return field;
   });
   (existingFields || []).forEach((field) => {
@@ -2234,6 +2236,19 @@ function validateSourceSchemaDefinition(schema) {
     if (field.enum != null && !Array.isArray(field.enum)) {
       throw new Error(`Field "${name}" enum must be a list`);
     }
+    if (field.default != null && Array.isArray(field.enum) && !field.enum.includes(field.default)) {
+      throw new Error(`Field "${name}" default must be one of its enum values`);
+    }
+    if (field.default != null && field.type === 'array' && !Array.isArray(field.default)) {
+      throw new Error(`Field "${name}" default must be a list`);
+    }
+    if (field.default != null && (field.type === 'number' || field.type === 'integer') &&
+        typeof field.default !== 'number') {
+      throw new Error(`Field "${name}" default must be a number`);
+    }
+    if (field.default != null && field.type === 'boolean' && typeof field.default !== 'boolean') {
+      throw new Error(`Field "${name}" default must be true or false`);
+    }
   });
   (schema.key_fields || []).forEach((name) => {
     if (!fieldNames.has(name)) throw new Error(`Key field "${name}" is not defined in fields`);
@@ -2300,6 +2315,35 @@ function applyEditableSchemaFieldType(field, value) {
   }
 }
 
+function editableSchemaFieldDefault(field) {
+  if (!Object.prototype.hasOwnProperty.call(field || {}, 'default')) return '';
+  return Array.isArray(field.default) ? field.default.join(', ') : String(field.default);
+}
+
+function applyEditableSchemaFieldDefault(field, value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) {
+    delete field.default;
+    return;
+  }
+  if (field.type === 'array') {
+    field.default = trimmed.split(',').map((item) => item.trim()).filter(Boolean);
+    return;
+  }
+  if (field.type === 'number' || field.type === 'integer') {
+    const number = Number(trimmed);
+    field.default = Number.isFinite(number) ? number : trimmed;
+    return;
+  }
+  if (field.type === 'boolean') {
+    field.default = trimmed.toLowerCase() === 'true' ? true
+      : trimmed.toLowerCase() === 'false' ? false
+      : trimmed;
+    return;
+  }
+  field.default = trimmed;
+}
+
 async function loadCanonicalSchemaSources(app, settings = {}) {
   const folder = (WORKSPACE_CONFIG.schemas?.folder || settings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
   if (!await app.vault.adapter.exists(folder)) return { folder, schemas: [], errors: [] };
@@ -2341,6 +2385,7 @@ function sourceSchemaToJsonSchema(schema) {
     if (field.format) property.format = field.format;
     if (Array.isArray(field.enum) && field.enum.length) property.enum = field.enum;
     if (field.description) property.description = field.description;
+    if (Object.prototype.hasOwnProperty.call(field, 'default')) property.default = field.default;
     if (field.type === 'array') property.items = { type: 'string' };
     properties[field.name] = property;
     if (field.required) required.push(field.name);
@@ -2807,6 +2852,26 @@ function fmtValue(val, type) {
   return String(val);
 }
 
+function resolveEntityFieldDefault(field) {
+  if (!Object.prototype.hasOwnProperty.call(field || {}, 'defaultValue')) return undefined;
+  if (field.defaultValue === '{{today}}') return ymd();
+  return cloneConfig(field.defaultValue);
+}
+
+function templateFieldValue(field, isPrimary, name) {
+  if (isPrimary) return name;
+  const configured = resolveEntityFieldDefault(field);
+  if (configured !== undefined) return configured;
+  if (field.type === 'tags') return [];
+  if (field.type === 'number' || field.type === 'currency') return 0;
+  return '';
+}
+
+function yamlTemplateLine(key, value) {
+  const serialized = obsidian.stringifyYaml({ [key]: value }).trim();
+  return serialized || `${key}:`;
+}
+
 function entityTemplate(entityKey, name) {
   if (entityKey === 'project') return projectTemplate(name);
 
@@ -2817,20 +2882,12 @@ function entityTemplate(entityKey, name) {
   // Otherwise we'd emit duplicate YAML keys and the file fails to parse.
   const hasTypeField = def.fields.some((f) => f.key === 'type');
   if (!hasTypeField) {
-    lines.push(`type: ${def.typeFilter || entityKey}`);
+    lines.push(yamlTemplateLine('type', def.typeFilter || entityKey));
   }
 
   def.fields.forEach((f) => {
-    if (f.key === primaryFieldKey(def)) lines.push(`${f.key}: ${name}`);
-    else if (f.type === 'tags') lines.push(`${f.key}: []`);
-    else if (f.type === 'number' || f.type === 'currency') lines.push(`${f.key}: 0`);
-    else lines.push(`${f.key}:`);
+    lines.push(yamlTemplateLine(f.key, templateFieldValue(f, f.key === primaryFieldKey(def), name)));
   });
-  // Pipeline default stage
-  if (entityKey === 'deal') {
-    const idx = lines.findIndex((l) => l.startsWith('stage:'));
-    if (idx >= 0) lines[idx] = 'stage: lead';
-  }
   lines.push('---', '', `# ${name}`, '', '');
   return lines.join('\n');
 }
@@ -4423,14 +4480,6 @@ class CadenceEntityCreateModal extends obsidian.Modal {
         input = row.createEl('select', { cls: 'cad-create-input' });
         input.createEl('option', { value: '', text: '— —' });
         (f.options || []).forEach((opt) => input.createEl('option', { value: opt, text: opt }));
-        // Smart defaults — first option for stage/status fields
-        if (['stage', 'status', 'priority', 'tier', 'type'].includes(f.key) && f.options && f.options.length) {
-          const sensible = f.key === 'stage' ? (f.options.includes('lead') ? 'lead' : 'Lead')
-            : f.key === 'status' ? (f.options.find((o) => /active|new|draft|submitted|pending/i.test(o)) || f.options[0])
-            : f.key === 'priority' ? (f.options.find((o) => /medium/i.test(o)) || f.options[0])
-            : f.options[0];
-          if (f.options.includes(sensible)) input.value = sensible;
-        }
       } else if (fieldType === 'date') {
         input = row.createEl('input', { type: 'date', cls: 'cad-create-input' });
         input.lang = navigator.language || '';
@@ -4446,6 +4495,10 @@ class CadenceEntityCreateModal extends obsidian.Modal {
       } else {
         input = row.createEl('input', { type: 'text', cls: 'cad-create-input' });
         input.placeholder = this._placeholderFor(f, isPrimary);
+      }
+      const defaultValue = resolveEntityFieldDefault(f);
+      if (!isPrimary && defaultValue !== undefined) {
+        input.value = Array.isArray(defaultValue) ? defaultValue.join(', ') : String(defaultValue);
       }
       input.dataset.fieldKey = f.key;
       input.dataset.fieldType = fieldType;
@@ -10372,6 +10425,9 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         if (typeSelect.value === 'enum') {
           textControl(detail, 'Options', commaList(field.enum), (value) => { field.enum = parseList(value); });
         }
+        textControl(detail, 'Default value', editableSchemaFieldDefault(field), (value) => {
+          applyEditableSchemaFieldDefault(field, value);
+        });
         textControl(detail, 'Description', field.description, (value) => {
           if (value.trim()) field.description = value;
           else delete field.description;

@@ -17,7 +17,8 @@ The plugin has several layers. Later layers should refine or override earlier la
 2. **Schema layer**
    - YAML files in `00-CORE/Schemas/source/`.
    - Canonical source for BOB Workspace entity definitions when schema support is enabled.
-   - Defines entity identity, location, field keys, types, enums, required flags, and lifecycles.
+   - Defines entity identity, location, field keys, types, enums, required flags,
+     create defaults, and lifecycles.
    - Edited visually from Settings -> BOB Workspace -> Schemas -> Data model designer.
 
 3. **Base layer**
@@ -215,6 +216,12 @@ fields:
   - personal-contact
   - prospect
   - other
+- name: status
+  type: string
+  enum:
+  - active
+  - archived
+  default: active
 field_aliases:
   name:
   - full name
@@ -226,14 +233,19 @@ When schemas are enabled, BOB Workspace uses these fields to enrich built-in ent
 The Data model designer supports creating entity schema sources and editing
 identity, icon, type value, location pattern, key fields, lifecycle values,
 co-required relationships, discriminators, import field aliases, ordered
-fields, field types, required flags, enum options, display hints and advanced
-BOB behavior. A save
+fields, field types, required flags, enum options, create defaults, display
+hints and advanced BOB behavior. A save
 writes a sibling `.backup` file before updating source YAML and reloads BOB
 Workspace immediately. **Save and regenerate** validates all source schemas
 and writes Metadata Menu FileClasses and JSON Schemas as derived outputs.
 JSON Schema filenames follow `type_value` where present, matching frontmatter
 identity; regeneration removes stale derived outputs after source rename or
 archive.
+
+Field `default` values populate new-record forms and newly created notes.
+Use literal values for text, enum, number, boolean or list fields. Date fields
+also accept `{{today}}`, resolved when a note is created. JSON Schema outputs
+retain these defaults as derived documentation and validation metadata.
 
 ## Bases
 
