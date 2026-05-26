@@ -1531,6 +1531,12 @@ const WORKSPACE_OWNED_SETTING_KEYS = [
   'folderPlaybooks',
   'folderSkills',
   'projectFolders',
+  'dailyNoteFolder',
+  'journalHeading',
+  'tasksHeading',
+  'defaultTab',
+  'reminders',
+  'taskProjectLinks',
 ];
 
 function workspaceOwnedSettings(settings = {}) {
