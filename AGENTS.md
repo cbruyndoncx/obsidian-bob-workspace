@@ -4,138 +4,298 @@ Guidance for Codex and other coding agents working in this repository.
 
 ## Project
 
-This repository is `cbruyndoncx/obsidian-bob-workspace`, a customized BOB Workspace fork of the Cadence Obsidian plugin. It is a vault-native workspace for CRM, PRM, SRM, project management, daily planning, reports, and reminders.
+This repository is `cbruyndoncx/obsidian-bob-workspace`, a BOB Workspace fork
+of the Cadence Obsidian plugin. It provides a vault-native workspace for
+planning, CRM, client delivery, partner management, suppliers/procurement,
+finance/tax, AI playbooks and skills, reports, and reminders.
 
-The plugin has no build step. Obsidian loads these files directly:
+Current plugin identity in `manifest.json`:
 
-- `main.js` - all plugin logic
-- `styles.css` - plugin styles
+- ID: `bob-workspace`
+- Name: `BOB Workspace`
+- Version: `0.14.4-bob.2`
+- Minimum Obsidian version: `1.4.0`
+- Author: `cbruyndoncx`
+
+The plugin has no build step. Obsidian loads shipping artifacts directly:
+
+- `main.js` - all plugin behavior
+- `styles.css` - fallback/plugin styles
 - `manifest.json` - plugin metadata
-- `versions.json` - Obsidian release compatibility map
+- `versions.json` - release compatibility map
+- `vendor/xlsx.full.min.js` - bundled SheetJS dependency for XLSX workflows
 
-Manual test installs copy `main.js`, `styles.css`, and `manifest.json` into `<vault>/.obsidian/plugins/cadence-planner/` or the configured plugin folder.
+Manual test installs copy `main.js`, `styles.css`, `manifest.json`, and
+`vendor/xlsx.full.min.js` into `<vault>/.obsidian/plugins/bob-workspace/`.
+Do not use the upstream `cadence-planner` plugin folder for this fork unless
+testing an explicit migration or compatibility scenario.
 
-## Current Customization Context
+## Product Direction
 
-Claude has already customized this fork. Preserve that direction unless the user explicitly asks to revert it.
+Preserve the current BOB Workspace direction unless the user explicitly asks
+to change product identity or remove functionality.
 
-Important customized behavior:
+- User-facing branding is BOB Workspace, while internal compatibility names
+  such as `CadencePlugin`, `CadenceAppView`, `cad-` CSS classes, command IDs,
+  and `VIEW_TYPE_CADENCE_APP` intentionally remain.
+- Markdown files and frontmatter remain the source of truth. The plugin is a
+  workspace UI over vault data, not a parallel database.
+- Built-in entity definitions are fallbacks. For BOB vaults, schema YAML and
+  `.base` files are intended to describe the vault model and display behavior.
+- Prefer extending schemas, Bases, or plugin-folder `entities.json` when a
+  requested change is data-model configuration rather than application logic.
 
-- Plugin identity is BOB Workspace flavored: `manifest.json` has id `bob-workspace`, name `BOB Workspace`, version `0.13.8-bob.1`, and author `cbruyndoncx`.
-- UI labels, notices, commands, ribbon tooltips, settings copy, and desktop notifications have been renamed from plain Cadence to BOB Workspace / BOB Workspace Cadence in many places.
-- The plugin remains structurally based on Cadence, and some internal names still use `Cadence`, `cad-`, or `cadence` for compatibility.
-- Custom entities now live in the plugin folder as `entities.json`, next to Obsidian plugin `data.json`, with `entities.backup.json` written on save.
-- A legacy vault copy at `Cadence/entities.json` is migrated into the plugin folder on first load when no plugin-folder config exists. The legacy file is retained as a safety copy.
-- Direct edits to plugin-folder `entities.json` are not watched by Obsidian vault events. Use Settings -> BOB Workspace Cadence -> Custom entities, or run the command `Reload entities.json`.
-- The settings UI includes an in-settings JSON editor for custom entities with validation, formatting, save, and restore backup.
-- Schema support can derive entity definitions from Metadata Menu schema YAML in `00-CORE/Schemas/source` when `useSchemas` is enabled.
+Some supporting documents can lag the implementation. In particular, verify
+navigation and release behavior in `main.js`, `manifest.json`, and
+`versions.json` before relying on generated inventories or upstream-oriented
+publishing text.
 
-## Architecture
+## Repository Layout
 
-`main.js` is organized roughly as:
+- `main.js` - monolithic, directly loaded plugin source.
+- `styles.css` - theme-agnostic UI styles, dark mode, responsive/mobile rules,
+  entity table editing, dashboards, modals, and Playbook Runner styles.
+- `manifest.json` and `versions.json` - current BOB Workspace release metadata.
+- `vendor/xlsx.full.min.js` and `vendor/xlsx.LICENSE` - bundled XLSX support.
+- `docs/extending-bob-workspace.md` - schema/Base/entities extension model.
+- `docs/navigation-inventory.md` and `docs/entity-setup-audit.md` - useful
+  generated snapshots, but confirm against current code before editing.
+- `CLAUDE.md` - broader implementation notes; keep it aligned when changes
+  materially alter shared architecture.
+- `SUBMISSION.md` - inherited/upstream-oriented release notes in places; do
+  not blindly reuse its old plugin IDs, repository URLs, or asset list.
 
-- Nav structure: `NAV_GROUPS`, `ALL_SURFACES`, `SURFACE_BY_ID`
-- Entity registry: `ENTITIES`
-- Settings: `DEFAULT_SETTINGS`, `CURRENT_CURRENCY`, `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`
-- Custom entity loader: `initEntitiesPaths()`, `migrateLegacyEntitiesConfig()`, `saveEntitiesConfig()`, `applyCustomEntities()`, `clearCustomEntities()`
-- Schema loader: `applySchemas()`
-- Utility functions: date/time, file I/O, parsing, formatting
+## Main Architecture
+
+`main.js` is organized around:
+
+- Navigation and grouping: `NAV_GROUPS`, `ALL_SURFACES`, `SURFACE_BY_ID`,
+  `SURFACES_BY_ENTITY_KEY`, `SECONDARY_TABS`, `WORKBOOK_EXPORT_GROUPS`
+- Entity model: `ENTITIES`, `BUILTIN_ENTITY_DEFAULTS`, deal/activity accessors
+- Settings and folders: `DEFAULT_SETTINGS`, `CURRENT_CURRENCY`,
+  `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`
+- Runtime configuration layers: `applySchemas()`, `applyCustomEntities()`,
+  `applyBaseOverrides()`, `reloadEntityConfiguration()`
+- Base parsing/evaluation: `parseBaseFile()`, Base filter helpers, grouping and
+  sorting helpers
+- Data and import/export helpers, including XLSX workbook functions
 - Modal classes
-- Main app view: `CadenceAppView`
-- Settings UI: `CadenceSettingTab`
+- Main view: `CadenceAppView`
+- Settings tab: `CadenceSettingTab`
+- Optional Bases custom view: `CadencePlaybookRunnerView`
 - Plugin entry: `CadencePlugin`
 
 Key classes:
 
-- `CadencePlugin` registers commands, settings, views, hotkeys, reminders, and startup behavior.
-- `CadenceAppView` renders all internal surfaces.
-- `CadenceSettingTab` renders settings, including modules, folders, schema settings, and custom entities.
-- `CadenceCaptureModal`, `CadenceReminderEditModal`, `CadenceImportModal`, `CadenceEntityCreateModal`, and `CadencePromptModal` handle modal workflows.
+- `CadencePlugin` registers views, commands, settings, reminders, reload
+  behavior, workbook commands, and the optional Bases custom view.
+- `CadenceAppView` renders the application shell, responsive nav, all internal
+  surfaces, generic tables, detail forms, dashboards, reports, and kanban.
+- `CadenceSettingTab` configures modules, surfaces, folders, Bases, schemas,
+  tasks, reminders, export/import, and `entities.json`.
+- `CadenceCaptureModal`, `CadenceReminderEditModal`, `CadenceImportModal`,
+  `CadenceEntityCreateModal`, and `CadencePromptModal` handle modal workflows.
+- `CadencePlaybookRunnerView` registers `agent-client-playbook-runner` as an
+  Obsidian Bases custom view when that API exists.
 
-## Data Model
+## Current Surfaces And Modules
 
-Entities are markdown files with YAML frontmatter. `ENTITIES` defines fields, columns, folders, type filters, and special field names.
+Navigation is module-driven and supports hidden secondary/setup items plus
+inner tab bars defined by `SECONDARY_TABS`.
 
-Supported field types include `text`, `email`, `number`, `currency`, `date`, `enum`, and `tags`.
+- Planner: Inbox, Today, Calendar, TaskNotes, Projects
+- CRM: Dashboard, Pipeline, Contacts, Clients, My Companies, Leads,
+  Campaigns/Sequences, Activities
+- Client Work: overview plus Meetings, Comms, Deliverables, Feedback, Surveys,
+  Testimonials, and Decisions; overview selectors filter by client and project
+- PRM: Partners, Registrations, Commissions, Certifications, Analytics
+- Finance: Customer Invoices, General Ledger, Finance Setup, Tax, and their
+  accounting/compliance child entity lists
+- Suppliers & Procurement: Suppliers, Supplier Invoices, Purchase
+  Requisitions, Purchase Orders
+- Reports: Pipeline, Sales, Partners, Activity, Productivity
+- Team: a filtered People/contact view using configurable
+  `person_category` values, not a separate entity
+- AI Workspace: Playbooks and Skills
 
-Always use Obsidian frontmatter APIs for frontmatter writes:
+`showSecondaryNav` and `showSetupNav` control whether lower-frequency children
+appear in the left nav; those screens remain accessible through parent tabs.
+
+Important specialized behavior:
+
+- Pipeline is a deal kanban. Drag-to-change-stage is desktop-only; mobile
+  opens cards for editing rather than relying on HTML drag events.
+- Generic entity tables support sorting, enum column filters, inline editing,
+  multi-select, and bulk trashing.
+- Entity detail forms use frontmatter writes; project detail also edits note
+  body sections and task/milestone markdown.
+- External/non-table Base views delegate display to Obsidian Bases and expose
+  an `Open Base` action instead of duplicating the view.
+- Client Work child lists force the internal table so configured non-table
+  Base views do not make those embedded lists disappear.
+- Mobile layout includes a navigation drawer, compact briefing behavior, and
+  safe-area/responsive CSS.
+
+## Entity And Vault Model
+
+Entities are markdown notes with YAML frontmatter. `ENTITIES` defines fallback
+labels, fields, columns, folder/type matching, and specialized metadata.
+Built-in entities now cover planner, CRM, client-work, PRM, supplier and
+procurement, finance/tax, plus `playbook` and `skill`.
+
+Supported field UI types include `text`, `email`, `number`, `currency`,
+`date`, `enum`, and `tags`.
+
+Always use Obsidian frontmatter APIs for frontmatter mutation:
 
 ```javascript
 await app.fileManager.processFrontMatter(file, (fm) => {
-  fm.stage = 'Won';
+  fm.stage = 'won';
 });
 ```
 
-Do not manually string-replace YAML frontmatter.
+Do not manually replace YAML frontmatter text.
 
-Entity file resolution in `listEntityFiles(app, entityKey)` supports:
-
-- `typeFilters` object: all frontmatter key-value pairs must match
-- `typeFilter` string: frontmatter `type` must match
-- `folders` array: file path must be under any listed folder
-- `typesFilter` array: frontmatter `type` must be one of the listed values
-- `folder`: default single folder path
-
-Filter categories are AND-combined. Values inside `folders` and `typesFilter` are OR-combined.
-
-## Development Rules
-
-- Prefer small, scoped edits in `main.js` and `styles.css`.
-- Keep the no-build-step constraint. Do not introduce bundling unless the user asks for it.
-- Use `rg` for searching.
-- Use `processFrontMatter()` for frontmatter mutation.
-- Avoid `console.log` in shipping code.
-- Preserve existing BOB Workspace branding and compatibility comments unless intentionally changing product identity.
-- Internal compatibility names such as `CadencePlugin`, `CadenceAppView`, `cad-` CSS classes, and command ids may remain unless there is a clear reason to migrate them.
-- When changing entity behavior, check built-in entities, custom `entities.json`, schema-derived entities, and `.base` file behavior together.
-- When changing UI, check both light and dark modes and keep styles scoped under `cad-` classes.
-
-## Common Tasks
-
-Adding a built-in entity:
-
-1. Add it to `ENTITIES`.
-2. Add folder defaults to `DEFAULT_SETTINGS` and `ENTITY_FOLDERS`.
-3. Update `syncEntityFolders()`.
-4. Add a nav item in `NAV_GROUPS`.
-5. Add settings UI if the folder is configurable.
-6. Add a route or rely on generic entity-list rendering where appropriate.
-
-Adding a custom-rendered surface:
-
-1. Add a nav item to `NAV_GROUPS`.
-2. Add its id to `BUILT_SURFACES`.
-3. Add route dispatch in `CadenceAppView.render()`.
-4. Implement the renderer on `CadenceAppView`.
-
-Editing project body sections:
+Body markdown is edited separately where the feature is genuinely body-based,
+for example project sections or daily-note task lists:
 
 ```javascript
 const content = await app.vault.read(file);
-const sections = parseH2Sections(content);
 const updated = replaceSection(content, '## Brief', newText);
 await app.vault.modify(file, updated);
 ```
 
-## Testing
+### Runtime Configuration Order
 
-There is no automated build in this repo. Basic validation is:
+`reloadEntityConfiguration(app, settings)` applies configuration in this order:
 
-1. Review syntax carefully in `main.js`.
-2. Copy plugin files into a test vault plugin folder.
-3. Reload Obsidian or disable/enable the plugin.
-4. Check Obsidian developer console.
-5. Verify relevant surfaces and settings manually.
+1. Reset to `BUILTIN_ENTITY_DEFAULTS` and current settings.
+2. If enabled, load Metadata Menu schema YAML using `applySchemas()`.
+3. Merge plugin-folder `entities.json` using `applyCustomEntities()`.
+4. Merge selected `.base` behavior using `applyBaseOverrides()`.
 
-Changes to `main.js` may require a full Obsidian restart, not only disable/enable.
+Do not assume edits to `ENTITIES` alone control a BOB vault when schemas,
+custom overrides, or Bases are active.
+
+### File Resolution
+
+`listEntityFiles(app, entityKey)` currently applies:
+
+- `folders` as an optional OR list of permitted folder roots.
+- `folder`/`entityFolder()` as the default path restriction only when neither
+  `typeFilter` nor `folders` is configured.
+- `filenameFilter`, used for skills so only `SKILL.md` files match.
+- `typeFilter` for single `frontmatter.type` matching.
+- `typeFilters` for additional multi-field frontmatter matching.
+- Parsed Base filters when a selected Base/view contributes supported filters.
+
+Filter categories that exist together are AND-combined. Template paths are
+excluded: any note under a directory segment named `template` or `templates`
+must not appear in entity lists, counts, dashboards, or workbook exports.
+
+Do not document or add logic around a `typesFilter` option without
+implementing it first; it is not part of current `listEntityFiles()` behavior.
+
+### Schemas, Bases, And Custom Entities
+
+- Schema YAML defaults to `00-CORE/Schemas/source` when `useSchemas` is enabled.
+- Default Base mappings live in `DEFAULT_SETTINGS.baseFiles`; selected views
+  may contribute columns, filters, sort, group-by, or external view behavior.
+- Unsupported Base filters are surfaced in UI warnings; preserve that
+  transparency when extending Base support.
+- `entities.json` lives in the active plugin folder next to `data.json`, with
+  `entities.backup.json` written on save.
+- On first load without a plugin-folder config, legacy
+  `Cadence/entities.json` is migrated into the plugin folder and retained.
+- Direct disk edits to plugin-folder `entities.json` require `Reload
+  entities.json`, unless saved through Settings -> BOB Workspace -> Custom
+  entities.
+
+## Task, Import, And Export Behavior
+
+- Task modes are `checkbox`, `tasknotes`, and `hybrid`.
+- TaskNotes list views use the active TaskNotes folder; Productivity history
+  may read both active and archive folders.
+- Quick capture writes reminder state into plugin settings and attempts to add
+  a checkbox item to the relevant daily note.
+- CSV import maps columns into entity frontmatter through entity definitions.
+- XLSX export/import uses `vendor/xlsx.full.min.js`; exports default under
+  `BOB Workspace/Exports`.
+- `WORKBOOK_EXPORT_GROUPS` includes Planner, CRM, Client Work, PRM, Finance,
+  Suppliers & Procurement, and AI Workspace entity sets.
+
+When changing entity fields, verify create/edit UI, generic list behavior,
+CSV import, XLSX import/export, configured Bases, and schema-derived entities.
+
+## Development Rules
+
+- Keep the no-build-step constraint unless the user explicitly requests an
+  architectural migration.
+- Prefer small, scoped edits in `main.js` and `styles.css`.
+- Preserve BOB Workspace branding and compatibility names unless deliberately
+  changing public identity.
+- Use `processFrontMatter()` for YAML changes. Use vault body writes only for
+  markdown sections/tasks that live outside frontmatter.
+- Do not add `console.log` to shipping code.
+- Avoid unsafe raw `innerHTML` for untrusted vault content.
+- Keep new styles scoped under existing `cad-` / `cadence-` patterns and
+  verify both light and dark presentation.
+- Respect current responsive behavior and mobile limitations for interactive
+  changes.
+- Do not remove `vendor/xlsx.full.min.js` from packaging while XLSX commands
+  and settings remain available.
+
+## Common Extension Tasks
+
+For a new entity that can be vault-configured, prefer a schema and/or
+`entities.json` over code. Code changes are justified for first-class nav,
+custom rendering, new widgets, or new import/export behavior.
+
+When adding a built-in entity in code:
+
+1. Add its fallback definition to `ENTITIES`.
+2. Add folder settings and `syncEntityFolders()` handling if configurable.
+3. Add appropriate nav and route wiring through `NAV_GROUPS`,
+   `BUILT_SURFACES`, and `CadenceAppView.render()`.
+4. Add inner tabs in `SECONDARY_TABS` when it belongs under a workspace.
+5. Add a Base default where applicable.
+6. Add it to the appropriate `WORKBOOK_EXPORT_GROUPS` entry.
+7. Verify schemas, custom overrides, Bases, create/edit, and import/export.
+
+When adding a custom-rendered surface:
+
+1. Add its nav definition and module gating.
+2. Add it to `BUILT_SURFACES`.
+3. Add route dispatch in `CadenceAppView.render()`.
+4. Implement the renderer, preserving mobile and theme behavior.
+5. Add secondary tabs or settings controls if users must configure it.
+
+## Validation
+
+There is no automated application build in this repository. For relevant
+changes:
+
+1. Run a JavaScript syntax check on `main.js`, for example
+   `node --check main.js`.
+2. Review edits for untrusted DOM insertion, frontmatter mutation, and missing
+   vendor/release artifacts.
+3. Copy shipping files to a test vault plugin folder.
+4. Reload or restart Obsidian and inspect the developer console.
+5. Exercise affected surfaces, settings, light/dark appearance, and mobile
+   layout where UI behavior changed.
+
+Changes to `main.js` may require a full Obsidian restart rather than only
+disabling and enabling the plugin.
 
 ## Publishing
 
-See `SUBMISSION.md`.
+Before releasing:
 
-Release reminders:
-
-- `manifest.json` version must match the git tag exactly, without a leading `v`.
-- `versions.json` must map the version to the minimum Obsidian app version.
-- Release assets must include `main.js`, `manifest.json`, and `styles.css`.
-- Keep shipping code free of debug logs, unsafe raw `innerHTML` for untrusted content, and raw YAML string mutation.
+- Treat `manifest.json` and `versions.json` as authoritative for this fork;
+  confirm inherited instructions in `SUBMISSION.md` before using them.
+- The git tag must match `manifest.json.version` exactly, with no leading `v`.
+- `versions.json` must map the release to its minimum Obsidian version.
+- Release assets must include `main.js`, `manifest.json`, `styles.css`, and
+  `vendor/xlsx.full.min.js`.
+- Recheck shipping code for debug logs, unsafe untrusted HTML insertion, and
+  manual YAML frontmatter mutation.
