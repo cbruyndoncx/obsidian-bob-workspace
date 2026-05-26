@@ -1161,6 +1161,60 @@ select.cad-create-input {
   border-radius: 8px;
   background: var(--background-secondary);
 }
+.cad-workbook-designer {
+  margin: 18px 0 24px;
+  padding: 14px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-secondary);
+}
+.cad-workbook-designer-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+.cad-workbook-designer-group {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 7px;
+  background: var(--background-primary);
+  overflow: hidden;
+}
+.cad-workbook-designer-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.cad-workbook-designer-title {
+  flex: 1;
+  min-width: 80px;
+  padding: 5px 7px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 5px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+}
+.cad-workbook-designer-choices {
+  max-height: 290px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px;
+}
+.cad-workbook-designer-choice {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 4px 5px;
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-size: 12px;
+}
+.cad-workbook-designer-choice:hover {
+  background: var(--background-modifier-hover);
+}
 .cad-nav-designer-head h4 {
   margin: 0 0 5px;
   font-size: 15px;

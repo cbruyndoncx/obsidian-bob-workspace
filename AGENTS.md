@@ -218,6 +218,9 @@ implementing it first; it is not part of current `listEntityFiles()` behavior.
   icon IDs, removing individual tabs or tree items back to their unassigned
   pool, normalizing orphaned legacy secondary/setup children to primary
   navigation in configured workspaces, and reordering groups/items.
+- Settings includes a workbook export group designer over
+  `workspace.json.workbookGroups`; it can assign schema-derived entity types
+  to overlapping XLSX export bundles without code changes.
 - Schema YAML defaults to `00-CORE/Schemas/source` when `useSchemas` is enabled.
 - Settings includes a Data model designer for canonical schema YAML. It creates
   entity source files and edits identity/location, icons, discriminators,

@@ -40,7 +40,8 @@ The plugin has several layers. Later layers should refine or override earlier la
 6. **Import alias layer**
    - Maps spreadsheet/frontmatter aliases to canonical field keys.
    - Useful when importing from Cadence, another CRM, or another vault.
-   - This is currently partly built in; long term it should be first-class configuration.
+   - Defined per schema as `field_aliases` and edited in the Data model designer.
+   - Legacy built-in synonyms remain as compatibility fallback only.
 
 The most important rule: **the vault data model should live in the vault, not in plugin code.**
 
@@ -131,6 +132,17 @@ Settings also provides a **Navigation designer** over the same JSON draft:
 
 The designer updates the `workspace.json` editor draft. Click **Save and
 apply** to persist and activate its arrangement.
+
+Settings also provides a **Workbook export groups** designer over
+`workspace.json.workbookGroups`:
+
+- Add, rename, remove and reorder reusable XLSX export bundles.
+- Assign any runtime record type, including schema-derived types not placed in
+  navigation.
+- Include one record type in multiple bundles when exports overlap.
+
+As with navigation, these edits update the JSON draft until **Save and apply**
+persists them.
 
 ## Template Folders
 

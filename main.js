@@ -1309,6 +1309,21 @@ function validateWorkspaceConfig(config) {
   if (config.workbookGroups != null && !Array.isArray(config.workbookGroups)) {
     throw new Error('workbookGroups must be an array');
   }
+  const workbookGroupIds = new Set();
+  for (const group of config.workbookGroups || []) {
+    if (!group || typeof group !== 'object' || !String(group.id || '').trim() ||
+        !String(group.label || '').trim() || !Array.isArray(group.entityKeys)) {
+      throw new Error('Every workbook group needs an id, label and entityKeys array');
+    }
+    if (workbookGroupIds.has(group.id)) throw new Error(`Duplicate workbook group id "${group.id}"`);
+    if (group.entityKeys.some((key) => !String(key || '').trim())) {
+      throw new Error(`Workbook group "${group.id}" has an invalid entity key`);
+    }
+    if (new Set(group.entityKeys).size !== group.entityKeys.length) {
+      throw new Error(`Workbook group "${group.id}" contains duplicate entity keys`);
+    }
+    workbookGroupIds.add(group.id);
+  }
   return config;
 }
 
@@ -8934,7 +8949,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           workspaceTa.value = workspaceConfigTemplate(this.plugin.settings);
           workspaceStatus.setText('No workspace.json yet - edit and Save to make navigation/config file-managed.');
         }
-        renderNavDesigner();
+        renderConfigurationDesigners();
       } catch (e) {
         workspaceStatus.setText(`Read error: ${e.message}`);
       }
@@ -8961,6 +8976,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       try {
         workspaceTa.value = JSON.stringify(validateWorkspaceConfig(JSON.parse(workspaceTa.value)), null, 2);
         setWorkspaceStatus('Formatted', true);
+        renderConfigurationDesigners();
       } catch (e) {
         setWorkspaceStatus(`Cannot format: ${e.message}`, false);
       }
@@ -8987,6 +9003,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         }
         workspaceTa.value = await adapter.read(WORKSPACE_BACKUP_PATH);
         setWorkspaceStatus('Backup loaded into editor - click Save and apply', true);
+        renderConfigurationDesigners();
       } catch (e) {
         setWorkspaceStatus(`Restore failed: ${e.message}`, false);
       }
@@ -9006,7 +9023,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         if (config.entities && !Object.keys(config.entities).length) delete config.entities;
         workspaceTa.value = JSON.stringify(config, null, 2);
         setWorkspaceStatus('Base associations imported into workspace draft - click Save and apply', true);
-        renderNavDesigner();
+        renderConfigurationDesigners();
       } catch (e) {
         setWorkspaceStatus(`Import failed: ${e.message}`, false);
       }
@@ -9020,12 +9037,24 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       text: 'Drag unassigned tabs or record types into groups and move existing menu items between groups. Choose icons from Obsidian\'s registered icon library. Remove an item to return it to its available pool. Changes update the workspace JSON draft; use Save and apply above to persist them.',
     });
     const navDesignerBody = navDesigner.createDiv({ cls: 'cad-nav-designer-body' });
+    const workbookDesigner = containerEl.createDiv({ cls: 'cad-workbook-designer' });
+    const workbookDesignerHead = workbookDesigner.createDiv({ cls: 'cad-nav-designer-head' });
+    workbookDesignerHead.createEl('h4', { text: 'Workbook export groups' });
+    workbookDesignerHead.createEl('p', {
+      cls: 'setting-item-description',
+      text: 'Define reusable XLSX export bundles in workspace.json. Assign a record type to more than one bundle when separate exports need overlapping data.',
+    });
+    const workbookDesignerBody = workbookDesigner.createDiv({ cls: 'cad-workbook-designer-body' });
 
     const readWorkspaceDraft = () => validateWorkspaceConfig(JSON.parse(workspaceTa.value));
+    const renderConfigurationDesigners = () => {
+      renderNavDesigner();
+      renderWorkbookDesigner();
+    };
     const updateWorkspaceDraft = (config, message) => {
       workspaceTa.value = JSON.stringify(config, null, 2);
-      setWorkspaceStatus(message || 'Navigation changed - click Save and apply', true);
-      renderNavDesigner();
+      setWorkspaceStatus(message || 'Workspace changed - click Save and apply', true);
+      renderConfigurationDesigners();
     };
     const saveWorkspaceBase = async (entityKey, file, view) => {
       const config = readWorkspaceDraft();
@@ -9470,8 +9499,88 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         });
       });
     };
-    workspaceTa.addEventListener('input', renderNavDesigner);
-    setTimeout(renderNavDesigner, 0);
+    const renderWorkbookDesigner = () => {
+      workbookDesignerBody.empty();
+      let config;
+      try {
+        config = readWorkspaceDraft();
+      } catch (e) {
+        workbookDesignerBody.createDiv({ cls: 'setting-item-description', text: `Fix workspace JSON to edit export groups: ${e.message}` });
+        return;
+      }
+      if (!Array.isArray(config.workbookGroups)) config.workbookGroups = [];
+      const addRow = workbookDesignerBody.createDiv({ cls: 'cad-nav-designer-add-group' });
+      const newGroupInput = addRow.createEl('input', { type: 'text', placeholder: 'New export group label' });
+      const addGroup = addRow.createEl('button', { text: '+ Add export group' });
+      addGroup.addEventListener('click', () => {
+        const label = newGroupInput.value.trim();
+        if (!label) return;
+        const seed = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'export';
+        let id = seed;
+        let suffix = 2;
+        while (config.workbookGroups.some((group) => group.id === id)) id = `${seed}-${suffix++}`;
+        config.workbookGroups.push({ id, label, entityKeys: [] });
+        updateWorkspaceDraft(config, `${label} export group added - click Save and apply`);
+      });
+      if (!config.workbookGroups.length) {
+        workbookDesignerBody.createDiv({ cls: 'cad-nav-designer-empty', text: 'No export groups defined. Add a group to make selected workbook exports available.' });
+        return;
+      }
+      const entities = Object.entries(ENTITIES)
+        .filter(([, def]) => def?.label)
+        .sort(([, a], [, b]) => String(a.plural || a.label).localeCompare(String(b.plural || b.label)));
+      const board = workbookDesignerBody.createDiv({ cls: 'cad-workbook-designer-board' });
+      config.workbookGroups.forEach((group, groupIndex) => {
+        const card = board.createDiv({ cls: 'cad-workbook-designer-group' });
+        const head = card.createDiv({ cls: 'cad-workbook-designer-group-head' });
+        const labelInput = head.createEl('input', { type: 'text', cls: 'cad-workbook-designer-title' });
+        labelInput.value = group.label;
+        labelInput.addEventListener('change', () => {
+          const next = labelInput.value.trim();
+          if (!next) {
+            labelInput.value = group.label;
+            return;
+          }
+          group.label = next;
+          updateWorkspaceDraft(config, `${next} export group renamed - click Save and apply`);
+        });
+        const up = head.createEl('button', { cls: 'cad-nav-designer-action', text: 'Up' });
+        up.disabled = groupIndex === 0;
+        up.addEventListener('click', () => {
+          if (groupIndex === 0) return;
+          [config.workbookGroups[groupIndex - 1], config.workbookGroups[groupIndex]] =
+            [config.workbookGroups[groupIndex], config.workbookGroups[groupIndex - 1]];
+          updateWorkspaceDraft(config, 'Export group order updated - click Save and apply');
+        });
+        const down = head.createEl('button', { cls: 'cad-nav-designer-action', text: 'Down' });
+        down.disabled = groupIndex === config.workbookGroups.length - 1;
+        down.addEventListener('click', () => {
+          if (groupIndex >= config.workbookGroups.length - 1) return;
+          [config.workbookGroups[groupIndex], config.workbookGroups[groupIndex + 1]] =
+            [config.workbookGroups[groupIndex + 1], config.workbookGroups[groupIndex]];
+          updateWorkspaceDraft(config, 'Export group order updated - click Save and apply');
+        });
+        const remove = head.createEl('button', { cls: 'cad-nav-designer-action danger', text: 'Remove' });
+        remove.addEventListener('click', () => {
+          config.workbookGroups.splice(groupIndex, 1);
+          updateWorkspaceDraft(config, `${group.label} export group removed - click Save and apply`);
+        });
+        const choices = card.createDiv({ cls: 'cad-workbook-designer-choices' });
+        entities.forEach(([entityKey, def]) => {
+          const row = choices.createEl('label', { cls: 'cad-workbook-designer-choice' });
+          const checkbox = row.createEl('input', { type: 'checkbox' });
+          checkbox.checked = group.entityKeys.includes(entityKey);
+          row.createSpan({ text: def.plural || pluralizeEntityLabel(def.label) });
+          checkbox.addEventListener('change', () => {
+            if (checkbox.checked && !group.entityKeys.includes(entityKey)) group.entityKeys.push(entityKey);
+            if (!checkbox.checked) group.entityKeys = group.entityKeys.filter((key) => key !== entityKey);
+            updateWorkspaceDraft(config, `${group.label} export records updated - click Save and apply`);
+          });
+        });
+      });
+    };
+    workspaceTa.addEventListener('input', renderConfigurationDesigners);
+    setTimeout(renderConfigurationDesigners, 0);
 
     /* ─── Modules (consolidated: toggle + surfaces + folders + base files) ─── */
     containerEl.createEl('h3', { text: 'Modules' });
@@ -10428,7 +10537,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     const exportGroups = workbookExportGroups();
     const exportSetting = new obsidian.Setting(dataPanel)
       .setName('Export entity groups to XLSX')
-      .setDesc(`Select one or more navigation groups to create a limited workbook under ${workbookExportFolder(this.plugin.settings)}.`);
+      .setDesc(`Select one or more configured export groups to create a limited workbook under ${workbookExportFolder(this.plugin.settings)}.`);
     const exportControl = exportSetting.controlEl.createDiv({ cls: 'cad-workbook-export-control' });
     const groupSelect = exportControl.createEl('select', { cls: 'dropdown cad-workbook-group-select', attr: { multiple: 'multiple' } });
     groupSelect.size = Math.min(Math.max(exportGroups.length, 6), 12);
