@@ -10509,7 +10509,6 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       schemaSave.toggleClass('cad-schema-save-needed', on);
       schemaSaveGenerate.toggleClass('cad-schema-save-needed', on);
     };
-    let autoSaveTimer = null;
     const autoSaveSchema = async () => {
       if (!sourceSchema || !sourceSchemaPath) return;
       try { validateSourceSchemaDefinition(sourceSchema); } catch (e) {
@@ -10545,9 +10544,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     };
     const markSchemaDirty = () => {
       schemaDirty = true;
-      setSchemaStatus('Saving…', true);
-      clearTimeout(autoSaveTimer);
-      autoSaveTimer = setTimeout(autoSaveSchema, 700);
+      setSchemaStatus('Unsaved changes', true);
     };
     const commaList = (value) => Array.isArray(value) ? value.join(', ') : '';
     const parseList = (value) => String(value || '').split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
@@ -10594,6 +10591,9 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         onInput(input.value);
         markSchemaDirty();
       });
+      input.addEventListener('blur', () => {
+        if (schemaDirty) autoSaveSchema();
+      });
       return input;
     };
     const renderSourceSchema = () => {
@@ -10622,6 +10622,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         if (iconId) sourceSchema.icon = iconId;
         else delete sourceSchema.icon;
         markSchemaDirty();
+        autoSaveSchema();
         renderSchemaIcon();
       }).open());
       renderSchemaIcon();
@@ -10669,6 +10670,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         if (!Array.isArray(sourceSchema.fields)) sourceSchema.fields = [];
         sourceSchema.fields.push({ name: '', type: 'string', required: false });
         markSchemaDirty();
+        autoSaveSchema();
         renderSourceSchema();
       });
       (sourceSchema.fields || []).forEach((field, index) => {
@@ -10677,6 +10679,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         const nameInput = row.createEl('input', { type: 'text', cls: 'cad-schema-designer-input', placeholder: 'field_name' });
         nameInput.value = field.name || '';
         nameInput.addEventListener('input', () => { field.name = nameInput.value.trim(); markSchemaDirty(); });
+        nameInput.addEventListener('blur', () => { if (schemaDirty) autoSaveSchema(); });
         const typeSelect = row.createEl('select', { cls: 'dropdown cad-schema-field-type' });
         [['string', 'Text'], ['number', 'Number'], ['integer', 'Integer'], ['boolean', 'Boolean'], ['array', 'Array'], ['date', 'Date'], ['datetime', 'Date/time'], ['enum', 'Enum']].forEach(([value, label]) => {
           typeSelect.createEl('option', { value, text: label });
@@ -10685,19 +10688,21 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         typeSelect.addEventListener('change', () => {
           applyEditableSchemaFieldType(field, typeSelect.value);
           markSchemaDirty();
+          autoSaveSchema();
           renderSourceSchema();
         });
         const requiredWrap = row.createEl('label', { cls: 'cad-schema-required' });
         const required = requiredWrap.createEl('input', { type: 'checkbox' });
         required.checked = !!field.required;
         requiredWrap.appendText(' Required');
-        required.addEventListener('change', () => { field.required = required.checked; markSchemaDirty(); });
+        required.addEventListener('change', () => { field.required = required.checked; markSchemaDirty(); autoSaveSchema(); });
         const up = row.createEl('button', { cls: 'cad-nav-designer-action', text: '\u2191', attr: { title: 'Move up' } });
         up.disabled = index === 0;
         up.addEventListener('click', () => {
           if (index === 0) return;
           [sourceSchema.fields[index - 1], sourceSchema.fields[index]] = [sourceSchema.fields[index], sourceSchema.fields[index - 1]];
           markSchemaDirty();
+          autoSaveSchema();
           renderSourceSchema();
         });
         const down = row.createEl('button', { cls: 'cad-nav-designer-action', text: '\u2193', attr: { title: 'Move down' } });
@@ -10706,12 +10711,14 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           if (index >= sourceSchema.fields.length - 1) return;
           [sourceSchema.fields[index], sourceSchema.fields[index + 1]] = [sourceSchema.fields[index + 1], sourceSchema.fields[index]];
           markSchemaDirty();
+          autoSaveSchema();
           renderSourceSchema();
         });
         const remove = row.createEl('button', { cls: 'cad-nav-designer-action danger', text: 'Remove' });
         remove.addEventListener('click', () => {
           sourceSchema.fields.splice(index, 1);
           markSchemaDirty();
+          autoSaveSchema();
           renderSourceSchema();
         });
         const detail = card.createDiv({ cls: 'cad-schema-field-detail' });
@@ -10725,6 +10732,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           if (displayType.value) field.bob_type = displayType.value;
           else delete field.bob_type;
           markSchemaDirty();
+          autoSaveSchema();
         });
         if (typeSelect.value === 'enum') {
           textControl(detail, 'Options', commaList(field.enum), (value) => { field.enum = parseList(value); });

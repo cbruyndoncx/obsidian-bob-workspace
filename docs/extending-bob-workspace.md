@@ -335,13 +335,112 @@ legacy built-in importer synonyms remain as compatibility fallbacks.
 
 ## Adding A New Entity
 
-For a BOB vault:
+The no-code path uses four Settings designers in sequence. Each step saves
+automatically or through **Save and apply**; no JSON editing is required.
 
-1. Create a schema in `00-CORE/Schemas/source/{entity}.yaml`.
-2. Create a Base in `00-CORE/Bases/{Entity}.base` if the entity needs custom views.
-3. Arrange the entity in navigation or a secondary tab using the Navigation designer.
-4. Associate a Base/view in Settings; it is stored in `workspace.json.bases`.
-5. Test create, list, workbook export, workbook import, and Base view switching.
+### Step 1 — Define the schema
+
+Open **Settings → BOB Workspace → Data model** and click **+ New schema**.
+
+Fill in the identity fields:
+
+| Field | Purpose | Example |
+|---|---|---|
+| Entity key | Internal identifier, used in code and workspace.json | `order` |
+| Label / Plural | Display name in the UI | `Order` / `Orders` |
+| Type value | Value written to frontmatter `type:` | `order` |
+| Location pattern | Folder where notes are created | `30-CLIENTS/{id}/Orders/` |
+| Icon | Lucide icon ID shown in navigation | `package` |
+| Definition | Short description of the entity | `A customer purchase order` |
+| Key fields | Fields shown in list headings | `name, client_id, status` |
+| Lifecycle | Allowed values for a `status` field | `draft, open, fulfilled, cancelled` |
+
+Then add fields with **+ Add field**. For each field:
+
+- Set the field name (snake_case, e.g. `order_date`)
+- Choose the data type (`Text`, `Number`, `Date`, `Enum`, etc.)
+- For `Enum` fields, add the allowed values in **Options**
+- Set a **Default value** for pre-populated forms; date fields accept `{{today}}`
+- Mark **Required** for mandatory create-form fields
+- Choose a **BOB display** override only when the JSON type differs from how
+  the UI should render the field (e.g. a `string` field displayed as `currency`)
+
+Click **Save** (triggered automatically on blur for text fields, or immediately
+for dropdowns, checkboxes, and buttons).
+
+Click **Save and regenerate** to write downstream artifacts:
+
+- `00-CORE/FileClasses/{Entity}.md` — Metadata Menu FileClass
+- `00-CORE/Schemas/json/{type_value}.json` — JSON Schema for validation
+- Injects an entity table and definition block into `DATAMODEL.md` and
+  `DATAMODEL-FULL.md` between the `<!-- BEGIN/END GENERATED -->` markers
+
+### Step 2 — Place the entity in navigation
+
+Open **Settings → BOB Workspace → Workspace** and go to the
+**Navigation designer**.
+
+The **Record types** panel lists all schema-defined types that are not yet
+placed in navigation. Drag your new type into an existing group, or:
+
+1. Click **+ Group** to create a new navigation group for it
+2. Set the group label and icon
+3. Drag the record type into the group
+
+To create a secondary (inner) tab instead of a top-level item:
+
+1. Click **+ Tabs** on the parent navigation row
+2. Drag the record type into that parent's tab area
+
+Click **Save and apply** to persist the navigation arrangement to
+`workspace.json`.
+
+### Step 3 — Create a Base (optional)
+
+If the entity needs a custom view — filtered subsets, a specific column
+order, or a non-table layout — create a `.base` file:
+
+```yaml
+# 00-CORE/Bases/Orders.base
+filters: note.type == "order"
+properties:
+  note.status:
+    displayName: Status
+views:
+  - type: table
+    name: Open Orders
+    filters:
+      and:
+        - note.status == "open"
+    order:
+      - file.name
+      - client_id
+      - order_date
+      - status
+```
+
+### Step 4 — Associate the Base
+
+In **Settings → BOB Workspace → Workspace**, find the entity row and select
+the `.base` file and view from the **Base** selector. The mapping is saved to
+`workspace.json.bases` and travels with the vault.
+
+### Step 5 — Add to workbook export groups (optional)
+
+Open the **Workbook export groups** designer in the same Workspace settings
+panel. Add the entity key to an existing group or create a new bundle.
+
+### Step 6 — Test
+
+| Action | What to verify |
+|---|---|
+| Create record | Form shows correct fields and defaults; file lands in the right folder |
+| List view | Records appear; columns match Base column order |
+| Inline edit | Field saves via frontmatter |
+| Base view | Filters apply; switching views works |
+| CSV import | Column headers map to canonical field names (or aliases) |
+| Workbook export | Entity appears in the correct XLSX sheet |
+| Workbook import | Imported rows resolve field aliases and write correct frontmatter |
 
 ## What Requires Code
 
