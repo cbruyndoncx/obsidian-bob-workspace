@@ -10437,9 +10437,23 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     const configuredSchemas = WORKSPACE_CONFIG.schemas || {};
     const schemaSettings = effectiveSchemaSettings(this.plugin.settings);
     const schemasManaged = configuredSchemas.enabled != null || !!configuredSchemas.folder;
+    if (schemasManaged) {
+      const banner = schemasPanel.createDiv({ cls: 'cad-managed-banner' });
+      const icon = banner.createSpan({ cls: 'cad-managed-banner-icon' });
+      try { obsidian.setIcon(icon, 'lock'); } catch (_) {}
+      banner.createSpan({ text: 'Schema settings are controlled by ' });
+      banner.createEl('code', { text: 'workspace.json' });
+      banner.createSpan({ text: '. Edit the ' });
+      const wsLink = banner.createEl('a', { text: 'Workspace tab', cls: 'cad-managed-banner-link' });
+      wsLink.addEventListener('click', () => {
+        const wsTab = containerEl.querySelector('.cad-settings-tab[data-tab="workspace"]');
+        if (wsTab) wsTab.click();
+      });
+      banner.createSpan({ text: ' to change them.' });
+    }
     new obsidian.Setting(schemasPanel)
       .setName('Use schema YAML files')
-      .setDesc(`Read entity definitions (folders, type filters, field types, enum options) from Metadata Menu schema YAML files.${schemasManaged ? ' Managed by workspace.json.' : ''}`)
+      .setDesc('Read entity definitions (folders, type filters, field types, enum options) from Metadata Menu schema YAML files.')
       .addToggle((t) => {
         t.setValue(!!schemaSettings.useSchemas);
         if (schemasManaged) t.setDisabled(true);
@@ -10452,7 +10466,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       });
     new obsidian.Setting(schemasPanel)
       .setName('Schemas folder')
-      .setDesc(`Vault path where schema YAML files live (one per entity).${schemasManaged ? ' Managed by workspace.json.' : ''}`)
+      .setDesc('Vault path where schema YAML files live (one per entity).')
       .addText((t) => {
         t.setPlaceholder('00-CORE/Schemas/source').setValue(schemaSettings.schemasFolder);
         if (schemasManaged) t.setDisabled(true);

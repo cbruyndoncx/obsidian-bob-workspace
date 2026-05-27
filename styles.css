@@ -2682,6 +2682,26 @@ select.cad-form-input {
   border-top: 1px dashed var(--background-modifier-border);
 }
 
+/* ─────────── Managed-by-workspace banner ─────────── */
+.cad-managed-banner {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+  padding: 8px 12px; margin-bottom: 4px; border-radius: 6px;
+  background: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  font-size: 13px; color: var(--text-muted);
+}
+.cad-managed-banner-icon {
+  display: flex; align-items: center;
+  color: var(--color-yellow); flex-shrink: 0;
+}
+.cad-managed-banner code {
+  font-size: 12px; padding: 1px 4px; border-radius: 3px;
+  background: var(--background-modifier-border);
+  color: var(--text-normal);
+}
+.cad-managed-banner-link { color: var(--link-color); cursor: pointer; text-decoration: underline; }
+.cad-managed-banner-link:hover { color: var(--link-color-hover); }
+
 /* ─────────── Playbook Runner Bases view ─────────── */
 .cad-pb-runner { display: flex; flex-direction: column; gap: 6px; padding: 8px; }
 .cad-pb-card {

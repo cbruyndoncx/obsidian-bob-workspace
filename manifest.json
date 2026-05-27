@@ -1,7 +1,7 @@
 {
   "id": "bob-workspace",
   "name": "BOB Workspace",
-  "version": "0.14.4-bob.3",
+  "version": "0.14.4-bob.4",
   "minAppVersion": "1.4.0",
   "description": "A configurable workspace built on Cadence — CRM, PRM, Planner, Projects, Reports and Reminders. Vault-native, markdown source-of-truth.",
   "author": "cbruyndoncx",
