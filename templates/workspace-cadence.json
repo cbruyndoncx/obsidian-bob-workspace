@@ -2,7 +2,7 @@
   "_template": {
     "id": "cadence-classic",
     "label": "Cadence Classic",
-    "description": "Original Cadence navigation: Planner, CRM, PRM, Client Work and Reports. No Finance, Procurement or schema files required.",
+    "description": "Original Cadence navigation: Planner, CRM, PRM and Client Work. Uses Cadence/ folder structure.",
     "order": 2
   },
   "schemas": {
@@ -263,11 +263,17 @@
       "crm": true,
       "client-work": true,
       "prm": true,
-      "finance": false,
-      "procurement": false,
-      "tax": false,
-      "planner": true,
-      "ai": false
-    }
+      "planner": true
+    },
+    "folderContacts": "Cadence/Contacts",
+    "folderPipeline": "Cadence/Pipeline",
+    "folderPartners": "Cadence/Partners",
+    "folderRegistrations": "Cadence/Registrations",
+    "folderCommissions": "Cadence/Commissions",
+    "folderLeads": "Cadence/Leads",
+    "folderCertifications": "Cadence/Certifications",
+    "folderActivities": "Cadence/Activities",
+    "folderSequences": "Cadence/Sequences",
+    "folderProjects": "Cadence/Projects"
   }
 }

@@ -47,14 +47,7 @@
   "workbookGroups": [],
   "settings": {
     "modules": {
-      "crm": false,
-      "client-work": false,
-      "prm": false,
-      "finance": false,
-      "procurement": false,
-      "tax": false,
-      "planner": true,
-      "ai": false
+      "planner": true
     }
   }
 }
