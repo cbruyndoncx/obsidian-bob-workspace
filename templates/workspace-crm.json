@@ -1,0 +1,200 @@
+{
+  "_template": {
+    "id": "crm-only",
+    "label": "CRM Only",
+    "description": "Focused CRM workspace: Pipeline, Contacts, Clients, Leads, Campaigns, Activities and Reports. No Finance, PRM or Procurement modules.",
+    "order": 3
+  },
+  "schemas": {
+    "enabled": false,
+    "folder": "00-CORE/Schemas/source"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "id": "home_group",
+        "label": "",
+        "items": [
+          {
+            "id": "home",
+            "label": "Home",
+            "icon": "home",
+            "desc": "Command centre — today, projects, pipeline and upcoming, all on one screen."
+          }
+        ]
+      },
+      {
+        "id": "planner",
+        "label": "Planner",
+        "module": "planner",
+        "items": [
+          {
+            "id": "planner.inbox",
+            "label": "Inbox",
+            "icon": "inbox",
+            "module": "planner",
+            "desc": "Universal capture + reminders."
+          },
+          {
+            "id": "planner.today",
+            "label": "Today",
+            "icon": "sun",
+            "module": "planner",
+            "desc": "Diary view of today's daily note."
+          },
+          {
+            "id": "planner.tasknotes",
+            "label": "TaskNotes",
+            "icon": "circle-check-big",
+            "module": "planner",
+            "entityKey": "task",
+            "folderKey": "taskNotesFolder",
+            "desc": "TaskNotes as full markdown task records."
+          }
+        ]
+      },
+      {
+        "id": "crm",
+        "label": "CRM",
+        "module": "crm",
+        "items": [
+          {
+            "id": "crm.dashboard",
+            "label": "Dashboard",
+            "icon": "layout-grid",
+            "module": "crm",
+            "desc": "Overview cards — today's tasks, deal momentum, recent contacts, week stats."
+          },
+          {
+            "id": "crm.pipeline",
+            "label": "Pipeline",
+            "icon": "trending-up",
+            "module": "crm",
+            "entityKey": "deal",
+            "folderKey": "folderPipeline",
+            "desc": "Sales pipeline kanban over deal notes."
+          },
+          {
+            "id": "crm.contacts",
+            "label": "Contacts",
+            "icon": "users",
+            "module": "crm",
+            "entityKey": "contact",
+            "folderKey": "folderContacts",
+            "desc": "People as markdown notes — name, email, company, tags."
+          },
+          {
+            "id": "crm.clients",
+            "label": "Clients",
+            "icon": "briefcase",
+            "module": "crm",
+            "entityKey": "client",
+            "folderKey": "folderClients",
+            "desc": "Client company profiles."
+          },
+          {
+            "id": "crm.leads",
+            "label": "Leads",
+            "icon": "target",
+            "module": "crm",
+            "entityKey": "lead",
+            "folderKey": "folderLeads",
+            "desc": "Prospect records — qualification, source, outreach status."
+          },
+          {
+            "id": "crm.campaigns",
+            "label": "Campaigns",
+            "icon": "megaphone",
+            "module": "crm",
+            "entityKey": "campaign",
+            "folderKey": "folderCampaigns",
+            "desc": "Marketing/sales campaigns."
+          },
+          {
+            "id": "crm.activities",
+            "label": "Activities",
+            "icon": "calendar",
+            "module": "crm",
+            "entityKey": "activity",
+            "folderKey": "folderActivities",
+            "desc": "Cross-cutting activity timeline."
+          }
+        ]
+      },
+      {
+        "id": "reports",
+        "label": "Reports",
+        "items": [
+          {
+            "id": "reports.pipeline",
+            "label": "Pipeline",
+            "icon": "trending-up",
+            "module": "crm",
+            "desc": "Pipeline coverage and weighted forecast."
+          },
+          {
+            "id": "reports.sales",
+            "label": "Sales",
+            "icon": "bar-chart-3",
+            "module": "crm",
+            "desc": "Closed won / lost trends."
+          },
+          {
+            "id": "reports.activity",
+            "label": "Activity",
+            "icon": "pie-chart",
+            "module": "crm",
+            "desc": "Activity mix — calls, meetings, emails."
+          },
+          {
+            "id": "reports.productivity",
+            "label": "Productivity",
+            "icon": "sun",
+            "desc": "Personal productivity — completion rate, streaks."
+          }
+        ]
+      },
+      {
+        "id": "misc",
+        "label": "",
+        "items": [
+          {
+            "id": "team",
+            "label": "Team",
+            "icon": "user-cog",
+            "desc": "Team members, roles, seats."
+          },
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "settings-2",
+            "desc": "BOB Workspace settings."
+          }
+        ]
+      }
+    ],
+    "secondaryTabs": {
+      "crm.campaigns": [
+        { "label": "Overview", "route": "crm.campaigns.overview" },
+        { "label": "Campaigns", "entityKey": "campaign" },
+        { "label": "Sequences", "entityKey": "sequence" }
+      ]
+    }
+  },
+  "workbookGroups": [
+    { "id": "planner", "label": "Planner", "entityKeys": ["task", "project"] },
+    { "id": "crm", "label": "CRM", "entityKeys": ["deal", "contact", "client", "company", "lead", "campaign", "sequence", "activity"] }
+  ],
+  "settings": {
+    "modules": {
+      "crm": true,
+      "client-work": false,
+      "prm": false,
+      "finance": false,
+      "procurement": false,
+      "tax": false,
+      "planner": true,
+      "ai": false
+    }
+  }
+}

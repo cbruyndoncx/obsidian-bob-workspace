@@ -2720,3 +2720,26 @@ select.cad-form-input {
 .cad-pb-card-title { font-weight: 600; font-size: 13px; color: var(--text-normal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cad-pb-card-trigger { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cad-pb-run { flex-shrink: 0; font-size: 12px; }
+
+/* ─────────── Workspace setup / template picker modal ─────────── */
+.cad-setup-modal .modal-content { max-width: 560px; }
+.cad-setup-modal h2 { margin-bottom: 6px; }
+.cad-setup-subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; }
+.cad-template-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin-bottom: 20px;
+}
+.cad-template-card {
+  padding: 14px 16px; border-radius: 8px; cursor: pointer;
+  border: 2px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  transition: border-color 0.1s;
+}
+.cad-template-card:hover { border-color: var(--interactive-accent); background: var(--background-modifier-hover); }
+.cad-template-card.is-selected { border-color: var(--interactive-accent); background: var(--background-modifier-active-hover); }
+.cad-template-card strong { display: block; font-size: 14px; margin-bottom: 4px; color: var(--text-normal); }
+.cad-template-card p { font-size: 12px; color: var(--text-muted); margin: 0; line-height: 1.4; }
+.cad-setup-footer { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.cad-setup-footer .mod-cta:disabled { opacity: 0.4; cursor: not-allowed; }
+.cad-setup-skip { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; }
+.cad-setup-skip:hover { color: var(--text-normal); }

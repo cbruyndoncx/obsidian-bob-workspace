@@ -22,183 +22,16 @@ const BUILTIN_NAV_GROUPS = [
     ],
   },
   {
-    id: 'planner', label: 'Planner', module: 'planner',
-    items: [
-      { id: 'planner.inbox',    label: 'Inbox',    icon: 'inbox',         module: 'planner', desc: 'Universal capture + reminders. Anything you toss in here surfaces at the right time.' },
-      { id: 'planner.today',    label: 'Today',    icon: 'sun',           module: 'planner', desc: 'Diary view of today\'s daily note.' },
-      { id: 'planner.calendar', label: 'Calendar', icon: 'calendar-days', module: 'planner', desc: 'Week view across daily notes.' },
-      { id: 'planner.tasknotes', label: 'TaskNotes', icon: 'circle-check-big', module: 'planner', entityKey: 'task', folderKey: 'taskNotesFolder', desc: 'TaskNotes as full markdown task records with status, priority, due date and context.' },
-      { id: 'planner.projects', label: 'Projects', icon: 'folder-kanban', module: 'planner', entityKey: 'project', folderKey: 'folderProjects', desc: 'Active projects with milestones, owners, statuses — kanban over project notes.' },
-    ],
-  },
-  {
-    id: 'crm', label: 'CRM', module: 'crm',
-    items: [
-      { id: 'crm.dashboard',  label: 'Dashboard',  icon: 'layout-grid',     module: 'crm', desc: 'Overview cards — today\'s tasks, deal momentum, recent contacts, week stats.' },
-      { id: 'crm.pipeline',   label: 'Pipeline',   icon: 'trending-up',     module: 'crm', entityKey: 'deal',     folderKey: 'folderPipeline',     desc: 'Sales pipeline. Deals as markdown notes with stage, deal value, client and follow-up frontmatter.' },
-      { id: 'crm.contacts',   label: 'Contacts',   icon: 'users',           module: 'crm', entityKey: 'contact',  folderKey: 'folderContacts',     desc: 'People as markdown notes — name, email, company, last-talked-to cadence, tags.' },
-      { id: 'crm.clients',    label: 'Clients',    icon: 'briefcase',       module: 'crm', entityKey: 'client',   folderKey: 'folderClients',      desc: 'Client company profiles — status, regions, contact details, related deals and projects.' },
-      { id: 'crm.companies',  label: 'My Companies', icon: 'building-2',    module: 'crm', navLevel: 'setup', parent: 'settings', entityKey: 'company',  folderKey: 'folderCompanies',    desc: 'Your own company profiles (can be multiple) — regions, status, branding.' },
-      { id: 'crm.leads',      label: 'Leads',      icon: 'target',          module: 'crm', entityKey: 'lead',     folderKey: 'folderLeads',        desc: 'Prospect records — qualification, source, outreach status. Per-lead folder for replies in 03-COMMS/.' },
-      { id: 'crm.campaigns',  label: 'Campaigns',  icon: 'megaphone',       module: 'crm', entityKey: 'campaign', folderKey: 'folderCampaigns',    desc: 'Marketing/sales campaigns — outbound (sequences), inbound (content+ads), or mixed.' },
-      { id: 'crm.sequences',  label: 'Sequences',  icon: 'zap',             module: 'crm', navLevel: 'secondary', parent: 'crm.campaigns', entityKey: 'sequence', folderKey: 'folderSequences',    desc: 'Outbound multi-touch sequences — execution detail within a campaign.' },
-      { id: 'crm.activities', label: 'Activities', icon: 'calendar',        module: 'crm', entityKey: 'activity', folderKey: 'folderActivities',   desc: 'Cross-cutting activity timeline — calls, meetings, telegram/whatsapp/email logs.' },
-    ],
-  },
-  {
-    id: 'prm', label: 'PRM', module: 'prm',
-    items: [
-      { id: 'prm.partners',       label: 'Partners',       icon: 'handshake',        module: 'prm', entityKey: 'partner',       folderKey: 'folderPartners',       desc: 'Partner organisations — relationship status, named contacts, joint pipeline.' },
-      { id: 'prm.registrations',  label: 'Registrations',  icon: 'clipboard-check',  module: 'prm', navLevel: 'secondary', parent: 'prm.partners', entityKey: 'registration',  folderKey: 'folderRegistrations',  desc: 'Deal registrations submitted by partners — status, expiry, attached deals.' },
-      { id: 'prm.commissions',    label: 'Commissions',    icon: 'wallet',           module: 'prm', navLevel: 'secondary', parent: 'prm.partners', entityKey: 'commission',    folderKey: 'folderCommissions',    desc: 'Commission ledger across partners — earned, pending, paid, by quarter.' },
-      { id: 'prm.certifications', label: 'Certifications', icon: 'award',            module: 'prm', navLevel: 'secondary', parent: 'prm.partners', entityKey: 'certification', folderKey: 'folderCertifications', desc: 'Partner certifications — track expiries, renewals, training completion.' },
-      { id: 'prm.analytics',      label: 'Analytics',      icon: 'bar-chart-3',      module: 'prm', navLevel: 'secondary', parent: 'prm.partners', desc: 'PRM analytics — partner-sourced revenue, top performers, lifecycle funnel.' },
-    ],
-  },
-  {
-    id: 'client-work', label: 'Client Work', module: 'client-work',
-    items: [
-      { id: 'client-work.overview',      label: 'Workspace',    icon: 'briefcase-business', module: 'client-work', desc: 'Client delivery workspace: meetings, communications, deliverables, feedback, surveys, testimonials and decisions.' },
-      { id: 'client-work.meetings',      label: 'Meetings',     icon: 'calendar-clock',     module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'meeting',      desc: 'Client meetings with attendees, status, dates and related client IDs.' },
-      { id: 'client-work.comms',         label: 'Comms',        icon: 'messages-square',    module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'comms-thread', desc: 'Client and lead communication threads across email, WhatsApp and Telegram.' },
-      { id: 'client-work.deliverables',  label: 'Deliverables', icon: 'package-check',      module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'deliverable',  desc: 'Client deliverables and their review, approval and delivery status.' },
-      { id: 'client-work.feedback',      label: 'Feedback',     icon: 'message-circle',     module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'feedback',     desc: 'Client feedback, scores, themes, sentiment and response actions.' },
-      { id: 'client-work.surveys',       label: 'Surveys',      icon: 'clipboard-list',     module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'survey',       desc: 'Survey campaigns, response rates, launch dates and analysis status.' },
-      { id: 'client-work.testimonials',  label: 'Testimonials', icon: 'quote',              module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'testimonial',  desc: 'Client testimonials with permissions, attribution and publication status.' },
-      { id: 'client-work.decisions',     label: 'Decisions',    icon: 'git-pull-request',   module: 'client-work', navLevel: 'secondary', parent: 'client-work.overview', entityKey: 'decision',     desc: 'Decision records connected to client and delivery work.' },
-    ],
-  },
-  {
-    id: 'finance', label: 'Finance', module: 'finance',
-    items: [
-      { id: 'finance.invoices',                label: 'Customer Invoices',       icon: 'receipt',        module: 'finance', entityKey: 'invoice',                desc: 'Customer invoices, payment status and amounts.' },
-      { id: 'finance.gl',                      label: 'General Ledger',          icon: 'book-open',      module: 'finance', desc: 'GL work area for chart of accounts, journal entries, trial balances and financial statements.' },
-      { id: 'finance.setup',                   label: 'Finance Setup',           icon: 'sliders-horizontal', module: 'finance', desc: 'Finance setup records: periods, bank accounts, FX rates and inventory/reference setup.' },
-      { id: 'finance.accounting-periods',      label: 'Accounting Periods',      icon: 'calendar-range', module: 'finance', navLevel: 'setup', parent: 'finance.setup', entityKey: 'accounting-period',      desc: 'Accounting periods — month, quarter and annual close windows.' },
-      { id: 'finance.bank-accounts',           label: 'Bank Accounts',           icon: 'landmark',       module: 'finance', navLevel: 'setup', parent: 'finance.setup', entityKey: 'bank-account',           desc: 'Bank accounts linked to currencies and GL accounts.' },
-      { id: 'finance.fx-rates',                label: 'FX Rates Tables',         icon: 'repeat-2',       module: 'finance', navLevel: 'setup', parent: 'finance.setup', entityKey: 'fx-rates-table',         desc: 'Foreign exchange rate tables and sources.' },
-      { id: 'finance.inventory',               label: 'Inventory',               icon: 'boxes',          module: 'finance', navLevel: 'secondary', parent: 'finance.setup', entityKey: 'inventory',              desc: 'Inventory items, quantities, costing and write-downs.' },
-      { id: 'finance.bank-reconciliations',    label: 'Bank Reconciliations',    icon: 'scale',          module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'bank-reconciliation',    desc: 'Bank reconciliation records by account and period.' },
-      { id: 'finance.chart-of-accounts',       label: 'Chart of Accounts',       icon: 'list-tree',      module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'chart-of-accounts',      desc: 'Chart of accounts by jurisdiction and account classification.' },
-      { id: 'finance.journal-entries',         label: 'Journal Entries',         icon: 'book-open',      module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'journal-entry',          desc: 'Journal entries with posting status and totals.' },
-      { id: 'finance.trial-balances',          label: 'Trial Balances',          icon: 'table-2',        module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'trial-balance',          desc: 'Trial balances by period with review status.' },
-      { id: 'finance.financial-statements',    label: 'Financial Statements',    icon: 'file-bar-chart', module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'financial-statement',    desc: 'Financial statements generated from trial balances.' },
-      { id: 'finance.fs-notes',                label: 'FS Notes',                icon: 'notebook-text',   module: 'finance', navLevel: 'secondary', parent: 'finance.gl', entityKey: 'fs-notes',               desc: 'Financial statement notes and policy disclosures.' },
-      { id: 'tax.overview',              label: 'Tax',                   icon: 'receipt-text',   module: 'finance', desc: 'Tax and compliance work area: VAT, corporate tax, transfer pricing, free-zone status and retention.' },
-      { id: 'tax.vat-returns',           label: 'VAT Returns',           icon: 'receipt-text',   module: 'finance', navLevel: 'secondary', parent: 'tax.overview', entityKey: 'vat-return',           desc: 'VAT returns, filing status, payable/refund and payment references.' },
-      { id: 'tax.corporate-tax-returns', label: 'Corporate Tax Returns', icon: 'landmark',       module: 'finance', navLevel: 'secondary', parent: 'tax.overview', entityKey: 'corporate-tax-return', desc: 'Corporate tax returns, taxable income and filing status.' },
-      { id: 'tax.deferred-tax',          label: 'Deferred Tax',          icon: 'split-square-horizontal', module: 'finance', navLevel: 'secondary', parent: 'tax.overview', entityKey: 'deferred-tax', desc: 'Deferred tax asset/liability assessments and review status.' },
-      { id: 'tax.transfer-pricing',      label: 'Transfer Pricing',      icon: 'git-compare',    module: 'finance', navLevel: 'secondary', parent: 'tax.overview', entityKey: 'transfer-pricing',     desc: 'Related-party transactions and transfer pricing documentation.' },
-      { id: 'tax.free-zone-status',      label: 'Free Zone Status',      icon: 'building',       module: 'finance', navLevel: 'secondary', parent: 'tax.overview', entityKey: 'free-zone-status',     desc: 'Free-zone qualifying status, substance and nexus records.' },
-      { id: 'tax.legal-rules',           label: 'Legal Rules',           icon: 'scale',          module: 'finance', navLevel: 'setup', parent: 'tax.overview', entityKey: 'legal-rule',           desc: 'Legal and regulatory source tracking by jurisdiction.' },
-      { id: 'tax.document-retention',    label: 'Document Retention',    icon: 'archive',        module: 'finance', navLevel: 'setup', parent: 'tax.overview', entityKey: 'document-retention',    desc: 'Retention register, destruction dates and responsible owners.' },
-    ],
-  },
-  {
-    id: 'procurement', label: 'Suppliers & Procurement', module: 'procurement',
-    items: [
-      { id: 'procurement.suppliers',             label: 'Suppliers',             icon: 'truck',          module: 'procurement', entityKey: 'supplier', folderKey: 'folderSuppliers', desc: 'Supplier profiles — services, contracts, contacts, spend.' },
-      { id: 'procurement.supplier-invoices',     label: 'Supplier Invoices',     icon: 'file-check-2',   module: 'procurement', entityKey: 'supplier-invoice', desc: 'Supplier invoices, three-way match and payment status.' },
-      { id: 'procurement.purchase-requisitions', label: 'Purchase Requisitions', icon: 'clipboard-list', module: 'procurement', entityKey: 'purchase-requisition', desc: 'Internal purchase requests before spend is approved or a PO is issued.' },
-      { id: 'procurement.purchase-orders',       label: 'Purchase Orders',       icon: 'shopping-cart',  module: 'procurement', entityKey: 'purchase-order',       desc: 'Formal supplier purchase orders, approval status and delivery references.' },
-    ],
-  },
-  {
-    id: 'reports', label: 'Reports',
-    items: [
-      { id: 'reports.pipeline',     label: 'Pipeline',     icon: 'trending-up', module: 'crm', desc: 'Pipeline coverage and weighted forecast — by stage, owner, source.' },
-      { id: 'reports.sales',        label: 'Sales',        icon: 'bar-chart-3', module: 'crm', desc: 'Closed won / lost trends — quota attainment, win rate, average cycle.' },
-      { id: 'reports.partners',     label: 'Partners',     icon: 'handshake',   module: 'prm', desc: 'Partner contribution — sourced vs influenced revenue, top tiers.' },
-      { id: 'reports.activity',     label: 'Activity',     icon: 'pie-chart',   module: 'crm', desc: 'Activity mix — calls, meetings, emails by rep and account.' },
-      { id: 'reports.productivity', label: 'Productivity', icon: 'sun',         desc: 'Personal productivity — completion rate, streaks, focus blocks, journal volume.' },
-    ],
-  },
-  {
     id: 'misc', label: '',
     items: [
       { id: 'team',     label: 'Team',     icon: 'user-cog',   desc: 'Team members, roles, seats — admin view of your BOB Workspace.' },
       { id: 'settings', label: 'Settings', icon: 'settings-2', desc: 'BOB Workspace settings — folders, headings, week start, API connection.' },
     ],
   },
-  {
-    id: 'ai', label: 'AI Workspace', module: 'ai',
-    items: [
-      { id: 'ai.playbooks', label: 'Playbooks', icon: 'book-open-check', module: 'ai', entityKey: 'playbook', folderKey: 'folderPlaybooks', desc: 'Runnable AI playbooks — step-by-step process recipes with triggers, outcomes and maturity levels.' },
-      { id: 'ai.skills',    label: 'Skills',    icon: 'cpu',             module: 'ai', entityKey: 'skill',    folderKey: 'folderSkills',    desc: 'Agent skills installed in the vault — category, version, enabled/disabled status.' },
-    ],
-  },
 ];
 
-const BUILTIN_SECONDARY_TABS = {
-  'crm.campaigns': [
-    { label: 'Overview', route: 'crm.campaigns.overview' },
-    { label: 'Campaigns', entityKey: 'campaign' },
-    { label: 'Sequences', entityKey: 'sequence' },
-  ],
-  'client-work.overview': [
-    { label: 'Overview', route: 'client-work.dashboard' },
-    { label: 'Meetings', entityKey: 'meeting' },
-    { label: 'Comms', entityKey: 'comms-thread' },
-    { label: 'Deliverables', entityKey: 'deliverable' },
-    { label: 'Feedback', entityKey: 'feedback' },
-    { label: 'Surveys', entityKey: 'survey' },
-    { label: 'Testimonials', entityKey: 'testimonial' },
-    { label: 'Decisions', entityKey: 'decision' },
-  ],
-  'prm.partners': [
-    { label: 'Overview', route: 'prm.partners.overview' },
-    { label: 'Partners', entityKey: 'partner' },
-    { label: 'Registrations', entityKey: 'registration' },
-    { label: 'Commissions', entityKey: 'commission' },
-    { label: 'Certifications', entityKey: 'certification' },
-    { label: 'Analytics', route: 'prm.analytics' },
-  ],
-  'finance.invoices': [
-    { label: 'Customer Invoices', entityKey: 'invoice' },
-  ],
-  'finance.gl': [
-    { label: 'Overview', route: 'finance.gl.overview' },
-    { label: 'Chart of Accounts', entityKey: 'chart-of-accounts' },
-    { label: 'Journal Entries', entityKey: 'journal-entry' },
-    { label: 'Bank Reconciliations', entityKey: 'bank-reconciliation' },
-    { label: 'Trial Balances', entityKey: 'trial-balance' },
-    { label: 'Statements', entityKey: 'financial-statement' },
-    { label: 'FS Notes', entityKey: 'fs-notes' },
-  ],
-  'finance.setup': [
-    { label: 'Overview', route: 'finance.setup.overview' },
-    { label: 'Accounting Periods', entityKey: 'accounting-period' },
-    { label: 'Bank Accounts', entityKey: 'bank-account' },
-    { label: 'FX Rates', entityKey: 'fx-rates-table' },
-    { label: 'Inventory', entityKey: 'inventory' },
-  ],
-  'procurement.suppliers': [
-    { label: 'Overview', route: 'procurement.overview' },
-    { label: 'Suppliers', entityKey: 'supplier' },
-    { label: 'Supplier Invoices', entityKey: 'supplier-invoice' },
-    { label: 'Purchase Requisitions', entityKey: 'purchase-requisition' },
-    { label: 'Purchase Orders', entityKey: 'purchase-order' },
-  ],
-  'tax.overview': [
-    { label: 'Overview', route: 'tax.dashboard' },
-    { label: 'VAT Returns', entityKey: 'vat-return' },
-    { label: 'Corporate Tax', entityKey: 'corporate-tax-return' },
-    { label: 'Deferred Tax', entityKey: 'deferred-tax' },
-    { label: 'Transfer Pricing', entityKey: 'transfer-pricing' },
-    { label: 'Free Zone Status', entityKey: 'free-zone-status' },
-    { label: 'Legal Rules', entityKey: 'legal-rule' },
-    { label: 'Document Retention', entityKey: 'document-retention' },
-  ],
-};
-const BUILTIN_WORKBOOK_EXPORT_GROUPS = [
-  { id: 'planner', label: 'Planner', entityKeys: ['task', 'project'] },
-  { id: 'crm', label: 'CRM', entityKeys: ['deal', 'contact', 'client', 'company', 'lead', 'campaign', 'sequence', 'activity'] },
-  { id: 'client-work', label: 'Client Work', entityKeys: ['meeting', 'comms-thread', 'deliverable', 'feedback', 'survey', 'testimonial', 'decision'] },
-  { id: 'prm', label: 'PRM', entityKeys: ['partner', 'registration', 'commission', 'certification'] },
-  { id: 'finance', label: 'Finance', entityKeys: ['invoice', 'chart-of-accounts', 'journal-entry', 'bank-reconciliation', 'trial-balance', 'financial-statement', 'fs-notes', 'accounting-period', 'bank-account', 'fx-rates-table', 'inventory', 'vat-return', 'corporate-tax-return', 'deferred-tax', 'transfer-pricing', 'free-zone-status', 'legal-rule', 'document-retention'] },
-  { id: 'procurement', label: 'Suppliers & Procurement', entityKeys: ['supplier', 'supplier-invoice', 'purchase-requisition', 'purchase-order'] },
-  { id: 'ai', label: 'AI Workspace', entityKeys: ['playbook', 'skill'] },
-];
+const BUILTIN_SECONDARY_TABS = {};
+const BUILTIN_WORKBOOK_EXPORT_GROUPS = [];
 
 function cloneConfig(value) {
   return JSON.parse(JSON.stringify(value));
@@ -11051,6 +10884,84 @@ class CadencePlaybookRunnerView extends (obsidian.BasesView || class {}) {
   }
 }
 
+/* ─────────── Workspace template picker ─────────── */
+async function loadWorkspaceTemplates(app) {
+  const adapter = app.vault.adapter;
+  const dir = `${PLUGIN_DIR}/templates`;
+  try {
+    const listed = await adapter.list(dir);
+    const files = (listed.files || []).filter((f) => f.endsWith('.json')).sort();
+    const templates = [];
+    for (const path of files) {
+      try {
+        const tpl = JSON.parse(await adapter.read(path));
+        if (tpl._template) templates.push(tpl);
+      } catch (_) {}
+    }
+    return templates.sort((a, b) => (a._template.order || 99) - (b._template.order || 99));
+  } catch (_) {
+    return [];
+  }
+}
+
+class CadenceWorkspaceSetupModal extends obsidian.Modal {
+  constructor(app, plugin, templates) {
+    super(app);
+    this.plugin = plugin;
+    this.templates = templates;
+    this.selected = null;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass('cad-setup-modal');
+    contentEl.createEl('h2', { text: 'Welcome to BOB Workspace' });
+    contentEl.createEl('p', { cls: 'cad-setup-subtitle', text: 'Choose a starter workspace to get going. You can customise it at any time from Settings → BOB Workspace → Workspace.' });
+
+    const grid = contentEl.createDiv({ cls: 'cad-template-grid' });
+    for (const tpl of this.templates) {
+      const meta = tpl._template;
+      const card = grid.createDiv({ cls: 'cad-template-card' });
+      card.createEl('strong', { text: meta.label });
+      card.createEl('p', { text: meta.description });
+      card.addEventListener('click', () => {
+        grid.querySelectorAll('.cad-template-card').forEach((c) => c.classList.remove('is-selected'));
+        card.classList.add('is-selected');
+        this.selected = tpl;
+        applyBtn.disabled = false;
+      });
+    }
+
+    const footer = contentEl.createDiv({ cls: 'cad-setup-footer' });
+    const applyBtn = footer.createEl('button', { text: 'Apply template', cls: 'mod-cta' });
+    applyBtn.disabled = true;
+    applyBtn.addEventListener('click', async () => {
+      if (!this.selected) return;
+      const { _template, ...config } = this.selected;
+      await saveWorkspaceConfig(this.app, JSON.stringify(validateWorkspaceConfig(config), null, 2));
+      WORKSPACE_CONFIG = validateWorkspaceConfig(config);
+      this.plugin.settings = applyWorkspaceOwnedSettings(this.plugin.settings);
+      await this.plugin.saveSettings();
+      await reloadEntityConfiguration(this.app, this.plugin.settings);
+      this.plugin.refreshOpenViews();
+      this.close();
+      new obsidian.Notice(`BOB Workspace: "${_template.label}" template applied.`);
+    });
+
+    const skipBtn = footer.createEl('button', { text: 'Skip for now', cls: 'cad-setup-skip' });
+    skipBtn.addEventListener('click', async () => {
+      this.plugin.settings.setupDismissed = true;
+      await this.plugin.saveSettings();
+      this.close();
+    });
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}
+
 /* ─────────── The plugin ─────────── */
 class CadencePlugin extends obsidian.Plugin {
   async onload() {
@@ -11202,6 +11113,17 @@ class CadencePlugin extends obsidian.Plugin {
     // then every 30s.
     this.app.workspace.onLayoutReady(() => this.tickReminders());
     this.registerInterval(window.setInterval(() => this.tickReminders(), 30 * 1000));
+
+    // ─── First-run workspace template picker ───
+    this.app.workspace.onLayoutReady(async () => {
+      const hasWorkspace = await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH);
+      if (!hasWorkspace && !this.settings.setupDismissed) {
+        const templates = await loadWorkspaceTemplates(this.app);
+        if (templates.length > 0) {
+          new CadenceWorkspaceSetupModal(this.app, this, templates).open();
+        }
+      }
+    });
 
     // Optional: open Cadence Home on Obsidian startup.
     if (this.settings.openOnStartup) {

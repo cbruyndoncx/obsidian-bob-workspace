@@ -1,0 +1,60 @@
+{
+  "_template": {
+    "id": "minimal",
+    "label": "Minimal",
+    "description": "Blank slate: just Home and Settings. Build your own navigation from the Navigation designer in Settings → BOB Workspace → Workspace.",
+    "order": 4
+  },
+  "schemas": {
+    "enabled": false,
+    "folder": "00-CORE/Schemas/source"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "id": "home_group",
+        "label": "",
+        "items": [
+          {
+            "id": "home",
+            "label": "Home",
+            "icon": "home",
+            "desc": "Command centre — today, projects, pipeline and upcoming, all on one screen."
+          }
+        ]
+      },
+      {
+        "id": "misc",
+        "label": "",
+        "items": [
+          {
+            "id": "team",
+            "label": "Team",
+            "icon": "user-cog",
+            "desc": "Team members, roles, seats."
+          },
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "settings-2",
+            "desc": "BOB Workspace settings."
+          }
+        ]
+      }
+    ],
+    "secondaryTabs": {}
+  },
+  "workbookGroups": [],
+  "settings": {
+    "modules": {
+      "crm": false,
+      "client-work": false,
+      "prm": false,
+      "finance": false,
+      "procurement": false,
+      "tax": false,
+      "planner": true,
+      "ai": false
+    }
+  }
+}
