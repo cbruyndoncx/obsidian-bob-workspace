@@ -258,22 +258,184 @@
     { "id": "client-work", "label": "Client Work", "entityKeys": ["meeting", "comms-thread", "deliverable", "feedback", "survey", "testimonial", "decision"] },
     { "id": "prm", "label": "PRM", "entityKeys": ["partner", "registration", "commission", "certification"] }
   ],
+  "entities": {
+    "contact": {
+      "typeFilter": null,
+      "folder": "Cadence/Contacts",
+      "fields": [
+        { "key": "name", "label": "Name", "primary": true },
+        { "key": "email", "label": "Email", "type": "email" },
+        { "key": "company", "label": "Company" },
+        { "key": "role", "label": "Role" },
+        { "key": "lastContact", "label": "Last contact", "type": "date" },
+        { "key": "tags", "label": "Tags", "type": "tags" }
+      ],
+      "columns": ["name", "company", "email", "role", "lastContact"]
+    },
+    "company": {
+      "typeFilter": null,
+      "folder": "Cadence/Companies",
+      "fields": [
+        { "key": "name", "label": "Name", "primary": true },
+        { "key": "domain", "label": "Domain" },
+        { "key": "industry", "label": "Industry" },
+        { "key": "size", "label": "Size" },
+        { "key": "owner", "label": "Owner" },
+        { "key": "tags", "label": "Tags", "type": "tags" }
+      ],
+      "columns": ["name", "domain", "industry", "size", "owner"]
+    },
+    "client": {
+      "typeFilter": null,
+      "folder": "Cadence/Clients"
+    },
+    "deal": {
+      "typeFilter": null,
+      "folder": "Cadence/Pipeline",
+      "fields": [
+        { "key": "title", "label": "Title", "primary": true },
+        { "key": "stage", "label": "Stage", "type": "enum", "options": ["Lead", "Qualified", "Proposal", "Negotiation", "Won", "Lost"] },
+        { "key": "value", "label": "Value", "type": "currency" },
+        { "key": "company", "label": "Company" },
+        { "key": "contact", "label": "Contact" },
+        { "key": "owner", "label": "Owner" },
+        { "key": "closeBy", "label": "Close by", "type": "date" }
+      ],
+      "columns": ["title", "stage", "value", "company", "closeBy"],
+      "valueField": "value",
+      "closeByField": "closeBy",
+      "wonStages": ["Won"],
+      "lostStages": ["Lost"]
+    },
+    "lead": {
+      "typeFilter": null,
+      "folder": "Cadence/Leads",
+      "fields": [
+        { "key": "name", "label": "Name", "primary": true },
+        { "key": "company", "label": "Company" },
+        { "key": "source", "label": "Source" },
+        { "key": "status", "label": "Status", "type": "enum", "options": ["New", "Contacted", "Qualified", "Disqualified", "Converted"] },
+        { "key": "assigned", "label": "Assigned" }
+      ],
+      "columns": ["name", "company", "source", "status", "assigned"]
+    },
+    "partner": {
+      "typeFilter": null,
+      "folder": "Cadence/Partners",
+      "fields": [
+        { "key": "name", "label": "Name", "primary": true },
+        { "key": "tier", "label": "Tier", "type": "enum", "options": ["Gold", "Silver", "Bronze", "Standard"] },
+        { "key": "status", "label": "Status", "type": "enum", "options": ["Active", "Onboarding", "Inactive", "Churned"] },
+        { "key": "owner", "label": "Owner" },
+        { "key": "region", "label": "Region" }
+      ],
+      "columns": ["name", "tier", "status", "region", "owner"]
+    },
+    "registration": {
+      "typeFilter": null,
+      "folder": "Cadence/Registrations",
+      "fields": [
+        { "key": "title", "label": "Title", "primary": true },
+        { "key": "partner", "label": "Partner" },
+        { "key": "status", "label": "Status", "type": "enum", "options": ["Submitted", "Approved", "Rejected", "Expired"] },
+        { "key": "value", "label": "Value", "type": "currency" },
+        { "key": "expires", "label": "Expires", "type": "date" }
+      ],
+      "columns": ["title", "partner", "status", "value", "expires"]
+    },
+    "commission": {
+      "typeFilter": null,
+      "folder": "Cadence/Commissions",
+      "fields": [
+        { "key": "reference", "label": "Ref", "primary": true },
+        { "key": "partner", "label": "Partner" },
+        { "key": "amount", "label": "Amount", "type": "currency" },
+        { "key": "status", "label": "Status", "type": "enum", "options": ["Pending", "Earned", "Paid", "Disputed"] },
+        { "key": "period", "label": "Period" },
+        { "key": "paidOn", "label": "Paid on", "type": "date" }
+      ],
+      "columns": ["reference", "partner", "amount", "status", "period", "paidOn"]
+    },
+    "certification": {
+      "typeFilter": null,
+      "folder": "Cadence/Certifications",
+      "fields": [
+        { "key": "name", "label": "Name", "primary": true },
+        { "key": "partner", "label": "Partner" },
+        { "key": "level", "label": "Level" },
+        { "key": "issued", "label": "Issued", "type": "date" },
+        { "key": "expires", "label": "Expires", "type": "date" }
+      ],
+      "columns": ["name", "partner", "level", "issued", "expires"]
+    },
+    "activity": {
+      "typeFilter": null,
+      "folder": "Cadence/Activities",
+      "fields": [
+        { "key": "subject", "label": "Subject", "primary": true },
+        { "key": "type", "label": "Type", "type": "enum", "options": ["Call", "Email", "Meeting", "Note", "Task"] },
+        { "key": "when", "label": "When", "type": "date" },
+        { "key": "with", "label": "With" },
+        { "key": "related", "label": "Related" }
+      ],
+      "columns": ["when", "type", "subject", "with", "related"]
+    },
+    "sequence": {
+      "typeFilter": null,
+      "folder": "Cadence/Sequences",
+      "fields": [
+        { "key": "name", "label": "Name", "primary": true },
+        { "key": "audience", "label": "Audience" },
+        { "key": "steps", "label": "Steps", "type": "number" },
+        { "key": "active", "label": "Active", "type": "number" },
+        { "key": "status", "label": "Status", "type": "enum", "options": ["Draft", "Active", "Paused", "Archived"] }
+      ],
+      "columns": ["name", "audience", "steps", "active", "status"]
+    },
+    "campaign": {
+      "typeFilter": null,
+      "folder": "Cadence/Campaigns"
+    },
+    "project": {
+      "typeFilter": null,
+      "folder": "Cadence/Projects",
+      "fields": [
+        { "key": "name", "label": "Name", "primary": true },
+        { "key": "status", "label": "Status", "type": "enum", "options": ["active", "on_hold", "backlog", "done", "cancelled"] },
+        { "key": "priority", "label": "Priority", "type": "enum", "options": ["low", "medium", "high"] },
+        { "key": "owner", "label": "Owner" },
+        { "key": "due", "label": "Due", "type": "date" }
+      ],
+      "columns": ["name", "status", "owner", "due"]
+    },
+    "meeting": {
+      "typeFilter": null
+    },
+    "comms-thread": {
+      "typeFilter": null
+    },
+    "deliverable": {
+      "typeFilter": null
+    },
+    "feedback": {
+      "typeFilter": null
+    },
+    "survey": {
+      "typeFilter": null
+    },
+    "testimonial": {
+      "typeFilter": null
+    },
+    "decision": {
+      "typeFilter": null
+    }
+  },
   "settings": {
     "modules": {
       "crm": true,
       "client-work": true,
       "prm": true,
       "planner": true
-    },
-    "folderContacts": "Cadence/Contacts",
-    "folderPipeline": "Cadence/Pipeline",
-    "folderPartners": "Cadence/Partners",
-    "folderRegistrations": "Cadence/Registrations",
-    "folderCommissions": "Cadence/Commissions",
-    "folderLeads": "Cadence/Leads",
-    "folderCertifications": "Cadence/Certifications",
-    "folderActivities": "Cadence/Activities",
-    "folderSequences": "Cadence/Sequences",
-    "folderProjects": "Cadence/Projects"
+    }
   }
 }
