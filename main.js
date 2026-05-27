@@ -1604,7 +1604,8 @@ function entityBasePath(settings = {}, entityKey) {
 
 function entityBaseViewName(settings = {}, entityKey) {
   const base = configuredBaseDefinition(entityKey);
-  return base?.view || base?.baseView || (settings.baseViews || {})[entityKey] || '';
+  // User selection in settings.baseViews overrides workspace.json default view.
+  return (settings.baseViews || {})[entityKey] || base?.view || base?.baseView || '';
 }
 
 function resetEntityRegistry(settings = {}) {
@@ -2241,12 +2242,14 @@ async function applyBaseOverrides(app, settings = {}) {
   }
 }
 
-async function applyConfiguredBaseOverrides(app) {
+async function applyConfiguredBaseOverrides(app, settings = {}) {
   for (const [entityKey, def] of Object.entries(WORKSPACE_CONFIG.bases || {})) {
     const basePath = def?.file || def?.base;
     if (!basePath || !ENTITIES[entityKey]) continue;
     CONFIGURED_BASE_ENTITY_KEYS.add(entityKey);
-    const baseConfig = await parseBaseFile(app, basePath, def.view || def.baseView);
+    // User selection (settings.baseViews) overrides workspace.json default view.
+    const viewName = entityBaseViewName(settings, entityKey);
+    const baseConfig = await parseBaseFile(app, basePath, viewName);
     mergeBaseConfigIntoEntity(entityKey, baseConfig);
   }
 }
@@ -2265,7 +2268,7 @@ async function reloadEntityConfiguration(app, settings = {}) {
   if (WORKSPACE_CONFIG.entities) {
     await applyEntityDefinitions(app, settings, WORKSPACE_CONFIG.entities, false);
   }
-  await applyConfiguredBaseOverrides(app);
+  await applyConfiguredBaseOverrides(app, settings);
   await applyBaseOverrides(app, settings);
   rebuildSurfaceLookups();
 }
@@ -5008,7 +5011,6 @@ class CadenceAppView extends obsidian.ItemView {
     // Today state
     this.todayFile = null;
     this.todayParsed = null;
-    this._journalSaveTimer = null;
     // Planner state
     this.plannerAnchor = startOfDay(new Date());
     // Detail-view state — when set, renders the entity form instead of the surface
@@ -9104,8 +9106,9 @@ class CadenceAppView extends obsidian.ItemView {
     ta.addEventListener('input', () => {
       ta.style.height = 'auto';
       ta.style.height = ta.scrollHeight + 'px';
-      if (this._journalSaveTimer) clearTimeout(this._journalSaveTimer);
-      this._journalSaveTimer = setTimeout(() => this.saveTodayJournal(ta.value), 800);
+    });
+    ta.addEventListener('blur', () => {
+      this.saveTodayJournal(ta.value);
     });
     setTimeout(() => { ta.style.height = ta.scrollHeight + 'px'; }, 0);
 
