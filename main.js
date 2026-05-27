@@ -11099,6 +11099,19 @@ class CadencePlugin extends obsidian.Plugin {
     });
 
     this.addCommand({
+      id: 'apply-workspace-template',
+      name: 'Apply workspace template…',
+      callback: async () => {
+        const templates = await loadWorkspaceTemplates(this.app);
+        if (templates.length === 0) {
+          new obsidian.Notice('BOB Workspace: no templates found in plugin templates/ folder.');
+          return;
+        }
+        new CadenceWorkspaceSetupModal(this.app, this, templates).open();
+      },
+    });
+
+    this.addCommand({
       id: 'reload-workspace-config',
       name: 'Reload workspace.json',
       callback: async () => {
