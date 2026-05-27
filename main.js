@@ -1468,8 +1468,6 @@ const WORKSPACE_OWNED_SETTING_KEYS = [
   'currency',
   'modules',
   'disabledSurfaces',
-  'showSecondaryNav',
-  'showSetupNav',
   'teamPersonCategories',
   'taskMode',
   'taskNotesFolder',
@@ -10269,28 +10267,6 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     const plannerGroup = pPlanner.createDiv({ cls: 'setting-group cad-settings-section' });
     const plannerPanel = plannerGroup.createDiv({ cls: 'setting-items' });
 
-    new obsidian.Setting(appPanel)
-      .setName('Show secondary screens in left navigation')
-      .setDesc('Shows lower-frequency child screens such as Sequences, Registrations, Commissions, Certifications, Journals, Statements and tax returns. They remain available as tabs on their parent screens when hidden.')
-      .addToggle((t) => t
-        .setValue(!!this.plugin.settings.showSecondaryNav)
-        .onChange(async (v) => {
-          this.plugin.settings.showSecondaryNav = v;
-          await this.plugin.saveSettings();
-          this.plugin.refreshOpenViews();
-        }));
-
-    new obsidian.Setting(appPanel)
-      .setName('Show setup screens in left navigation')
-      .setDesc('Shows setup/reference screens such as My Companies, Accounting Periods, Bank Accounts, Chart of Accounts, FX Rates, Legal Rules and Document Retention.')
-      .addToggle((t) => t
-        .setValue(!!this.plugin.settings.showSetupNav)
-        .onChange(async (v) => {
-          this.plugin.settings.showSetupNav = v;
-          await this.plugin.saveSettings();
-          this.plugin.refreshOpenViews();
-        }));
-
     const peopleCategories = ENTITIES.contact.fields.find((f) => f.key === 'person_category')?.options
       || DEFAULT_SETTINGS.teamPersonCategories;
     const selectedTeamCategories = new Set(
@@ -10554,6 +10530,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         setSchemaStatus('Saved', true);
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
+        await refreshSchemaSelect(sourceSchemaPath);
       } catch (e) {
         setSchemaStatus(`Auto-save failed: ${e.message}`, false);
         highlightSaveButtons(true);
@@ -11077,8 +11054,8 @@ class CadencePlaybookRunnerView extends (obsidian.BasesView || class {}) {
 /* ─────────── The plugin ─────────── */
 class CadencePlugin extends obsidian.Plugin {
   async onload() {
-    await this.loadSettings();
     initPluginPaths(this);
+    await this.loadSettings();
     await reloadEntityConfiguration(this.app, this.settings);
 
     this.registerView(
