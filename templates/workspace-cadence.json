@@ -2,7 +2,7 @@
   "_template": {
     "id": "cadence-classic",
     "label": "Cadence Classic",
-    "description": "Original Cadence navigation structure: Planner, CRM, PRM, Client Work, Finance, Procurement, Reports. No schema files required.",
+    "description": "Original Cadence navigation: Planner, CRM, PRM, Client Work and Reports. No Finance, Procurement or schema files required.",
     "order": 2
   },
   "schemas": {
@@ -115,7 +115,7 @@
             "module": "crm",
             "entityKey": "lead",
             "folderKey": "folderLeads",
-            "desc": "Prospect records — qualification, source, outreach status. Per-lead folder for replies in 03-COMMS/."
+            "desc": "Prospect records — qualification, source, outreach status."
           },
           {
             "id": "crm.campaigns",
@@ -164,82 +164,6 @@
             "icon": "briefcase-business",
             "module": "client-work",
             "desc": "Client delivery workspace: meetings, communications, deliverables, feedback, surveys, testimonials and decisions."
-          }
-        ]
-      },
-      {
-        "id": "finance",
-        "label": "Finance",
-        "module": "finance",
-        "items": [
-          {
-            "id": "finance.invoices",
-            "label": "Customer Invoices",
-            "icon": "receipt",
-            "module": "finance",
-            "entityKey": "invoice",
-            "desc": "Customer invoices, payment status and amounts."
-          },
-          {
-            "id": "finance.gl",
-            "label": "General Ledger",
-            "icon": "book-open",
-            "module": "finance",
-            "desc": "GL work area for chart of accounts, journal entries, trial balances and financial statements."
-          },
-          {
-            "id": "finance.setup",
-            "label": "Finance Setup",
-            "icon": "sliders-horizontal",
-            "module": "finance",
-            "desc": "Finance setup records: periods, bank accounts, FX rates and inventory/reference setup."
-          },
-          {
-            "id": "tax.overview",
-            "label": "Tax",
-            "icon": "receipt-text",
-            "module": "finance",
-            "desc": "Tax and compliance work area: VAT, corporate tax, transfer pricing, free-zone status and retention."
-          }
-        ]
-      },
-      {
-        "id": "procurement",
-        "label": "Suppliers & Procurement",
-        "module": "procurement",
-        "items": [
-          {
-            "id": "procurement.suppliers",
-            "label": "Suppliers",
-            "icon": "truck",
-            "module": "procurement",
-            "entityKey": "supplier",
-            "folderKey": "folderSuppliers",
-            "desc": "Supplier profiles — services, contracts, contacts, spend."
-          },
-          {
-            "id": "procurement.supplier-invoices",
-            "label": "Supplier Invoices",
-            "icon": "file-check-2",
-            "module": "procurement",
-            "entityKey": "supplier-invoice",
-            "desc": "Supplier invoices, three-way match and payment status."
-          },
-          {
-            "id": "procurement.purchase-requisitions",
-            "label": "Purchase Requisitions",
-            "icon": "clipboard-list",
-            "module": "procurement",
-            "entityKey": "purchase-requisition",
-            "desc": "Internal purchase requests before spend is approved or a PO is issued."
-          },
-          {
-            "id": "procurement.purchase-orders",
-            "label": "Purchase Orders",
-            "icon": "shopping-cart",
-            "module": "procurement",
-            "entityKey": "purchase-order",
-            "desc": "Formal supplier purchase orders, approval status and delivery references."
           }
         ]
       },
@@ -325,42 +249,6 @@
         { "label": "Commissions", "entityKey": "commission" },
         { "label": "Certifications", "entityKey": "certification" },
         { "label": "Analytics", "route": "prm.analytics" }
-      ],
-      "finance.invoices": [
-        { "label": "Customer Invoices", "entityKey": "invoice" }
-      ],
-      "finance.gl": [
-        { "label": "Overview", "route": "finance.gl.overview" },
-        { "label": "Chart of Accounts", "entityKey": "chart-of-accounts" },
-        { "label": "Journal Entries", "entityKey": "journal-entry" },
-        { "label": "Bank Reconciliations", "entityKey": "bank-reconciliation" },
-        { "label": "Trial Balances", "entityKey": "trial-balance" },
-        { "label": "Statements", "entityKey": "financial-statement" },
-        { "label": "FS Notes", "entityKey": "fs-notes" }
-      ],
-      "finance.setup": [
-        { "label": "Overview", "route": "finance.setup.overview" },
-        { "label": "Accounting Periods", "entityKey": "accounting-period" },
-        { "label": "Bank Accounts", "entityKey": "bank-account" },
-        { "label": "FX Rates", "entityKey": "fx-rates-table" },
-        { "label": "Inventory", "entityKey": "inventory" }
-      ],
-      "procurement.suppliers": [
-        { "label": "Overview", "route": "procurement.overview" },
-        { "label": "Suppliers", "entityKey": "supplier" },
-        { "label": "Supplier Invoices", "entityKey": "supplier-invoice" },
-        { "label": "Purchase Requisitions", "entityKey": "purchase-requisition" },
-        { "label": "Purchase Orders", "entityKey": "purchase-order" }
-      ],
-      "tax.overview": [
-        { "label": "Overview", "route": "tax.dashboard" },
-        { "label": "VAT Returns", "entityKey": "vat-return" },
-        { "label": "Corporate Tax", "entityKey": "corporate-tax-return" },
-        { "label": "Deferred Tax", "entityKey": "deferred-tax" },
-        { "label": "Transfer Pricing", "entityKey": "transfer-pricing" },
-        { "label": "Free Zone Status", "entityKey": "free-zone-status" },
-        { "label": "Legal Rules", "entityKey": "legal-rule" },
-        { "label": "Document Retention", "entityKey": "document-retention" }
       ]
     }
   },
@@ -368,18 +256,16 @@
     { "id": "planner", "label": "Planner", "entityKeys": ["task", "project"] },
     { "id": "crm", "label": "CRM", "entityKeys": ["deal", "contact", "client", "company", "lead", "campaign", "sequence", "activity"] },
     { "id": "client-work", "label": "Client Work", "entityKeys": ["meeting", "comms-thread", "deliverable", "feedback", "survey", "testimonial", "decision"] },
-    { "id": "prm", "label": "PRM", "entityKeys": ["partner", "registration", "commission", "certification"] },
-    { "id": "finance", "label": "Finance", "entityKeys": ["invoice", "chart-of-accounts", "journal-entry", "bank-reconciliation", "trial-balance", "financial-statement", "fs-notes", "accounting-period", "bank-account", "fx-rates-table", "inventory", "vat-return", "corporate-tax-return", "deferred-tax", "transfer-pricing", "free-zone-status", "legal-rule", "document-retention"] },
-    { "id": "procurement", "label": "Suppliers & Procurement", "entityKeys": ["supplier", "supplier-invoice", "purchase-requisition", "purchase-order"] }
+    { "id": "prm", "label": "PRM", "entityKeys": ["partner", "registration", "commission", "certification"] }
   ],
   "settings": {
     "modules": {
       "crm": true,
       "client-work": true,
       "prm": true,
-      "finance": true,
-      "procurement": true,
-      "tax": true,
+      "finance": false,
+      "procurement": false,
+      "tax": false,
       "planner": true,
       "ai": false
     }
