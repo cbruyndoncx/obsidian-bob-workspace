@@ -24,8 +24,11 @@ const BUILTIN_NAV_GROUPS = [
   {
     id: 'misc', label: '',
     items: [
-      { id: 'team',     label: 'Team',     icon: 'user-cog',   desc: 'Team members, roles, seats — admin view of your BOB Workspace.' },
-      { id: 'settings', label: 'Settings', icon: 'settings-2', desc: 'BOB Workspace settings — folders, headings, week start, API connection.' },
+      { id: 'team',                  label: 'Team',             icon: 'user-cog',          desc: 'Team members, roles, seats — admin view of your BOB Workspace.' },
+      { id: 'settings',              label: 'Settings',         icon: 'settings-2',        desc: 'BOB Workspace settings — folders, headings, week start, API connection.' },
+      { id: 'misc.dashboard-editor', label: 'Dashboard Editor', icon: 'layout-panel-left', desc: 'Customize dashboard layouts and widgets — live preview updates as you type.' },
+      { id: 'misc.export',            label: 'Export',           icon: 'download',          desc: 'Export data to XLSX workbooks.' },
+      { id: 'misc.import',            label: 'Import',           icon: 'upload',            desc: 'Import data from XLSX workbooks or CSV files.' },
     ],
   },
 ];
@@ -887,7 +890,7 @@ const BUILT_SURFACES = new Set([
   'tax.overview',
   'prm.partners', 'prm.registrations', 'prm.commissions', 'prm.certifications', 'prm.analytics',
   'reports.pipeline', 'reports.sales', 'reports.partners', 'reports.activity', 'reports.productivity',
-  'team', 'settings',
+  'team', 'settings', 'misc.dashboard-editor', 'misc.export', 'misc.import',
   'ai.playbooks', 'ai.skills',
 ]);
 const BUILTIN_SURFACE_IDS = new Set(BUILT_SURFACES);
@@ -1240,9 +1243,10 @@ function validateWorkspaceConfig(config) {
   }
   const surfaceIds = new Set();
   for (const group of navigation?.groups || []) {
-    if (!group || typeof group !== 'object' || !group.id || !Array.isArray(group.items)) {
-      throw new Error('Every navigation group needs an id and items array');
+    if (!group || typeof group !== 'object' || !group.id) {
+      throw new Error('Every navigation group needs an id');
     }
+    if (!Array.isArray(group.items)) continue; // separator group — no items to validate
     for (const surface of group.items) {
       if (!surface || !surface.id || !surface.label) {
         throw new Error(`Navigation group "${group.id}" has an item without id/label`);
@@ -1275,6 +1279,9 @@ function validateWorkspaceConfig(config) {
     if (!base || typeof base !== 'object' || Array.isArray(base) || !String(base.file || base.base || '').trim()) {
       throw new Error(`bases "${entityKey}" needs a file path`);
     }
+  }
+  if (config.dashboards != null && (typeof config.dashboards !== 'object' || Array.isArray(config.dashboards))) {
+    throw new Error('dashboards must be an object keyed by surface id');
   }
   if (config.workbookGroups != null && !Array.isArray(config.workbookGroups)) {
     throw new Error('workbookGroups must be an array');
@@ -4106,6 +4113,24 @@ async function importWorkbookEntities(app, file) {
   return result;
 }
 
+async function importWorkbookEntitiesFromBuffer(app, buffer, filename) {
+  const XLSX = getXLSX(app);
+  const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
+  const result = { created: 0, updated: 0, failed: 0, sheets: 0, skippedSheets: [] };
+  for (const sheetName of wb.SheetNames) {
+    const entityKey = workbookEntityKeyFromSheet(sheetName);
+    if (!entityKey) { result.skippedSheets.push(sheetName); continue; }
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '', raw: false });
+    const nonEmptyRows = rows.filter((row) => Object.values(row).some((v) => String(v || '').trim()));
+    const imported = await importEntityRows(app, entityKey, nonEmptyRows);
+    result.created += imported.created;
+    result.updated += imported.updated || 0;
+    result.failed += imported.failed;
+    result.sheets++;
+  }
+  return result;
+}
+
 async function promptImportWorkbook(app, onDone = () => {}) {
   const workbookFiles = app.vault.getFiles().filter((f) => {
     const p = f.path.toLowerCase();
@@ -4139,7 +4164,7 @@ class CadenceImportModal extends obsidian.Modal {
     super(app);
     this.entityKey = (opts && opts.entityKey) || 'contact';
     this.onSubmit = (opts && opts.onSubmit) || (() => {});
-    this.csvText = '';
+    this.csvText = (opts && opts.prefillCsv) || '';
     this.headers = [];
     this.rows = [];
     this.mapping = {}; // csv-header → entity-field-key | null
@@ -4150,12 +4175,20 @@ class CadenceImportModal extends obsidian.Modal {
     contentEl.empty();
     contentEl.addClass('cad-import-modal');
     if (modalEl) modalEl.addClass('cad-import-modal-shell');
-    contentEl.createEl('h3', { cls: 'cad-create-title', text: 'Import from CSV' });
+    contentEl.createEl('h3', { cls: 'cad-create-title', text: 'Import' });
 
-    /* Entity selector */
+    /* Top row: entity picker + file source buttons */
+    const srcRow = contentEl.createDiv({ cls: 'cad-data-btn-row cad-import-src-row' });
+    const entitySelect = srcRow.createEl('select', { cls: 'cad-de-select' });
+    const fileBtn  = srcRow.createEl('button', { cls: 'cad-btn', text: 'Pick .csv file…' });
+    fileBtn.type = 'button';
+    const xlsxBtn = srcRow.createEl('button', { cls: 'cad-btn', text: 'Pick .xlsx file…' });
+    xlsxBtn.type = 'button';
+
+    /* Entity selector (same select, wired below) */
     const entityRow = contentEl.createDiv({ cls: 'cad-create-row' });
-    entityRow.createDiv({ cls: 'cad-create-label', text: 'IMPORT AS' });
-    const entitySelect = entityRow.createEl('select', { cls: 'cad-create-input' });
+    entityRow.style.display = 'none'; // hidden — entity select is in srcRow
+    entitySelect.createEl('option', { value: '', text: 'Please select entity…', attr: { disabled: '', selected: '' } });
     Object.entries(ENTITIES)
       .sort(([, a], [, b]) => String(a.plural || a.label || '').localeCompare(String(b.plural || b.label || '')))
       .forEach(([key, def]) => {
@@ -4181,21 +4214,6 @@ class CadenceImportModal extends obsidian.Modal {
     csvWrap.style.flexDirection = 'column';
     csvWrap.style.gap = '8px';
 
-    const tabs = csvWrap.createDiv();
-    tabs.style.display = 'flex';
-    tabs.style.gap = '6px';
-    tabs.style.flexWrap = 'wrap';
-    const pasteBtn = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Paste' });
-    pasteBtn.type = 'button';
-    const fileBtn  = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Pick .csv from vault' });
-    fileBtn.type = 'button';
-    const xlsxBtn = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Pick .xlsx from vault' });
-    xlsxBtn.type = 'button';
-    const exportBtn = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Export CSV template' });
-    exportBtn.type = 'button';
-    const exportXlsxBtn = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Export XLSX template' });
-    exportXlsxBtn.type = 'button';
-
     const ta = csvWrap.createEl('textarea', { cls: 'cad-create-input' });
     ta.rows = 8;
     ta.placeholder = 'Paste CSV here, including a header row…';
@@ -4208,36 +4226,26 @@ class CadenceImportModal extends obsidian.Modal {
       this._renderPreview();
     });
 
-    pasteBtn.addEventListener('click', () => ta.focus());
-    exportBtn.addEventListener('click', () => this._exportTemplateCSV());
-    exportXlsxBtn.addEventListener('click', () => this._exportTemplateXLSX());
-    xlsxBtn.addEventListener('click', () => this._pickXLSXFromVault(ta));
-    fileBtn.addEventListener('click', async () => {
-      // Intentional vault-wide enumeration: the user is explicitly picking a
-      // .csv file they've placed somewhere in their vault. Limiting this
-      // would defeat the feature. All other entity reads are folder-scoped.
-      const csvFiles = this.app.vault.getFiles().filter((f) => f.path.toLowerCase().endsWith('.csv'));
-      if (!csvFiles.length) {
-        new obsidian.Notice('No .csv files found in vault. Drop one in the vault first.');
-        return;
-      }
-      const picker = new (class extends obsidian.SuggestModal {
-        constructor(app, files, onPick) { super(app); this.files = files; this.onPick = onPick; this.setPlaceholder('Search .csv files…'); }
-        getSuggestions(q) { return this.files.filter((f) => f.path.toLowerCase().includes(q.toLowerCase())); }
-        renderSuggestion(file, el) { el.setText(file.path); }
-        onChooseSuggestion(file) { this.onPick(file); }
-      })(this.app, csvFiles, async (file) => {
-        try {
-          const text = await this.app.vault.read(file);
-          ta.value = text;
-          this.csvText = text;
-          this._parse();
-          this._renderPreview();
-        } catch (e) {
-          new obsidian.Notice(`Failed to read ${file.path}: ${e.message}`);
-        }
+    if (this.csvText) { ta.value = this.csvText; this._parse(); }
+    fileBtn.addEventListener('click', () => {
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = '.csv,.txt';
+      inp.addEventListener('change', async () => {
+        const f = inp.files[0]; if (!f) return;
+        try { const text = await f.text(); ta.value = text; this.csvText = text; this._parse(); this._renderPreview(); }
+        catch (e) { new obsidian.Notice(`Failed to read file: ${e.message}`); }
       });
-      picker.open();
+      inp.click();
+    });
+    xlsxBtn.addEventListener('click', () => {
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = '.xlsx,.xlsm,.xlsb,.xls';
+      inp.addEventListener('change', async () => {
+        const f = inp.files[0]; if (!f) return;
+        try { await this._loadXLSXFile(f, ta); }
+        catch (e) { new obsidian.Notice(`Failed to read file: ${e.message}`); }
+      });
+      inp.click();
     });
 
     /* Preview area */
@@ -4284,11 +4292,11 @@ class CadenceImportModal extends obsidian.Modal {
   async _exportTemplateCSV() {
     const def = ENTITIES[this.entityKey];
     if (!def) return;
-    const folder = 'Cadence/Imports';
+    const folder = `${DEFAULT_SETTINGS.workbookExportFolder}/Templates`;
     const safeKey = this.entityKey.replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
     const path = `${folder}/${safeKey}-import-template.csv`;
     try {
-      await ensureFolderSync(this.app, 'Cadence');
+      await ensureFolderSync(this.app, DEFAULT_SETTINGS.workbookExportFolder);
       await ensureFolderSync(this.app, folder);
       await this.app.vault.adapter.write(path, csvTemplateForEntity(this.entityKey));
       new obsidian.Notice(`Exported CSV template to ${path}`);
@@ -4306,7 +4314,7 @@ class CadenceImportModal extends obsidian.Modal {
       const rows = [Object.fromEntries(def.fields.map((f, i) => [f.key, sampleValueForField(f, def, i)]))];
       const ws = XLSX.utils.json_to_sheet(rows, { header: def.fields.map((f) => f.key) });
       XLSX.utils.book_append_sheet(wb, ws, safeSheetName(def.plural || this.entityKey));
-      const folder = 'Cadence/Imports';
+      const folder = `${DEFAULT_SETTINGS.workbookExportFolder}/Templates`;
       const safeKey = this.entityKey.replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
       const path = `${folder}/${safeKey}-import-template.xlsx`;
       await writeWorkbookToVault(this.app, wb, path);
@@ -4316,41 +4324,21 @@ class CadenceImportModal extends obsidian.Modal {
     }
   }
 
-  async _pickXLSXFromVault(textarea) {
-    const xlsxFiles = this.app.vault.getFiles().filter((f) => {
-      const p = f.path.toLowerCase();
-      return p.endsWith('.xlsx') || p.endsWith('.xlsm') || p.endsWith('.xlsb') || p.endsWith('.xls');
-    });
-    if (!xlsxFiles.length) {
-      new obsidian.Notice('No Excel files found in vault. Drop one in the vault first.');
-      return;
+  async _loadXLSXFile(file, textarea) {
+    const XLSX = getXLSX(this.app);
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
+    const matchingSheet = wb.SheetNames.find((s) => workbookEntityKeyFromSheet(s) === this.entityKey);
+    const sheetName = matchingSheet || wb.SheetNames[0];
+    if (!sheetName) throw new Error('Workbook has no sheets');
+    const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]);
+    textarea.value = csv;
+    this.csvText = csv;
+    this._parse();
+    this._renderPreview();
+    if (!matchingSheet && wb.SheetNames.length > 1) {
+      new obsidian.Notice(`Loaded sheet "${sheetName}".`);
     }
-    const picker = new (class extends obsidian.SuggestModal {
-      constructor(app, files, onPick) { super(app); this.files = files; this.onPick = onPick; this.setPlaceholder('Search Excel files…'); }
-      getSuggestions(q) { return this.files.filter((f) => f.path.toLowerCase().includes(q.toLowerCase())); }
-      renderSuggestion(file, el) { el.setText(file.path); }
-      onChooseSuggestion(file) { this.onPick(file); }
-    })(this.app, xlsxFiles, async (file) => {
-      try {
-        const XLSX = getXLSX(this.app);
-        const data = await this.app.vault.readBinary(file);
-        const wb = XLSX.read(data, { type: 'array', cellDates: true });
-        const matchingSheet = wb.SheetNames.find((s) => workbookEntityKeyFromSheet(s) === this.entityKey);
-        const sheetName = matchingSheet || wb.SheetNames[0];
-        if (!sheetName) throw new Error('Workbook has no sheets');
-        const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]);
-        textarea.value = csv;
-        this.csvText = csv;
-        this._parse();
-        this._renderPreview();
-        if (!matchingSheet && wb.SheetNames.length > 1) {
-          new obsidian.Notice(`Loaded sheet "${sheetName}".`);
-        }
-      } catch (e) {
-        new obsidian.Notice(`Failed to read ${file.path}: ${e.message}`);
-      }
-    });
-    picker.open();
   }
 
   _parse() {
@@ -4831,6 +4819,179 @@ class CadenceIconPickerModal extends obsidian.SuggestModal {
   }
 }
 
+/* ─────────── Built-in dashboard configuration defaults ─────────── */
+const BUILTIN_DASHBOARD_DEFAULTS = {
+  'client-work.dashboard': {
+    title: 'Client Work',
+    subtitle: 'Delivery overview across meetings, comms, deliverables, feedback and decisions',
+    contextFilter: 'client-work',
+    stats: [
+      { label: 'MEETINGS', entity: 'meeting', count: 'all', sub: 'client conversations', accent: 'sky', mode: 'client-work.meetings' },
+      { label: 'OPEN DELIVERABLES', entity: 'deliverable', count: 'open', sub: { entity: 'deliverable', count: 'all', suffix: 'total' }, accent: 'emerald' },
+      { label: 'OPEN COMMS', entity: 'comms-thread', count: 'open', sub: { entity: 'comms-thread', count: 'all', suffix: 'threads' }, accent: 'mint' },
+      { label: 'FEEDBACK', entity: 'feedback', count: 'all', sub: 'items captured', accent: 'warn' },
+      { label: 'DECISIONS', entity: 'decision', count: 'all', sub: 'decision records', accent: 'rose' },
+    ],
+    layout: [
+      [
+        [
+          { title: 'RECENT MEETINGS', empty: 'No meetings.', entity: 'meeting', source: 'recent', titleFields: ['context', 'name', 'title'], metaFields: ['date', 'status', 'client_id', 'project_id'] },
+          { title: 'OPEN DELIVERABLES', empty: 'No open deliverables.', entity: 'deliverable', source: 'recent-open', titleFields: ['title', 'project'], metaFields: ['status', 'client_id', 'project_id'] },
+          { title: 'RECENT COMMS', empty: 'No communication threads.', entity: 'comms-thread', source: 'recent', titleFields: ['subject', 'thread_id'], metaFields: ['channel', 'status', 'last_message_at'] },
+        ],
+        [
+          { title: 'RECENT FEEDBACK', empty: 'No feedback captured.', entity: 'feedback', source: 'recent', titleFields: ['respondent', 'feedback_type'], metaFields: ['score', 'status', 'client_id'] },
+          { title: 'RECENT DECISIONS', empty: 'No decisions recorded.', entity: 'decision', source: 'recent', titleFields: ['title', 'status'], metaFields: ['status', 'client_id', 'project_id'] },
+        ],
+      ],
+    ],
+    conditionalRows: [
+      {
+        condition: { entities: ['survey', 'testimonial'] },
+        cards: [
+          { title: 'SURVEYS', empty: 'No surveys.', entity: 'survey', source: 'recent', titleFields: ['title'], metaFields: ['status', 'response_count', 'response_rate'] },
+          { title: 'TESTIMONIALS', empty: 'No testimonials.', entity: 'testimonial', source: 'recent', titleFields: ['respondent_name', 'respondent'], metaFields: ['status', 'permission_level'] },
+        ],
+      },
+    ],
+  },
+  'finance.gl.overview': {
+    title: 'General Ledger',
+    subtitle: 'Posting, reconciliation, trial balance and reporting overview',
+    legend: 'finance-statements',
+    stats: [
+      { label: 'ACCOUNTS', entity: 'chart-of-accounts', count: 'all', sub: 'chart records', accent: 'sky' },
+      { label: 'OPEN JOURNALS', entity: 'journal-entry', count: 'open', sub: { entity: 'journal-entry', count: 'all', suffix: 'total' }, accent: 'mint' },
+      { label: 'RECONCILIATIONS', entity: 'bank-reconciliation', count: 'all', sub: 'bank rec records', accent: 'emerald' },
+      { label: 'TRIAL BALANCES', entity: 'trial-balance', count: 'all', sub: 'period snapshots', accent: 'warn' },
+      { label: 'STATEMENTS', entity: 'financial-statement', count: 'all', sub: { entity: 'fs-notes', count: 'all', suffix: 'FS notes' }, accent: 'rose' },
+    ],
+    layout: [
+      [
+        { title: 'RECENT JOURNALS', empty: 'No journal entries.', entity: 'journal-entry', source: 'recent', titleFields: ['journal_id', 'title'], metaFields: ['status', 'period_id', 'client_id'] },
+        { title: 'RECENT RECONCILIATIONS', empty: 'No bank reconciliations.', entity: 'bank-reconciliation', source: 'recent', titleFields: ['reconciliation_id', 'account_id'], metaFields: ['status', 'period_id', 'difference'] },
+      ],
+      [
+        { title: 'TRIAL BALANCES', empty: 'No trial balances.', entity: 'trial-balance', source: 'recent', titleFields: ['trial_balance_id', 'period_id'], metaFields: ['status', 'period_id', 'client_id'] },
+        { title: 'FINANCIAL STATEMENTS', empty: 'No financial statements.', entity: 'financial-statement', source: 'recent', titleFields: ['statement_id', 'statement_type', 'period_id'], metaFields: ['statement_type', 'status', 'period_id', 'client_id'] },
+      ],
+    ],
+  },
+  'finance.setup.overview': {
+    title: 'Finance Setup',
+    subtitle: 'Configuration records required before finance workflows run cleanly',
+    stats: [
+      { label: 'PERIODS', entity: 'accounting-period', count: 'all', sub: { entity: 'accounting-period', count: 'open', suffix: 'open' }, accent: 'sky' },
+      { label: 'BANK ACCOUNTS', entity: 'bank-account', count: 'all', sub: 'configured accounts', accent: 'mint' },
+      { label: 'FX TABLES', entity: 'fx-rates-table', count: 'all', sub: 'rate tables', accent: 'warn' },
+      { label: 'INVENTORY ITEMS', entity: 'inventory', count: 'all', sub: 'tracked records', accent: 'emerald' },
+    ],
+    layout: [
+      [
+        { title: 'OPEN PERIODS', empty: 'No open periods.', entity: 'accounting-period', source: 'recent-open', titleFields: ['period_id'], metaFields: ['status', 'start_date', 'end_date'] },
+        {
+          title: 'RECENT SETUP CHANGES', empty: 'No setup records.',
+          merge: [
+            { entity: 'bank-account', source: 'recent', titleFields: ['account_name', 'account_id'], metaFields: ['currency', 'status'] },
+            { entity: 'fx-rates-table', source: 'recent', titleFields: ['rate_table_id', 'base_currency'], metaFields: ['period_id', 'source'] },
+          ],
+        },
+      ],
+    ],
+  },
+  'procurement.overview': {
+    title: 'Suppliers & Procurement',
+    subtitle: 'Supplier, invoice, requisition and purchase order overview',
+    stats: [
+      { label: 'SUPPLIERS', entity: 'supplier', count: 'all', sub: 'supplier records', accent: 'sky' },
+      { label: 'OPEN INVOICES', entity: 'supplier-invoice', count: 'open', sub: { entity: 'supplier-invoice', count: 'all', suffix: 'total' }, accent: 'rose' },
+      { label: 'REQUISITIONS', entity: 'purchase-requisition', count: 'open', sub: { entity: 'purchase-requisition', count: 'all', suffix: 'total' }, accent: 'warn' },
+      { label: 'OPEN POS', entity: 'purchase-order', count: 'open', sub: { entity: 'purchase-order', count: 'all', suffix: 'total' }, accent: 'mint' },
+    ],
+    layout: [
+      [
+        { title: 'OPEN SUPPLIER INVOICES', empty: 'No open supplier invoices.', entity: 'supplier-invoice', source: 'due-open', dateFields: ['due_date', 'invoice_date'], titleFields: ['invoice_id', 'supplier_id'] },
+        { title: 'PENDING REQUISITIONS', empty: 'No pending requisitions.', entity: 'purchase-requisition', source: 'recent-open', titleFields: ['requisition_id', 'title'], metaFields: ['status', 'requester', 'amount'] },
+      ],
+      [
+        { title: 'OPEN PURCHASE ORDERS', empty: 'No open purchase orders.', entity: 'purchase-order', source: 'due-open', dateFields: ['expected_delivery', 'order_date'], titleFields: ['po_id', 'supplier_id'] },
+        { title: 'RECENT SUPPLIERS', empty: 'No suppliers.', entity: 'supplier', source: 'recent', titleFields: ['supplier_name', 'name'], metaFields: ['status', 'category'] },
+      ],
+    ],
+  },
+  'tax.dashboard': {
+    title: 'Tax',
+    subtitle: 'Filing, tax review, legal rule and retention overview',
+    stats: [
+      { label: 'OPEN VAT', entity: 'vat-return', count: 'open', sub: { entity: 'vat-return', count: 'all', suffix: 'returns' }, accent: 'sky' },
+      { label: 'OPEN CT', entity: 'corporate-tax-return', count: 'open', sub: { entity: 'corporate-tax-return', count: 'all', suffix: 'returns' }, accent: 'mint' },
+      { label: 'TP FILES', entity: 'transfer-pricing', count: 'all', sub: 'transfer pricing', accent: 'warn' },
+      { label: 'LEGAL RULES', entity: 'legal-rule', count: 'all', sub: { entity: 'document-retention', count: 'all', suffix: 'retention records' }, accent: 'rose' },
+    ],
+    layout: [
+      [
+        { title: 'UPCOMING VAT RETURNS', empty: 'No open VAT returns.', entity: 'vat-return', source: 'due-open', dateFields: ['filing_due_date', 'due_date', 'period_end'], titleFields: ['return_id', 'period_id'] },
+        { title: 'UPCOMING CORPORATE TAX', empty: 'No open corporate tax returns.', entity: 'corporate-tax-return', source: 'due-open', dateFields: ['filing_due_date', 'due_date', 'period_end'], titleFields: ['return_id', 'period_id'] },
+      ],
+      [
+        {
+          title: 'TAX REVIEWS', empty: 'No deferred tax or free-zone reviews.',
+          merge: [
+            { entity: 'deferred-tax', source: 'recent', titleFields: ['assessment_id', 'period_id'], metaFields: ['status', 'period_id'] },
+            { entity: 'free-zone-status', source: 'recent', titleFields: ['assessment_id', 'entity_id'], metaFields: ['status', 'period_id'] },
+          ],
+        },
+        {
+          title: 'RECENT LEGAL / RETENTION', empty: 'No legal or retention records.',
+          merge: [
+            { entity: 'legal-rule', source: 'recent', titleFields: ['rule_id', 'title'], metaFields: ['jurisdiction', 'status'] },
+            { entity: 'document-retention', source: 'recent', titleFields: ['document_type', 'retention_id'], metaFields: ['status', 'destroy_after_date'] },
+          ],
+        },
+      ],
+    ],
+  },
+  'prm.partners.overview': {
+    title: 'Partners',
+    subtitle: 'Partner operations overview across registrations, commissions and certifications',
+    stats: [
+      { label: 'PARTNERS', entity: 'partner', count: 'all', sub: 'partner records', accent: 'sky' },
+      { label: 'REGISTRATIONS', entity: 'registration', count: 'open', sub: { entity: 'registration', count: 'all', suffix: 'total' }, accent: 'mint' },
+      { label: 'COMMISSIONS', entity: 'commission', count: 'open', sub: { entity: 'commission', count: 'all', suffix: 'total' }, accent: 'warn' },
+      { label: 'CERTIFICATIONS', entity: 'certification', count: 'all', sub: 'cert records', accent: 'emerald' },
+      { label: 'PARTNER DEALS', entity: 'deal', count: { field: 'partner' }, sub: 'attributed deals', accent: 'rose' },
+    ],
+    layout: [
+      [
+        { title: 'PENDING REGISTRATIONS', empty: 'No pending registrations.', entity: 'registration', source: 'recent-open', titleFields: ['deal_name', 'registration_id'], metaFields: ['status', 'partner_ref', 'expiry_date'] },
+        { title: 'OPEN COMMISSIONS', empty: 'No open commissions.', entity: 'commission', source: 'recent-open', titleFields: ['commission_id', 'partner_ref'], metaFields: ['status', 'amount', 'currency'] },
+      ],
+      [
+        { title: 'CERTIFICATIONS EXPIRING', empty: 'No certifications expiring soon.', entity: 'certification', source: 'due', dateFields: ['expires_date', 'renewal_date'], titleFields: ['name', 'certification_id'] },
+        { title: 'RECENT PARTNERS', empty: 'No partners.', entity: 'partner', source: 'recent', titleFields: ['partner_name', 'name'], metaFields: ['tier', 'status'] },
+      ],
+    ],
+  },
+  'crm.campaigns.overview': {
+    title: 'Campaigns',
+    subtitle: 'Campaign and outbound sequence overview',
+    stats: [
+      { label: 'ACTIVE CAMPAIGNS', entity: 'campaign', count: 'open', sub: { entity: 'campaign', count: 'all', suffix: 'total' }, accent: 'sky' },
+      { label: 'ACTIVE SEQUENCES', entity: 'sequence', count: 'open', sub: { entity: 'sequence', count: 'all', suffix: 'total' }, accent: 'mint' },
+      { label: 'LEADS', entity: 'lead', count: 'all', sub: 'lead records', accent: 'warn' },
+    ],
+    layout: [
+      [
+        { title: 'ACTIVE CAMPAIGNS', empty: 'No active campaigns.', entity: 'campaign', source: 'recent-open', titleFields: ['campaign_name', 'title'], metaFields: ['status', 'campaign_type', 'launch_date'] },
+        { title: 'ACTIVE SEQUENCES', empty: 'No active sequences.', entity: 'sequence', source: 'recent-open', titleFields: ['sequence_name', 'title'], metaFields: ['status', 'channel', 'campaign_id'] },
+      ],
+      [
+        { title: 'RECENT LEADS', empty: 'No leads captured.', entity: 'lead', source: 'recent', titleFields: ['company_name', 'contact_name'], metaFields: ['status', 'owner', 'next_action_date'] },
+      ],
+    ],
+  },
+};
+
 /* ─────────── The unified Cadence app view ─────────── */
 class CadenceAppView extends obsidian.ItemView {
   constructor(leaf, plugin) {
@@ -4903,6 +5064,7 @@ class CadenceAppView extends obsidian.ItemView {
     const showSetup = !!this.plugin.settings.showSetupNav;
     return NAV_GROUPS
       .map((g) => {
+        if (!Array.isArray(g.items)) return g; // separator group — pass through as-is
         if (g.module && mods[g.module] === false) return null;
         const items = g.items.filter((it) => {
           if (it.module && mods[it.module] === false) return false;
@@ -5107,6 +5269,7 @@ class CadenceAppView extends obsidian.ItemView {
 
     const visibleGroups = this._visibleNavGroups();
     visibleGroups.forEach((group) => {
+      if (!Array.isArray(group.items)) { nav.createEl('hr', { cls: 'cad-nav-separator' }); return; }
       const groupEl = nav.createDiv({ cls: 'cad-nav-group' });
       const isCollapsed = !!collapsed[group.id];
 
@@ -5184,9 +5347,12 @@ class CadenceAppView extends obsidian.ItemView {
 	      'reports.partners':    () => this.renderReportPartners(content),
 	      'reports.activity':    () => this.renderReportActivity(content),
 	      'reports.productivity':() => this.renderProductivity(content),
-	      'team':                () => this.renderTeam(content),
-	      'settings':            () => this.openSettingsTab(content),
-	      'ai.playbooks':        () => this.renderEntityList(content, 'playbook'),
+	      'team':                   () => this.renderTeam(content),
+	      'settings':               () => this.openSettingsTab(content),
+	      'misc.dashboard-editor':  () => this.renderDashboardEditor(content),
+	      'misc.export':             () => this.renderExport(content),
+      'misc.import':             () => this.renderImport(content),
+	      'ai.playbooks':           () => this.renderEntityList(content, 'playbook'),
 	      'ai.skills':           () => this.renderEntityList(content, 'skill'),
 	      'finance.invoices':    () => this.renderEntityTabs(content, 'finance.invoices', 'invoice'),
 	      'finance.gl':          () => this.renderEntityTabs(content, 'finance.gl', 'finance.gl.overview'),
@@ -5215,6 +5381,8 @@ class CadenceAppView extends obsidian.ItemView {
       const entityKey = this.mode.slice('custom.'.length);
       if (ENTITIES[entityKey]) await this.renderEntityList(content, entityKey);
       else this.renderComingSoon(content, active);
+    } else if (WORKSPACE_CONFIG.dashboards?.[this.mode]) {
+      await this.renderConfigDashboard(this.mode, content);
     } else {
       this.renderComingSoon(content, active);
     }
@@ -5754,6 +5922,7 @@ class CadenceAppView extends obsidian.ItemView {
     if (route === 'prm.partners.overview') return this.renderPartnerWorkspaceDashboard(root);
     if (route === 'crm.campaigns.overview') return this.renderCampaignWorkspaceDashboard(root);
     if (route === 'prm.analytics') return this.renderPRMAnalytics(root);
+    if (WORKSPACE_CONFIG.dashboards?.[route]) return this.renderConfigDashboard(route, root);
     return this.renderComingSoon(root, { label: route, icon: 'layout-dashboard', desc: 'Workspace overview.' });
   }
 
@@ -5912,6 +6081,105 @@ class CadenceAppView extends obsidian.ItemView {
     return null;
   }
 
+  async renderConfigDashboard(surfaceId, root, opts = {}) {
+    const config = (WORKSPACE_CONFIG.dashboards || {})[surfaceId] || BUILTIN_DASHBOARD_DEFAULTS[surfaceId];
+    if (!config) return;
+
+    const entityCache = new Map();
+    const getEntities = (key) => {
+      if (!entityCache.has(key)) {
+        let entities = listEntities(this.app, key);
+        if (config.contextFilter === 'client-work') {
+          const cid = this._clientWorkClientId || '';
+          const pid = this._clientWorkProjectId || '';
+          entities = entities.filter(e => this._entityMatchesClient(e, cid) && this._entityMatchesProject(e, pid));
+        }
+        entityCache.set(key, entities);
+      }
+      return entityCache.get(key);
+    };
+
+    const titleSuffix = config.contextFilter === 'client-work'
+      ? [this._clientWorkClientId, this._clientWorkProjectId].filter(Boolean).join(' · ')
+      : '';
+    this._renderPageHeader(
+      root,
+      config.title + (titleSuffix ? ` · ${titleSuffix}` : ''),
+      config.subtitle,
+      config.contextFilter === 'client-work' ? (r) => this._renderClientWorkSelector(r) : undefined
+    );
+
+    if (config.stats?.length) {
+      const statItems = config.stats.map(s => {
+        const entities = getEntities(s.entity);
+        let value;
+        if (s.count === 'open') {
+          value = entities.filter(e => this._isOpenEntity(e, s.entity)).length;
+        } else if (s.count && typeof s.count === 'object' && s.count.field) {
+          value = entities.filter(e => entityValue(e, s.count.field, ENTITIES[s.entity])).length;
+        } else {
+          value = entities.length;
+        }
+        let sub = s.sub;
+        if (sub && typeof sub === 'object') {
+          const subKey = sub.entity || s.entity;
+          const subEnts = getEntities(subKey);
+          const subCount = sub.count === 'open'
+            ? subEnts.filter(e => this._isOpenEntity(e, subKey)).length
+            : subEnts.length;
+          sub = `${subCount} ${sub.suffix}`;
+        }
+        return { label: s.label, value, sub, accent: s.accent, mode: s.mode };
+      });
+      this._dashboardStats(root, statItems);
+    }
+
+    for (const row of config.layout || []) {
+      const cols = root.createDiv({ cls: 'cad-dash-cols' });
+      for (const colDef of row) {
+        const col = cols.createDiv({ cls: 'cad-dash-col' });
+        for (const card of (Array.isArray(colDef) ? colDef : [colDef])) {
+          this._renderConfigCard(col, card, getEntities);
+        }
+      }
+    }
+
+    for (const cr of config.conditionalRows || []) {
+      const hasData = (cr.condition?.entities || []).some(k => getEntities(k).length > 0);
+      if (!hasData) continue;
+      const extra = root.createDiv({ cls: 'cad-dash-cols' });
+      for (const card of cr.cards) {
+        this._renderConfigCard(extra.createDiv({ cls: 'cad-dash-col' }), card, getEntities);
+      }
+    }
+
+    if (config.legend === 'finance-statements') this._renderFinanceStatementLegend(root);
+  }
+
+  _renderConfigCard(col, card, getEntities) {
+    this._dashCardSection(col, card.title, this._resolveCardRows(card, getEntities), card.empty || '');
+  }
+
+  _resolveCardRows(card, getEntities) {
+    if (card.merge) {
+      return card.merge
+        .flatMap(m => this._resolveSourceRows(m, getEntities))
+        .sort((a, b) => (b.file?.stat?.mtime || 0) - (a.file?.stat?.mtime || 0))
+        .slice(0, 6);
+    }
+    return this._resolveSourceRows(card, getEntities);
+  }
+
+  _resolveSourceRows(def, getEntities) {
+    const all = getEntities(def.entity);
+    const source = def.source || 'recent';
+    if (source === 'recent') return this._recentRows(def.entity, all, def.titleFields, def.metaFields);
+    if (source === 'recent-open') return this._recentRows(def.entity, all.filter(e => this._isOpenEntity(e, def.entity)), def.titleFields, def.metaFields);
+    if (source === 'due') return this._dueRows(def.entity, all, def.dateFields, def.titleFields);
+    if (source === 'due-open') return this._dueRows(def.entity, all.filter(e => this._isOpenEntity(e, def.entity)), def.dateFields, def.titleFields);
+    return [];
+  }
+
   _dashboardStats(root, stats) {
     const grid = root.createDiv({ cls: 'cad-stat-grid' });
     stats.forEach((item) => {
@@ -5979,176 +6247,513 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   async renderClientWorkDashboard(root, opts = {}) {
-    const selectedClientId = this._clientWorkClientId || '';
-    const selectedProjectId = this._clientWorkProjectId || '';
-    const titleParts = [selectedClientId, selectedProjectId].filter(Boolean);
-    const matches = (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId);
-    const get = (key) => listEntities(this.app, key).filter(matches);
-    const meetings = get('meeting');
-    const comms = get('comms-thread');
-    const deliverables = get('deliverable');
-    const feedback = get('feedback');
-    const surveys = get('survey');
-    const testimonials = get('testimonial');
-    const decisions = get('decision');
-
-    this._renderPageHeader(root, `Client Work${titleParts.length ? ` · ${titleParts.join(' · ')}` : ''}`, 'Delivery overview across meetings, comms, deliverables, feedback and decisions', (right) => {
-      this._renderClientWorkSelector(right);
-    });
-    this._dashboardStats(root, [
-      { label: 'MEETINGS', value: meetings.length, sub: 'client conversations', accent: 'sky', mode: 'client-work.meetings' },
-      { label: 'OPEN DELIVERABLES', value: deliverables.filter((e) => this._isOpenEntity(e, 'deliverable')).length, sub: `${deliverables.length} total`, accent: 'emerald' },
-      { label: 'OPEN COMMS', value: comms.filter((e) => this._isOpenEntity(e, 'comms-thread')).length, sub: `${comms.length} threads`, accent: 'mint' },
-      { label: 'FEEDBACK', value: feedback.length, sub: 'items captured', accent: 'warn' },
-      { label: 'DECISIONS', value: decisions.length, sub: 'decision records', accent: 'rose' },
-    ]);
-    const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    const left = cols.createDiv({ cls: 'cad-dash-col' });
-    const right = cols.createDiv({ cls: 'cad-dash-col' });
-    this._dashCardSection(left, 'RECENT MEETINGS', this._recentRows('meeting', meetings, ['context', 'name', 'title'], ['date', 'status', 'client_id', 'project_id']), 'No meetings.');
-    this._dashCardSection(left, 'OPEN DELIVERABLES', this._recentRows('deliverable', deliverables.filter((e) => this._isOpenEntity(e, 'deliverable')), ['title', 'project'], ['status', 'client_id', 'project_id']), 'No open deliverables.');
-    this._dashCardSection(left, 'RECENT COMMS', this._recentRows('comms-thread', comms, ['subject', 'thread_id'], ['channel', 'status', 'last_message_at']), 'No communication threads.');
-    this._dashCardSection(right, 'RECENT FEEDBACK', this._recentRows('feedback', feedback, ['respondent', 'feedback_type'], ['score', 'status', 'client_id']), 'No feedback captured.');
-    this._dashCardSection(right, 'RECENT DECISIONS', this._recentRows('decision', decisions, ['title', 'status'], ['status', 'client_id', 'project_id']), 'No decisions recorded.');
-    if (surveys.length || testimonials.length) {
-      const extra = root.createDiv({ cls: 'cad-dash-cols' });
-      this._dashCardSection(extra.createDiv({ cls: 'cad-dash-col' }), 'SURVEYS', this._recentRows('survey', surveys, ['title'], ['status', 'response_count', 'response_rate']), 'No surveys.');
-      this._dashCardSection(extra.createDiv({ cls: 'cad-dash-col' }), 'TESTIMONIALS', this._recentRows('testimonial', testimonials, ['respondent_name', 'respondent'], ['status', 'permission_level']), 'No testimonials.');
-    }
+    return this.renderConfigDashboard('client-work.dashboard', root, opts);
   }
 
   async renderFinanceGLDashboard(root) {
-    const coa = listEntities(this.app, 'chart-of-accounts');
-    const journals = listEntities(this.app, 'journal-entry');
-    const recs = listEntities(this.app, 'bank-reconciliation');
-    const tbs = listEntities(this.app, 'trial-balance');
-    const statements = listEntities(this.app, 'financial-statement');
-    const notes = listEntities(this.app, 'fs-notes');
-    this._renderPageHeader(root, 'General Ledger', 'Posting, reconciliation, trial balance and reporting overview');
-    this._dashboardStats(root, [
-      { label: 'ACCOUNTS', value: coa.length, sub: 'chart records', accent: 'sky' },
-      { label: 'OPEN JOURNALS', value: journals.filter((e) => this._isOpenEntity(e, 'journal-entry')).length, sub: `${journals.length} total`, accent: 'mint' },
-      { label: 'RECONCILIATIONS', value: recs.length, sub: 'bank rec records', accent: 'emerald' },
-      { label: 'TRIAL BALANCES', value: tbs.length, sub: 'period snapshots', accent: 'warn' },
-      { label: 'STATEMENTS', value: statements.length, sub: `${notes.length} FS notes`, accent: 'rose' },
-    ]);
-    const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'RECENT JOURNALS', this._recentRows('journal-entry', journals, ['journal_id', 'title'], ['status', 'period_id', 'client_id']), 'No journal entries.');
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'RECENT RECONCILIATIONS', this._recentRows('bank-reconciliation', recs, ['reconciliation_id', 'account_id'], ['status', 'period_id', 'difference']), 'No bank reconciliations.');
-    const cols2 = root.createDiv({ cls: 'cad-dash-cols' });
-    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'TRIAL BALANCES', this._recentRows('trial-balance', tbs, ['trial_balance_id', 'period_id'], ['status', 'period_id', 'client_id']), 'No trial balances.');
-    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'FINANCIAL STATEMENTS', this._recentRows('financial-statement', statements, ['statement_id', 'statement_type', 'period_id'], ['statement_type', 'status', 'period_id', 'client_id']), 'No financial statements.');
-    this._renderFinanceStatementLegend(root);
+    return this.renderConfigDashboard('finance.gl.overview', root);
   }
 
   async renderFinanceSetupDashboard(root) {
-    const periods = listEntities(this.app, 'accounting-period');
-    const banks = listEntities(this.app, 'bank-account');
-    const fx = listEntities(this.app, 'fx-rates-table');
-    const inventory = listEntities(this.app, 'inventory');
-    this._renderPageHeader(root, 'Finance Setup', 'Configuration records required before finance workflows run cleanly');
-    this._dashboardStats(root, [
-      { label: 'PERIODS', value: periods.length, sub: `${periods.filter((e) => this._isOpenEntity(e, 'accounting-period')).length} open`, accent: 'sky' },
-      { label: 'BANK ACCOUNTS', value: banks.length, sub: 'configured accounts', accent: 'mint' },
-      { label: 'FX TABLES', value: fx.length, sub: 'rate tables', accent: 'warn' },
-      { label: 'INVENTORY ITEMS', value: inventory.length, sub: 'tracked records', accent: 'emerald' },
-    ]);
-    const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'OPEN PERIODS', this._recentRows('accounting-period', periods.filter((e) => this._isOpenEntity(e, 'accounting-period')), ['period_id'], ['status', 'start_date', 'end_date']), 'No open periods.');
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'RECENT SETUP CHANGES', [
-      ...this._recentRows('bank-account', banks, ['account_name', 'account_id'], ['currency', 'status']),
-      ...this._recentRows('fx-rates-table', fx, ['rate_table_id', 'base_currency'], ['period_id', 'source']),
-    ].sort((a, b) => (b.file?.stat?.mtime || 0) - (a.file?.stat?.mtime || 0)).slice(0, 6), 'No setup records.');
+    return this.renderConfigDashboard('finance.setup.overview', root);
   }
 
   async renderProcurementDashboard(root) {
-    const suppliers = listEntities(this.app, 'supplier');
-    const invoices = listEntities(this.app, 'supplier-invoice');
-    const reqs = listEntities(this.app, 'purchase-requisition');
-    const pos = listEntities(this.app, 'purchase-order');
-    const openInvoices = invoices.filter((e) => this._isOpenEntity(e, 'supplier-invoice'));
-    this._renderPageHeader(root, 'Suppliers & Procurement', 'Supplier, invoice, requisition and purchase order overview');
-    this._dashboardStats(root, [
-      { label: 'SUPPLIERS', value: suppliers.length, sub: 'supplier records', accent: 'sky' },
-      { label: 'OPEN INVOICES', value: openInvoices.length, sub: `${invoices.length} total`, accent: 'rose' },
-      { label: 'REQUISITIONS', value: reqs.filter((e) => this._isOpenEntity(e, 'purchase-requisition')).length, sub: `${reqs.length} total`, accent: 'warn' },
-      { label: 'OPEN POS', value: pos.filter((e) => this._isOpenEntity(e, 'purchase-order')).length, sub: `${pos.length} total`, accent: 'mint' },
-    ]);
-    const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'OPEN SUPPLIER INVOICES', this._dueRows('supplier-invoice', openInvoices, ['due_date', 'invoice_date'], ['invoice_id', 'supplier_id']), 'No open supplier invoices.');
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'PENDING REQUISITIONS', this._recentRows('purchase-requisition', reqs.filter((e) => this._isOpenEntity(e, 'purchase-requisition')), ['requisition_id', 'title'], ['status', 'requester', 'amount']), 'No pending requisitions.');
-    const cols2 = root.createDiv({ cls: 'cad-dash-cols' });
-    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'OPEN PURCHASE ORDERS', this._dueRows('purchase-order', pos.filter((e) => this._isOpenEntity(e, 'purchase-order')), ['expected_delivery', 'order_date'], ['po_id', 'supplier_id']), 'No open purchase orders.');
-    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'RECENT SUPPLIERS', this._recentRows('supplier', suppliers, ['supplier_name', 'name'], ['status', 'category']), 'No suppliers.');
+    return this.renderConfigDashboard('procurement.overview', root);
   }
 
   async renderTaxDashboard(root) {
-    const vat = listEntities(this.app, 'vat-return');
-    const ct = listEntities(this.app, 'corporate-tax-return');
-    const deferred = listEntities(this.app, 'deferred-tax');
-    const tp = listEntities(this.app, 'transfer-pricing');
-    const fz = listEntities(this.app, 'free-zone-status');
-    const rules = listEntities(this.app, 'legal-rule');
-    const retention = listEntities(this.app, 'document-retention');
-    this._renderPageHeader(root, 'Tax', 'Filing, tax review, legal rule and retention overview');
-    this._dashboardStats(root, [
-      { label: 'OPEN VAT', value: vat.filter((e) => this._isOpenEntity(e, 'vat-return')).length, sub: `${vat.length} returns`, accent: 'sky' },
-      { label: 'OPEN CT', value: ct.filter((e) => this._isOpenEntity(e, 'corporate-tax-return')).length, sub: `${ct.length} returns`, accent: 'mint' },
-      { label: 'TP FILES', value: tp.length, sub: 'transfer pricing', accent: 'warn' },
-      { label: 'LEGAL RULES', value: rules.length, sub: `${retention.length} retention records`, accent: 'rose' },
-    ]);
-    const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'UPCOMING VAT RETURNS', this._dueRows('vat-return', vat.filter((e) => this._isOpenEntity(e, 'vat-return')), ['filing_due_date', 'due_date', 'period_end'], ['return_id', 'period_id']), 'No open VAT returns.');
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'UPCOMING CORPORATE TAX', this._dueRows('corporate-tax-return', ct.filter((e) => this._isOpenEntity(e, 'corporate-tax-return')), ['filing_due_date', 'due_date', 'period_end'], ['return_id', 'period_id']), 'No open corporate tax returns.');
-    const cols2 = root.createDiv({ cls: 'cad-dash-cols' });
-    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'TAX REVIEWS', [
-      ...this._recentRows('deferred-tax', deferred, ['assessment_id', 'period_id'], ['status', 'period_id']),
-      ...this._recentRows('free-zone-status', fz, ['assessment_id', 'entity_id'], ['status', 'period_id']),
-    ].slice(0, 6), 'No deferred tax or free-zone reviews.');
-    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'RECENT LEGAL / RETENTION', [
-      ...this._recentRows('legal-rule', rules, ['rule_id', 'title'], ['jurisdiction', 'status']),
-      ...this._recentRows('document-retention', retention, ['document_type', 'retention_id'], ['status', 'destroy_after_date']),
-    ].slice(0, 6), 'No legal or retention records.');
+    return this.renderConfigDashboard('tax.dashboard', root);
   }
 
   async renderPartnerWorkspaceDashboard(root) {
-    const partners = listEntities(this.app, 'partner');
-    const regs = listEntities(this.app, 'registration');
-    const commissions = listEntities(this.app, 'commission');
-    const certs = listEntities(this.app, 'certification');
-    const deals = listEntities(this.app, 'deal').filter((e) => entityValue(e, 'partner', ENTITIES.deal));
-    this._renderPageHeader(root, 'Partners', 'Partner operations overview across registrations, commissions and certifications');
-    this._dashboardStats(root, [
-      { label: 'PARTNERS', value: partners.length, sub: 'partner records', accent: 'sky' },
-      { label: 'REGISTRATIONS', value: regs.filter((e) => this._isOpenEntity(e, 'registration')).length, sub: `${regs.length} total`, accent: 'mint' },
-      { label: 'COMMISSIONS', value: commissions.filter((e) => this._isOpenEntity(e, 'commission')).length, sub: `${commissions.length} total`, accent: 'warn' },
-      { label: 'CERTIFICATIONS', value: certs.length, sub: 'cert records', accent: 'emerald' },
-      { label: 'PARTNER DEALS', value: deals.length, sub: 'attributed deals', accent: 'rose' },
-    ]);
-    const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'PENDING REGISTRATIONS', this._recentRows('registration', regs.filter((e) => this._isOpenEntity(e, 'registration')), ['deal_name', 'registration_id'], ['status', 'partner_ref', 'expiry_date']), 'No pending registrations.');
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'OPEN COMMISSIONS', this._recentRows('commission', commissions.filter((e) => this._isOpenEntity(e, 'commission')), ['commission_id', 'partner_ref'], ['status', 'amount', 'currency']), 'No open commissions.');
-    const cols2 = root.createDiv({ cls: 'cad-dash-cols' });
-    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'CERTIFICATIONS EXPIRING', this._dueRows('certification', certs, ['expires_date', 'renewal_date'], ['name', 'certification_id']), 'No certifications expiring soon.');
-    this._dashCardSection(cols2.createDiv({ cls: 'cad-dash-col' }), 'RECENT PARTNERS', this._recentRows('partner', partners, ['partner_name', 'name'], ['tier', 'status']), 'No partners.');
+    return this.renderConfigDashboard('prm.partners.overview', root);
   }
 
   async renderCampaignWorkspaceDashboard(root) {
-    const campaigns = listEntities(this.app, 'campaign');
-    const sequences = listEntities(this.app, 'sequence');
-    const leads = listEntities(this.app, 'lead');
-    const activeCampaigns = campaigns.filter((e) => this._isOpenEntity(e, 'campaign'));
-    const activeSequences = sequences.filter((e) => this._isOpenEntity(e, 'sequence'));
-    this._renderPageHeader(root, 'Campaigns', 'Campaign and outbound sequence overview');
-    this._dashboardStats(root, [
-      { label: 'ACTIVE CAMPAIGNS', value: activeCampaigns.length, sub: `${campaigns.length} total`, accent: 'sky' },
-      { label: 'ACTIVE SEQUENCES', value: activeSequences.length, sub: `${sequences.length} total`, accent: 'mint' },
-      { label: 'LEADS', value: leads.length, sub: 'lead records', accent: 'warn' },
-    ]);
-    const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'ACTIVE CAMPAIGNS', this._recentRows('campaign', activeCampaigns, ['campaign_name', 'title'], ['status', 'campaign_type', 'launch_date']), 'No active campaigns.');
-    this._dashCardSection(cols.createDiv({ cls: 'cad-dash-col' }), 'ACTIVE SEQUENCES', this._recentRows('sequence', activeSequences, ['sequence_name', 'title'], ['status', 'channel', 'campaign_id']), 'No active sequences.');
-    this._dashCardSection(root.createDiv({ cls: 'cad-dash-cols' }).createDiv({ cls: 'cad-dash-col' }), 'RECENT LEADS', this._recentRows('lead', leads, ['company_name', 'contact_name'], ['status', 'owner', 'next_action_date']), 'No leads captured.');
+    return this.renderConfigDashboard('crm.campaigns.overview', root);
+  }
+
+  async renderExport(root) {
+    this._renderPageHeader(root, 'Export', 'Export your data to an Excel workbook');
+
+    const section = (parent, title, desc) => {
+      const s = parent.createDiv({ cls: 'cad-data-section' });
+      s.createDiv({ cls: 'cad-data-section-title', text: title });
+      if (desc) s.createDiv({ cls: 'cad-data-section-desc', text: desc });
+      return s;
+    };
+
+    const exportGroups = workbookExportGroups();
+    const exportSec = section(root, 'Export to XLSX',
+      'Select one or more groups and export to an Excel workbook. Each group becomes a separate sheet.');
+
+    const checked = new Set(exportGroups.map(g => g.id));
+    if (exportGroups.length) {
+      const groupsWrap = exportSec.createDiv({ cls: 'cad-data-group-list' });
+      exportGroups.forEach(g => {
+        const lbl = groupsWrap.createEl('label', { cls: 'cad-data-group-item' });
+        const cb = lbl.createEl('input', { type: 'checkbox' });
+        cb.checked = true;
+        cb.addEventListener('change', () => { if (cb.checked) checked.add(g.id); else checked.delete(g.id); });
+        lbl.createSpan({ text: g.label });
+        lbl.createSpan({ cls: 'cad-data-group-count', text: `${g.entityKeys.length} types` });
+      });
+    }
+
+    const destDesc = exportSec.createDiv({ cls: 'cad-data-section-desc' });
+    destDesc.innerHTML = `Output folder: <strong>${workbookExportFolder(this.settings)}</strong>`;
+
+    const exportRow = exportSec.createDiv({ cls: 'cad-data-action-row' });
+    const exportBtnRow = exportRow.createDiv({ cls: 'cad-data-btn-row' });
+    const exportBtn = exportBtnRow.createEl('button', { cls: 'cad-btn', text: 'Export workbook' });
+    const exportStatus = exportRow.createDiv({ cls: 'cad-data-status' });
+    exportBtn.addEventListener('click', async () => {
+      const keys = exportGroups.length ? selectedWorkbookEntityKeys([...checked]) : Object.keys(ENTITIES);
+      if (!keys.length) { exportStatus.className = 'cad-data-status cad-data-status-error'; exportStatus.setText('Nothing to export.'); return; }
+      exportBtn.disabled = true;
+      exportBtn.setText('Exporting…');
+      exportStatus.className = 'cad-data-status';
+      exportStatus.setText('');
+      try {
+        const suffix = exportGroups.length && checked.size < exportGroups.length ? 'selected' : '';
+        const path = await exportEntitiesXLSX(this.app, keys, suffix, this.settings);
+        exportStatus.className = 'cad-data-status cad-data-status-ok';
+        exportStatus.innerHTML = `Saved to <strong>${path}</strong> — <a class="cad-data-open-link">Open file</a>`;
+        exportStatus.querySelector('.cad-data-open-link').addEventListener('click', () => {
+          this.app.openWithDefaultApp(path);
+        });
+      } catch (e) {
+        exportStatus.className = 'cad-data-status cad-data-status-error';
+        exportStatus.setText(`Export failed — ${e.message}`);
+      } finally {
+        exportBtn.disabled = false;
+        exportBtn.setText('Export workbook');
+      }
+    });
+
+    // ── Export import template ───────────────────────────────────────
+    const tmplSec = section(root, 'Export import template',
+      'Download a pre-filled template file to use as a starting point for importing a specific entity type.');
+    const tmplRow = tmplSec.createDiv({ cls: 'cad-data-btn-row' });
+    const tmplSelect = tmplRow.createEl('select', { cls: 'cad-de-select' });
+    Object.entries(ENTITIES)
+      .sort(([, a], [, b]) => String(a.plural || a.label || '').localeCompare(String(b.plural || b.label || '')))
+      .forEach(([key, def]) => tmplSelect.createEl('option', { value: key, text: def.plural || def.label || key }));
+    const tmplCsvBtn  = tmplRow.createEl('button', { cls: 'cad-btn', text: 'CSV template' });
+    const tmplXlsxBtn = tmplRow.createEl('button', { cls: 'cad-btn', text: 'XLSX template' });
+    tmplCsvBtn.addEventListener('click', async () => {
+      const modal = new CadenceImportModal(this.app, { entityKey: tmplSelect.value });
+      await modal._exportTemplateCSV();
+    });
+    tmplXlsxBtn.addEventListener('click', async () => {
+      const modal = new CadenceImportModal(this.app, { entityKey: tmplSelect.value });
+      await modal._exportTemplateXLSX();
+    });
+  }
+
+  renderImport(root) {
+    new CadenceImportModal(this.app, {}).open();
+  }
+
+  async renderDashboardEditor(root) {
+    this._renderPageHeader(root, 'Dashboard Editor', 'Customize dashboard layouts and widgets');
+
+    const builtinIds = Object.keys(BUILTIN_DASHBOARD_DEFAULTS);
+    const workspaceDashIds = Object.keys(WORKSPACE_CONFIG.dashboards || {});
+    const customOnlyIds = workspaceDashIds.filter(id => !builtinIds.includes(id));
+    const allIds = [...builtinIds, ...customOnlyIds];
+
+    const toolbar = root.createDiv({ cls: 'cad-de-toolbar' });
+    toolbar.createDiv({ cls: 'cad-de-toolbar-label', text: 'Dashboard' });
+    const sel = toolbar.createEl('select', { cls: 'cad-de-select' });
+    allIds.forEach(id => {
+      const opt = sel.createEl('option', { text: id, value: id });
+      if (id === (this._dashEditorSurfaceId || builtinIds[0])) opt.selected = true;
+    });
+
+    const modeToggle = toolbar.createDiv({ cls: 'cad-de-mode-toggle' });
+    if (!this._dashEditorMode) this._dashEditorMode = 'visual';
+    const visualBtn = modeToggle.createEl('button', { cls: `cad-de-mode-btn${this._dashEditorMode === 'visual' ? ' active' : ''}`, text: 'Visual' });
+    const jsonBtn   = modeToggle.createEl('button', { cls: `cad-de-mode-btn${this._dashEditorMode === 'json'   ? ' active' : ''}`, text: 'JSON' });
+
+    const split       = root.createDiv({ cls: 'cad-de-split' });
+    const editorPane  = split.createDiv({ cls: 'cad-de-editor-pane' });
+    const previewPane = split.createDiv({ cls: 'cad-de-preview-pane' });
+
+    const getConfig = (id) => {
+      const ws = (WORKSPACE_CONFIG.dashboards || {})[id];
+      if (ws) return JSON.parse(JSON.stringify(ws));
+      const bi = BUILTIN_DASHBOARD_DEFAULTS[id];
+      if (bi) return JSON.parse(JSON.stringify(bi));
+      return { title: id, layout: [] };
+    };
+
+    const renderPreview = async (id) => {
+      previewPane.empty();
+      const prevDash = WORKSPACE_CONFIG.dashboards;
+      WORKSPACE_CONFIG.dashboards = Object.assign({}, prevDash, { [id]: this._dashEditorDraft });
+      try { await this.renderConfigDashboard(id, previewPane); } finally { WORKSPACE_CONFIG.dashboards = prevDash; }
+    };
+
+    let debounceTimer;
+    const triggerPreview = (id) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => renderPreview(id), 400);
+    };
+
+    const isEditable = (id) => !!(WORKSPACE_CONFIG.dashboards || {})[id] || customOnlyIds.includes(id);
+
+    const renderEditorPane = (id) => {
+      editorPane.empty();
+      const editable = isEditable(id);
+      const config = this._dashEditorDraft;
+
+      editorPane.createDiv({
+        cls: `cad-de-badge ${editable ? 'cad-de-badge-custom' : 'cad-de-badge-builtin'}`,
+        text: editable ? 'Custom override' : 'Built-in (read-only)',
+      });
+
+      const reRender = () => { renderEditorPane(id); triggerPreview(id); };
+
+      if (this._dashEditorMode === 'visual') {
+        this._renderDashboardDesigner(editorPane, config, editable, reRender, () => triggerPreview(id));
+      } else {
+        const ta = editorPane.createEl('textarea', { cls: 'cad-de-textarea' });
+        ta.value = JSON.stringify(config, null, 2);
+        ta.readOnly = !editable;
+        ta.spellcheck = false;
+        if (editable) {
+          ta.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+              try { this._dashEditorDraft = JSON.parse(ta.value); renderPreview(id); } catch (_) {}
+            }, 600);
+          });
+        }
+      }
+
+      const actions = editorPane.createDiv({ cls: 'cad-de-actions' });
+      if (!editable) {
+        const customizeBtn = actions.createEl('button', { cls: 'cad-btn primary', text: 'Customize' });
+        customizeBtn.addEventListener('click', () => {
+          if (!WORKSPACE_CONFIG.dashboards) WORKSPACE_CONFIG.dashboards = {};
+          WORKSPACE_CONFIG.dashboards[id] = JSON.parse(JSON.stringify(BUILTIN_DASHBOARD_DEFAULTS[id]));
+          this._dashEditorDraft = getConfig(id);
+          renderEditorPane(id);
+          renderPreview(id);
+        });
+      } else {
+        const saveBtn = actions.createEl('button', { cls: 'cad-btn primary', text: 'Save' });
+        saveBtn.addEventListener('click', async () => {
+          try {
+            if (!WORKSPACE_CONFIG.dashboards) WORKSPACE_CONFIG.dashboards = {};
+            WORKSPACE_CONFIG.dashboards[id] = this._dashEditorDraft;
+            await saveWorkspaceConfig(this.app, JSON.stringify(WORKSPACE_CONFIG, null, 2));
+            new obsidian.Notice('Dashboard saved.');
+          } catch (e) { new obsidian.Notice(`Save failed: ${e.message}`); }
+        });
+        if (BUILTIN_DASHBOARD_DEFAULTS[id]) {
+          const resetBtn = actions.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Reset to built-in' });
+          resetBtn.addEventListener('click', async () => {
+            delete WORKSPACE_CONFIG.dashboards[id];
+            if (Object.keys(WORKSPACE_CONFIG.dashboards).length === 0) delete WORKSPACE_CONFIG.dashboards;
+            await saveWorkspaceConfig(this.app, JSON.stringify(WORKSPACE_CONFIG, null, 2));
+            new obsidian.Notice('Reset to built-in.');
+            this._dashEditorDraft = getConfig(id);
+            renderEditorPane(id);
+            renderPreview(id);
+          });
+        }
+      }
+    };
+
+    const renderAll = (id) => {
+      this._dashEditorSurfaceId = id;
+      this._dashEditorDraft = getConfig(id);
+      renderEditorPane(id);
+      renderPreview(id);
+    };
+
+    sel.addEventListener('change', () => renderAll(sel.value));
+    visualBtn.addEventListener('click', () => {
+      this._dashEditorMode = 'visual'; visualBtn.addClass('active'); jsonBtn.removeClass('active');
+      renderEditorPane(this._dashEditorSurfaceId);
+    });
+    jsonBtn.addEventListener('click', () => {
+      this._dashEditorMode = 'json'; jsonBtn.addClass('active'); visualBtn.removeClass('active');
+      renderEditorPane(this._dashEditorSurfaceId);
+    });
+
+    const initialId = this._dashEditorSurfaceId && allIds.includes(this._dashEditorSurfaceId)
+      ? this._dashEditorSurfaceId : allIds[0];
+    sel.value = initialId;
+    renderAll(initialId);
+  }
+
+  _renderDashboardDesigner(pane, config, editable, reRender, triggerPreview) {
+    // Header fields
+    const metaSection = pane.createDiv({ cls: 'cad-de-section' });
+    metaSection.createDiv({ cls: 'cad-de-section-label', text: 'Header' });
+    const titleInput = metaSection.createEl('input', { type: 'text', cls: 'cad-de-field', value: config.title || '', placeholder: 'Title' });
+    titleInput.disabled = !editable;
+    titleInput.addEventListener('input', () => { config.title = titleInput.value; triggerPreview(); });
+    const subInput = metaSection.createEl('input', { type: 'text', cls: 'cad-de-field', value: config.subtitle || '', placeholder: 'Subtitle' });
+    subInput.disabled = !editable;
+    subInput.addEventListener('input', () => { config.subtitle = subInput.value; triggerPreview(); });
+
+    // Stats
+    const statsSection = pane.createDiv({ cls: 'cad-de-section' });
+    const statsHead = statsSection.createDiv({ cls: 'cad-de-section-head' });
+    statsHead.createDiv({ cls: 'cad-de-section-label', text: `Stats (${(config.stats || []).length})` });
+    if (editable) {
+      const addBtn = statsHead.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Add stat' });
+      addBtn.addEventListener('click', () => {
+        (config.stats || (config.stats = [])).push({ label: 'NEW STAT', entity: Object.keys(ENTITIES)[0] || 'contact', count: 'all' });
+        reRender();
+      });
+    }
+    (config.stats || []).forEach((stat, idx) => {
+      const chip = statsSection.createDiv({ cls: 'cad-de-stat-chip' });
+      const lbl = chip.createEl('input', { type: 'text', cls: 'cad-de-stat-label' });
+      lbl.value = stat.label || ''; lbl.placeholder = 'LABEL'; lbl.disabled = !editable;
+      lbl.addEventListener('input', () => { stat.label = lbl.value; triggerPreview(); });
+      const ent = chip.createEl('select', { cls: 'cad-de-stat-select' });
+      ent.disabled = !editable;
+      Object.keys(ENTITIES).forEach(k => { const o = ent.createEl('option', { value: k, text: k }); if (k === stat.entity) o.selected = true; });
+      ent.addEventListener('change', () => { stat.entity = ent.value; triggerPreview(); });
+      const cnt = chip.createEl('select', { cls: 'cad-de-stat-select' });
+      cnt.disabled = !editable;
+      ['all', 'open'].forEach(v => { const o = cnt.createEl('option', { value: v, text: v }); if (v === stat.count) o.selected = true; });
+      cnt.addEventListener('change', () => { stat.count = cnt.value; triggerPreview(); });
+      if (editable) {
+        const del = chip.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
+        del.addEventListener('click', () => { config.stats.splice(idx, 1); reRender(); });
+      }
+    });
+
+    // Normalize layout columns to arrays
+    if (!config.layout) config.layout = [];
+    config.layout = config.layout.map(row => row.map(col => Array.isArray(col) ? col : [col]));
+
+    // Layout board
+    const layoutSection = pane.createDiv({ cls: 'cad-de-section' });
+    layoutSection.createDiv({ cls: 'cad-de-section-label', text: 'Layout' });
+
+    let activeDrag = null;
+
+    config.layout.forEach((row, rowIdx) => {
+      const rowEl = layoutSection.createDiv({ cls: 'cad-de-layout-row' });
+      const rowHead = rowEl.createDiv({ cls: 'cad-de-row-head' });
+      rowHead.createDiv({ cls: 'cad-de-row-label', text: `Row ${rowIdx + 1}` });
+      if (editable) {
+        const addCol = rowHead.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Col' });
+        addCol.addEventListener('click', () => {
+          row.push([{ title: 'New Card', entity: Object.keys(ENTITIES)[0] || 'contact', source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' }]);
+          reRender();
+        });
+        const delRow = rowHead.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '× Row' });
+        delRow.addEventListener('click', () => { config.layout.splice(rowIdx, 1); reRender(); });
+      }
+
+      const cols = rowEl.createDiv({ cls: 'cad-de-row-cols' });
+      row.forEach((col, colIdx) => {
+        const colEl = cols.createDiv({ cls: 'cad-de-layout-col' });
+
+        if (editable && row.length > 1) {
+          const delCol = colEl.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger cad-de-del-col', text: '× Col' });
+          delCol.addEventListener('click', () => { row.splice(colIdx, 1); reRender(); });
+        }
+
+        col.forEach((card, cardIdx) => {
+          const cardEl = colEl.createDiv({ cls: 'cad-de-card' });
+          cardEl.draggable = editable;
+          if (editable) {
+            cardEl.addEventListener('dragstart', (ev) => {
+              activeDrag = { rowIdx, colIdx, cardIdx };
+              ev.dataTransfer.effectAllowed = 'move';
+              ev.dataTransfer.setData('text/cad-dash', JSON.stringify(activeDrag));
+              setTimeout(() => cardEl.addClass('cad-de-dragging'), 0);
+            });
+            cardEl.addEventListener('dragend', () => { activeDrag = null; cardEl.removeClass('cad-de-dragging'); });
+            cardEl.addEventListener('dragover', (ev) => {
+              if (!activeDrag) return; ev.preventDefault(); ev.stopPropagation(); cardEl.addClass('drag-over');
+            });
+            cardEl.addEventListener('dragleave', () => cardEl.removeClass('drag-over'));
+            cardEl.addEventListener('drop', (ev) => {
+              ev.preventDefault(); ev.stopPropagation(); cardEl.removeClass('drag-over');
+              if (!activeDrag) return;
+              const src = activeDrag;
+              const [moved] = config.layout[src.rowIdx][src.colIdx].splice(src.cardIdx, 1);
+              let tgt = cardIdx;
+              if (src.rowIdx === rowIdx && src.colIdx === colIdx && src.cardIdx < cardIdx) tgt--;
+              config.layout[rowIdx][colIdx].splice(Math.max(0, tgt), 0, moved);
+              reRender();
+            });
+          }
+
+          const cardHead = cardEl.createDiv({ cls: 'cad-de-card-head' });
+          if (editable) cardHead.createSpan({ cls: 'cad-de-drag-handle', text: '⠿' });
+          const titleSpan = cardHead.createSpan({ cls: 'cad-de-card-title-text', text: card.title || '(untitled)' });
+          const badges = cardHead.createDiv({ cls: 'cad-de-card-badges' });
+          badges.createSpan({ cls: 'cad-de-card-badge', text: card.entity || '?' });
+          if (card.source && card.source !== 'recent') badges.createSpan({ cls: 'cad-de-card-badge cad-de-badge-source', text: card.source });
+
+          if (editable) {
+            const acts = cardHead.createDiv({ cls: 'cad-de-card-actions' });
+            const editBtn = acts.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Edit' });
+            editBtn.addEventListener('mousedown', ev => ev.stopPropagation());
+            editBtn.addEventListener('dragstart', ev => ev.stopPropagation());
+            editBtn.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              const existing = cardEl.querySelector('.cad-de-card-form');
+              if (existing) { existing.remove(); return; }
+              this._renderCardForm(cardEl, card, () => {
+                titleSpan.textContent = card.title || '(untitled)';
+                badges.empty();
+                badges.createSpan({ cls: 'cad-de-card-badge', text: card.entity || '?' });
+                if (card.source && card.source !== 'recent') badges.createSpan({ cls: 'cad-de-card-badge cad-de-badge-source', text: card.source });
+                triggerPreview();
+              });
+            });
+            const delBtn = acts.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
+            delBtn.addEventListener('mousedown', ev => ev.stopPropagation());
+            delBtn.addEventListener('click', () => { col.splice(cardIdx, 1); reRender(); });
+          }
+        });
+
+        if (editable) {
+          const dropZone = colEl.createDiv({ cls: 'cad-de-col-drop-zone', text: '+ Add card' });
+          dropZone.addEventListener('dragover', (ev) => {
+            if (!activeDrag) return; ev.preventDefault(); ev.stopPropagation(); dropZone.addClass('drag-over');
+          });
+          dropZone.addEventListener('dragleave', () => dropZone.removeClass('drag-over'));
+          dropZone.addEventListener('drop', (ev) => {
+            ev.preventDefault(); ev.stopPropagation(); dropZone.removeClass('drag-over');
+            if (!activeDrag) return;
+            const src = activeDrag;
+            const [moved] = config.layout[src.rowIdx][src.colIdx].splice(src.cardIdx, 1);
+            config.layout[rowIdx][colIdx].push(moved);
+            reRender();
+          });
+          dropZone.addEventListener('click', () => {
+            col.push({ title: 'New Card', entity: Object.keys(ENTITIES)[0] || 'contact', source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' });
+            reRender();
+          });
+        }
+      });
+    });
+
+    if (editable) {
+      const addRowBtn = layoutSection.createEl('button', { cls: 'cad-btn cad-btn-sm cad-de-add-row-btn', text: '+ Add row' });
+      addRowBtn.addEventListener('click', () => {
+        config.layout.push([[{ title: 'New Card', entity: Object.keys(ENTITIES)[0] || 'contact', source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' }]]);
+        reRender();
+      });
+    }
+
+    // Conditional rows — same visual pattern as layout rows; each card in cr.cards = one column
+    if ((config.conditionalRows || []).length > 0 || editable) {
+      const crSection = pane.createDiv({ cls: 'cad-de-section' });
+      crSection.createDiv({ cls: 'cad-de-section-label', text: 'Conditional rows' });
+      const newCard = () => ({ title: 'New Card', entity: Object.keys(ENTITIES)[0] || 'contact', source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' });
+      (config.conditionalRows || []).forEach((cr, crIdx) => {
+        const crEl = crSection.createDiv({ cls: 'cad-de-layout-row' });
+        const crRowHead = crEl.createDiv({ cls: 'cad-de-row-head' });
+        crRowHead.createDiv({ cls: 'cad-de-row-label', text: 'Show when' });
+        const condInp = crRowHead.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm' });
+        condInp.value = (cr.condition?.entities || []).join(', ');
+        condInp.placeholder = 'entities with data (comma-separated)';
+        condInp.disabled = !editable;
+        condInp.addEventListener('input', () => {
+          if (!cr.condition) cr.condition = {};
+          cr.condition.entities = condInp.value.split(',').map(s => s.trim()).filter(Boolean);
+          triggerPreview();
+        });
+        if (editable) {
+          const addCol = crRowHead.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Col' });
+          addCol.addEventListener('click', () => { (cr.cards || (cr.cards = [])).push(newCard()); reRender(); });
+          const delCr = crRowHead.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '× Row' });
+          delCr.addEventListener('click', () => { config.conditionalRows.splice(crIdx, 1); reRender(); });
+        }
+        const crCols = crEl.createDiv({ cls: 'cad-de-row-cols' });
+        (cr.cards || []).forEach((card, cardIdx) => {
+          const col = crCols.createDiv({ cls: 'cad-de-layout-col' });
+          if (editable && (cr.cards || []).length > 1) {
+            const delCol = col.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger cad-de-del-col', text: '× Col' });
+            delCol.addEventListener('click', () => { cr.cards.splice(cardIdx, 1); reRender(); });
+          }
+          const cardEl = col.createDiv({ cls: 'cad-de-card' });
+          const cardHead = cardEl.createDiv({ cls: 'cad-de-card-head' });
+          const titleSpan = cardHead.createSpan({ cls: 'cad-de-card-title-text', text: card.title || '(untitled)' });
+          const badges = cardHead.createDiv({ cls: 'cad-de-card-badges' });
+          badges.createSpan({ cls: 'cad-de-card-badge', text: card.entity || '?' });
+          if (card.source && card.source !== 'recent') badges.createSpan({ cls: 'cad-de-card-badge cad-de-badge-source', text: card.source });
+          if (editable) {
+            const acts = cardHead.createDiv({ cls: 'cad-de-card-actions' });
+            const editBtn = acts.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Edit' });
+            editBtn.addEventListener('mousedown', ev => ev.stopPropagation());
+            editBtn.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              const existing = cardEl.querySelector('.cad-de-card-form');
+              if (existing) { existing.remove(); return; }
+              this._renderCardForm(cardEl, card, () => {
+                titleSpan.textContent = card.title || '(untitled)';
+                badges.empty();
+                badges.createSpan({ cls: 'cad-de-card-badge', text: card.entity || '?' });
+                if (card.source && card.source !== 'recent') badges.createSpan({ cls: 'cad-de-card-badge cad-de-badge-source', text: card.source });
+                triggerPreview();
+              });
+            });
+            const delBtn = acts.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
+            delBtn.addEventListener('click', () => { cr.cards.splice(cardIdx, 1); reRender(); });
+          }
+        });
+      });
+      if (editable) {
+        const addRowBtn = crSection.createEl('button', { cls: 'cad-btn cad-btn-sm cad-de-add-row-btn', text: '+ Add conditional row' });
+        addRowBtn.addEventListener('click', () => {
+          (config.conditionalRows || (config.conditionalRows = [])).push({ condition: { entities: [] }, cards: [newCard()] });
+          reRender();
+        });
+      }
+    }
+  }
+
+  _renderCardForm(parent, card, onChange) {
+    const form = parent.createDiv({ cls: 'cad-de-card-form' });
+    let _dlId = 0;
+    const addRow = (label, key, opts, combobox = false) => {
+      const r = form.createDiv({ cls: 'cad-de-form-row' });
+      r.createDiv({ cls: 'cad-de-form-label', text: label });
+      if (opts && !combobox) {
+        const sel = r.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+        opts.forEach(v => { const o = sel.createEl('option', { value: v, text: v }); if (v === card[key]) o.selected = true; });
+        sel.addEventListener('change', () => { card[key] = sel.value; onChange(); });
+      } else if (opts && combobox) {
+        const dlId = `cad-de-dl-${++_dlId}`;
+        const inp = r.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm', attr: { list: dlId } });
+        inp.value = card[key] || '';
+        const dl = r.createEl('datalist', { attr: { id: dlId } });
+        opts.forEach(v => dl.createEl('option', { value: v }));
+        inp.addEventListener('input', () => { card[key] = inp.value; onChange(); });
+      } else {
+        const val = Array.isArray(card[key]) ? card[key].join(', ') : (card[key] || '');
+        const inp = r.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm' });
+        inp.value = val; inp.placeholder = key;
+        inp.addEventListener('input', () => {
+          card[key] = Array.isArray(card[key]) ? inp.value.split(',').map(s => s.trim()).filter(Boolean) : inp.value;
+          onChange();
+        });
+      }
+    };
+    const sortedEntityKeys = Object.keys(ENTITIES).sort();
+    addRow('Title', 'title');
+    addRow('Entity', 'entity', sortedEntityKeys, true);
+    addRow('Source', 'source', ['recent', 'recent-open', 'due', 'due-open']);
+    addRow('Title fields', 'titleFields');
+    addRow('Meta fields', 'metaFields');
+    addRow('Empty text', 'empty');
   }
 
   /* ── Generic entity LIST view ───────────── */
@@ -6172,8 +6777,6 @@ class CadenceAppView extends obsidian.ItemView {
         const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
         openBaseBtn.addEventListener('click', () => this._openEntityBase(entityKey));
       }
-      const importBtn = right.createEl('button', { cls: 'cad-btn', text: 'Import CSV' });
-      importBtn.addEventListener('click', () => new CadenceImportModal(this.app, { entityKey }).open());
       const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
       btn.addEventListener('click', () => this._createEntityFromPrompt(entityKey));
     });
@@ -6732,8 +7335,6 @@ class CadenceAppView extends obsidian.ItemView {
         const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
         openBaseBtn.addEventListener('click', () => this._openEntityBase('project'));
       }
-      const importBtn = right.createEl('button', { cls: 'cad-btn', text: 'Import CSV' });
-      importBtn.addEventListener('click', () => new CadenceImportModal(this.app, { entityKey: 'project' }).open());
       const btn = right.createEl('button', { cls: 'cad-btn primary', text: '+ New Project' });
       btn.addEventListener('click', () => this._createEntityFromPrompt('project'));
     });
@@ -7711,8 +8312,6 @@ class CadenceAppView extends obsidian.ItemView {
         const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
         openBaseBtn.addEventListener('click', () => this._openEntityBase(entityKey));
       }
-      const importBtn = right.createEl('button', { cls: 'cad-btn', text: 'Import CSV' });
-      importBtn.addEventListener('click', () => new CadenceImportModal(this.app, { entityKey }).open());
       const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
       btn.addEventListener('click', () => this._createEntityFromPrompt(entityKey));
     });
