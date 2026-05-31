@@ -278,5 +278,5 @@ See `SUBMISSION.md` for the full release checklist.
 Key reminders:
 - `manifest.json` version must match the git tag exactly (no `v` prefix)
 - `versions.json` must map the new version → min-app-version
-- Release assets must include all four files: `main.js`, `manifest.json`, `styles.css`, `vendor/xlsx.full.min.js`
+- Release assets must include `main.js`, `manifest.json`, `styles.css`, `vendor/xlsx.full.min.js`, and `templates/workspace-*.json`
 - No `console.log`, unsanitized `innerHTML`, or raw frontmatter string manipulation in shipping code

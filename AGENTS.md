@@ -17,16 +17,18 @@ Current plugin identity in `manifest.json`:
 - Minimum Obsidian version: `1.4.0`
 - Author: `cbruyndoncx`
 
-The plugin has no build step. Obsidian loads shipping artifacts directly:
+The plugin has no build step. Obsidian loads/reads shipping artifacts directly:
 
 - `main.js` - all plugin behavior
 - `styles.css` - fallback/plugin styles
 - `manifest.json` - plugin metadata
 - `versions.json` - release compatibility map
 - `vendor/xlsx.full.min.js` - bundled SheetJS dependency for XLSX workflows
+- `templates/workspace-*.json` - file-backed starter workspace templates
 
 Manual test installs copy `main.js`, `styles.css`, `manifest.json`, and
-`vendor/xlsx.full.min.js` into `<vault>/.obsidian/plugins/bob-workspace/`.
+`vendor/xlsx.full.min.js` plus `templates/` into
+`<vault>/.obsidian/plugins/bob-workspace/`.
 Do not use the upstream `cadence-planner` plugin folder for this fork unless
 testing an explicit migration or compatibility scenario.
 
@@ -68,9 +70,8 @@ publishing text.
 - `manifest.json` and `versions.json` - current BOB Workspace release metadata.
 - `vendor/xlsx.full.min.js` and `vendor/xlsx.LICENSE` - bundled XLSX support.
 - `templates/workspace-*.json` - human-readable starter workspace templates.
-  These should become the canonical starter templates. The current embedded
-  `BUILTIN_TEMPLATES` copy in `main.js` is a legacy fallback and should not be
-  treated as the target architecture.
+  These are the canonical starter templates; do not mirror them as hardcoded
+  workspace definitions in `main.js`.
 - `docs/extending-bob-workspace.md` - schema/Base/entities extension model.
 - `docs/navigation-inventory.md` and `docs/entity-setup-audit.md` - useful
   generated snapshots, but confirm against current code before editing.
@@ -201,12 +202,10 @@ read by the running plugin.
 For an empty vault, first-run setup should produce a complete usable workspace:
 the active `workspace.json`, required schema YAML, required `.base` files, and
 record/task templates should all be generated or installed into their expected
-locations. The current implementation loads starter templates from
-`<plugin-dir>/templates/*.json`, or from embedded `BUILTIN_TEMPLATES` in
-`main.js` if that folder is absent; that embedded fallback is legacy bootstrap
-behavior and should be removed or minimized as the file-backed setup path
-matures. Applying a template writes the chosen template, minus `_template`, to
-the active plugin-folder `workspace.json`.
+locations. The current implementation loads starter templates only from
+`<plugin-dir>/templates/*.json`; there is intentionally no embedded fallback in
+`main.js`. Applying a template writes the chosen template, minus `_template`,
+to the active plugin-folder `workspace.json`.
 
 `data.json` is no longer the source for portable workspace-owned settings.
 `CadencePlugin.loadSettings()` first reads plugin data, then loads
@@ -442,7 +441,8 @@ Before releasing:
   confirm inherited instructions in `SUBMISSION.md` before using them.
 - The git tag must match `manifest.json.version` exactly, with no leading `v`.
 - `versions.json` must map the release to its minimum Obsidian version.
-- Release assets must include `main.js`, `manifest.json`, `styles.css`, and
-  `vendor/xlsx.full.min.js`.
+- Release assets must include `main.js`, `manifest.json`, `styles.css`,
+  `vendor/xlsx.full.min.js`, and file-backed starter templates under
+  `templates/`.
 - Recheck shipping code for debug logs, unsafe untrusted HTML insertion, and
   manual YAML frontmatter mutation.
