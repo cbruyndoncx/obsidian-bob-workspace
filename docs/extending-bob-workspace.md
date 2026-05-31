@@ -442,6 +442,17 @@ panel. Add the entity key to an existing group or create a new bundle.
 | Workbook export | Entity appears in the correct XLSX sheet |
 | Workbook import | Imported rows resolve field aliases and write correct frontmatter |
 
+## Gotchas (field-tested)
+
+These cost real debugging time when building a standalone product vault on BOB Workspace:
+
+- **Schema field types are limited to `string | number | integer | boolean | array`.** There is no `date` type — dates are stored as `string` (e.g. `due_date`, `target_date`, `created`). A schema with `type: date` fails to load with `Cannot load <file>: Field "<x>" has unsupported type "date"`.
+- **A nav entity must be defined in the schema layer, not only in `entities.json`.** An entity that exists only as an `entities.json` override (no canonical schema) is shown as `[incompatible]` in Settings — because `entities.json` is for overrides/special cases, while canonical entities live in `Schemas/*.yaml` with `schemas.enabled: true`.
+- **An entity nav item with no wired Base renders "coming soon".** Add the mapping under the top-level `bases` block (`bases: { <entity>: { file, view } }`) so the item renders its Base. Without it the surface is just a placeholder.
+- **Navigation is entity-backed.** A view that is *not* an entity (e.g. a habit tracker reading `habit_*` fields across daily notes) cannot be a navigation item. Surface it as a Base opened from the file tree, embedded in a note, or as a secondary tab — not a nav entry.
+- **Settings live in `workspace.json → settings`, not `data.json`.** `taskMode`, `taskNotesFolder`, `folderProjects`, `dailyNoteFolder`, and `modules` are persisted in the workspace definition; unknown keys placed in `data.json` are stripped on load.
+- *(Obsidian, not BOB)* Embedding a Base view inline uses a ` ```base ` code block; `![[file.base]]` does not render the view.
+
 ## What Requires Code
 
 Most entity and field changes should not require code. Code is only needed for:

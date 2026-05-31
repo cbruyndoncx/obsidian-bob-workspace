@@ -45,6 +45,15 @@ to change product identity or remove functionality.
 - Prefer extending schemas, Bases, or plugin-folder `workspace.json` when a
   requested change is data-model/navigation configuration rather than
   application logic.
+- Target direction: a new empty vault should be generated into a complete,
+  immediately usable workspace. The setup path should create or install every
+  required config/schema/Base/template artifact in the proper vault shape,
+  rather than leaving implicit prerequisites.
+- Target direction: avoid hardcoded workspace composition. `workspace.json`
+  should be the explicit single starting source for BOB Workspace composition,
+  with schema YAML, Base files, and optional imported vault JSON/YAML providing
+  the data model and view behavior. Embedded defaults in `main.js` are legacy
+  fallback/bootstrap behavior, not the desired long-term source of truth.
 
 Some supporting documents can lag the implementation. In particular, verify
 navigation and release behavior in `main.js`, `manifest.json`, and
@@ -58,6 +67,10 @@ publishing text.
   entity table editing, dashboards, modals, and Playbook Runner styles.
 - `manifest.json` and `versions.json` - current BOB Workspace release metadata.
 - `vendor/xlsx.full.min.js` and `vendor/xlsx.LICENSE` - bundled XLSX support.
+- `templates/workspace-*.json` - human-readable starter workspace templates.
+  These should become the canonical starter templates. The current embedded
+  `BUILTIN_TEMPLATES` copy in `main.js` is a legacy fallback and should not be
+  treated as the target architecture.
 - `docs/extending-bob-workspace.md` - schema/Base/entities extension model.
 - `docs/navigation-inventory.md` and `docs/entity-setup-audit.md` - useful
   generated snapshots, but confirm against current code before editing.
@@ -65,6 +78,9 @@ publishing text.
   materially alter shared architecture.
 - `SUBMISSION.md` - inherited/upstream-oriented release notes in places; do
   not blindly reuse its old plugin IDs, repository URLs, or asset list.
+- A repo-root `workspace.json`, when present, is not loaded by Obsidian. Treat
+  it as a scratch/template artifact unless it is copied to the installed plugin
+  directory for a vault.
 
 ## Main Architecture
 
@@ -75,8 +91,10 @@ publishing text.
 - Entity model: `ENTITIES`, `BUILTIN_ENTITY_DEFAULTS`, deal/activity accessors
 - Settings and folders: `DEFAULT_SETTINGS`, `CURRENT_CURRENCY`,
   `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`
-- Runtime configuration layers: `applySchemas()`,
-  `applyBaseOverrides()`, workspace registry loading, `reloadEntityConfiguration()`
+- Runtime configuration layers: `loadWorkspaceConfig()`,
+  `applyWorkspaceRegistries()`, `applySchemas()`,
+  `applyConfiguredBaseOverrides()`, `applyBaseOverrides()`,
+  `workspaceConfigTemplate()`, and `reloadEntityConfiguration()`
 - Base parsing/evaluation: `parseBaseFile()`, Base filter helpers, grouping and
   sorting helpers
 - Data and import/export helpers, including XLSX workbook functions
@@ -166,19 +184,85 @@ const updated = replaceSection(content, '## Brief', newText);
 await app.vault.modify(file, updated);
 ```
 
+### Workspace Source Of Truth
+
+The active workspace definition is always read from the installed plugin
+folder:
+
+```text
+<vault>/.obsidian/plugins/bob-workspace/workspace.json
+```
+
+`initPluginPaths(plugin)` derives this from `plugin.manifest.dir`; the fallback
+path before initialization is legacy `Cadence/workspace.json` and should not be
+used for current BOB installs. A `workspace.json` in the repository root is not
+read by the running plugin.
+
+For an empty vault, first-run setup should produce a complete usable workspace:
+the active `workspace.json`, required schema YAML, required `.base` files, and
+record/task templates should all be generated or installed into their expected
+locations. The current implementation loads starter templates from
+`<plugin-dir>/templates/*.json`, or from embedded `BUILTIN_TEMPLATES` in
+`main.js` if that folder is absent; that embedded fallback is legacy bootstrap
+behavior and should be removed or minimized as the file-backed setup path
+matures. Applying a template writes the chosen template, minus `_template`, to
+the active plugin-folder `workspace.json`.
+
+`data.json` is no longer the source for portable workspace-owned settings.
+`CadencePlugin.loadSettings()` first reads plugin data, then loads
+`workspace.json`, then overlays `workspace.json.settings` for keys listed in
+`WORKSPACE_OWNED_SETTING_KEYS`. `saveSettings()` removes those owned keys from
+plugin data and writes them back to `workspace.json` whenever a workspace file
+exists or any owned setting needs persistence. Personal/non-workspace settings
+remain in Obsidian plugin data.
+
+When hand-authoring `workspace.json`, prefer these top-level blocks:
+
+- `schemas` for schema enablement and schema source folder.
+- `bases` for portable Base file and default view associations.
+- `navigation.groups` and `navigation.secondaryTabs` for workspace layout.
+- `workbookGroups` for XLSX export bundles.
+- `dashboards` for configurable dashboard layouts keyed by route/surface id.
+- `templates` for record templates such as `templates.taskNote`.
+- `settings` only for portable settings such as modules, folders, task mode,
+  reminders, currency, and other keys explicitly listed in
+  `WORKSPACE_OWNED_SETTING_KEYS`.
+
+Avoid treating duplicated `settings.useSchemas`, `settings.schemasFolder`,
+`settings.baseFiles`, or `settings.baseViews` as the canonical composition
+source when top-level `schemas` or `bases` are present. In runtime code,
+top-level `schemas` controls schema loading, top-level `bases` controls Base
+file paths, and `settings.baseViews` can still override a workspace Base's
+default view as a user selection.
+
 ### Runtime Configuration Order
 
 `reloadEntityConfiguration(app, settings)` applies configuration in this order:
 
-1. Reset runtime navigation/export registries and load plugin-folder
-   `workspace.json` when present.
-2. Reset to `BUILTIN_ENTITY_DEFAULTS` and current settings.
-3. Apply configured groups/tabs/export groups.
-4. If enabled, load canonical schema YAML using `applySchemas()`; a schema can
-   introduce a generic record type without plugin code.
-5. Apply deprecated `workspace.json.entities` block only for backward compatibility.
-6. Merge `workspace.json.bases` behavior, then settings-selected `.base`
-   behavior for entities not controlled by workspace composition.
+1. Reset runtime navigation/export registries and load the active
+   plugin-folder `workspace.json` if present.
+2. Reset `ENTITIES` to `BUILTIN_ENTITY_DEFAULTS` and sync folders from the
+   already-effective settings object.
+3. Apply configured `navigation.groups`, `navigation.secondaryTabs`, and
+   `workbookGroups`. These replace the built-in registries when present; they
+   are not deep-merged.
+4. Apply deprecated `workspace.json.entities` once before schema loading for
+   migration compatibility, injecting navigation only when no configured
+   navigation exists.
+5. Resolve schema settings, where top-level `workspace.json.schemas` overrides
+   settings, then load canonical schema YAML with `applySchemas()` if enabled.
+   A schema can introduce a generic record type without plugin code.
+6. Apply deprecated `workspace.json.entities` again as post-schema overrides,
+   without injecting navigation. New entity definitions should not be added
+   here for current BOB vaults.
+7. Merge top-level `workspace.json.bases` with
+   `applyConfiguredBaseOverrides()`. These Base file paths win over
+   `settings.baseFiles` for the same entity.
+8. Merge remaining settings-selected `.base` behavior with
+   `applyBaseOverrides()` for entities not controlled by top-level
+   `workspace.json.bases`. `settings.baseViews` can override the default view
+   for either source.
+9. Rebuild surface lookups after all runtime registries are settled.
 
 Do not assume edits to `ENTITIES` alone control a BOB vault when schemas,
 custom overrides, or Bases are active.
@@ -205,9 +289,18 @@ implementing it first; it is not part of current `listEntityFiles()` behavior.
 ### Schemas, Bases, And Custom Entities
 
 - `workspace.json` is the preferred no-code composition file. It defines
-  `schemas`, `bases`, `navigation.groups`, `navigation.secondaryTabs`, and
-  `workbookGroups`; entity definitions belong in canonical schema YAML.
+  `schemas`, `bases`, `templates`, `dashboards`, `navigation.groups`,
+  `navigation.secondaryTabs`, and `workbookGroups`; entity definitions belong
+  in canonical schema YAML.
   Deprecated `entities` content remains readable for migration compatibility.
+- Entity-backed navigation surfaces render the generic record list/detail UI
+  when their `entityKey` exists in `ENTITIES` after schema loading. A Base
+  mapping is optional for simple lists, but required when the workspace needs
+  Base-specific filters, column order, grouping, sorting, or an external
+  non-table Base view.
+- Configured dashboards can be rendered from `workspace.json.dashboards` when
+  the dashboard key matches a surface id or secondary-tab route. Arbitrary
+  non-entity tools still require code.
 - The Settings navigation designer edits the same draft and supports adding
   groups, moving unassigned record types or secondary tabs into groups,
   choosing whether secondary children render as tabs or navigation-tree
@@ -279,6 +372,31 @@ For a new entity that can be vault-configured, prefer a schema and/or
 `workspace.json` over code. Code changes are justified for bespoke rendering,
 new widgets, or new import/export behavior; generic entity lists and tab/nav
 composition should be configured.
+
+When preparing a new empty-vault workspace:
+
+1. Create or install canonical schema YAML under the configured schema source
+   folder and set top-level `workspace.json.schemas.enabled` to `true`.
+2. Create or install required `.base` files under the configured Base folder so
+   the workspace is usable immediately after setup.
+3. Put portable Base mappings in top-level `workspace.json.bases` only when the
+   entity needs Base-defined filters, visible columns, sorting, grouping, or an
+   external Base view.
+4. Add navigation items with stable ids and `entityKey` values that match the
+   schema-derived entity keys.
+5. Add secondary tabs and workbook export groups in the same `workspace.json`
+   draft.
+6. Include task/record templates and any generated starter folders/files needed
+   for an immediately usable empty vault.
+7. Put the final file at
+   `<vault>/.obsidian/plugins/bob-workspace/workspace.json`; do not expect a
+   repo-root `workspace.json` to affect the running plugin.
+8. Reload with the `Reload workspace.json` command or restart Obsidian.
+
+When supporting an existing vault, prefer an explicit import path that reads
+YAML or JSON configuration already present in the vault, normalizes it into the
+same `workspace.json`/schema/Base model, and writes the result as visible files
+rather than relying on hidden or inferred plugin state.
 
 When adding a built-in entity in code:
 

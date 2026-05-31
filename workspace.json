@@ -1,0 +1,1182 @@
+{
+  "_comment": "This file controls no-code workspace composition. Entity-backed items render generic record lists; existing built-in surface IDs keep their specialized renderers.",
+  "dashboards": {
+    "crm.campaigns.overview": {
+      "title": "Campaigns",
+      "subtitle": "Campaign and outbound sequence overview",
+      "stats": [
+        { "label": "ACTIVE CAMPAIGNS", "entity": "campaign", "count": "open", "sub": { "entity": "campaign", "count": "all", "suffix": "total" }, "accent": "sky" },
+        { "label": "ACTIVE SEQUENCES", "entity": "sequence", "count": "open", "sub": { "entity": "sequence", "count": "all", "suffix": "total" }, "accent": "mint" },
+        { "label": "LEADS", "entity": "lead", "count": "all", "sub": "lead records", "accent": "warn" }
+      ],
+      "layout": [
+        [
+          { "title": "ACTIVE CAMPAIGNS", "empty": "No active campaigns.", "entity": "campaign", "source": "recent-open", "titleFields": ["campaign_name", "title"], "metaFields": ["status", "campaign_type", "launch_date"] },
+          { "title": "ACTIVE SEQUENCES", "empty": "No active sequences.", "entity": "sequence", "source": "recent-open", "titleFields": ["sequence_name", "title"], "metaFields": ["status", "channel", "campaign_id"] }
+        ],
+        [
+          { "title": "RECENT LEADS", "empty": "No leads captured.", "entity": "lead", "source": "recent", "titleFields": ["company_name", "contact_name"], "metaFields": ["status", "owner", "next_action_date"] }
+        ]
+      ]
+    },
+    "crm.campaigns.qa": {
+      "title": "Campaigns (QA)",
+      "subtitle": "QA copy — rendered from workspace.json config, compare with built-in Campaigns above",
+      "stats": [
+        { "label": "ACTIVE CAMPAIGNS", "entity": "campaign", "count": "open", "sub": { "entity": "campaign", "count": "all", "suffix": "total" }, "accent": "sky" },
+        { "label": "ACTIVE SEQUENCES", "entity": "sequence", "count": "open", "sub": { "entity": "sequence", "count": "all", "suffix": "total" }, "accent": "mint" },
+        { "label": "LEADS", "entity": "lead", "count": "all", "sub": "lead records", "accent": "warn" }
+      ],
+      "layout": [
+        [
+          { "title": "ACTIVE CAMPAIGNS", "empty": "No active campaigns.", "entity": "campaign", "source": "recent-open", "titleFields": ["campaign_name", "title"], "metaFields": ["status", "campaign_type", "launch_date"] },
+          { "title": "ACTIVE SEQUENCES", "empty": "No active sequences.", "entity": "sequence", "source": "recent-open", "titleFields": ["sequence_name", "title"], "metaFields": ["status", "channel", "campaign_id"] }
+        ],
+        [
+          { "title": "RECENT LEADS", "empty": "No leads captured.", "entity": "lead", "source": "recent", "titleFields": ["company_name", "contact_name"], "metaFields": ["status", "owner", "next_action_date"] }
+        ]
+      ]
+    }
+  },
+  "schemas": {
+    "enabled": true,
+    "folder": "00-CORE/Schemas/source"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "id": "home_group",
+        "label": "",
+        "items": [
+          {
+            "id": "home",
+            "label": "Home",
+            "icon": "home",
+            "desc": "Command centre — today, projects, pipeline and upcoming, all on one screen."
+          },
+          {
+            "id": "records.weather-forecast",
+            "label": "Weather Forecasts",
+            "icon": "lucide-cloud-sun-rain",
+            "entityKey": "weather-forecast",
+            "desc": "Weather Forecasts records"
+          }
+        ]
+      },
+      {
+        "id": "quick-menu",
+        "label": "Quick Menu",
+        "module": "quick-menu",
+        "items": [
+          {
+            "id": "planner.tasknotes",
+            "label": "TaskNotes",
+            "icon": "circle-check-big",
+            "module": "quick-menu",
+            "entityKey": "task",
+            "folderKey": "taskNotesFolder",
+            "desc": "TaskNotes as full markdown task records with status, priority, due date and context."
+          },
+          {
+            "id": "planner.projects",
+            "label": "Projects",
+            "icon": "folder-kanban",
+            "module": "quick-menu",
+            "entityKey": "project",
+            "folderKey": "folderProjects",
+            "desc": "Active projects with milestones, owners, statuses — kanban over project notes."
+          }
+        ]
+      },
+      {
+        "id": "planner",
+        "label": "Planner",
+        "module": "planner",
+        "items": [
+          {
+            "id": "planner.inbox",
+            "label": "Inbox",
+            "icon": "inbox",
+            "module": "planner",
+            "desc": "Universal capture + reminders. Anything you toss in here surfaces at the right time."
+          },
+          {
+            "id": "planner.today",
+            "label": "Today",
+            "icon": "sun",
+            "module": "planner",
+            "desc": "Diary view of today's daily note."
+          },
+          {
+            "id": "planner.calendar",
+            "label": "Calendar",
+            "icon": "calendar-days",
+            "module": "planner",
+            "desc": "Week view across daily notes."
+          }
+        ]
+      },
+      {
+        "id": "crm",
+        "label": "CRM",
+        "module": "crm",
+        "items": [
+          {
+            "id": "crm.dashboard",
+            "label": "Dashboard",
+            "icon": "layout-grid",
+            "module": "crm",
+            "desc": "Overview cards — today's tasks, deal momentum, recent contacts, week stats."
+          },
+          {
+            "id": "crm.pipeline",
+            "label": "Pipeline",
+            "icon": "trending-up",
+            "module": "crm",
+            "entityKey": "deal",
+            "folderKey": "folderPipeline",
+            "desc": "Sales pipeline. Deals as markdown notes with stage, deal value, client and follow-up frontmatter."
+          },
+          {
+            "id": "crm.contacts",
+            "label": "Contacts",
+            "icon": "users",
+            "module": "crm",
+            "entityKey": "contact",
+            "folderKey": "folderContacts",
+            "desc": "People as markdown notes — name, email, company, last-talked-to cadence, tags."
+          },
+          {
+            "id": "crm.clients",
+            "label": "Clients",
+            "icon": "briefcase",
+            "module": "crm",
+            "entityKey": "client",
+            "folderKey": "folderClients",
+            "desc": "Client company profiles — status, regions, contact details, related deals and projects."
+          },
+          {
+            "id": "crm.companies",
+            "label": "My Companies",
+            "icon": "building-2",
+            "module": "crm",
+            "entityKey": "company",
+            "folderKey": "folderCompanies",
+            "desc": "Your own company profiles (can be multiple) — regions, status, branding."
+          },
+          {
+            "id": "crm.leads",
+            "label": "Leads",
+            "icon": "target",
+            "module": "crm",
+            "entityKey": "lead",
+            "folderKey": "folderLeads",
+            "desc": "Prospect records — qualification, source, outreach status. Per-lead folder for replies in 03-COMMS/."
+          },
+          {
+            "id": "crm.campaigns",
+            "label": "Campaigns",
+            "icon": "megaphone",
+            "module": "crm",
+            "entityKey": "campaign",
+            "folderKey": "folderCampaigns",
+            "desc": "Marketing/sales campaigns — outbound (sequences), inbound (content+ads), or mixed."
+          },
+          {
+            "id": "crm.campaigns.qa",
+            "label": "Campaigns (QA)",
+            "icon": "flask-conical",
+            "module": "crm",
+            "desc": "QA copy of Campaigns dashboard — rendered from workspace.json config."
+          },
+          {
+            "id": "crm.sequences",
+            "label": "Sequences",
+            "icon": "zap",
+            "module": "crm",
+            "navLevel": "secondary",
+            "parent": "crm.campaigns",
+            "entityKey": "sequence",
+            "folderKey": "folderSequences",
+            "desc": "Outbound multi-touch sequences — execution detail within a campaign."
+          },
+          {
+            "id": "crm.activities",
+            "label": "Activities",
+            "icon": "calendar",
+            "module": "crm",
+            "entityKey": "activity",
+            "folderKey": "folderActivities",
+            "desc": "Cross-cutting activity timeline — calls, meetings, telegram/whatsapp/email logs."
+          }
+        ]
+      },
+      {
+        "id": "prm",
+        "label": "PRM",
+        "module": "prm",
+        "items": [
+          {
+            "id": "prm.partners",
+            "label": "Partners",
+            "icon": "handshake",
+            "module": "prm",
+            "entityKey": "partner",
+            "folderKey": "folderPartners",
+            "desc": "Partner organisations — relationship status, named contacts, joint pipeline."
+          },
+          {
+            "id": "prm.registrations",
+            "label": "Registrations",
+            "icon": "clipboard-check",
+            "module": "prm",
+            "navLevel": "secondary",
+            "parent": "prm.partners",
+            "entityKey": "registration",
+            "folderKey": "folderRegistrations",
+            "desc": "Deal registrations submitted by partners — status, expiry, attached deals."
+          },
+          {
+            "id": "prm.commissions",
+            "label": "Commissions",
+            "icon": "wallet",
+            "module": "prm",
+            "navLevel": "secondary",
+            "parent": "prm.partners",
+            "entityKey": "commission",
+            "folderKey": "folderCommissions",
+            "desc": "Commission ledger across partners — earned, pending, paid, by quarter."
+          },
+          {
+            "id": "prm.certifications",
+            "label": "Certifications",
+            "icon": "award",
+            "module": "prm",
+            "navLevel": "secondary",
+            "parent": "prm.partners",
+            "entityKey": "certification",
+            "folderKey": "folderCertifications",
+            "desc": "Partner certifications — track expiries, renewals, training completion."
+          },
+          {
+            "id": "prm.analytics",
+            "label": "Analytics",
+            "icon": "bar-chart-3",
+            "module": "prm",
+            "navLevel": "secondary",
+            "parent": "prm.partners",
+            "desc": "PRM analytics — partner-sourced revenue, top performers, lifecycle funnel."
+          }
+        ]
+      },
+      {
+        "id": "client-work",
+        "label": "Client Work",
+        "module": "client-work",
+        "items": [
+          {
+            "id": "client-work.overview",
+            "label": "Workspace",
+            "icon": "briefcase-business",
+            "module": "client-work",
+            "desc": "Client delivery workspace: meetings, communications, deliverables, feedback, surveys, testimonials and decisions."
+          },
+          {
+            "id": "client-work.meetings",
+            "label": "Meetings",
+            "icon": "calendar-clock",
+            "module": "client-work",
+            "navLevel": "secondary",
+            "parent": "client-work.overview",
+            "entityKey": "meeting",
+            "desc": "Client meetings with attendees, status, dates and related client IDs."
+          },
+          {
+            "id": "client-work.comms",
+            "label": "Comms",
+            "icon": "messages-square",
+            "module": "client-work",
+            "navLevel": "secondary",
+            "parent": "client-work.overview",
+            "entityKey": "comms-thread",
+            "desc": "Client and lead communication threads across email, WhatsApp and Telegram."
+          },
+          {
+            "id": "client-work.deliverables",
+            "label": "Deliverables",
+            "icon": "package-check",
+            "module": "client-work",
+            "navLevel": "secondary",
+            "parent": "client-work.overview",
+            "entityKey": "deliverable",
+            "desc": "Client deliverables and their review, approval and delivery status."
+          },
+          {
+            "id": "client-work.feedback",
+            "label": "Feedback",
+            "icon": "message-circle",
+            "module": "client-work",
+            "navLevel": "secondary",
+            "parent": "client-work.overview",
+            "entityKey": "feedback",
+            "desc": "Client feedback, scores, themes, sentiment and response actions."
+          },
+          {
+            "id": "client-work.surveys",
+            "label": "Surveys",
+            "icon": "clipboard-list",
+            "module": "client-work",
+            "navLevel": "secondary",
+            "parent": "client-work.overview",
+            "entityKey": "survey",
+            "desc": "Survey campaigns, response rates, launch dates and analysis status."
+          },
+          {
+            "id": "client-work.testimonials",
+            "label": "Testimonials",
+            "icon": "quote",
+            "module": "client-work",
+            "navLevel": "secondary",
+            "parent": "client-work.overview",
+            "entityKey": "testimonial",
+            "desc": "Client testimonials with permissions, attribution and publication status."
+          },
+          {
+            "id": "client-work.decisions",
+            "label": "Decisions",
+            "icon": "git-pull-request",
+            "module": "client-work",
+            "navLevel": "secondary",
+            "parent": "client-work.overview",
+            "entityKey": "decision",
+            "desc": "Decision records connected to client and delivery work."
+          }
+        ]
+      },
+      {
+        "id": "finance",
+        "label": "Finance",
+        "module": "finance",
+        "items": [
+          {
+            "id": "finance.invoices",
+            "label": "Customer Invoices",
+            "icon": "receipt",
+            "module": "finance",
+            "entityKey": "invoice",
+            "desc": "Customer invoices, payment status and amounts."
+          },
+          {
+            "id": "finance.gl",
+            "label": "General Ledger",
+            "icon": "book-open",
+            "module": "finance",
+            "desc": "GL work area for chart of accounts, journal entries, trial balances and financial statements."
+          },
+          {
+            "id": "finance.setup",
+            "label": "Finance Setup",
+            "icon": "sliders-horizontal",
+            "module": "finance",
+            "desc": "Finance setup records: periods, bank accounts, FX rates and inventory/reference setup."
+          },
+          {
+            "id": "finance.accounting-periods",
+            "label": "Accounting Periods",
+            "icon": "calendar-range",
+            "module": "finance",
+            "navLevel": "setup",
+            "parent": "finance.setup",
+            "entityKey": "accounting-period",
+            "desc": "Accounting periods — month, quarter and annual close windows."
+          },
+          {
+            "id": "finance.bank-accounts",
+            "label": "Bank Accounts",
+            "icon": "landmark",
+            "module": "finance",
+            "navLevel": "setup",
+            "parent": "finance.setup",
+            "entityKey": "bank-account",
+            "desc": "Bank accounts linked to currencies and GL accounts."
+          },
+          {
+            "id": "finance.fx-rates",
+            "label": "FX Rates Tables",
+            "icon": "repeat-2",
+            "module": "finance",
+            "navLevel": "setup",
+            "parent": "finance.setup",
+            "entityKey": "fx-rates-table",
+            "desc": "Foreign exchange rate tables and sources."
+          },
+          {
+            "id": "finance.inventory",
+            "label": "Inventory",
+            "icon": "boxes",
+            "module": "finance",
+            "entityKey": "inventory",
+            "desc": "Inventory items, quantities, costing and write-downs."
+          },
+          {
+            "id": "finance.bank-reconciliations",
+            "label": "Bank Reconciliations",
+            "icon": "scale",
+            "module": "finance",
+            "navLevel": "secondary",
+            "parent": "finance.gl",
+            "entityKey": "bank-reconciliation",
+            "desc": "Bank reconciliation records by account and period."
+          },
+          {
+            "id": "finance.chart-of-accounts",
+            "label": "Chart of Accounts",
+            "icon": "list-tree",
+            "module": "finance",
+            "navLevel": "secondary",
+            "parent": "finance.gl",
+            "entityKey": "chart-of-accounts",
+            "desc": "Chart of accounts by jurisdiction and account classification."
+          },
+          {
+            "id": "finance.journal-entries",
+            "label": "Journal Entries",
+            "icon": "book-open",
+            "module": "finance",
+            "navLevel": "secondary",
+            "parent": "finance.gl",
+            "entityKey": "journal-entry",
+            "desc": "Journal entries with posting status and totals."
+          },
+          {
+            "id": "finance.trial-balances",
+            "label": "Trial Balances",
+            "icon": "table-2",
+            "module": "finance",
+            "navLevel": "secondary",
+            "parent": "finance.gl",
+            "entityKey": "trial-balance",
+            "desc": "Trial balances by period with review status."
+          },
+          {
+            "id": "finance.financial-statements",
+            "label": "Financial Statements",
+            "icon": "file-bar-chart",
+            "module": "finance",
+            "navLevel": "secondary",
+            "parent": "finance.gl",
+            "entityKey": "financial-statement",
+            "desc": "Financial statements generated from trial balances."
+          },
+          {
+            "id": "finance.fs-notes",
+            "label": "FS Notes",
+            "icon": "notebook-text",
+            "module": "finance",
+            "navLevel": "secondary",
+            "parent": "finance.gl",
+            "entityKey": "fs-notes",
+            "desc": "Financial statement notes and policy disclosures."
+          },
+          {
+            "id": "tax.overview",
+            "label": "Tax",
+            "icon": "receipt-text",
+            "module": "finance",
+            "desc": "Tax and compliance work area: VAT, corporate tax, transfer pricing, free-zone status and retention."
+          },
+          {
+            "id": "tax.vat-returns",
+            "label": "VAT Returns",
+            "icon": "receipt-text",
+            "module": "finance",
+            "navLevel": "secondary",
+            "parent": "tax.overview",
+            "entityKey": "vat-return",
+            "desc": "VAT returns, filing status, payable/refund and payment references."
+          },
+          {
+            "id": "tax.corporate-tax-returns",
+            "label": "Corporate Tax Returns",
+            "icon": "landmark",
+            "module": "finance",
+            "navLevel": "secondary",
+            "parent": "tax.overview",
+            "entityKey": "corporate-tax-return",
+            "desc": "Corporate tax returns, taxable income and filing status."
+          },
+          {
+            "id": "tax.deferred-tax",
+            "label": "Deferred Tax",
+            "icon": "split-square-horizontal",
+            "module": "finance",
+            "navLevel": "secondary",
+            "parent": "tax.overview",
+            "entityKey": "deferred-tax",
+            "desc": "Deferred tax asset/liability assessments and review status."
+          },
+          {
+            "id": "tax.transfer-pricing",
+            "label": "Transfer Pricing",
+            "icon": "git-compare",
+            "module": "finance",
+            "navLevel": "secondary",
+            "parent": "tax.overview",
+            "entityKey": "transfer-pricing",
+            "desc": "Related-party transactions and transfer pricing documentation."
+          },
+          {
+            "id": "tax.free-zone-status",
+            "label": "Free Zone Status",
+            "icon": "building",
+            "module": "finance",
+            "navLevel": "secondary",
+            "parent": "tax.overview",
+            "entityKey": "free-zone-status",
+            "desc": "Free-zone qualifying status, substance and nexus records."
+          },
+          {
+            "id": "tax.legal-rules",
+            "label": "Legal Rules",
+            "icon": "scale",
+            "module": "finance",
+            "navLevel": "setup",
+            "parent": "tax.overview",
+            "entityKey": "legal-rule",
+            "desc": "Legal and regulatory source tracking by jurisdiction."
+          },
+          {
+            "id": "tax.document-retention",
+            "label": "Document Retention",
+            "icon": "archive",
+            "module": "finance",
+            "navLevel": "setup",
+            "parent": "tax.overview",
+            "entityKey": "document-retention",
+            "desc": "Retention register, destruction dates and responsible owners."
+          }
+        ]
+      },
+      {
+        "id": "procurement",
+        "label": "Suppliers & Procurement",
+        "module": "procurement",
+        "items": [
+          {
+            "id": "procurement.suppliers",
+            "label": "Suppliers",
+            "module": "procurement",
+            "entityKey": "supplier",
+            "folderKey": "folderSuppliers",
+            "desc": "Supplier profiles — services, contracts, contacts, spend.",
+            "icon": "lucide-truck"
+          },
+          {
+            "id": "procurement.supplier-invoices",
+            "label": "Supplier Invoices",
+            "icon": "file-check-2",
+            "module": "procurement",
+            "entityKey": "supplier-invoice",
+            "desc": "Supplier invoices, three-way match and payment status."
+          },
+          {
+            "id": "procurement.purchase-requisitions",
+            "label": "Purchase Requisitions",
+            "icon": "clipboard-list",
+            "module": "procurement",
+            "entityKey": "purchase-requisition",
+            "desc": "Internal purchase requests before spend is approved or a PO is issued."
+          },
+          {
+            "id": "procurement.purchase-orders",
+            "label": "Purchase Orders",
+            "icon": "shopping-cart",
+            "module": "procurement",
+            "entityKey": "purchase-order",
+            "desc": "Formal supplier purchase orders, approval status and delivery references."
+          }
+        ]
+      },
+      {
+        "id": "reports",
+        "label": "Reports",
+        "items": [
+          {
+            "id": "reports.productivity",
+            "label": "Productivity",
+            "icon": "sun",
+            "desc": "Personal productivity — completion rate, streaks, focus blocks, journal volume."
+          },
+          {
+            "id": "reports.pipeline",
+            "label": "Pipeline",
+            "icon": "trending-up",
+            "module": "crm",
+            "desc": "Pipeline coverage and weighted forecast — by stage, owner, source."
+          },
+          {
+            "id": "reports.sales",
+            "label": "Sales",
+            "icon": "bar-chart-3",
+            "module": "crm",
+            "desc": "Closed won / lost trends — quota attainment, win rate, average cycle."
+          },
+          {
+            "id": "reports.partners",
+            "label": "Partners",
+            "icon": "handshake",
+            "module": "prm",
+            "desc": "Partner contribution — sourced vs influenced revenue, top tiers."
+          },
+          {
+            "id": "reports.activity",
+            "label": "Activity",
+            "icon": "pie-chart",
+            "module": "crm",
+            "desc": "Activity mix — calls, meetings, emails by rep and account."
+          }
+        ]
+      },
+      {
+        "id": "misc",
+        "label": "",
+        "items": [
+          {
+            "id": "team",
+            "label": "Team",
+            "icon": "user-cog",
+            "desc": "Team members, roles, seats — admin view of your BOB Workspace."
+          },
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "settings-2",
+            "desc": "BOB Workspace settings — folders, headings, week start, API connection."
+          }
+        ]
+      },
+      {
+        "id": "ai",
+        "label": "AI Workspace",
+        "module": "ai",
+        "items": [
+          {
+            "id": "ai.playbooks",
+            "label": "Playbooks",
+            "icon": "book-open-check",
+            "module": "ai",
+            "entityKey": "playbook",
+            "folderKey": "folderPlaybooks",
+            "desc": "Runnable AI playbooks — step-by-step process recipes with triggers, outcomes and maturity levels."
+          },
+          {
+            "id": "ai.skills",
+            "label": "Skills",
+            "icon": "cpu",
+            "module": "ai",
+            "entityKey": "skill",
+            "folderKey": "folderSkills",
+            "desc": "Agent skills installed in the vault — category, version, enabled/disabled status."
+          }
+        ]
+      }
+    ],
+    "secondaryTabs": {
+      "crm.campaigns": [
+        {
+          "label": "Overview",
+          "route": "crm.campaigns.overview"
+        },
+        {
+          "label": "Campaigns",
+          "entityKey": "campaign"
+        },
+        {
+          "label": "Sequences",
+          "entityKey": "sequence"
+        }
+      ],
+      "client-work.overview": [
+        {
+          "label": "Overview",
+          "route": "client-work.dashboard"
+        },
+        {
+          "label": "Meetings",
+          "entityKey": "meeting"
+        },
+        {
+          "label": "Comms",
+          "entityKey": "comms-thread"
+        },
+        {
+          "label": "Deliverables",
+          "entityKey": "deliverable"
+        },
+        {
+          "label": "Feedback",
+          "entityKey": "feedback"
+        },
+        {
+          "label": "Surveys",
+          "entityKey": "survey"
+        },
+        {
+          "label": "Testimonials",
+          "entityKey": "testimonial"
+        },
+        {
+          "label": "Decisions",
+          "entityKey": "decision"
+        }
+      ],
+      "prm.partners": [
+        {
+          "label": "Overview",
+          "route": "prm.partners.overview"
+        },
+        {
+          "label": "Partners",
+          "entityKey": "partner"
+        },
+        {
+          "label": "Registrations",
+          "entityKey": "registration"
+        },
+        {
+          "label": "Commissions",
+          "entityKey": "commission"
+        },
+        {
+          "label": "Certifications",
+          "entityKey": "certification"
+        },
+        {
+          "label": "Analytics",
+          "route": "prm.analytics"
+        }
+      ],
+      "finance.invoices": [
+        {
+          "label": "Customer Invoices",
+          "entityKey": "invoice"
+        }
+      ],
+      "finance.gl": [
+        {
+          "label": "Overview",
+          "route": "finance.gl.overview"
+        },
+        {
+          "label": "Chart of Accounts",
+          "entityKey": "chart-of-accounts"
+        },
+        {
+          "label": "Journal Entries",
+          "entityKey": "journal-entry"
+        },
+        {
+          "label": "Bank Reconciliations",
+          "entityKey": "bank-reconciliation"
+        },
+        {
+          "label": "Trial Balances",
+          "entityKey": "trial-balance"
+        },
+        {
+          "label": "Statements",
+          "entityKey": "financial-statement"
+        },
+        {
+          "label": "FS Notes",
+          "entityKey": "fs-notes"
+        }
+      ],
+      "finance.setup": [
+        {
+          "label": "Overview",
+          "route": "finance.setup.overview"
+        },
+        {
+          "label": "Accounting Periods",
+          "entityKey": "accounting-period"
+        },
+        {
+          "label": "Bank Accounts",
+          "entityKey": "bank-account"
+        },
+        {
+          "label": "FX Rates",
+          "entityKey": "fx-rates-table"
+        }
+      ],
+      "procurement.suppliers": [
+        {
+          "label": "Overview",
+          "route": "procurement.overview"
+        },
+        {
+          "label": "Suppliers",
+          "entityKey": "supplier"
+        },
+        {
+          "label": "Supplier Invoices",
+          "entityKey": "supplier-invoice"
+        },
+        {
+          "label": "Purchase Requisitions",
+          "entityKey": "purchase-requisition"
+        },
+        {
+          "label": "Purchase Orders",
+          "entityKey": "purchase-order"
+        }
+      ],
+      "tax.overview": [
+        {
+          "label": "Overview",
+          "route": "tax.dashboard"
+        },
+        {
+          "label": "VAT Returns",
+          "entityKey": "vat-return"
+        },
+        {
+          "label": "Corporate Tax",
+          "entityKey": "corporate-tax-return"
+        },
+        {
+          "label": "Deferred Tax",
+          "entityKey": "deferred-tax"
+        },
+        {
+          "label": "Transfer Pricing",
+          "entityKey": "transfer-pricing"
+        },
+        {
+          "label": "Free Zone Status",
+          "entityKey": "free-zone-status"
+        },
+        {
+          "label": "Legal Rules",
+          "entityKey": "legal-rule"
+        },
+        {
+          "label": "Document Retention",
+          "entityKey": "document-retention"
+        }
+      ]
+    }
+  },
+  "workbookGroups": [
+    {
+      "id": "planner",
+      "label": "Planner",
+      "entityKeys": [
+        "task",
+        "project"
+      ]
+    },
+    {
+      "id": "crm",
+      "label": "CRM",
+      "entityKeys": [
+        "deal",
+        "contact",
+        "client",
+        "company",
+        "lead",
+        "campaign",
+        "sequence",
+        "activity"
+      ]
+    },
+    {
+      "id": "client-work",
+      "label": "Client Work",
+      "entityKeys": [
+        "meeting",
+        "comms-thread",
+        "deliverable",
+        "feedback",
+        "survey",
+        "testimonial",
+        "decision"
+      ]
+    },
+    {
+      "id": "prm",
+      "label": "PRM",
+      "entityKeys": [
+        "partner",
+        "registration",
+        "commission",
+        "certification"
+      ]
+    },
+    {
+      "id": "finance",
+      "label": "Finance",
+      "entityKeys": [
+        "invoice",
+        "chart-of-accounts",
+        "journal-entry",
+        "bank-reconciliation",
+        "trial-balance",
+        "financial-statement",
+        "fs-notes",
+        "accounting-period",
+        "bank-account",
+        "fx-rates-table",
+        "inventory",
+        "vat-return",
+        "corporate-tax-return",
+        "deferred-tax",
+        "transfer-pricing",
+        "free-zone-status",
+        "legal-rule",
+        "document-retention"
+      ]
+    },
+    {
+      "id": "procurement",
+      "label": "Suppliers & Procurement",
+      "entityKeys": [
+        "supplier",
+        "supplier-invoice",
+        "purchase-requisition",
+        "purchase-order"
+      ]
+    },
+    {
+      "id": "ai",
+      "label": "AI Workspace",
+      "entityKeys": [
+        "playbook",
+        "skill"
+      ]
+    }
+  ],
+  "bases": {
+    "contact": {
+      "file": "00-CORE/Bases/People.base"
+    },
+    "client": {
+      "file": "00-CORE/Bases/Clients.base"
+    },
+    "company": {
+      "file": "00-CORE/Bases/Companies.base"
+    },
+    "deal": {
+      "file": "00-CORE/Bases/Pipeline.base",
+      "view": "Needs Follow-up"
+    },
+    "activity": {
+      "file": "00-CORE/Bases/Activities.base",
+      "view": "By Channel"
+    },
+    "lead": {
+      "file": "00-CORE/Bases/Sales-Leads.base",
+      "view": "All"
+    },
+    "partner": {
+      "file": "00-CORE/Bases/Partners.base"
+    },
+    "registration": {
+      "file": "00-CORE/Bases/Partner-Registrations.base"
+    },
+    "commission": {
+      "file": "00-CORE/Bases/Partner-Commissions.base"
+    },
+    "certification": {
+      "file": "00-CORE/Bases/Partner-Certifications.base"
+    },
+    "campaign": {
+      "file": "00-CORE/Bases/Campaigns.base"
+    },
+    "sequence": {
+      "file": "00-CORE/Bases/Sequences.base"
+    },
+    "meeting": {
+      "file": "00-CORE/Bases/Meetings.base"
+    },
+    "comms-thread": {
+      "file": "00-CORE/Bases/Comms.base"
+    },
+    "deliverable": {
+      "file": "00-CORE/Bases/Deliverables.base",
+      "view": "In Progress"
+    },
+    "feedback": {
+      "file": "00-CORE/Bases/Feedback.base"
+    },
+    "survey": {
+      "file": "00-CORE/Bases/Surveys.base"
+    },
+    "testimonial": {
+      "file": "00-CORE/Bases/Testimonials.base"
+    },
+    "decision": {
+      "file": "00-CORE/Bases/Decisions.base"
+    },
+    "project": {
+      "file": "00-CORE/Bases/Projects.base",
+      "view": "By Client"
+    },
+    "supplier": {
+      "file": "00-CORE/Bases/Suppliers.base"
+    },
+    "accounting-period": {
+      "file": "00-CORE/Bases/Accounting-Periods.base"
+    },
+    "bank-account": {
+      "file": "00-CORE/Bases/Bank-Accounts.base",
+      "view": "All Accounts"
+    },
+    "bank-reconciliation": {
+      "file": "00-CORE/Bases/Bank-Reconciliations.base"
+    },
+    "chart-of-accounts": {
+      "file": "00-CORE/Bases/Chart-of-Accounts.base",
+      "view": "All Accounts"
+    },
+    "financial-statement": {
+      "file": "00-CORE/Bases/Financial-Statements.base"
+    },
+    "fs-notes": {
+      "file": "00-CORE/Bases/FS-Notes.base"
+    },
+    "fx-rates-table": {
+      "file": "00-CORE/Bases/FX-Rates-Tables.base"
+    },
+    "inventory": {
+      "file": "00-CORE/Bases/Inventory.base"
+    },
+    "invoice": {
+      "file": "00-CORE/Bases/AR.base"
+    },
+    "journal-entry": {
+      "file": "00-CORE/Bases/Journal-Entries.base"
+    },
+    "purchase-requisition": {
+      "file": "00-CORE/Bases/Purchase-Requisitions.base"
+    },
+    "purchase-order": {
+      "file": "00-CORE/Bases/Purchase-Orders.base",
+      "view": "PO Board"
+    },
+    "supplier-invoice": {
+      "file": "00-CORE/Bases/Supplier-Invoices.base"
+    },
+    "trial-balance": {
+      "file": "00-CORE/Bases/Trial-Balances.base"
+    },
+    "vat-return": {
+      "file": "00-CORE/Bases/VAT-Returns.base"
+    },
+    "corporate-tax-return": {
+      "file": "00-CORE/Bases/Corporate-Tax-Returns.base"
+    },
+    "deferred-tax": {
+      "file": "00-CORE/Bases/Deferred-Tax.base"
+    },
+    "transfer-pricing": {
+      "file": "00-CORE/Bases/Transfer-Pricing.base"
+    },
+    "free-zone-status": {
+      "file": "00-CORE/Bases/Free-Zone-Status.base"
+    },
+    "legal-rule": {
+      "file": "00-CORE/Bases/Legal-Rules.base"
+    },
+    "document-retention": {
+      "file": "00-CORE/Bases/Document-Retention.base"
+    },
+    "task": {
+      "file": "00-CORE/TaskNotes/Views/tasks-default.base",
+      "view": "This Week"
+    },
+    "playbook": {
+      "file": "00-CORE/Bases/Playbooks.base",
+      "view": "Runner"
+    },
+    "skill": {
+      "file": "20-COMPANY/skills-publishing.base",
+      "view": "All Skills"
+    }
+  },
+  "settings": {
+    "currency": "USD",
+    "modules": {
+      "crm": true,
+      "client-work": true,
+      "prm": true,
+      "srm": true,
+      "finance": true,
+      "procurement": true,
+      "tax": true,
+      "planner": true,
+      "ai": true,
+      "quick-menu": true
+    },
+    "showSecondaryNav": false,
+    "showSetupNav": false,
+    "taskMode": "hybrid",
+    "baseFiles": {
+      "contact": "00-CORE/Bases/People.base",
+      "client": "00-CORE/Bases/Clients.base",
+      "company": "00-CORE/Bases/Companies.base",
+      "deal": "00-CORE/Bases/Pipeline.base",
+      "activity": "00-CORE/Bases/Activities.base",
+      "lead": "00-CORE/Bases/Sales-Leads.base",
+      "partner": "00-CORE/Bases/Partners.base",
+      "registration": "00-CORE/Bases/Partner-Registrations.base",
+      "commission": "00-CORE/Bases/Partner-Commissions.base",
+      "certification": "00-CORE/Bases/Partner-Certifications.base",
+      "campaign": "00-CORE/Bases/Campaigns.base",
+      "sequence": "00-CORE/Bases/Sequences.base",
+      "meeting": "00-CORE/Bases/Meetings.base",
+      "comms-thread": "00-CORE/Bases/Comms.base",
+      "deliverable": "00-CORE/Bases/Deliverables.base",
+      "feedback": "00-CORE/Bases/Feedback.base",
+      "survey": "00-CORE/Bases/Surveys.base",
+      "testimonial": "00-CORE/Bases/Testimonials.base",
+      "decision": "00-CORE/Bases/Decisions.base",
+      "project": "00-CORE/Bases/Projects.base",
+      "supplier": "00-CORE/Bases/Suppliers.base",
+      "accounting-period": "00-CORE/Bases/Accounting-Periods.base",
+      "bank-account": "00-CORE/Bases/Bank-Accounts.base",
+      "bank-reconciliation": "00-CORE/Bases/Bank-Reconciliations.base",
+      "chart-of-accounts": "00-CORE/Bases/Chart-of-Accounts.base",
+      "financial-statement": "00-CORE/Bases/Financial-Statements.base",
+      "fs-notes": "00-CORE/Bases/FS-Notes.base",
+      "fx-rates-table": "00-CORE/Bases/FX-Rates-Tables.base",
+      "inventory": "00-CORE/Bases/Inventory.base",
+      "invoice": "00-CORE/Bases/AR.base",
+      "journal-entry": "00-CORE/Bases/Journal-Entries.base",
+      "purchase-requisition": "00-CORE/Bases/Purchase-Requisitions.base",
+      "purchase-order": "00-CORE/Bases/Purchase-Orders.base",
+      "supplier-invoice": "00-CORE/Bases/Supplier-Invoices.base",
+      "trial-balance": "00-CORE/Bases/Trial-Balances.base",
+      "vat-return": "00-CORE/Bases/VAT-Returns.base",
+      "corporate-tax-return": "00-CORE/Bases/Corporate-Tax-Returns.base",
+      "deferred-tax": "00-CORE/Bases/Deferred-Tax.base",
+      "transfer-pricing": "00-CORE/Bases/Transfer-Pricing.base",
+      "free-zone-status": "00-CORE/Bases/Free-Zone-Status.base",
+      "legal-rule": "00-CORE/Bases/Legal-Rules.base",
+      "document-retention": "00-CORE/Bases/Document-Retention.base"
+    },
+    "baseViews": {},
+    "useSchemas": false,
+    "folderPipeline": "30-CLIENTS",
+    "folderRegistrations": "20-COMPANY/35-PARTNERS",
+    "folderCommissions": "20-COMPANY/35-PARTNERS",
+    "folderLeads": "20-COMPANY/55-LEADS",
+    "folderCertifications": "20-COMPANY/35-PARTNERS",
+    "folderActivities": "30-CLIENTS",
+    "folderSequences": "20-COMPANY/60-SALES/SEQUENCES",
+    "folderProjects": "30-CLIENTS",
+    "dailyNoteFolder": "00-COREPeriodicNotes/Daily",
+    "reminders": []
+  }
+}
