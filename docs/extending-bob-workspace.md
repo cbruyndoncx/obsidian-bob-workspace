@@ -79,7 +79,12 @@ Minimal example:
         ]
       }
     ],
-    "secondaryTabs": {}
+    "secondaryTabs": {},
+    "actions": {
+      "home": [
+        { "entityKey": "order", "label": "+ Order", "primary": true }
+      ]
+    }
   },
   "workbookGroups": [
     { "id": "operations", "label": "Operations", "entityKeys": ["order"] }
@@ -107,11 +112,21 @@ For a new parent surface, use **+ Tabs** on its navigation row, then drop a
 record type or an existing entity-backed navigation item into that parent's
 tab area.
 
+Header buttons are configured with `navigation.actions`, keyed by surface id.
+Entity actions use the configured schema/form for that record type and are
+ignored unless the entity is part of the active workspace-owned record-type
+set. Supported non-entity actions are explicit, for example
+`{ "action": "quick-capture" }` and `{ "action": "today-task" }`. When a
+surface has configured header actions, that list replaces the surface's
+legacy default create buttons.
+
 Settings also provides a **Navigation designer** over the same JSON draft:
 
 - Add groups without editing JSON.
-- The record type and secondary tab panels show only unassigned items; drag an
-  item into a group to expose it in navigation.
+- The record type and secondary tab panels show only unassigned items. In a
+  file-managed workspace, the record type panel is limited to canonical schema
+  YAML plus entity keys explicitly referenced by `workspace.json`; fallback
+  built-in entities are not offered as available configuration.
 - Use **+ Tabs** on a navigation parent and drop children into its tab area to
   create deeper navigation without editing JSON.
 - Drag items between groups and drag group headers to reorder navigation.

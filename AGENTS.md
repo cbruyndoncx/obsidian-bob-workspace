@@ -289,8 +289,8 @@ implementing it first; it is not part of current `listEntityFiles()` behavior.
 
 - `workspace.json` is the preferred no-code composition file. It defines
   `schemas`, `bases`, `templates`, `dashboards`, `navigation.groups`,
-  `navigation.secondaryTabs`, and `workbookGroups`; entity definitions belong
-  in canonical schema YAML.
+  `navigation.secondaryTabs`, `navigation.actions`, and `workbookGroups`;
+  entity definitions belong in canonical schema YAML.
   Deprecated `entities` content remains readable for migration compatibility.
 - Entity-backed navigation surfaces render the generic record list/detail UI
   when their `entityKey` exists in `ENTITIES` after schema loading. A Base
@@ -311,6 +311,19 @@ implementing it first; it is not part of current `listEntityFiles()` behavior.
 - Settings includes a workbook export group designer over
   `workspace.json.workbookGroups`; it can assign schema-derived entity types
   to overlapping XLSX export bundles without code changes.
+- In file-managed workspaces, Settings authoring controls must not expose
+  fallback built-in entities as available/unassigned record types. The
+  available record-type set is limited to canonical schema YAML plus entity
+  keys explicitly referenced by the active `workspace.json` composition.
+- Specialized built-in screens such as Home must follow the same boundary:
+  do not show fallback entity actions/cards/briefing items unless that entity
+  is part of the active workspace-owned record-type set.
+- Header buttons belong in `workspace.json.navigation.actions`, keyed by
+  surface id. Entity actions must render from the configured schema/form and
+  non-entity actions must be explicit supported action ids such as
+  `quick-capture` or `today-task`. When a surface has configured header
+  actions, those actions are the explicit top-button list for that surface;
+  do not add legacy hardcoded create buttons beside them.
 - Schema YAML defaults to `00-CORE/Schemas/source` when `useSchemas` is enabled.
 - Settings includes a Data model designer for canonical schema YAML. It creates
   entity source files and edits identity/location, icons, discriminators,

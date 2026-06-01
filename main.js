@@ -1219,6 +1219,7 @@ let WORKSPACE_BACKUP_PATH = 'Cadence/workspace.backup.json';
 let WORKSPACE_CONFIG = {};
 let WORKSPACE_HAS_NAVIGATION = false;
 let CONFIGURED_BASE_ENTITY_KEYS = new Set();
+let SCHEMA_ENTITY_KEYS = new Set();
 
 function initPluginPaths(plugin) {
   const dir = (plugin.manifest && plugin.manifest.dir) || `.obsidian/plugins/${plugin.manifest.id}`;
@@ -1266,6 +1267,20 @@ function validateWorkspaceConfig(config) {
     for (const tab of tabs) {
       if (!tab || !tab.label || (!tab.entityKey && !tab.route && !Array.isArray(tab.children))) {
         throw new Error(`secondaryTabs "${parentId}" has a tab without label and entityKey/route/children`);
+      }
+    }
+  }
+  if (navigation?.actions != null && (typeof navigation.actions !== 'object' || Array.isArray(navigation.actions))) {
+    throw new Error('navigation.actions must be an object keyed by surface id');
+  }
+  for (const [surfaceId, actions] of Object.entries(navigation?.actions || {})) {
+    if (!Array.isArray(actions)) throw new Error(`actions "${surfaceId}" must be an array`);
+    for (const action of actions) {
+      if (!action || typeof action !== 'object' || Array.isArray(action)) {
+        throw new Error(`actions "${surfaceId}" has an invalid action`);
+      }
+      if (!action.entityKey && !action.action && !action.route) {
+        throw new Error(`actions "${surfaceId}" needs entityKey, action or route`);
       }
     }
   }
@@ -1431,6 +1446,68 @@ function effectiveSchemaSettings(settings = {}) {
   });
 }
 
+function addConfiguredEntityKey(keys, key) {
+  const normalized = String(key || '').trim();
+  if (normalized && ENTITIES[normalized]) keys.add(normalized);
+}
+
+function collectEntityKeysFromConfigValue(value, keys) {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectEntityKeysFromConfigValue(item, keys));
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  addConfiguredEntityKey(keys, value.entityKey);
+  addConfiguredEntityKey(keys, value.entity);
+  Object.values(value).forEach((item) => collectEntityKeysFromConfigValue(item, keys));
+}
+
+function workspaceConfiguredEntityKeys(config = WORKSPACE_CONFIG, opts = {}) {
+  const keys = new Set();
+  SCHEMA_ENTITY_KEYS.forEach((key) => addConfiguredEntityKey(keys, key));
+  Object.keys(config?.entities || {}).forEach((key) => addConfiguredEntityKey(keys, key));
+  Object.keys(config?.bases || {}).forEach((key) => addConfiguredEntityKey(keys, key));
+  (config?.workbookGroups || []).forEach((group) =>
+    (group.entityKeys || []).forEach((key) => addConfiguredEntityKey(keys, key))
+  );
+  collectEntityKeysFromConfigValue(config?.navigation, keys);
+  collectEntityKeysFromConfigValue(config?.dashboards, keys);
+
+  const hasExplicitConfig = !!(
+    SCHEMA_ENTITY_KEYS.size ||
+    config?.schemas ||
+    config?.bases ||
+    config?.entities ||
+    Array.isArray(config?.navigation?.groups) ||
+    config?.navigation?.secondaryTabs ||
+    config?.navigation?.actions ||
+    Array.isArray(config?.workbookGroups) ||
+    config?.dashboards
+  );
+  if (!keys.size && !hasExplicitConfig && opts.includeFallback !== false) {
+    Object.keys(ENTITIES).forEach((key) => addConfiguredEntityKey(keys, key));
+  }
+  return keys;
+}
+
+function workspaceConfiguredEntityEntries(config = WORKSPACE_CONFIG, opts = {}) {
+  return [...workspaceConfiguredEntityKeys(config, opts)]
+    .map((key) => [key, ENTITIES[key]])
+    .filter(([, def]) => def?.label)
+    .sort(([, a], [, b]) =>
+      String(a.plural || a.label).localeCompare(String(b.plural || b.label))
+    );
+}
+
+function workspaceHasEntity(entityKey, config = WORKSPACE_CONFIG) {
+  return workspaceConfiguredEntityKeys(config).has(entityKey);
+}
+
+function configuredSurfaceActions(surfaceId, config = WORKSPACE_CONFIG) {
+  const actions = config?.navigation?.actions?.[surfaceId];
+  return Array.isArray(actions) ? actions : [];
+}
+
 function configuredBaseDefinition(entityKey) {
   return WORKSPACE_CONFIG.bases?.[entityKey] || null;
 }
@@ -1448,6 +1525,7 @@ function entityBaseViewName(settings = {}, entityKey) {
 
 function resetEntityRegistry(settings = {}) {
   CONFIGURED_BASE_ENTITY_KEYS.clear();
+  SCHEMA_ENTITY_KEYS.clear();
   Object.keys(ENTITIES).forEach((key) => {
     if (!BUILTIN_ENTITY_DEFAULTS[key]) delete ENTITIES[key];
   });
@@ -1674,6 +1752,7 @@ async function applySchemas(app, settings = {}) {
     if (!schema || typeof schema !== 'object' || !schema.entity) continue;
 
     const entityKey = SCHEMA_TO_ENTITY_KEY[schema.entity] || schema.entity;
+    SCHEMA_ENTITY_KEYS.add(entityKey);
     if (!ENTITIES[entityKey]) {
       const label = schema.label || schemaFieldLabel(entityKey);
       const schemaFields = fieldsFromSchema(schema, []) || [];
@@ -2131,6 +2210,7 @@ function workspaceConfigTemplate(settings = {}) {
     navigation: {
       groups: NAV_GROUPS,
       secondaryTabs: SECONDARY_TABS,
+      actions: {},
     },
     workbookGroups: WORKBOOK_EXPORT_GROUPS,
   }, null, 2);
@@ -3902,7 +3982,7 @@ function safeSheetName(raw, used = new Set()) {
 function workbookEntityKeyFromSheet(sheetName) {
   const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const n = norm(sheetName);
-  for (const [key, def] of Object.entries(ENTITIES)) {
+  for (const [key, def] of workspaceConfiguredEntityEntries(WORKSPACE_CONFIG)) {
     if (n === norm(key) || n === norm(def.label) || n === norm(def.plural)) return key;
   }
   return null;
@@ -3982,9 +4062,12 @@ async function exportEntitiesXLSX(app, entityKeys, suffix = '', settings = {}) {
   const XLSX = getXLSX(app);
   const wb = XLSX.utils.book_new();
   const used = new Set();
-  const included = entityKeys?.length ? new Set(entityKeys) : null;
-  const sortedEntities = Object.entries(ENTITIES)
-    .filter(([key]) => !included || included.has(key))
+  const included = entityKeys?.length
+    ? new Set(entityKeys)
+    : workspaceConfiguredEntityKeys(WORKSPACE_CONFIG);
+  const sortedEntities = [...included]
+    .map((key) => [key, ENTITIES[key]])
+    .filter(([, def]) => def)
     .sort(([, a], [, b]) => String(a.plural || a.label || '').localeCompare(String(b.plural || b.label || '')));
   if (!sortedEntities.length) throw new Error('No entities selected for export.');
   for (const [entityKey, def] of sortedEntities) {
@@ -4189,8 +4272,11 @@ class CadenceImportModal extends obsidian.Modal {
     const entityRow = contentEl.createDiv({ cls: 'cad-create-row' });
     entityRow.style.display = 'none'; // hidden — entity select is in srcRow
     entitySelect.createEl('option', { value: '', text: 'Please select entity…', attr: { disabled: '', selected: '' } });
-    Object.entries(ENTITIES)
-      .sort(([, a], [, b]) => String(a.plural || a.label || '').localeCompare(String(b.plural || b.label || '')))
+    const importEntityEntries = workspaceConfiguredEntityEntries(WORKSPACE_CONFIG);
+    if (this.entityKey && ENTITIES[this.entityKey] && !importEntityEntries.some(([key]) => key === this.entityKey)) {
+      importEntityEntries.unshift([this.entityKey, ENTITIES[this.entityKey]]);
+    }
+    importEntityEntries
       .forEach(([key, def]) => {
       const o = entitySelect.createEl('option', { value: key, text: def.plural });
       if (key === this.entityKey) o.selected = true;
@@ -5403,15 +5489,70 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Generic page header ────────────────── */
-  _renderPageHeader(root, title, subtitle, actions) {
+  _renderPageHeader(root, title, subtitle, actions, options = {}) {
     const head = root.createDiv({ cls: 'cad-page-header' });
     const left = head.createDiv({ cls: 'cad-page-header-left' });
     left.createDiv({ cls: 'cad-eyebrow', text: 'CADENCE' });
     left.createDiv({ cls: 'cad-page-title', text: title });
     if (subtitle) left.createDiv({ cls: 'cad-page-subtitle', text: subtitle });
     const right = head.createDiv({ cls: 'cad-page-header-right' });
-    if (typeof actions === 'function') actions(right);
+    const surfaceId = options.surfaceId || this.mode;
+    const renderConfigured = options.configuredActions !== false;
+    const configuredActionCount = renderConfigured ? this._configuredHeaderActionCount(surfaceId) : 0;
+    const ctx = { surfaceId, configuredActionCount, hasConfiguredActions: configuredActionCount > 0 };
+    if (typeof actions === 'function') actions(right, ctx);
+    if (renderConfigured) this._renderConfiguredHeaderActions(right, surfaceId);
     return head;
+  }
+
+  _configuredHeaderActionCount(surfaceId) {
+    return configuredSurfaceActions(surfaceId).filter((action) => this._isConfiguredHeaderActionRenderable(action)).length;
+  }
+
+  _isConfiguredHeaderActionRenderable(action) {
+    if (!action || typeof action !== 'object') return false;
+    if (action.entityKey) return workspaceHasEntity(action.entityKey) && !!ENTITIES[action.entityKey]?.label;
+    const actionId = String(action.action || '').trim();
+    const route = String(action.route || '').trim();
+    return actionId === 'quick-capture' || actionId === 'today-task' || !!(route && SURFACE_BY_ID[route]);
+  }
+
+  _renderConfiguredHeaderActions(container, surfaceId) {
+    let rendered = 0;
+    configuredSurfaceActions(surfaceId).forEach((action) => {
+      if (!this._isConfiguredHeaderActionRenderable(action)) return;
+      if (action.entityKey) {
+        const def = ENTITIES[action.entityKey];
+        const btn = container.createEl('button', {
+          cls: `cad-btn${action.primary ? ' primary' : ''}`,
+          text: action.label || `+ ${def.label}`,
+        });
+        btn.addEventListener('click', () => this._createEntityFromPrompt(action.entityKey));
+        rendered++;
+        return;
+      }
+
+      const actionId = String(action.action || '').trim();
+      const route = String(action.route || '').trim();
+      const label = action.label || (
+        actionId === 'quick-capture' ? '+ Inbox' :
+        actionId === 'today-task' ? '+ Task' :
+        route && SURFACE_BY_ID[route] ? SURFACE_BY_ID[route].label :
+        ''
+      );
+      if (!label) return;
+      const btn = container.createEl('button', {
+        cls: `cad-btn${action.primary ? ' primary' : ''}`,
+        text: label,
+      });
+      btn.addEventListener('click', () => {
+        if (actionId === 'quick-capture') this.plugin.openQuickCapture();
+        else if (actionId === 'today-task') this._quickAddTodayTask();
+        else if (route && SURFACE_BY_ID[route]) this.setMode(route);
+      });
+      rendered++;
+    });
+    return rendered;
   }
 
   _renderEntityViewSelect(container, entityKey) {
@@ -6309,7 +6450,9 @@ class CadenceAppView extends obsidian.ItemView {
     const exportBtn = exportBtnRow.createEl('button', { cls: 'cad-btn', text: 'Export workbook' });
     const exportStatus = exportRow.createDiv({ cls: 'cad-data-status' });
     exportBtn.addEventListener('click', async () => {
-      const keys = exportGroups.length ? selectedWorkbookEntityKeys([...checked]) : Object.keys(ENTITIES);
+      const keys = exportGroups.length
+        ? selectedWorkbookEntityKeys([...checked])
+        : [...workspaceConfiguredEntityKeys(WORKSPACE_CONFIG)];
       if (!keys.length) { exportStatus.className = 'cad-data-status cad-data-status-error'; exportStatus.setText('Nothing to export.'); return; }
       exportBtn.disabled = true;
       exportBtn.setText('Exporting…');
@@ -6337,8 +6480,7 @@ class CadenceAppView extends obsidian.ItemView {
       'Download a pre-filled template file to use as a starting point for importing a specific entity type.');
     const tmplRow = tmplSec.createDiv({ cls: 'cad-data-btn-row' });
     const tmplSelect = tmplRow.createEl('select', { cls: 'cad-de-select' });
-    Object.entries(ENTITIES)
-      .sort(([, a], [, b]) => String(a.plural || a.label || '').localeCompare(String(b.plural || b.label || '')))
+    workspaceConfiguredEntityEntries(WORKSPACE_CONFIG)
       .forEach(([key, def]) => tmplSelect.createEl('option', { value: key, text: def.plural || def.label || key }));
     const tmplCsvBtn  = tmplRow.createEl('button', { cls: 'cad-btn', text: 'CSV template' });
     const tmplXlsxBtn = tmplRow.createEl('button', { cls: 'cad-btn', text: 'XLSX template' });
@@ -6492,6 +6634,9 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   _renderDashboardDesigner(pane, config, editable, reRender, triggerPreview) {
+    const entityKeys = workspaceConfiguredEntityEntries(WORKSPACE_CONFIG).map(([key]) => key);
+    const defaultEntityKey = entityKeys[0] || Object.keys(ENTITIES)[0] || 'contact';
+
     // Header fields
     const metaSection = pane.createDiv({ cls: 'cad-de-section' });
     metaSection.createDiv({ cls: 'cad-de-section-label', text: 'Header' });
@@ -6509,7 +6654,7 @@ class CadenceAppView extends obsidian.ItemView {
     if (editable) {
       const addBtn = statsHead.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Add stat' });
       addBtn.addEventListener('click', () => {
-        (config.stats || (config.stats = [])).push({ label: 'NEW STAT', entity: Object.keys(ENTITIES)[0] || 'contact', count: 'all' });
+        (config.stats || (config.stats = [])).push({ label: 'NEW STAT', entity: defaultEntityKey, count: 'all' });
         reRender();
       });
     }
@@ -6520,7 +6665,11 @@ class CadenceAppView extends obsidian.ItemView {
       lbl.addEventListener('input', () => { stat.label = lbl.value; triggerPreview(); });
       const ent = chip.createEl('select', { cls: 'cad-de-stat-select' });
       ent.disabled = !editable;
-      Object.keys(ENTITIES).forEach(k => { const o = ent.createEl('option', { value: k, text: k }); if (k === stat.entity) o.selected = true; });
+      if (stat.entity && !entityKeys.includes(stat.entity) && ENTITIES[stat.entity]) {
+        const o = ent.createEl('option', { value: stat.entity, text: stat.entity });
+        o.selected = true;
+      }
+      entityKeys.forEach(k => { const o = ent.createEl('option', { value: k, text: k }); if (k === stat.entity) o.selected = true; });
       ent.addEventListener('change', () => { stat.entity = ent.value; triggerPreview(); });
       const cnt = chip.createEl('select', { cls: 'cad-de-stat-select' });
       cnt.disabled = !editable;
@@ -6549,7 +6698,7 @@ class CadenceAppView extends obsidian.ItemView {
       if (editable) {
         const addCol = rowHead.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Col' });
         addCol.addEventListener('click', () => {
-          row.push([{ title: 'New Card', entity: Object.keys(ENTITIES)[0] || 'contact', source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' }]);
+          row.push([{ title: 'New Card', entity: defaultEntityKey, source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' }]);
           reRender();
         });
         const delRow = rowHead.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '× Row' });
@@ -6637,7 +6786,7 @@ class CadenceAppView extends obsidian.ItemView {
             reRender();
           });
           dropZone.addEventListener('click', () => {
-            col.push({ title: 'New Card', entity: Object.keys(ENTITIES)[0] || 'contact', source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' });
+            col.push({ title: 'New Card', entity: defaultEntityKey, source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' });
             reRender();
           });
         }
@@ -6647,7 +6796,7 @@ class CadenceAppView extends obsidian.ItemView {
     if (editable) {
       const addRowBtn = layoutSection.createEl('button', { cls: 'cad-btn cad-btn-sm cad-de-add-row-btn', text: '+ Add row' });
       addRowBtn.addEventListener('click', () => {
-        config.layout.push([[{ title: 'New Card', entity: Object.keys(ENTITIES)[0] || 'contact', source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' }]]);
+        config.layout.push([[{ title: 'New Card', entity: defaultEntityKey, source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' }]]);
         reRender();
       });
     }
@@ -6656,7 +6805,7 @@ class CadenceAppView extends obsidian.ItemView {
     if ((config.conditionalRows || []).length > 0 || editable) {
       const crSection = pane.createDiv({ cls: 'cad-de-section' });
       crSection.createDiv({ cls: 'cad-de-section-label', text: 'Conditional rows' });
-      const newCard = () => ({ title: 'New Card', entity: Object.keys(ENTITIES)[0] || 'contact', source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' });
+      const newCard = () => ({ title: 'New Card', entity: defaultEntityKey, source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' });
       (config.conditionalRows || []).forEach((cr, crIdx) => {
         const crEl = crSection.createDiv({ cls: 'cad-de-layout-row' });
         const crRowHead = crEl.createDiv({ cls: 'cad-de-row-head' });
@@ -6747,7 +6896,10 @@ class CadenceAppView extends obsidian.ItemView {
         });
       }
     };
-    const sortedEntityKeys = Object.keys(ENTITIES).sort();
+    const sortedEntityKeys = workspaceConfiguredEntityEntries(WORKSPACE_CONFIG).map(([key]) => key);
+    if (card.entity && ENTITIES[card.entity] && !sortedEntityKeys.includes(card.entity)) {
+      sortedEntityKeys.unshift(card.entity);
+    }
     addRow('Title', 'title');
     addRow('Entity', 'entity', sortedEntityKeys, true);
     addRow('Source', 'source', ['recent', 'recent-open', 'due', 'due-open']);
@@ -6770,15 +6922,17 @@ class CadenceAppView extends obsidian.ItemView {
       : '';
 
     const title = `${opts.title || def.plural}${opts.titleSuffix || ''}`;
-    this._renderPageHeader(root, title, `${filtered.length} ${filtered.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${entityFolder(entityKey)}${unsupportedText}`, (right) => {
+    this._renderPageHeader(root, title, `${filtered.length} ${filtered.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${entityFolder(entityKey)}${unsupportedText}`, (right, ctx) => {
       if (opts.renderHeaderControls) opts.renderHeaderControls(right, entityKey);
       this._renderEntityViewSelect(right, entityKey);
       if (def.externalBaseView) {
         const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
         openBaseBtn.addEventListener('click', () => this._openEntityBase(entityKey));
       }
-      const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
-      btn.addEventListener('click', () => this._createEntityFromPrompt(entityKey));
+      if (!ctx.hasConfiguredActions) {
+        const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
+        btn.addEventListener('click', () => this._createEntityFromPrompt(entityKey));
+      }
     });
 
     if (!opts.forceInternal && this._renderExternalBaseView(root, entityKey)) return;
@@ -7329,14 +7483,16 @@ class CadenceAppView extends obsidian.ItemView {
     const unsupportedText = unsupported.length
       ? ` · ${unsupported.length} Base filter${unsupported.length === 1 ? '' : 's'} not applied`
       : '';
-    this._renderPageHeader(root, 'Projects', `${files.length} ${files.length === 1 ? 'project' : 'projects'} in ${projectFolderLabel}${unsupportedText}`, (right) => {
+    this._renderPageHeader(root, 'Projects', `${files.length} ${files.length === 1 ? 'project' : 'projects'} in ${projectFolderLabel}${unsupportedText}`, (right, ctx) => {
       this._renderEntityViewSelect(right, 'project');
       if (def.externalBaseView) {
         const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
         openBaseBtn.addEventListener('click', () => this._openEntityBase('project'));
       }
-      const btn = right.createEl('button', { cls: 'cad-btn primary', text: '+ New Project' });
-      btn.addEventListener('click', () => this._createEntityFromPrompt('project'));
+      if (!ctx.hasConfiguredActions) {
+        const btn = right.createEl('button', { cls: 'cad-btn primary', text: '+ New Project' });
+        btn.addEventListener('click', () => this._createEntityFromPrompt('project'));
+      }
     });
 
     if (this._renderExternalBaseView(root, 'project')) return;
@@ -7461,19 +7617,7 @@ class CadenceAppView extends obsidian.ItemView {
     /* Header */
     const today = new Date();
     const dateStr = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    this._renderPageHeader(root, `${greeting()}.`, dateStr, (right) => {
-      const mk = (label, fn) => {
-        const b = right.createEl('button', { cls: 'cad-btn', text: label });
-        b.addEventListener('click', fn);
-        return b;
-      };
-      mk('+ Task', () => this._quickAddTodayTask());
-      mk('+ Deal', () => this._createEntityFromPrompt('deal'));
-      mk('+ Contact', () => this._createEntityFromPrompt('contact'));
-      mk('+ Project', () => this._createEntityFromPrompt('project'));
-      const newInbox = mk('+ Inbox', () => this.plugin.openQuickCapture());
-      newInbox.classList.add('primary');
-    });
+    this._renderPageHeader(root, `${greeting()}.`, dateStr);
 
     /* Top of the day — assistant-style briefing */
     await this._renderBriefing(root);
@@ -7488,12 +7632,12 @@ class CadenceAppView extends obsidian.ItemView {
     await this._homeTodayCard(left);
     await this._homeWeekCard(left);
     await this._homeUpcomingCard(left);
-    await this._homePartnersCard(left);
+    if (workspaceHasEntity('partner')) await this._homePartnersCard(left);
 
     /* ─── RIGHT: Projects + Pipeline + Activities ─── */
-    await this._homeProjectsCard(right);
-    await this._homePipelineCard(right);
-    await this._homeActivitiesCard(right);
+    if (workspaceHasEntity('project')) await this._homeProjectsCard(right);
+    if (workspaceHasEntity('deal')) await this._homePipelineCard(right);
+    if (workspaceHasEntity('activity')) await this._homeActivitiesCard(right);
 
   }
 
@@ -7615,6 +7759,7 @@ class CadenceAppView extends obsidian.ItemView {
   async _computeBriefing() {
     const items = [];
     const settings = this.plugin.settings;
+    const configuredEntities = workspaceConfiguredEntityKeys(WORKSPACE_CONFIG);
     const dealDef = ENTITIES.deal;
     const contactDef = ENTITIES.contact;
     const today = startOfDay(new Date());
@@ -7668,101 +7813,111 @@ class CadenceAppView extends obsidian.ItemView {
       });
     }
 
-    /* 4. Deals closing this week */
-    const deals = listEntities(this.app, 'deal');
-    const weekEnd = todayMs + 7 * 86400000;
-    const closingThisWeek = deals.filter((e) => {
-      const stage = String(entityValue(e, 'stage', dealDef));
-      if (['Won', 'Lost'].includes(stage)) return false;
-      const closeBy = entityValue(e, 'closeBy', dealDef);
-      if (!closeBy) return false;
-      const d = new Date(closeBy);
-      return !isNaN(d.getTime()) && d.getTime() >= todayMs && d.getTime() <= weekEnd;
-    });
-    if (closingThisWeek.length) {
-      const value = closingThisWeek.reduce((s, e) => s + (Number(entityValue(e, 'value', dealDef)) || 0), 0);
-      items.push({
-        icon: '💼',
-        tone: 'sky',
-        text: `${closingThisWeek.length} ${closingThisWeek.length === 1 ? 'deal closes' : 'deals close'} this week · ${fmtValue(value, 'currency')}`,
-        action: () => this.setMode('crm.pipeline'),
+    let deals = [];
+    let openDeals = [];
+    if (configuredEntities.has('deal')) {
+      /* 4. Deals closing this week */
+      deals = listEntities(this.app, 'deal');
+      const weekEnd = todayMs + 7 * 86400000;
+      const closingThisWeek = deals.filter((e) => {
+        const stage = String(entityValue(e, 'stage', dealDef));
+        if (['Won', 'Lost'].includes(stage)) return false;
+        const closeBy = entityValue(e, 'closeBy', dealDef);
+        if (!closeBy) return false;
+        const d = new Date(closeBy);
+        return !isNaN(d.getTime()) && d.getTime() >= todayMs && d.getTime() <= weekEnd;
       });
+      if (closingThisWeek.length) {
+        const value = closingThisWeek.reduce((s, e) => s + (Number(entityValue(e, 'value', dealDef)) || 0), 0);
+        items.push({
+          icon: '💼',
+          tone: 'sky',
+          text: `${closingThisWeek.length} ${closingThisWeek.length === 1 ? 'deal closes' : 'deals close'} this week · ${fmtValue(value, 'currency')}`,
+          action: () => this.setMode('crm.pipeline'),
+        });
+      }
+      openDeals = deals.filter((e) => !['Won', 'Lost'].includes(String(entityValue(e, 'stage', dealDef))));
     }
 
-    /* 5. Stale contacts on open deals (>30 days since lastContact) */
-    const contacts = listEntities(this.app, 'contact');
-    const openDeals = deals.filter((e) => !['Won', 'Lost'].includes(String(entityValue(e, 'stage', dealDef))));
-    const dealContactNames = new Set(
-      openDeals.map((d) => String(entityValue(d, 'contact', dealDef) || '').trim()).filter(Boolean)
-    );
-    const staleCutoffMs = todayMs - 30 * 86400000;
-    let staleSample = null;
-    let staleCount = 0;
-    contacts.forEach((c) => {
-      const name = String(entityValue(c, 'name', contactDef) || '').trim();
-      if (!name || !dealContactNames.has(name)) return;
-      const lc = entityValue(c, 'lastContact', contactDef);
-      const lcMs = lc ? new Date(lc).getTime() : null;
-      if (lcMs != null && !isNaN(lcMs) && lcMs >= staleCutoffMs) return;
-      staleCount++;
-      if (!staleSample) staleSample = { contact: c, name, lcMs };
-    });
-    if (staleSample) {
-      const days = staleSample.lcMs ? Math.floor((todayMs - staleSample.lcMs) / 86400000) : null;
-      const linkedDeal = openDeals.find((d) => String(entityValue(d, 'contact', dealDef) || '').trim() === staleSample.name);
-      const dealName = linkedDeal ? entityValue(linkedDeal, 'title', dealDef) || '' : '';
-      const ago = days === null ? 'never contacted' : `${days} ${days === 1 ? 'day' : 'days'} quiet`;
-      const more = staleCount > 1 ? ` (+${staleCount - 1} more)` : '';
-      items.push({
-        icon: '👤',
-        tone: 'warn',
-        text: `${staleSample.name} — ${ago}${dealName ? ` · ${dealName}` : ''}${more}`,
-        action: () => this.openEntityDetailFromFile(staleSample.contact.file),
+    if (configuredEntities.has('deal') && configuredEntities.has('contact')) {
+      /* 5. Stale contacts on open deals (>30 days since lastContact) */
+      const contacts = listEntities(this.app, 'contact');
+      const dealContactNames = new Set(
+        openDeals.map((d) => String(entityValue(d, 'contact', dealDef) || '').trim()).filter(Boolean)
+      );
+      const staleCutoffMs = todayMs - 30 * 86400000;
+      let staleSample = null;
+      let staleCount = 0;
+      contacts.forEach((c) => {
+        const name = String(entityValue(c, 'name', contactDef) || '').trim();
+        if (!name || !dealContactNames.has(name)) return;
+        const lc = entityValue(c, 'lastContact', contactDef);
+        const lcMs = lc ? new Date(lc).getTime() : null;
+        if (lcMs != null && !isNaN(lcMs) && lcMs >= staleCutoffMs) return;
+        staleCount++;
+        if (!staleSample) staleSample = { contact: c, name, lcMs };
       });
+      if (staleSample) {
+        const days = staleSample.lcMs ? Math.floor((todayMs - staleSample.lcMs) / 86400000) : null;
+        const linkedDeal = openDeals.find((d) => String(entityValue(d, 'contact', dealDef) || '').trim() === staleSample.name);
+        const dealName = linkedDeal ? entityValue(linkedDeal, 'title', dealDef) || '' : '';
+        const ago = days === null ? 'never contacted' : `${days} ${days === 1 ? 'day' : 'days'} quiet`;
+        const more = staleCount > 1 ? ` (+${staleCount - 1} more)` : '';
+        items.push({
+          icon: '👤',
+          tone: 'warn',
+          text: `${staleSample.name} — ${ago}${dealName ? ` · ${dealName}` : ''}${more}`,
+          action: () => this.openEntityDetailFromFile(staleSample.contact.file),
+        });
+      }
     }
 
     /* 6. Upcoming project milestones (next 14 days) */
-    const projectFiles = listEntityFiles(this.app, 'project');
-    const upcoming = [];
-    for (const f of projectFiles) {
-      try {
-        const meta = await readProjectMeta(this.app, f);
-        if (meta.next && meta.next.date) {
-          const ms = meta.next.date.getTime();
-          if (ms >= todayMs && ms <= todayMs + 14 * 86400000) {
-            upcoming.push({ file: f, milestone: meta.next, name: projectNameFromPath(this.app, f.path) });
+    if (configuredEntities.has('project')) {
+      const projectFiles = listEntityFiles(this.app, 'project');
+      const upcoming = [];
+      for (const f of projectFiles) {
+        try {
+          const meta = await readProjectMeta(this.app, f);
+          if (meta.next && meta.next.date) {
+            const ms = meta.next.date.getTime();
+            if (ms >= todayMs && ms <= todayMs + 14 * 86400000) {
+              upcoming.push({ file: f, milestone: meta.next, name: projectNameFromPath(this.app, f.path) });
+            }
           }
-        }
-      } catch (_) {}
-    }
-    upcoming.sort((a, b) => a.milestone.date - b.milestone.date);
-    if (upcoming.length) {
-      const m = upcoming[0];
-      const days = Math.max(0, Math.ceil((m.milestone.date.getTime() - todayMs) / 86400000));
-      const dayStr = days === 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
-      const title = m.milestone.title || 'milestone';
-      items.push({
-        icon: '📅',
-        tone: 'mint',
-        text: `${m.name} · "${title}" — due ${dayStr}`,
-        action: () => this.openEntityDetail('project', m.file),
-      });
+        } catch (_) {}
+      }
+      upcoming.sort((a, b) => a.milestone.date - b.milestone.date);
+      if (upcoming.length) {
+        const m = upcoming[0];
+        const days = Math.max(0, Math.ceil((m.milestone.date.getTime() - todayMs) / 86400000));
+        const dayStr = days === 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
+        const title = m.milestone.title || 'milestone';
+        items.push({
+          icon: '📅',
+          tone: 'mint',
+          text: `${m.name} · "${title}" — due ${dayStr}`,
+          action: () => this.openEntityDetail('project', m.file),
+        });
+      }
     }
 
-    /* 7. Recent wins (deals moved to Won in last 7 days) */
-    const winCutoff = nowMs - 7 * 86400000;
-    const recentWins = deals.filter((e) => {
-      if (String(entityValue(e, 'stage', dealDef)) !== 'Won') return false;
-      return e.file && e.file.stat && e.file.stat.mtime >= winCutoff;
-    });
-    if (recentWins.length) {
-      const value = recentWins.reduce((s, e) => s + (Number(entityValue(e, 'value', dealDef)) || 0), 0);
-      items.push({
-        icon: '🎉',
-        tone: 'emerald',
-        text: `${recentWins.length} ${recentWins.length === 1 ? 'deal won' : 'deals won'} this week · ${fmtValue(value, 'currency')}`,
-        action: () => this.setMode('reports.sales'),
+    if (configuredEntities.has('deal')) {
+      /* 7. Recent wins (deals moved to Won in last 7 days) */
+      const winCutoff = nowMs - 7 * 86400000;
+      const recentWins = deals.filter((e) => {
+        if (String(entityValue(e, 'stage', dealDef)) !== 'Won') return false;
+        return e.file && e.file.stat && e.file.stat.mtime >= winCutoff;
       });
+      if (recentWins.length) {
+        const value = recentWins.reduce((s, e) => s + (Number(entityValue(e, 'value', dealDef)) || 0), 0);
+        items.push({
+          icon: '🎉',
+          tone: 'emerald',
+          text: `${recentWins.length} ${recentWins.length === 1 ? 'deal won' : 'deals won'} this week · ${fmtValue(value, 'currency')}`,
+          action: () => this.setMode('reports.sales'),
+        });
+      }
     }
 
     return items;
@@ -7919,48 +8074,66 @@ class CadenceAppView extends obsidian.ItemView {
   async _homeUpcomingCard(parent) {
     const today = startOfDay(new Date());
     const horizon = addDays(today, 7);
+    const configuredEntities = workspaceConfiguredEntityKeys(WORKSPACE_CONFIG);
     const items = [];
 
-    // Project deadlines
-    const projects = listEntities(this.app, 'project');
-    projects.forEach((e) => {
-      const due = entityValue(e, 'due', ENTITIES.project);
-      if (!due) return;
-      const d = new Date(due);
-      if (isNaN(d.getTime())) return;
-      if (d >= today && d <= horizon) {
-        items.push({ date: d, title: entityValue(e, 'name', ENTITIES.project) || e.basename, type: 'Project due', file: e.file });
-      }
-    });
-    // Project milestones (next upcoming per project)
-    for (const e of projects) {
-      try {
-        const meta = await readProjectMeta(this.app, e.file);
-        if (meta.next && meta.next.date && meta.next.date >= today && meta.next.date <= horizon) {
-          items.push({ date: meta.next.date, title: `${entityValue(e, 'name', ENTITIES.project) || e.basename} — ${meta.next.title || 'milestone'}`, type: 'Milestone', file: e.file });
+    if (configuredEntities.has('project')) {
+      // Project deadlines
+      const projectDef = ENTITIES.project;
+      const projects = listEntities(this.app, 'project');
+      projects.forEach((e) => {
+        const due = entityValue(e, 'due', projectDef) || entityValue(e, 'deadline', projectDef);
+        if (!due) return;
+        const d = new Date(due);
+        if (isNaN(d.getTime())) return;
+        if (d >= today && d <= horizon) {
+          items.push({
+            date: d,
+            title: entityValue(e, 'name', projectDef) || entityValue(e, 'project', projectDef) || e.basename,
+            type: 'Project due',
+            file: e.file,
+          });
         }
-      } catch (_) {}
+      });
+      // Project milestones (next upcoming per project)
+      for (const e of projects) {
+        try {
+          const meta = await readProjectMeta(this.app, e.file);
+          if (meta.next && meta.next.date && meta.next.date >= today && meta.next.date <= horizon) {
+            items.push({
+              date: meta.next.date,
+              title: `${entityValue(e, 'name', projectDef) || entityValue(e, 'project', projectDef) || e.basename} — ${meta.next.title || 'milestone'}`,
+              type: 'Milestone',
+              file: e.file,
+            });
+          }
+        } catch (_) {}
+      }
     }
-    // Registration expiries
-    listEntities(this.app, 'registration').forEach((e) => {
-      const exp = entityValue(e, 'expires_date', ENTITIES.registration);
-      if (!exp) return;
-      const d = new Date(exp);
-      if (isNaN(d.getTime())) return;
-      if (d >= today && d <= horizon) {
-        items.push({ date: d, title: entityValue(e, 'title', ENTITIES.registration) || e.basename, type: 'Registration expires', file: e.file });
-      }
-    });
-    // Cert expiries
-    listEntities(this.app, 'certification').forEach((e) => {
-      const exp = entityValue(e, 'expires_date', ENTITIES.certification);
-      if (!exp) return;
-      const d = new Date(exp);
-      if (isNaN(d.getTime())) return;
-      if (d >= today && d <= horizon) {
-        items.push({ date: d, title: entityValue(e, 'name', ENTITIES.certification) || e.basename, type: 'Cert expires', file: e.file });
-      }
-    });
+    if (configuredEntities.has('registration')) {
+      // Registration expiries
+      listEntities(this.app, 'registration').forEach((e) => {
+        const exp = entityValue(e, 'expires_date', ENTITIES.registration);
+        if (!exp) return;
+        const d = new Date(exp);
+        if (isNaN(d.getTime())) return;
+        if (d >= today && d <= horizon) {
+          items.push({ date: d, title: entityValue(e, 'title', ENTITIES.registration) || e.basename, type: 'Registration expires', file: e.file });
+        }
+      });
+    }
+    if (configuredEntities.has('certification')) {
+      // Cert expiries
+      listEntities(this.app, 'certification').forEach((e) => {
+        const exp = entityValue(e, 'expires_date', ENTITIES.certification);
+        if (!exp) return;
+        const d = new Date(exp);
+        if (isNaN(d.getTime())) return;
+        if (d >= today && d <= horizon) {
+          items.push({ date: d, title: entityValue(e, 'name', ENTITIES.certification) || e.basename, type: 'Cert expires', file: e.file });
+        }
+      });
+    }
 
     items.sort((a, b) => a.date - b.date);
     const body = this._homeCard(parent, `UPCOMING · NEXT 7 DAYS — ${items.length}`, undefined, 'warn');
@@ -8027,7 +8200,7 @@ class CadenceAppView extends obsidian.ItemView {
       const row = body.createDiv({ cls: 'cad-home-proj' });
       row.dataset.pctBand = pctBand(p.meta.percent);
       const head = row.createDiv({ cls: 'cad-home-proj-head' });
-      head.createSpan({ cls: 'cad-home-proj-title', text: entityValue(p.entity, 'name', def) || p.entity.basename });
+      head.createSpan({ cls: 'cad-home-proj-title', text: entityValue(p.entity, 'name', def) || entityValue(p.entity, 'project', def) || p.entity.basename });
       head.createSpan({ cls: 'cad-home-proj-pct', text: `${p.meta.percent}%` });
       const bar = row.createDiv({ cls: 'cad-proj-progress-bar' });
       const fill = bar.createDiv({ cls: 'cad-proj-progress-fill' });
@@ -8108,9 +8281,11 @@ class CadenceAppView extends obsidian.ItemView {
     const buckets = { now: [], today: [], week: [], later: [] };
     all.forEach((r) => buckets[reminderBucket(r.when)].push(r));
 
-    this._renderPageHeader(root, 'Inbox', `${all.length} ${all.length === 1 ? 'item' : 'items'} · capture once, surface at the right time`, (right) => {
-      const captureBtn = right.createEl('button', { cls: 'cad-btn primary', text: '+ Quick capture' });
-      captureBtn.addEventListener('click', () => this.plugin.openQuickCapture());
+    this._renderPageHeader(root, 'Inbox', `${all.length} ${all.length === 1 ? 'item' : 'items'} · capture once, surface at the right time`, (right, ctx) => {
+      if (!ctx.hasConfiguredActions) {
+        const captureBtn = right.createEl('button', { cls: 'cad-btn primary', text: '+ Quick capture' });
+        captureBtn.addEventListener('click', () => this.plugin.openQuickCapture());
+      }
     });
 
     if (!all.length) {
@@ -8306,14 +8481,16 @@ class CadenceAppView extends obsidian.ItemView {
     const unsupportedText = unsupported.length
       ? ` · ${unsupported.length} Base filter${unsupported.length === 1 ? '' : 's'} not applied`
       : '';
-    this._renderPageHeader(root, def.plural, `${entities.length} ${entities.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} · ${fmtValue(totalValue, 'currency')} total${unsupportedText}`, (right) => {
+    this._renderPageHeader(root, def.plural, `${entities.length} ${entities.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} · ${fmtValue(totalValue, 'currency')} total${unsupportedText}`, (right, ctx) => {
       this._renderEntityViewSelect(right, entityKey);
       if (def.externalBaseView) {
         const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
         openBaseBtn.addEventListener('click', () => this._openEntityBase(entityKey));
       }
-      const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
-      btn.addEventListener('click', () => this._createEntityFromPrompt(entityKey));
+      if (!ctx.hasConfiguredActions) {
+        const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
+        btn.addEventListener('click', () => this._createEntityFromPrompt(entityKey));
+      }
     });
 
     if (this._renderExternalBaseView(root, entityKey)) return;
@@ -8420,9 +8597,11 @@ class CadenceAppView extends obsidian.ItemView {
     const activities = listEntities(this.app, 'activity');
 
     // ─── Header ────────────────────────────────────────
-    this._renderPageHeader(root, 'CRM Dashboard', 'Pipeline · momentum · recent activity', (right) => {
-      const newDeal = right.createEl('button', { cls: 'cad-btn primary', text: '+ New Deal' });
-      newDeal.addEventListener('click', () => this._createEntityFromPrompt('deal'));
+    this._renderPageHeader(root, 'CRM Dashboard', 'Pipeline · momentum · recent activity', (right, ctx) => {
+      if (!ctx.hasConfiguredActions) {
+        const newDeal = right.createEl('button', { cls: 'cad-btn primary', text: '+ New Deal' });
+        newDeal.addEventListener('click', () => this._createEntityFromPrompt('deal'));
+      }
     });
 
     // ─── Top stats (5 cards) ───────────────────────────
@@ -10160,8 +10339,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       const entityPalette = navDesignerBody.createDiv({ cls: 'cad-nav-designer-tabs' });
       entityPalette.createDiv({ cls: 'cad-nav-designer-label', text: 'Unassigned record types - drag into a navigation group' });
       const entityChips = entityPalette.createDiv({ cls: 'cad-nav-designer-tab-chips' });
-      const entityDefs = Object.assign({}, ENTITIES);
-      Object.entries(entityDefs).forEach(([entityKey, def]) => {
+      workspaceConfiguredEntityEntries(config).forEach(([entityKey, def]) => {
         if (!def || !def.label) return;
         const existing = assignedSurfaces.find((surface) => surface.entityKey === entityKey);
         if (existing || tabEntityKeys.has(entityKey)) return;
@@ -10355,9 +10533,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         workbookDesignerBody.createDiv({ cls: 'cad-nav-designer-empty', text: 'No export groups defined. Add a group to make selected workbook exports available.' });
         return;
       }
-      const entities = Object.entries(ENTITIES)
-        .filter(([, def]) => def?.label)
-        .sort(([, a], [, b]) => String(a.plural || a.label).localeCompare(String(b.plural || b.label)));
+      const entities = workspaceConfiguredEntityEntries(config);
       const board = workbookDesignerBody.createDiv({ cls: 'cad-workbook-designer-board' });
       config.workbookGroups.forEach((group, groupIndex) => {
         const card = board.createDiv({ cls: 'cad-workbook-designer-group' });
