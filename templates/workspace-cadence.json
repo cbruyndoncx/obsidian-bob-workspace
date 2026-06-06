@@ -228,62 +228,1699 @@
     ],
     "secondaryTabs": {
       "crm.campaigns": [
-        { "label": "Overview", "route": "crm.campaigns.overview" },
-        { "label": "Campaigns", "entityKey": "campaign" },
-        { "label": "Sequences", "entityKey": "sequence" }
+        {
+          "label": "Overview",
+          "route": "crm.campaigns.overview"
+        },
+        {
+          "label": "Campaigns",
+          "entityKey": "campaign"
+        },
+        {
+          "label": "Sequences",
+          "entityKey": "sequence"
+        }
       ],
       "client-work.overview": [
-        { "label": "Overview", "route": "client-work.dashboard" },
-        { "label": "Meetings", "entityKey": "meeting" },
-        { "label": "Comms", "entityKey": "comms-thread" },
-        { "label": "Deliverables", "entityKey": "deliverable" },
-        { "label": "Feedback", "entityKey": "feedback" },
-        { "label": "Surveys", "entityKey": "survey" },
-        { "label": "Testimonials", "entityKey": "testimonial" },
-        { "label": "Decisions", "entityKey": "decision" }
+        {
+          "label": "Overview",
+          "route": "client-work.dashboard"
+        },
+        {
+          "label": "Meetings",
+          "entityKey": "meeting"
+        },
+        {
+          "label": "Comms",
+          "entityKey": "comms-thread"
+        },
+        {
+          "label": "Deliverables",
+          "entityKey": "deliverable"
+        },
+        {
+          "label": "Feedback",
+          "entityKey": "feedback"
+        },
+        {
+          "label": "Surveys",
+          "entityKey": "survey"
+        },
+        {
+          "label": "Testimonials",
+          "entityKey": "testimonial"
+        },
+        {
+          "label": "Decisions",
+          "entityKey": "decision"
+        }
       ],
       "prm.partners": [
-        { "label": "Overview", "route": "prm.partners.overview" },
-        { "label": "Partners", "entityKey": "partner" },
-        { "label": "Registrations", "entityKey": "registration" },
-        { "label": "Commissions", "entityKey": "commission" },
-        { "label": "Certifications", "entityKey": "certification" },
-        { "label": "Analytics", "route": "prm.analytics" }
+        {
+          "label": "Overview",
+          "route": "prm.partners.overview"
+        },
+        {
+          "label": "Partners",
+          "entityKey": "partner"
+        },
+        {
+          "label": "Registrations",
+          "entityKey": "registration"
+        },
+        {
+          "label": "Commissions",
+          "entityKey": "commission"
+        },
+        {
+          "label": "Certifications",
+          "entityKey": "certification"
+        },
+        {
+          "label": "Analytics",
+          "route": "prm.analytics"
+        }
+      ]
+    }
+  },
+  "dashboards": {
+    "home": {
+      "title": "Home",
+      "subtitle": "Command centre for the day",
+      "layout": [
+        [
+          {
+            "kind": "actions",
+            "title": "Jump / Create",
+            "actions": [
+              {
+                "label": "Inbox",
+                "surface": "planner.inbox",
+                "icon": "inbox"
+              },
+              {
+                "label": "Today",
+                "surface": "planner.today",
+                "icon": "sun"
+              },
+              {
+                "label": "Calendar",
+                "surface": "planner.calendar",
+                "icon": "calendar-days"
+              },
+              {
+                "label": "Pipeline",
+                "surface": "crm.pipeline",
+                "icon": "trending-up"
+              },
+              {
+                "label": "Activities",
+                "surface": "crm.activities",
+                "icon": "calendar"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "list",
+            "title": "TOP OF THE DAY",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "home",
+              "section": "briefing"
+            },
+            "limit": 4
+          },
+          {
+            "kind": "list",
+            "title": "INBOX",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "home",
+              "section": "inbox"
+            },
+            "limit": 5,
+            "empty": "Inbox zero — capture anything with + Inbox above."
+          }
+        ],
+        [
+          {
+            "kind": "list",
+            "title": "TODAY",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "home",
+              "section": "today"
+            },
+            "limit": 8,
+            "empty": "No tasks yet — add one with + Task above."
+          },
+          {
+            "kind": "list",
+            "title": "THIS WEEK",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "home",
+              "section": "week"
+            },
+            "limit": 4,
+            "empty": "No tasks logged this week yet."
+          }
+        ],
+        [
+          {
+            "kind": "list",
+            "title": "UPCOMING",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "home",
+              "section": "upcoming"
+            },
+            "limit": 6,
+            "empty": "Nothing on the radar."
+          },
+          {
+            "kind": "list",
+            "title": "PIPELINE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "home",
+              "section": "pipeline"
+            },
+            "limit": 5,
+            "empty": "No open deals — hit + Deal above."
+          }
+        ],
+        [
+          {
+            "kind": "list",
+            "title": "PARTNERS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "home",
+              "section": "partners"
+            },
+            "limit": 5,
+            "empty": "No partners on the books yet."
+          },
+          {
+            "kind": "list",
+            "title": "PROJECTS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "home",
+              "section": "projects"
+            },
+            "limit": 3,
+            "empty": "No projects yet — hit + Project above."
+          }
+        ],
+        [
+          {
+            "kind": "list",
+            "title": "RECENT ACTIVITY",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "home",
+              "section": "activities"
+            },
+            "limit": 5,
+            "empty": "No activities logged yet."
+          }
+        ]
+      ]
+    },
+    "planner.inbox": {
+      "kind": "planner",
+      "title": "Inbox",
+      "subtitle": "Capture and reminders",
+      "stats": [
+        { "label": "REMINDERS", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "inboxCount", "accent": "sky" },
+        { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "rose" },
+        { "label": "TODAY TASKS", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayCount", "accent": "emerald" }
+      ],
+      "layout": [
+        [
+          {
+            "kind": "actions",
+            "title": "Planner actions",
+            "actions": [
+              { "label": "+ Inbox", "command": "quick-capture", "icon": "inbox", "primary": true },
+              { "label": "+ Task", "entityKey": "task", "icon": "circle-check-big" },
+              { "label": "Today", "surface": "planner.today", "icon": "sun" },
+              { "label": "Calendar", "surface": "planner.calendar", "icon": "calendar-days" }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "list",
+            "title": "REMINDERS",
+            "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" },
+            "limit": 10,
+            "empty": "Inbox zero — capture something to get started."
+          },
+          {
+            "kind": "list",
+            "title": "TODAY TASKS",
+            "source": { "mode": "built-in", "builtIn": "planner", "section": "today" },
+            "limit": 12,
+            "empty": "No tasks on today's note."
+          }
+        ],
+        [
+          {
+            "kind": "list",
+            "title": "OVERVIEW",
+            "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+            "limit": 4,
+            "empty": "Nothing urgent right now."
+          }
+        ]
+      ]
+    },
+    "planner.today": {
+      "kind": "planner",
+      "title": "Today",
+      "subtitle": "Daily tasks and journal",
+      "stats": [
+        { "label": "OPEN", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayOpenCount", "accent": "sky" },
+        { "label": "DONE", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayDoneCount", "accent": "mint" },
+        { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "warn" }
+      ],
+      "layout": [
+        [
+          {
+            "kind": "actions",
+            "title": "Planner actions",
+            "actions": [
+              { "label": "+ Task", "entityKey": "task", "icon": "circle-check-big", "primary": true },
+              { "label": "+ Inbox", "command": "quick-capture", "icon": "inbox" },
+              { "label": "Inbox", "surface": "planner.inbox", "icon": "inbox" },
+              { "label": "Projects", "surface": "planner.projects", "icon": "folder-kanban" }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "list",
+            "title": "TODAY TASKS",
+            "source": { "mode": "built-in", "builtIn": "planner", "section": "today" },
+            "limit": 12,
+            "empty": "No tasks on today's note."
+          },
+          {
+            "kind": "list",
+            "title": "OVERVIEW",
+            "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+            "limit": 4,
+            "empty": "Planner overview is empty."
+          }
+        ]
+      ]
+    },
+    "planner.calendar": {
+      "kind": "planner",
+      "title": "Calendar",
+      "subtitle": "Weekly task rhythm",
+      "stats": [
+        { "label": "DAYS", "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" }, "field": "calendarCount", "accent": "sky" },
+        { "label": "OPEN", "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" }, "field": "calendarOpenCount", "accent": "warn" },
+        { "label": "DONE", "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" }, "field": "calendarDoneCount", "accent": "emerald" }
+      ],
+      "layout": [
+        [
+          {
+            "kind": "actions",
+            "title": "Planner actions",
+            "actions": [
+              { "label": "Inbox", "surface": "planner.inbox", "icon": "inbox", "primary": true },
+              { "label": "Today", "surface": "planner.today", "icon": "sun" },
+              { "label": "Projects", "surface": "planner.projects", "icon": "folder-kanban" },
+              { "label": "Home", "surface": "home", "icon": "home" }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "bar-chart",
+            "title": "DAY BREAKDOWN",
+            "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" },
+            "valueField": "done",
+            "limit": 7,
+            "empty": "No daily note data yet."
+          }
+        ],
+        [
+          {
+            "kind": "list",
+            "title": "WEEK OVERVIEW",
+            "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+            "limit": 4,
+            "empty": "Nothing to summarise yet."
+          }
+        ]
+      ]
+    },
+    "planner.projects": {
+      "kind": "planner",
+      "title": "Projects",
+      "subtitle": "Project progress and milestones",
+      "stats": [
+        { "label": "PROJECTS", "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" }, "field": "projectCount", "accent": "mint" },
+        { "label": "ACTIVE", "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" }, "field": "projectCount", "accent": "sky" },
+        { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "warn" }
+      ],
+      "layout": [
+        [
+          {
+            "kind": "actions",
+            "title": "Planner actions",
+            "actions": [
+              { "label": "+ Project", "entityKey": "project", "icon": "folder-kanban", "primary": true },
+              { "label": "Inbox", "surface": "planner.inbox", "icon": "inbox" },
+              { "label": "Today", "surface": "planner.today", "icon": "sun" }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "list",
+            "title": "PROJECTS",
+            "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" },
+            "limit": 8,
+            "empty": "No active projects yet."
+          },
+          {
+            "kind": "list",
+            "title": "OVERVIEW",
+            "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+            "limit": 4,
+            "empty": "No planner overview available."
+          }
+        ]
+      ]
+    },
+    "planner": {
+      "planner.inbox": {
+        "kind": "planner",
+        "title": "Inbox",
+        "subtitle": "Capture and reminders",
+        "stats": [
+          { "label": "REMINDERS", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "inboxCount", "accent": "sky" },
+          { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "rose" },
+          { "label": "TODAY TASKS", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayCount", "accent": "emerald" }
+        ],
+        "layout": [
+          [
+            {
+              "kind": "list",
+              "title": "REMINDERS",
+              "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" },
+              "limit": 10,
+              "empty": "Inbox zero — capture something to get started."
+            },
+            {
+              "kind": "list",
+              "title": "TODAY TASKS",
+              "source": { "mode": "built-in", "builtIn": "planner", "section": "today" },
+              "limit": 12,
+              "empty": "No tasks on today's note."
+            }
+          ],
+          [
+            {
+              "kind": "list",
+              "title": "OVERVIEW",
+              "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+              "limit": 4,
+              "empty": "Nothing urgent right now."
+            }
+          ]
+        ]
+      },
+      "planner.today": {
+        "kind": "planner",
+        "title": "Today",
+        "subtitle": "Daily tasks and journal",
+        "stats": [
+          { "label": "OPEN", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayOpenCount", "accent": "sky" },
+          { "label": "DONE", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayDoneCount", "accent": "mint" },
+          { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "warn" }
+        ],
+        "layout": [
+          [
+            {
+              "kind": "list",
+              "title": "TODAY TASKS",
+              "source": { "mode": "built-in", "builtIn": "planner", "section": "today" },
+              "limit": 12,
+              "empty": "No tasks on today's note."
+            },
+            {
+              "kind": "list",
+              "title": "OVERVIEW",
+              "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+              "limit": 4,
+              "empty": "Planner overview is empty."
+            }
+          ]
+        ]
+      },
+      "planner.calendar": {
+        "kind": "planner",
+        "title": "Calendar",
+        "subtitle": "Weekly task rhythm",
+        "stats": [
+          { "label": "DAYS", "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" }, "field": "calendarCount", "accent": "sky" },
+          { "label": "OPEN", "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" }, "field": "calendarOpenCount", "accent": "warn" },
+          { "label": "DONE", "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" }, "field": "calendarDoneCount", "accent": "emerald" }
+        ],
+        "layout": [
+          [
+            {
+              "kind": "bar-chart",
+              "title": "DAY BREAKDOWN",
+              "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" },
+              "valueField": "done",
+              "limit": 7,
+              "empty": "No daily note data yet."
+            }
+          ],
+          [
+            {
+              "kind": "list",
+              "title": "WEEK OVERVIEW",
+              "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+              "limit": 4,
+              "empty": "Nothing to summarise yet."
+            }
+          ]
+        ]
+      },
+      "planner.projects": {
+        "kind": "planner",
+        "title": "Projects",
+        "subtitle": "Project progress and milestones",
+        "stats": [
+          { "label": "PROJECTS", "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" }, "field": "projectCount", "accent": "mint" },
+          { "label": "ACTIVE", "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" }, "field": "projectCount", "accent": "sky" },
+          { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "warn" }
+        ],
+        "layout": [
+          [
+            {
+              "kind": "list",
+              "title": "PROJECTS",
+              "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" },
+              "limit": 8,
+              "empty": "No active projects yet."
+            },
+            {
+              "kind": "list",
+              "title": "OVERVIEW",
+              "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+              "limit": 4,
+              "empty": "No planner overview available."
+            }
+          ]
+        ]
+      }
+    },
+    "crm.dashboard": {
+      "title": "CRM Dashboard",
+      "subtitle": "Lead, contact, campaign and activity overview",
+      "stats": [
+        {
+          "label": "LEADS",
+          "entity": "lead",
+          "count": "all",
+          "sub": "lead records",
+          "accent": "sky"
+        },
+        {
+          "label": "CONTACTS",
+          "entity": "contact",
+          "count": "all",
+          "sub": "people records",
+          "accent": "mint"
+        },
+        {
+          "label": "CAMPAIGNS",
+          "entity": "campaign",
+          "count": "all",
+          "sub": "campaign records",
+          "accent": "warn"
+        },
+        {
+          "label": "ACTIVITIES",
+          "entity": "activity",
+          "count": "all",
+          "sub": "activity records",
+          "accent": "emerald"
+        },
+        {
+          "label": "OPEN DEALS",
+          "entity": "deal",
+          "count": "open",
+          "sub": {
+            "entity": "deal",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "rose"
+        }
+      ],
+      "layout": [
+        [
+          [
+            {
+              "title": "RECENT LEADS",
+              "empty": "No leads captured.",
+              "entity": "lead",
+              "source": "recent",
+              "titleFields": [
+                "company_name",
+                "contact_name"
+              ],
+              "metaFields": [
+                "status",
+                "owner",
+                "next_action_date"
+              ]
+            },
+            {
+              "title": "RECENT CONTACTS",
+              "empty": "No contacts.",
+              "entity": "contact",
+              "source": "recent",
+              "titleFields": [
+                "name",
+                "company"
+              ],
+              "metaFields": [
+                "email",
+                "status",
+                "lastContact"
+              ]
+            }
+          ],
+          [
+            {
+              "title": "RECENT CAMPAIGNS",
+              "empty": "No campaigns.",
+              "entity": "campaign",
+              "source": "recent",
+              "titleFields": [
+                "campaign_name",
+                "title"
+              ],
+              "metaFields": [
+                "status",
+                "campaign_type",
+                "launch_date"
+              ]
+            },
+            {
+              "title": "RECENT ACTIVITIES",
+              "empty": "No activities.",
+              "entity": "activity",
+              "source": "recent",
+              "titleFields": [
+                "title",
+                "subject",
+                "name"
+              ],
+              "metaFields": [
+                "activity_type",
+                "status",
+                "date"
+              ]
+            }
+          ]
+        ]
+      ]
+    },
+    "workspace.base-links": {
+      "title": "Base Links",
+      "subtitle": "Jump into the Base views behind key records",
+      "layout": [
+        [
+          {
+            "kind": "base-link",
+            "title": "Deal Base",
+            "entity": "deal",
+            "description": "Opens the configured Base view for deals."
+          },
+          {
+            "kind": "base-link",
+            "title": "Project Base",
+            "entity": "project",
+            "description": "Opens the configured Base view for projects."
+          }
+        ]
+      ]
+    },
+    "workspace.report-note": {
+      "title": "Report Note",
+      "subtitle": "Narrative block for report or dashboard context",
+      "layout": [
+        [
+          {
+            "kind": "markdown",
+            "title": "Today at a glance",
+            "body": "## Focus\n- Review planner items before opening new work.\n- Use dashboard widgets to jump into the underlying surfaces.\n- Keep Base views as the tabular source of truth."
+          }
+        ]
+      ]
+    },
+    "workspace.quick-actions": {
+      "title": "Quick Actions",
+      "subtitle": "Surface switches and record creation shortcuts",
+      "layout": [
+        [
+          {
+            "kind": "actions",
+            "title": "Jump / Create",
+            "actions": [
+              {
+                "label": "Open Home",
+                "surface": "home",
+                "icon": "home",
+                "primary": true
+              },
+              {
+                "label": "New Project",
+                "entityKey": "project",
+                "icon": "folder-kanban"
+              },
+              {
+                "label": "Open Pipeline",
+                "surface": "crm.pipeline",
+                "icon": "trending-up"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "workspace.report-filters": {
+      "title": "Filtered Deals",
+      "subtitle": "Selector-driven dashboard slices",
+      "layout": [
+        [
+          {
+            "kind": "selector",
+            "key": "stage",
+            "label": "Stage",
+            "entity": "deal",
+            "field": "stage",
+            "allLabel": "All stages"
+          }
+        ],
+        [
+          {
+            "title": "Deals by selected stage",
+            "empty": "No deals match the selected stage.",
+            "entity": "deal",
+            "source": {
+              "source": "recent",
+              "filters": "{{stageFilter}}"
+            },
+            "titleFields": [
+              "title",
+              "deal_name"
+            ],
+            "metaFields": [
+              "stage",
+              "value",
+              "closeBy"
+            ]
+          }
+        ]
+      ]
+    },
+    "client-work.dashboard": {
+      "title": "Client Work",
+      "subtitle": "Delivery overview across meetings, comms, deliverables, feedback and decisions",
+      "contextFilter": "client-work",
+      "stats": [
+        {
+          "label": "MEETINGS",
+          "entity": "meeting",
+          "count": "all",
+          "sub": "client conversations",
+          "accent": "sky",
+          "mode": "client-work.meetings"
+        },
+        {
+          "label": "OPEN DELIVERABLES",
+          "entity": "deliverable",
+          "count": "open",
+          "sub": {
+            "entity": "deliverable",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "emerald"
+        },
+        {
+          "label": "OPEN COMMS",
+          "entity": "comms-thread",
+          "count": "open",
+          "sub": {
+            "entity": "comms-thread",
+            "count": "all",
+            "suffix": "threads"
+          },
+          "accent": "mint"
+        },
+        {
+          "label": "FEEDBACK",
+          "entity": "feedback",
+          "count": "all",
+          "sub": "items captured",
+          "accent": "warn"
+        },
+        {
+          "label": "DECISIONS",
+          "entity": "decision",
+          "count": "all",
+          "sub": "decision records",
+          "accent": "rose"
+        }
+      ],
+      "layout": [
+        [
+          [
+            {
+              "title": "RECENT MEETINGS",
+              "empty": "No meetings.",
+              "entity": "meeting",
+              "source": "recent",
+              "titleFields": [
+                "context",
+                "name",
+                "title"
+              ],
+              "metaFields": [
+                "date",
+                "status",
+                "client_id",
+                "project_id"
+              ]
+            },
+            {
+              "title": "OPEN DELIVERABLES",
+              "empty": "No open deliverables.",
+              "entity": "deliverable",
+              "source": "recent-open",
+              "titleFields": [
+                "title",
+                "project"
+              ],
+              "metaFields": [
+                "status",
+                "client_id",
+                "project_id"
+              ]
+            },
+            {
+              "title": "RECENT COMMS",
+              "empty": "No communication threads.",
+              "entity": "comms-thread",
+              "source": "recent",
+              "titleFields": [
+                "subject",
+                "thread_id"
+              ],
+              "metaFields": [
+                "channel",
+                "status",
+                "last_message_at"
+              ]
+            }
+          ],
+          [
+            {
+              "title": "RECENT FEEDBACK",
+              "empty": "No feedback captured.",
+              "entity": "feedback",
+              "source": "recent",
+              "titleFields": [
+                "respondent",
+                "feedback_type"
+              ],
+              "metaFields": [
+                "score",
+                "status",
+                "client_id"
+              ]
+            },
+            {
+              "title": "RECENT DECISIONS",
+              "empty": "No decisions recorded.",
+              "entity": "decision",
+              "source": "recent",
+              "titleFields": [
+                "title",
+                "status"
+              ],
+              "metaFields": [
+                "status",
+                "client_id",
+                "project_id"
+              ]
+            }
+          ]
+        ]
+      ],
+      "conditionalRows": [
+        {
+          "condition": {
+            "entities": [
+              "survey",
+              "testimonial"
+            ]
+          },
+          "cards": [
+            {
+              "title": "SURVEYS",
+              "empty": "No surveys.",
+              "entity": "survey",
+              "source": "recent",
+              "titleFields": [
+                "title"
+              ],
+              "metaFields": [
+                "status",
+                "response_count",
+                "response_rate"
+              ]
+            },
+            {
+              "title": "TESTIMONIALS",
+              "empty": "No testimonials.",
+              "entity": "testimonial",
+              "source": "recent",
+              "titleFields": [
+                "respondent_name",
+                "respondent"
+              ],
+              "metaFields": [
+                "status",
+                "permission_level"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "finance.gl.overview": {
+      "title": "General Ledger",
+      "subtitle": "Posting, reconciliation, trial balance and reporting overview",
+      "legend": "finance-statements",
+      "stats": [
+        {
+          "label": "ACCOUNTS",
+          "entity": "chart-of-accounts",
+          "count": "all",
+          "sub": "chart records",
+          "accent": "sky"
+        },
+        {
+          "label": "OPEN JOURNALS",
+          "entity": "journal-entry",
+          "count": "open",
+          "sub": {
+            "entity": "journal-entry",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "mint"
+        },
+        {
+          "label": "RECONCILIATIONS",
+          "entity": "bank-reconciliation",
+          "count": "all",
+          "sub": "bank rec records",
+          "accent": "emerald"
+        },
+        {
+          "label": "TRIAL BALANCES",
+          "entity": "trial-balance",
+          "count": "all",
+          "sub": "period snapshots",
+          "accent": "warn"
+        },
+        {
+          "label": "STATEMENTS",
+          "entity": "financial-statement",
+          "count": "all",
+          "sub": {
+            "entity": "fs-notes",
+            "count": "all",
+            "suffix": "FS notes"
+          },
+          "accent": "rose"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "title": "RECENT JOURNALS",
+            "empty": "No journal entries.",
+            "entity": "journal-entry",
+            "source": "recent",
+            "titleFields": [
+              "journal_id",
+              "title"
+            ],
+            "metaFields": [
+              "status",
+              "period_id",
+              "client_id"
+            ]
+          },
+          {
+            "title": "RECENT RECONCILIATIONS",
+            "empty": "No bank reconciliations.",
+            "entity": "bank-reconciliation",
+            "source": "recent",
+            "titleFields": [
+              "reconciliation_id",
+              "account_id"
+            ],
+            "metaFields": [
+              "status",
+              "period_id",
+              "difference"
+            ]
+          }
+        ],
+        [
+          {
+            "title": "TRIAL BALANCES",
+            "empty": "No trial balances.",
+            "entity": "trial-balance",
+            "source": "recent",
+            "titleFields": [
+              "trial_balance_id",
+              "period_id"
+            ],
+            "metaFields": [
+              "status",
+              "period_id",
+              "client_id"
+            ]
+          },
+          {
+            "title": "FINANCIAL STATEMENTS",
+            "empty": "No financial statements.",
+            "entity": "financial-statement",
+            "source": "recent",
+            "titleFields": [
+              "statement_id",
+              "statement_type",
+              "period_id"
+            ],
+            "metaFields": [
+              "statement_type",
+              "status",
+              "period_id",
+              "client_id"
+            ]
+          }
+        ]
+      ]
+    },
+    "finance.setup.overview": {
+      "title": "Finance Setup",
+      "subtitle": "Configuration records required before finance workflows run cleanly",
+      "stats": [
+        {
+          "label": "PERIODS",
+          "entity": "accounting-period",
+          "count": "all",
+          "sub": {
+            "entity": "accounting-period",
+            "count": "open",
+            "suffix": "open"
+          },
+          "accent": "sky"
+        },
+        {
+          "label": "BANK ACCOUNTS",
+          "entity": "bank-account",
+          "count": "all",
+          "sub": "configured accounts",
+          "accent": "mint"
+        },
+        {
+          "label": "FX TABLES",
+          "entity": "fx-rates-table",
+          "count": "all",
+          "sub": "rate tables",
+          "accent": "warn"
+        },
+        {
+          "label": "INVENTORY ITEMS",
+          "entity": "inventory",
+          "count": "all",
+          "sub": "tracked records",
+          "accent": "emerald"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "title": "OPEN PERIODS",
+            "empty": "No open periods.",
+            "entity": "accounting-period",
+            "source": "recent-open",
+            "titleFields": [
+              "period_id"
+            ],
+            "metaFields": [
+              "status",
+              "start_date",
+              "end_date"
+            ]
+          },
+          {
+            "title": "RECENT SETUP CHANGES",
+            "empty": "No setup records.",
+            "merge": [
+              {
+                "entity": "bank-account",
+                "source": "recent",
+                "titleFields": [
+                  "account_name",
+                  "account_id"
+                ],
+                "metaFields": [
+                  "currency",
+                  "status"
+                ]
+              },
+              {
+                "entity": "fx-rates-table",
+                "source": "recent",
+                "titleFields": [
+                  "rate_table_id",
+                  "base_currency"
+                ],
+                "metaFields": [
+                  "period_id",
+                  "source"
+                ]
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "procurement.overview": {
+      "title": "Suppliers & Procurement",
+      "subtitle": "Supplier, invoice, requisition and purchase order overview",
+      "stats": [
+        {
+          "label": "SUPPLIERS",
+          "entity": "supplier",
+          "count": "all",
+          "sub": "supplier records",
+          "accent": "sky"
+        },
+        {
+          "label": "OPEN INVOICES",
+          "entity": "supplier-invoice",
+          "count": "open",
+          "sub": {
+            "entity": "supplier-invoice",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "rose"
+        },
+        {
+          "label": "REQUISITIONS",
+          "entity": "purchase-requisition",
+          "count": "open",
+          "sub": {
+            "entity": "purchase-requisition",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "warn"
+        },
+        {
+          "label": "OPEN POS",
+          "entity": "purchase-order",
+          "count": "open",
+          "sub": {
+            "entity": "purchase-order",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "mint"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "title": "OPEN SUPPLIER INVOICES",
+            "empty": "No open supplier invoices.",
+            "entity": "supplier-invoice",
+            "source": "due-open",
+            "dateFields": [
+              "due_date",
+              "invoice_date"
+            ],
+            "titleFields": [
+              "invoice_id",
+              "supplier_id"
+            ]
+          },
+          {
+            "title": "PENDING REQUISITIONS",
+            "empty": "No pending requisitions.",
+            "entity": "purchase-requisition",
+            "source": "recent-open",
+            "titleFields": [
+              "requisition_id",
+              "title"
+            ],
+            "metaFields": [
+              "status",
+              "requester",
+              "amount"
+            ]
+          }
+        ],
+        [
+          {
+            "title": "OPEN PURCHASE ORDERS",
+            "empty": "No open purchase orders.",
+            "entity": "purchase-order",
+            "source": "due-open",
+            "dateFields": [
+              "expected_delivery",
+              "order_date"
+            ],
+            "titleFields": [
+              "po_id",
+              "supplier_id"
+            ]
+          },
+          {
+            "title": "RECENT SUPPLIERS",
+            "empty": "No suppliers.",
+            "entity": "supplier",
+            "source": "recent",
+            "titleFields": [
+              "supplier_name",
+              "name"
+            ],
+            "metaFields": [
+              "status",
+              "category"
+            ]
+          }
+        ]
+      ]
+    },
+    "tax.dashboard": {
+      "title": "Tax",
+      "subtitle": "Filing, tax review, legal rule and retention overview",
+      "stats": [
+        {
+          "label": "OPEN VAT",
+          "entity": "vat-return",
+          "count": "open",
+          "sub": {
+            "entity": "vat-return",
+            "count": "all",
+            "suffix": "returns"
+          },
+          "accent": "sky"
+        },
+        {
+          "label": "OPEN CT",
+          "entity": "corporate-tax-return",
+          "count": "open",
+          "sub": {
+            "entity": "corporate-tax-return",
+            "count": "all",
+            "suffix": "returns"
+          },
+          "accent": "mint"
+        },
+        {
+          "label": "TP FILES",
+          "entity": "transfer-pricing",
+          "count": "all",
+          "sub": "transfer pricing",
+          "accent": "warn"
+        },
+        {
+          "label": "LEGAL RULES",
+          "entity": "legal-rule",
+          "count": "all",
+          "sub": {
+            "entity": "document-retention",
+            "count": "all",
+            "suffix": "retention records"
+          },
+          "accent": "rose"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "title": "UPCOMING VAT RETURNS",
+            "empty": "No open VAT returns.",
+            "entity": "vat-return",
+            "source": "due-open",
+            "dateFields": [
+              "filing_due_date",
+              "due_date",
+              "period_end"
+            ],
+            "titleFields": [
+              "return_id",
+              "period_id"
+            ]
+          },
+          {
+            "title": "UPCOMING CORPORATE TAX",
+            "empty": "No open corporate tax returns.",
+            "entity": "corporate-tax-return",
+            "source": "due-open",
+            "dateFields": [
+              "filing_due_date",
+              "due_date",
+              "period_end"
+            ],
+            "titleFields": [
+              "return_id",
+              "period_id"
+            ]
+          }
+        ],
+        [
+          {
+            "title": "TAX REVIEWS",
+            "empty": "No deferred tax or free-zone reviews.",
+            "merge": [
+              {
+                "entity": "deferred-tax",
+                "source": "recent",
+                "titleFields": [
+                  "assessment_id",
+                  "period_id"
+                ],
+                "metaFields": [
+                  "status",
+                  "period_id"
+                ]
+              },
+              {
+                "entity": "free-zone-status",
+                "source": "recent",
+                "titleFields": [
+                  "assessment_id",
+                  "entity_id"
+                ],
+                "metaFields": [
+                  "status",
+                  "period_id"
+                ]
+              }
+            ]
+          },
+          {
+            "title": "RECENT LEGAL / RETENTION",
+            "empty": "No legal or retention records.",
+            "merge": [
+              {
+                "entity": "legal-rule",
+                "source": "recent",
+                "titleFields": [
+                  "rule_id",
+                  "title"
+                ],
+                "metaFields": [
+                  "jurisdiction",
+                  "status"
+                ]
+              },
+              {
+                "entity": "document-retention",
+                "source": "recent",
+                "titleFields": [
+                  "document_type",
+                  "retention_id"
+                ],
+                "metaFields": [
+                  "status",
+                  "destroy_after_date"
+                ]
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "prm.partners.overview": {
+      "title": "Partners",
+      "subtitle": "Partner operations overview across registrations, commissions and certifications",
+      "stats": [
+        {
+          "label": "PARTNERS",
+          "entity": "partner",
+          "count": "all",
+          "sub": "partner records",
+          "accent": "sky"
+        },
+        {
+          "label": "REGISTRATIONS",
+          "entity": "registration",
+          "count": "open",
+          "sub": {
+            "entity": "registration",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "mint"
+        },
+        {
+          "label": "COMMISSIONS",
+          "entity": "commission",
+          "count": "open",
+          "sub": {
+            "entity": "commission",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "warn"
+        },
+        {
+          "label": "CERTIFICATIONS",
+          "entity": "certification",
+          "count": "all",
+          "sub": "cert records",
+          "accent": "emerald"
+        },
+        {
+          "label": "PARTNER DEALS",
+          "entity": "deal",
+          "count": {
+            "field": "partner"
+          },
+          "sub": "attributed deals",
+          "accent": "rose"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "title": "PENDING REGISTRATIONS",
+            "empty": "No pending registrations.",
+            "entity": "registration",
+            "source": "recent-open",
+            "titleFields": [
+              "deal_name",
+              "registration_id"
+            ],
+            "metaFields": [
+              "status",
+              "partner_ref",
+              "expiry_date"
+            ]
+          },
+          {
+            "title": "OPEN COMMISSIONS",
+            "empty": "No open commissions.",
+            "entity": "commission",
+            "source": "recent-open",
+            "titleFields": [
+              "commission_id",
+              "partner_ref"
+            ],
+            "metaFields": [
+              "status",
+              "amount",
+              "currency"
+            ]
+          }
+        ],
+        [
+          {
+            "title": "CERTIFICATIONS EXPIRING",
+            "empty": "No certifications expiring soon.",
+            "entity": "certification",
+            "source": "due",
+            "dateFields": [
+              "expires_date",
+              "renewal_date"
+            ],
+            "titleFields": [
+              "name",
+              "certification_id"
+            ]
+          },
+          {
+            "title": "RECENT PARTNERS",
+            "empty": "No partners.",
+            "entity": "partner",
+            "source": "recent",
+            "titleFields": [
+              "partner_name",
+              "name"
+            ],
+            "metaFields": [
+              "tier",
+              "status"
+            ]
+          }
+        ]
+      ]
+    },
+    "crm.campaigns.overview": {
+      "title": "Campaigns",
+      "subtitle": "Campaign and outbound sequence overview",
+      "stats": [
+        {
+          "label": "ACTIVE CAMPAIGNS",
+          "entity": "campaign",
+          "count": "open",
+          "sub": {
+            "entity": "campaign",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "sky"
+        },
+        {
+          "label": "ACTIVE SEQUENCES",
+          "entity": "sequence",
+          "count": "open",
+          "sub": {
+            "entity": "sequence",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "mint"
+        },
+        {
+          "label": "LEADS",
+          "entity": "lead",
+          "count": "all",
+          "sub": "lead records",
+          "accent": "warn"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "title": "ACTIVE CAMPAIGNS",
+            "empty": "No active campaigns.",
+            "entity": "campaign",
+            "source": "recent-open",
+            "titleFields": [
+              "campaign_name",
+              "title"
+            ],
+            "metaFields": [
+              "status",
+              "campaign_type",
+              "launch_date"
+            ]
+          },
+          {
+            "title": "ACTIVE SEQUENCES",
+            "empty": "No active sequences.",
+            "entity": "sequence",
+            "source": "recent-open",
+            "titleFields": [
+              "sequence_name",
+              "title"
+            ],
+            "metaFields": [
+              "status",
+              "channel",
+              "campaign_id"
+            ]
+          }
+        ],
+        [
+          {
+            "title": "RECENT LEADS",
+            "empty": "No leads captured.",
+            "entity": "lead",
+            "source": "recent",
+            "titleFields": [
+              "company_name",
+              "contact_name"
+            ],
+            "metaFields": [
+              "status",
+              "owner",
+              "next_action_date"
+            ]
+          }
+        ]
       ]
     }
   },
   "workbookGroups": [
-    { "id": "planner", "label": "Planner", "entityKeys": ["task", "project"] },
-    { "id": "crm", "label": "CRM", "entityKeys": ["deal", "contact", "client", "company", "lead", "campaign", "sequence", "activity"] },
-    { "id": "client-work", "label": "Client Work", "entityKeys": ["meeting", "comms-thread", "deliverable", "feedback", "survey", "testimonial", "decision"] },
-    { "id": "prm", "label": "PRM", "entityKeys": ["partner", "registration", "commission", "certification"] }
+    {
+      "id": "planner",
+      "label": "Planner",
+      "entityKeys": [
+        "task",
+        "project"
+      ]
+    },
+    {
+      "id": "crm",
+      "label": "CRM",
+      "entityKeys": [
+        "deal",
+        "contact",
+        "client",
+        "company",
+        "lead",
+        "campaign",
+        "sequence",
+        "activity"
+      ]
+    },
+    {
+      "id": "client-work",
+      "label": "Client Work",
+      "entityKeys": [
+        "meeting",
+        "comms-thread",
+        "deliverable",
+        "feedback",
+        "survey",
+        "testimonial",
+        "decision"
+      ]
+    },
+    {
+      "id": "prm",
+      "label": "PRM",
+      "entityKeys": [
+        "partner",
+        "registration",
+        "commission",
+        "certification"
+      ]
+    }
   ],
   "entities": {
     "contact": {
       "typeFilter": null,
       "folder": "Cadence/Contacts",
       "fields": [
-        { "key": "name", "label": "Name", "primary": true },
-        { "key": "email", "label": "Email", "type": "email" },
-        { "key": "company", "label": "Company" },
-        { "key": "role", "label": "Role" },
-        { "key": "lastContact", "label": "Last contact", "type": "date" },
-        { "key": "tags", "label": "Tags", "type": "tags" }
+        {
+          "key": "name",
+          "label": "Name",
+          "primary": true
+        },
+        {
+          "key": "email",
+          "label": "Email",
+          "type": "email"
+        },
+        {
+          "key": "company",
+          "label": "Company"
+        },
+        {
+          "key": "role",
+          "label": "Role"
+        },
+        {
+          "key": "lastContact",
+          "label": "Last contact",
+          "type": "date"
+        },
+        {
+          "key": "tags",
+          "label": "Tags",
+          "type": "tags"
+        }
       ],
-      "columns": ["name", "company", "email", "role", "lastContact"]
+      "columns": [
+        "name",
+        "company",
+        "email",
+        "role",
+        "lastContact"
+      ]
     },
     "company": {
       "typeFilter": null,
       "folder": "Cadence/Companies",
       "fields": [
-        { "key": "name", "label": "Name", "primary": true },
-        { "key": "domain", "label": "Domain" },
-        { "key": "industry", "label": "Industry" },
-        { "key": "size", "label": "Size" },
-        { "key": "owner", "label": "Owner" },
-        { "key": "tags", "label": "Tags", "type": "tags" }
+        {
+          "key": "name",
+          "label": "Name",
+          "primary": true
+        },
+        {
+          "key": "domain",
+          "label": "Domain"
+        },
+        {
+          "key": "industry",
+          "label": "Industry"
+        },
+        {
+          "key": "size",
+          "label": "Size"
+        },
+        {
+          "key": "owner",
+          "label": "Owner"
+        },
+        {
+          "key": "tags",
+          "label": "Tags",
+          "type": "tags"
+        }
       ],
-      "columns": ["name", "domain", "industry", "size", "owner"]
+      "columns": [
+        "name",
+        "domain",
+        "industry",
+        "size",
+        "owner"
+      ]
     },
     "client": {
       "typeFilter": null,
@@ -293,104 +1930,365 @@
       "typeFilter": null,
       "folder": "Cadence/Pipeline",
       "fields": [
-        { "key": "title", "label": "Title", "primary": true },
-        { "key": "stage", "label": "Stage", "type": "enum", "options": ["Lead", "Qualified", "Proposal", "Negotiation", "Won", "Lost"] },
-        { "key": "value", "label": "Value", "type": "currency" },
-        { "key": "company", "label": "Company" },
-        { "key": "contact", "label": "Contact" },
-        { "key": "owner", "label": "Owner" },
-        { "key": "closeBy", "label": "Close by", "type": "date" }
+        {
+          "key": "title",
+          "label": "Title",
+          "primary": true
+        },
+        {
+          "key": "stage",
+          "label": "Stage",
+          "type": "enum",
+          "options": [
+            "Lead",
+            "Qualified",
+            "Proposal",
+            "Negotiation",
+            "Won",
+            "Lost"
+          ]
+        },
+        {
+          "key": "value",
+          "label": "Value",
+          "type": "currency"
+        },
+        {
+          "key": "company",
+          "label": "Company"
+        },
+        {
+          "key": "contact",
+          "label": "Contact"
+        },
+        {
+          "key": "owner",
+          "label": "Owner"
+        },
+        {
+          "key": "closeBy",
+          "label": "Close by",
+          "type": "date"
+        }
       ],
-      "columns": ["title", "stage", "value", "company", "closeBy"],
+      "columns": [
+        "title",
+        "stage",
+        "value",
+        "company",
+        "closeBy"
+      ],
       "valueField": "value",
       "closeByField": "closeBy",
-      "wonStages": ["Won"],
-      "lostStages": ["Lost"]
+      "wonStages": [
+        "Won"
+      ],
+      "lostStages": [
+        "Lost"
+      ]
     },
     "lead": {
       "typeFilter": null,
       "folder": "Cadence/Leads",
       "fields": [
-        { "key": "name", "label": "Name", "primary": true },
-        { "key": "company", "label": "Company" },
-        { "key": "source", "label": "Source" },
-        { "key": "status", "label": "Status", "type": "enum", "options": ["New", "Contacted", "Qualified", "Disqualified", "Converted"] },
-        { "key": "assigned", "label": "Assigned" }
+        {
+          "key": "name",
+          "label": "Name",
+          "primary": true
+        },
+        {
+          "key": "company",
+          "label": "Company"
+        },
+        {
+          "key": "source",
+          "label": "Source"
+        },
+        {
+          "key": "status",
+          "label": "Status",
+          "type": "enum",
+          "options": [
+            "New",
+            "Contacted",
+            "Qualified",
+            "Disqualified",
+            "Converted"
+          ]
+        },
+        {
+          "key": "assigned",
+          "label": "Assigned"
+        }
       ],
-      "columns": ["name", "company", "source", "status", "assigned"]
+      "columns": [
+        "name",
+        "company",
+        "source",
+        "status",
+        "assigned"
+      ]
     },
     "partner": {
       "typeFilter": null,
       "folder": "Cadence/Partners",
       "fields": [
-        { "key": "name", "label": "Name", "primary": true },
-        { "key": "tier", "label": "Tier", "type": "enum", "options": ["Gold", "Silver", "Bronze", "Standard"] },
-        { "key": "status", "label": "Status", "type": "enum", "options": ["Active", "Onboarding", "Inactive", "Churned"] },
-        { "key": "owner", "label": "Owner" },
-        { "key": "region", "label": "Region" }
+        {
+          "key": "name",
+          "label": "Name",
+          "primary": true
+        },
+        {
+          "key": "tier",
+          "label": "Tier",
+          "type": "enum",
+          "options": [
+            "Gold",
+            "Silver",
+            "Bronze",
+            "Standard"
+          ]
+        },
+        {
+          "key": "status",
+          "label": "Status",
+          "type": "enum",
+          "options": [
+            "Active",
+            "Onboarding",
+            "Inactive",
+            "Churned"
+          ]
+        },
+        {
+          "key": "owner",
+          "label": "Owner"
+        },
+        {
+          "key": "region",
+          "label": "Region"
+        }
       ],
-      "columns": ["name", "tier", "status", "region", "owner"]
+      "columns": [
+        "name",
+        "tier",
+        "status",
+        "region",
+        "owner"
+      ]
     },
     "registration": {
       "typeFilter": null,
       "folder": "Cadence/Registrations",
       "fields": [
-        { "key": "title", "label": "Title", "primary": true },
-        { "key": "partner", "label": "Partner" },
-        { "key": "status", "label": "Status", "type": "enum", "options": ["Submitted", "Approved", "Rejected", "Expired"] },
-        { "key": "value", "label": "Value", "type": "currency" },
-        { "key": "expires", "label": "Expires", "type": "date" }
+        {
+          "key": "title",
+          "label": "Title",
+          "primary": true
+        },
+        {
+          "key": "partner",
+          "label": "Partner"
+        },
+        {
+          "key": "status",
+          "label": "Status",
+          "type": "enum",
+          "options": [
+            "Submitted",
+            "Approved",
+            "Rejected",
+            "Expired"
+          ]
+        },
+        {
+          "key": "value",
+          "label": "Value",
+          "type": "currency"
+        },
+        {
+          "key": "expires",
+          "label": "Expires",
+          "type": "date"
+        }
       ],
-      "columns": ["title", "partner", "status", "value", "expires"]
+      "columns": [
+        "title",
+        "partner",
+        "status",
+        "value",
+        "expires"
+      ]
     },
     "commission": {
       "typeFilter": null,
       "folder": "Cadence/Commissions",
       "fields": [
-        { "key": "reference", "label": "Ref", "primary": true },
-        { "key": "partner", "label": "Partner" },
-        { "key": "amount", "label": "Amount", "type": "currency" },
-        { "key": "status", "label": "Status", "type": "enum", "options": ["Pending", "Earned", "Paid", "Disputed"] },
-        { "key": "period", "label": "Period" },
-        { "key": "paidOn", "label": "Paid on", "type": "date" }
+        {
+          "key": "reference",
+          "label": "Ref",
+          "primary": true
+        },
+        {
+          "key": "partner",
+          "label": "Partner"
+        },
+        {
+          "key": "amount",
+          "label": "Amount",
+          "type": "currency"
+        },
+        {
+          "key": "status",
+          "label": "Status",
+          "type": "enum",
+          "options": [
+            "Pending",
+            "Earned",
+            "Paid",
+            "Disputed"
+          ]
+        },
+        {
+          "key": "period",
+          "label": "Period"
+        },
+        {
+          "key": "paidOn",
+          "label": "Paid on",
+          "type": "date"
+        }
       ],
-      "columns": ["reference", "partner", "amount", "status", "period", "paidOn"]
+      "columns": [
+        "reference",
+        "partner",
+        "amount",
+        "status",
+        "period",
+        "paidOn"
+      ]
     },
     "certification": {
       "typeFilter": null,
       "folder": "Cadence/Certifications",
       "fields": [
-        { "key": "name", "label": "Name", "primary": true },
-        { "key": "partner", "label": "Partner" },
-        { "key": "level", "label": "Level" },
-        { "key": "issued", "label": "Issued", "type": "date" },
-        { "key": "expires", "label": "Expires", "type": "date" }
+        {
+          "key": "name",
+          "label": "Name",
+          "primary": true
+        },
+        {
+          "key": "partner",
+          "label": "Partner"
+        },
+        {
+          "key": "level",
+          "label": "Level"
+        },
+        {
+          "key": "issued",
+          "label": "Issued",
+          "type": "date"
+        },
+        {
+          "key": "expires",
+          "label": "Expires",
+          "type": "date"
+        }
       ],
-      "columns": ["name", "partner", "level", "issued", "expires"]
+      "columns": [
+        "name",
+        "partner",
+        "level",
+        "issued",
+        "expires"
+      ]
     },
     "activity": {
       "typeFilter": null,
       "folder": "Cadence/Activities",
       "fields": [
-        { "key": "subject", "label": "Subject", "primary": true },
-        { "key": "type", "label": "Type", "type": "enum", "options": ["Call", "Email", "Meeting", "Note", "Task"] },
-        { "key": "when", "label": "When", "type": "date" },
-        { "key": "with", "label": "With" },
-        { "key": "related", "label": "Related" }
+        {
+          "key": "subject",
+          "label": "Subject",
+          "primary": true
+        },
+        {
+          "key": "type",
+          "label": "Type",
+          "type": "enum",
+          "options": [
+            "Call",
+            "Email",
+            "Meeting",
+            "Note",
+            "Task"
+          ]
+        },
+        {
+          "key": "when",
+          "label": "When",
+          "type": "date"
+        },
+        {
+          "key": "with",
+          "label": "With"
+        },
+        {
+          "key": "related",
+          "label": "Related"
+        }
       ],
-      "columns": ["when", "type", "subject", "with", "related"]
+      "columns": [
+        "when",
+        "type",
+        "subject",
+        "with",
+        "related"
+      ]
     },
     "sequence": {
       "typeFilter": null,
       "folder": "Cadence/Sequences",
       "fields": [
-        { "key": "name", "label": "Name", "primary": true },
-        { "key": "audience", "label": "Audience" },
-        { "key": "steps", "label": "Steps", "type": "number" },
-        { "key": "active", "label": "Active", "type": "number" },
-        { "key": "status", "label": "Status", "type": "enum", "options": ["Draft", "Active", "Paused", "Archived"] }
+        {
+          "key": "name",
+          "label": "Name",
+          "primary": true
+        },
+        {
+          "key": "audience",
+          "label": "Audience"
+        },
+        {
+          "key": "steps",
+          "label": "Steps",
+          "type": "number"
+        },
+        {
+          "key": "active",
+          "label": "Active",
+          "type": "number"
+        },
+        {
+          "key": "status",
+          "label": "Status",
+          "type": "enum",
+          "options": [
+            "Draft",
+            "Active",
+            "Paused",
+            "Archived"
+          ]
+        }
       ],
-      "columns": ["name", "audience", "steps", "active", "status"]
+      "columns": [
+        "name",
+        "audience",
+        "steps",
+        "active",
+        "status"
+      ]
     },
     "campaign": {
       "typeFilter": null,
@@ -400,13 +2298,49 @@
       "typeFilter": null,
       "folder": "Cadence/Projects",
       "fields": [
-        { "key": "name", "label": "Name", "primary": true },
-        { "key": "status", "label": "Status", "type": "enum", "options": ["active", "on_hold", "backlog", "done", "cancelled"] },
-        { "key": "priority", "label": "Priority", "type": "enum", "options": ["low", "medium", "high"] },
-        { "key": "owner", "label": "Owner" },
-        { "key": "due", "label": "Due", "type": "date" }
+        {
+          "key": "name",
+          "label": "Name",
+          "primary": true
+        },
+        {
+          "key": "status",
+          "label": "Status",
+          "type": "enum",
+          "options": [
+            "active",
+            "on_hold",
+            "backlog",
+            "done",
+            "cancelled"
+          ]
+        },
+        {
+          "key": "priority",
+          "label": "Priority",
+          "type": "enum",
+          "options": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        {
+          "key": "owner",
+          "label": "Owner"
+        },
+        {
+          "key": "due",
+          "label": "Due",
+          "type": "date"
+        }
       ],
-      "columns": ["name", "status", "owner", "due"]
+      "columns": [
+        "name",
+        "status",
+        "owner",
+        "due"
+      ]
     },
     "meeting": {
       "typeFilter": null

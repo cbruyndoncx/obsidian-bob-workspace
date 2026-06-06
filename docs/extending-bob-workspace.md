@@ -1,6 +1,6 @@
 # Extending BOB Workspace Without Code Changes
 
-BOB Workspace is still structurally based on the Cadence plugin, but the goal is not to make every vault adopt Cadence's original field names. The plugin should act as a workspace shell over markdown entities, while each vault defines its own data model through canonical schemas and Bases.
+BOB Workspace is still structurally based on the original Cadence plugin, but the goal is not to make every vault adopt the upstream field names. The plugin should act as a workspace shell over markdown entities, while each vault defines its own data model through canonical schemas and Bases.
 
 This guide explains the intended extension model.
 
@@ -12,7 +12,7 @@ The plugin has several layers. Later layers should refine or override earlier la
    - Lives in `main.js`.
    - Keeps the plugin usable in an empty vault.
    - Should stay small and generic.
-   - May still contain some legacy Cadence field names for compatibility.
+   - May still contain some legacy field names for older saved workspace shapes.
 
 2. **Schema layer**
    - YAML files in `00-CORE/Schemas/source/`.
@@ -29,15 +29,15 @@ The plugin has several layers. Later layers should refine or override earlier la
 4. **Workspace definition layer**
    - `workspace.json` in the plugin folder next to `data.json`.
    - Owns schema enablement, Base/view associations, navigation groups,
-     surfaces, secondary tabs, and workbook export groups.
+     dashboard compositions, secondary tabs, and workbook export groups.
    - Managed from Settings -> BOB Workspace -> Workspace definition, or
      reloaded with the `Reload workspace.json` command.
 
 5. **Import alias layer**
    - Maps spreadsheet/frontmatter aliases to canonical field keys.
-   - Useful when importing from Cadence, another CRM, or another vault.
+   - Useful when importing from older Cadence exports, another CRM, or another vault.
    - Defined per schema as `field_aliases` and edited in the Data model designer.
-   - Legacy built-in synonyms remain as compatibility fallback only.
+   - Older built-in synonyms remain only for shape normalization.
 
 The most important rule: **the vault data model should live in the vault, not in plugin code.**
 
@@ -45,13 +45,48 @@ The most important rule: **the vault data model should live in the vault, not in
 
 `workspace.json` is the no-code composition layer. When `navigation.groups`
 is present, it replaces the built-in left-navigation definition. Its
-`secondaryTabs` object replaces built-in inner tab definitions, and
-`workbookGroups` replaces export group choices.
+`secondaryTabs` object replaces built-in inner tab definitions, its
+`workbookGroups` array replaces export group choices, and its `dashboards`
+object replaces hardcoded dashboard/report compositions when the route id
+matches.
 
 Entity-backed configured surfaces use the generic record table/detail UI.
-Existing built-in surface IDs such as `home` and `crm.pipeline` retain their
-specialized renderer when they are included in configured navigation. A new
-specialized dashboard still requires plugin code.
+Dashboard and report routes such as `home`, `crm.pipeline`, and
+`crm.dashboard`, and `reports.*` render from `workspace.json.dashboards`.
+If a dashboard route has no matching dashboard definition, there is no
+hardcoded dashboard composition to fill it.
+
+Dashboard widget coverage currently includes metrics, lists, card lists,
+bar charts, kanban, merged cards, markdown, actions, `base-link`,
+`base-embed`, selector controls, and date-range controls. Runtime-backed
+sources such as `home` and `productivity` can feed those generic widgets, but
+they are data sources rather than separate dashboard compositions. Selector
+widgets expose both `{{key}}` and `{{key}}Filter` placeholders so downstream
+widgets can use either the raw choice or a ready-to-apply filter expression.
+The dashboard editor exposes explicit source details for widgets, including
+entity key, Base file, Base view, filters, sort, groupBy, and limit. Base
+views themselves remain the canonical tabular layer, so a separate dashboard
+table widget is not required for the current direction.
+
+Dashboard UI state that should survive restart, such as selector choices and
+date-range selections, is persisted under `workspace.json.settings.dashboardState`.
+That covers user intent only. Computed dashboard rows, metrics, and runtime
+snapshots remain transient and are recomputed when the surface renders.
+
+One nuance matters for the current implementation: `home` and
+`reports.productivity` are still backed by runtime snapshot helpers under the
+hood. They are rendered from config, but the underlying data still comes from
+live vault state such as reminders, daily notes, TaskNotes, and project
+metadata rather than directly from a `.base` file.
+
+If you want to push that last slice closer to pure Base-backed data, the
+design would be:
+
+- Materialize the runtime snapshot into notes or frontmatter fields on a
+  schedule or in response to edits.
+- Point the widget source at those notes through `base`/`view` instead of the
+  runtime snapshot helper.
+- Remove the runtime helper once the materialized data is stable.
 
 Minimal example:
 
@@ -88,7 +123,17 @@ Minimal example:
   },
   "workbookGroups": [
     { "id": "operations", "label": "Operations", "entityKeys": ["order"] }
-  ]
+  ],
+  "dashboards": {
+    "home": {
+      "title": "Home",
+      "layout": [
+        [
+          { "kind": "briefing" }
+        ]
+      ]
+    }
+  }
 }
 ```
 
@@ -118,7 +163,7 @@ ignored unless the entity is part of the active workspace-owned record-type
 set. Supported non-entity actions are explicit, for example
 `{ "action": "quick-capture" }` and `{ "action": "today-task" }`. When a
 surface has configured header actions, that list replaces the surface's
-legacy default create buttons.
+default create buttons.
 
 Settings also provides a **Navigation designer** over the same JSON draft:
 
@@ -154,6 +199,31 @@ Settings also provides a **Workbook export groups** designer over
 
 As with navigation, these edits update the JSON draft until **Save and apply**
 persists them.
+
+## Dashboards And Widgets
+
+`workspace.json.dashboards` is the dashboard/report composition layer. Each
+surface id maps to a dashboard object with optional `title`, `subtitle`,
+`contextFilter`, `stats`, `layout`, `conditionalRows`, and `legend`.
+
+Current widget shapes:
+
+- `metric` stats for top-line KPIs and report aggregates.
+- `list`, card-list, and `merge` widgets for note-backed sections.
+- `bar-chart` and `kanban` widgets for grouped source data.
+- `markdown`, `actions`, `base-link`, and `base-embed` widgets for
+  narrative, commands, and Base-backed navigation/preview.
+- `selector` and `date-range` controls for dashboard-local state and filters.
+- Card-list widgets using `source: "recent"`, `recent-open`, `due`, or
+  `due-open`.
+
+The Settings tab now includes:
+
+- A dashboard editor for the stored configurations.
+- A widget catalog describing which widget shapes are implemented and which
+  ones are still planned.
+- A built-in dashboard inventory that shows which widget types each shipped
+  dashboard uses.
 
 ## Template Folders
 
@@ -238,7 +308,7 @@ field_aliases:
   - displayName
 ```
 
-When schemas are enabled, BOB Workspace uses these fields to enrich built-in entities. That means workbook export/import, create forms, and entity tables can use the vault's field names instead of Cadence's original names.
+When schemas are enabled, BOB Workspace uses these fields to enrich built-in entities. That means workbook export/import, create forms, and entity tables can use the vault's field names instead of the upstream defaults.
 
 `location_pattern` also participates in creation-time folder resolution. When a new record has enough filled values to satisfy a placeholder path, BOB Workspace creates the note under that resolved folder; otherwise it falls back to the entity's configured default folder prefix.
 
@@ -315,7 +385,7 @@ This keeps the vault model DRY: derived views should compose existing entity sch
 
 ## Field Aliases
 
-Field aliases are the bridge between old Cadence names, spreadsheet headers, and canonical BOB field names.
+Field aliases are the bridge between older names, spreadsheet headers, and canonical BOB field names.
 
 Examples:
 
@@ -346,7 +416,7 @@ field_aliases:
 The Settings **Data model designer** edits this as one field per line, for
 example `expected_close: closeBy, close date`. Field aliases must point to
 defined schema fields and cannot conflict with another canonical field. The
-legacy built-in importer synonyms remain as compatibility fallbacks.
+older importer synonyms remain as input normalization only.
 
 ## Adding A New Entity
 
@@ -483,7 +553,7 @@ If a change is just "this entity has a different field", it should be a schema c
 
 ## Current Maintenance Notes
 
-The plugin still contains some legacy Cadence fallback fields. This is acceptable as compatibility fallback, but BOB vaults should rely on schemas/Bases for canonical behavior.
+The plugin still contains some legacy fallback fields. This is acceptable as input normalization, but BOB vaults should rely on schemas/Bases for canonical behavior.
 
 Known cleanup direction:
 

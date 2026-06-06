@@ -45,6 +45,21 @@
     "secondaryTabs": {}
   },
   "workbookGroups": [],
+  "dashboards": {
+    "home": {
+      "title": "Home",
+      "subtitle": "Blank workspace",
+      "layout": [
+        [
+          {
+            "kind": "markdown",
+            "title": "Start here",
+            "body": "Use Settings to add schema-backed record types, Bases, navigation, and dashboards."
+          }
+        ]
+      ]
+    }
+  },
   "settings": {
     "modules": {
       "planner": true

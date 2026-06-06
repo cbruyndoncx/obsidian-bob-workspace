@@ -8,9 +8,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**BOB Workspace** is an Obsidian plugin (forked from Cadence) providing a unified workspace for CRM, PRM, Client Work, Finance, Procurement, project management, daily planning, and reminders—all backed by plain markdown.
+**BOB Workspace** is an Obsidian plugin (forked from Cadence) providing a unified workspace for CRM, PRM, Client Work, Finance, Procurement, project management, daily planning, reminders, dashboards, and reports - all backed by plain markdown.
 
-The plugin has **no build step**. It's pure JavaScript loaded directly by Obsidian's plugin system. The three files (`main.js`, `manifest.json`, `styles.css`) are copied directly to `<vault>/.obsidian/plugins/bob-workspace/` and used as-is.
+The plugin has **no build step**. It's pure JavaScript loaded directly by Obsidian's plugin system. Shipping artifacts are copied directly to `<vault>/.obsidian/plugins/bob-workspace/` and used as-is:
+
+- `main.js`
+- `manifest.json`
+- `styles.css`
+- `vendor/xlsx.full.min.js`
+- `templates/`
 
 Plugin ID: `bob-workspace` (not `cadence-planner` — the upstream Cadence ID).
 
@@ -25,6 +31,7 @@ Plugin ID: `bob-workspace` (not `cadence-planner` — the upstream Cadence ID).
   - Entity registry: `ENTITIES`, `BUILTIN_ENTITY_DEFAULTS`, `DEAL_STAGES`, deal/activity field accessor functions
   - Settings: `DEFAULT_SETTINGS`, `CURRENT_CURRENCY`, `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`
   - Schema loader: `applySchemas()` — reads Metadata Menu YAML schema files into `ENTITIES` at runtime
+  - Dashboard/report config: `resolveDashboardConfig()`, `renderConfigDashboard()`, widget catalog helpers, runtime-backed widget sources
   - XLSX export: `getXLSX()`, `exportEntitiesXLSX()` via bundled `vendor/xlsx.full.min.js`
   - Utility functions: date/time, file I/O, parsing, formatting
   - Modal classes: `CadenceCaptureModal`, `CadenceReminderEditModal`, `CadenceImportModal`, `CadenceEntityCreateModal`, `CadencePromptModal`
@@ -142,14 +149,14 @@ Tab-based internal nav. Surfaces are dispatched in `CadenceAppView.render()` via
 
 | Surface ID | Renderer |
 |---|---|
-| `home` | `renderHome()` |
+| `home` | config dashboard via `renderHome()` |
 | `planner.inbox` | `renderInbox()` |
 | `planner.today` | `renderTodayPane()` |
 | `planner.calendar` | `renderPlannerPane()` |
 | `planner.tasknotes` | `renderEntityList()` (task entity) |
 | `planner.projects` | `renderProjectsView()` |
-| `crm.dashboard` | `renderCRMDashboard()` |
-| `crm.pipeline` | `renderEntityKanban()` (deal/stage) |
+| `crm.dashboard` | config dashboard |
+| `crm.pipeline` | config dashboard with kanban widget |
 | `crm.contacts` / `clients` / `companies` / `leads` / `activities` | `renderEntityList()` |
 | `crm.campaigns` | secondary tabs + `renderEntityList()` |
 | `client-work.overview` | `renderClientWorkDashboard()` + secondary tabs |
@@ -157,9 +164,13 @@ Tab-based internal nav. Surfaces are dispatched in `CadenceAppView.render()` via
 | `prm.partners` | secondary tabs + `renderEntityList()` |
 | `prm.analytics` | `renderPRMAnalytics()` |
 | `finance.*` / `tax.*` / `procurement.*` | secondary tabs + `renderEntityList()` |
-| `reports.*` | dedicated report renderers |
+| `reports.*` | config-driven dashboards with widget catalog renderers |
 
-**Specialised views** (Pipeline kanban, CRM Dashboard, Reports) hardcode field names like `stage`, `deal_value`, `expected_close` — they use the deal field accessor functions and don't auto-adapt to arbitrary schema changes.
+**Specialised views** (Pipeline kanban, CRM Dashboard, Reports) now primarily route through the dashboard/widget system. The shipped home, CRM, pipeline, and reports surfaces are config-driven.
+
+Nuance: `home` and `reports.productivity` are config-driven, but some of their source data is still produced by runtime snapshot helpers. That is intentional for now. If a future change wants those surfaces to become Base-first, the right path is to materialize the underlying runtime state into notes/frontmatter and point the widgets at those artifacts through `source.base`/`source.view`, leaving the runtime helper as a short-term fallback only.
+
+Small dashboard UI choices that should survive restart, such as selector picks and date ranges, are persisted in `workspace.json.settings.dashboardState`. Keep that state limited to user intent only; recompute dashboard metrics and snapshot rows on render.
 
 ### XLSX Workbook Export
 
@@ -200,16 +211,17 @@ weekDates(anchor, weekStartsOn) // [Mon, Tue, ..., Sun] as Date[]
 
 ### Testing/Development Cycle
 
-1. Edit `main.js` or `styles.css`
+1. Edit `main.js`, `styles.css`, or file-backed templates/docs as needed
 2. Copy to test vault: `cp main.js styles.css manifest.json vendor/xlsx.full.min.js <vault>/.obsidian/plugins/bob-workspace/`
 3. Reload in Obsidian: Settings → Community plugins → BOB Workspace → Disable/Enable
 4. Check console: Command palette → "Toggle developer tools"
+5. Run `node tests/run-tests.js` for the lightweight regression suite
 
 ### Code Style
 
 - No build step — ES6, compatible with Obsidian's Chromium runtime
 - Frontmatter I/O via `processFrontMatter()` only
-- DOM: `innerHTML` / `appendChild()`, BEM-style class names prefixed `cad-`
+- DOM: `createDiv()`, `createEl()`, and `appendChild()`/`setText()` as appropriate; keep BEM-style class names prefixed `cad-`
 - Events: `registerEvent()` for vault/metadata; standard `addEventListener` for DOM
 - No `console.log` in shipping code (SUBMISSION.md requirement)
 

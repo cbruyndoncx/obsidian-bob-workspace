@@ -3,7 +3,7 @@
   "name": "BOB Workspace",
   "version": "0.14.4-bob.14",
   "minAppVersion": "1.4.0",
-  "description": "A configurable workspace built on Cadence — CRM, PRM, Planner, Projects, Reports and Reminders. Vault-native, markdown source-of-truth.",
+  "description": "A configurable vault-native workspace for CRM, PRM, Planner, Projects, Reports and Reminders. Markdown is the source of truth.",
   "author": "cbruyndoncx",
   "authorUrl": "https://github.com/cbruyndoncx",
   "isDesktopOnly": false

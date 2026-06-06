@@ -15,7 +15,7 @@ Generated: 2026-05-22
 All navigation entities have a built-in plugin entity and a matching schema. The main inconsistencies are:
 
 - Several entities have an existing Base file but no configured Base in plugin settings.
-- Several built-in fallback definitions still use old Cadence field names.
+- Several built-in fallback definitions still use older fallback field names.
 - Schema loading usually corrects field definitions, but fallback/import/export can drift if schemas are disabled or unavailable.
 - The vault contains many schemas that are not yet exposed in the BOB Workspace navigation.
 
@@ -32,7 +32,7 @@ All navigation entities have a built-in plugin entity and a matching schema. The
 | CRM | `lead` | `lead.yaml` | configured | fallback aligned to primary BOB fields; long-tail schema fields remain schema-only |
 | CRM | `campaign` | `campaign.yaml` | configured to `Campaigns.base` | fallback and Base aligned to schema campaign metrics |
 | CRM | `sequence` | `sequence.yaml` | configured to `Sequences.base` | fallback and Base aligned to schema sequence metrics |
-| CRM | `activity` | `activity.yaml` | configured to `Activities.base` | recovered useful Cadence concepts as canonical BOB fields: `contact_ref`, `related`, follow-up fields |
+| CRM | `activity` | `activity.yaml` | configured to `Activities.base` | recovered useful legacy concepts as canonical BOB fields: `contact_ref`, `related`, follow-up fields |
 | Client Work | `meeting` | `meeting.yaml` | configured to `Meetings.base` | added to Client Work tabs and workbook export; workspace can filter by `client_id`/`end_client_id` and `project_id` |
 | Client Work | `comms-thread` | `comms-thread.yaml` | configured to `Comms.base` | added to Client Work tabs and workbook export; workspace can filter by `client_id`/`end_client_id` and `project_id` |
 | Client Work | `deliverable` | `deliverable.yaml` | configured to `Deliverables.base` | added to Client Work tabs and workbook export; workspace can filter by `client_id`/`end_client_id` and `project_id` |
