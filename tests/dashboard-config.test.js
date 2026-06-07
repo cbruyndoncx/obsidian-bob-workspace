@@ -13,6 +13,9 @@ const sandbox = loadMainFunctions([
   'validateWorkspaceConfig',
   'normalizeDashboardConfigShape',
   'resolveDashboardConfig',
+  'resolvePlannerConfig',
+  'resolveSurfaceConfig',
+  'migrateWorkspacePlannerConfig',
 ], {});
 
 const {
@@ -24,6 +27,8 @@ const {
   validateWorkspaceConfig,
   normalizeDashboardConfigShape,
   resolveDashboardConfig,
+  resolvePlannerConfig,
+  resolveSurfaceConfig,
 } = sandbox;
 
 (() => {
@@ -91,6 +96,16 @@ const {
     },
   };
   validateWorkspaceConfig(workspace);
+})();
+
+(() => {
+  const workspace = {
+    dashboards: {
+      'planner.calendar': { title: 'Legacy calendar' },
+    },
+    planner: {},
+  };
+  assert.strictEqual(resolveSurfaceConfig('planner.calendar', workspace), null);
 })();
 
 (() => {

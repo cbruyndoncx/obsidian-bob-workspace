@@ -42,6 +42,33 @@ function cloneConfig(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function migrateWorkspacePlannerConfig(config) {
+  if (!config || typeof config !== 'object' || Array.isArray(config)) return config;
+  const next = JSON.parse(JSON.stringify(config));
+  const planner = next.planner && typeof next.planner === 'object' && !Array.isArray(next.planner)
+    ? Object.assign({}, next.planner)
+    : {};
+  const dashboards = next.dashboards && typeof next.dashboards === 'object' && !Array.isArray(next.dashboards)
+    ? Object.assign({}, next.dashboards)
+    : null;
+  if (dashboards) {
+    let moved = false;
+    Object.keys(dashboards).forEach((surfaceId) => {
+      if (!String(surfaceId || '').startsWith('planner.')) return;
+      if (planner[surfaceId] == null) planner[surfaceId] = dashboards[surfaceId];
+      delete dashboards[surfaceId];
+      moved = true;
+    });
+    if (moved) {
+      if (Object.keys(planner).length) next.planner = planner;
+      else delete next.planner;
+      if (Object.keys(dashboards).length) next.dashboards = dashboards;
+      else delete next.dashboards;
+    }
+  }
+  return next;
+}
+
 function loadBuiltinDashboardDefaults() {
   const defaults = {};
   ['workspace-bob.json', 'workspace-cadence.json', 'workspace-crm.json'].forEach((fileName) => {
@@ -1298,6 +1325,7 @@ function initPluginPaths(plugin) {
 }
 
 function validateWorkspaceConfig(config) {
+  config = migrateWorkspacePlannerConfig(config);
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
     throw new Error('Must be a JSON object');
   }
@@ -1723,12 +1751,12 @@ function persistedWorkspaceOwnedSettings(settings = {}) {
 }
 
 async function saveWorkspaceConfig(app, jsonText) {
-  const parsed = validateWorkspaceConfig(JSON.parse(jsonText));
+  const parsed = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(jsonText)));
   const adapter = app.vault.adapter;
   if (await adapter.exists(WORKSPACE_CONFIG_PATH)) {
     await adapter.write(WORKSPACE_BACKUP_PATH, await adapter.read(WORKSPACE_CONFIG_PATH));
   }
-  await adapter.write(WORKSPACE_CONFIG_PATH, jsonText);
+  await adapter.write(WORKSPACE_CONFIG_PATH, JSON.stringify(parsed, null, 2));
   return parsed;
 }
 
@@ -1737,7 +1765,7 @@ async function loadWorkspaceConfig(app) {
   WORKSPACE_HAS_NAVIGATION = false;
   if (!(await app.vault.adapter.exists(WORKSPACE_CONFIG_PATH))) return WORKSPACE_CONFIG;
   try {
-    WORKSPACE_CONFIG = validateWorkspaceConfig(JSON.parse(await app.vault.adapter.read(WORKSPACE_CONFIG_PATH)));
+    WORKSPACE_CONFIG = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(await app.vault.adapter.read(WORKSPACE_CONFIG_PATH))));
     WORKSPACE_HAS_NAVIGATION = Array.isArray(WORKSPACE_CONFIG.navigation?.groups);
   } catch (e) {
     new obsidian.Notice(`BOB Workspace: workspace.json error - ${e.message}`);
@@ -1858,7 +1886,7 @@ function resolvePlannerConfig(surfaceId, planner = WORKSPACE_CONFIG.planner) {
 
 function resolveSurfaceConfig(surfaceId, config = WORKSPACE_CONFIG) {
   if (String(surfaceId || '').startsWith('planner.')) {
-    return resolvePlannerConfig(surfaceId, config.planner) || resolveDashboardConfig(surfaceId, config.dashboards);
+    return resolvePlannerConfig(surfaceId, config.planner);
   }
   return resolveDashboardConfig(surfaceId, config.dashboards);
 }
@@ -9801,8 +9829,8 @@ class CadenceAppView extends obsidian.ItemView {
     });
     const source = getObjectField('source', typeof card.source === 'string' ? { source: card.source } : {});
     const sourceModeValue = (() => {
-      const raw = String(source.mode || source.builtIn || '').trim().toLowerCase();
-      return raw || 'recent';
+      const raw = String(source.mode || '').trim().toLowerCase();
+      return raw || (String(source.builtIn || '').trim() ? 'built-in' : 'recent');
     })();
     const setSourceField = (patch, opts = {}) => {
       const normalizedPatch = Object.assign({}, patch);
@@ -12125,14 +12153,24 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     });
     const workbookDesignerBody = workbookDesigner.createDiv({ cls: 'cad-workbook-designer-body' });
 
-    const readWorkspaceDraft = () => validateWorkspaceConfig(JSON.parse(workspaceTa.value));
+    const readWorkspaceDraft = () => validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(workspaceTa.value)));
+    let dashboardRenderer = null;
     const renderWorkspaceDesigners = () => {
       renderNavDesigner();
       renderWorkbookDesigner();
+      if (dashboardRenderer) {
+        pDash.empty();
+        void dashboardRenderer.renderDashboardEditor(pDash).catch((e) => {
+          pDash.createDiv({ cls: 'setting-item-description', text: `Dashboard editor failed: ${e.message}` });
+        });
+        pWidgets.empty();
+        dashboardRenderer._renderWidgetCatalog(pWidgets);
+      }
     };
     const updateWorkspaceDraft = (config, message) => {
       workspaceTa.value = JSON.stringify(config, null, 2);
       setWorkspaceStatus(message || 'Workspace changed - click Save and apply', true);
+      WORKSPACE_CONFIG = validateWorkspaceConfig(migrateWorkspacePlannerConfig(config));
       renderWorkspaceDesigners();
     };
     const saveWorkspaceBase = async (entityKey, file, view) => {
@@ -12654,7 +12692,16 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         });
       });
     };
-    workspaceTa.addEventListener('input', renderWorkspaceDesigners);
+    workspaceTa.addEventListener('input', () => {
+      try {
+        const parsed = readWorkspaceDraft();
+        WORKSPACE_CONFIG = parsed;
+        setWorkspaceStatus(`Valid - ${parsed.navigation?.groups?.length || 0} navigation group${(parsed.navigation?.groups?.length || 0) === 1 ? '' : 's'}`, true);
+        renderWorkspaceDesigners();
+      } catch (e) {
+        setWorkspaceStatus(`Invalid JSON/config: ${e.message}`, false);
+      }
+    });
     setTimeout(renderWorkspaceDesigners, 0);
 
     /* ─── Dashboards ─── */
@@ -12663,7 +12710,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       cls: 'setting-item-description',
       text: 'Use the dashboard editor to tune the shipped surfaces. The dashboard tab stays focused on composition; the widget catalog and gap analysis live next door.',
     });
-    const dashboardRenderer = this._dashboardSettingsRenderer();
+    dashboardRenderer = this._dashboardSettingsRenderer();
     void dashboardRenderer.renderDashboardEditor(pDash).catch((e) => {
       pDash.createDiv({ cls: 'setting-item-description', text: `Dashboard editor failed: ${e.message}` });
     });

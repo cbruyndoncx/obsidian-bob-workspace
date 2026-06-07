@@ -3,6 +3,8 @@ const { loadMainFunctions } = require('./load-main-functions');
 
 const sandbox = loadMainFunctions([
   'loadWorkspaceConfig',
+  'resolveSurfaceConfig',
+  'migrateWorkspacePlannerConfig',
 ], {
   validateWorkspaceConfig: (config) => config,
   WORKSPACE_CONFIG_PATH: 'workspace.json',
@@ -27,14 +29,22 @@ const { loadWorkspaceConfig } = sandbox;
           return path === 'workspace.json';
         },
         async read() {
-          return JSON.stringify({});
+          return JSON.stringify({
+            dashboards: {
+              'planner.calendar': { title: 'Legacy calendar' },
+            },
+          });
         },
       },
     },
   };
 
   const loaded = await loadWorkspaceConfig(app);
-  assert.deepStrictEqual(loaded, {});
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(loaded)), {
+    planner: {
+      'planner.calendar': { title: 'Legacy calendar' },
+    },
+  });
   console.log('workspace-config.test.js: ok');
 })().catch((error) => {
   console.error(error);
