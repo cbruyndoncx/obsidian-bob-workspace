@@ -1945,10 +1945,18 @@ function resolvePlannerConfig(surfaceId, planner = WORKSPACE_CONFIG.planner) {
 }
 
 function resolveSurfaceConfig(surfaceId, config = WORKSPACE_CONFIG) {
+  // Fall back to the shipped builtin dashboard for surfaces the user's
+  // workspace.json doesn't define — e.g. an older workspace.json predating a
+  // surface, or a template (like workspace-bob) that omits one. Non-destructive:
+  // the builtin is only used for rendering, never written back to their file.
+  const builtin = () => {
+    const def = typeof BUILTIN_DASHBOARD_DEFAULTS !== 'undefined' ? BUILTIN_DASHBOARD_DEFAULTS[surfaceId] : null;
+    return def ? normalizeDashboardConfigShape(def) : null;
+  };
   if (String(surfaceId || '').startsWith('planner.')) {
-    return resolvePlannerConfig(surfaceId, config.planner);
+    return resolvePlannerConfig(surfaceId, config.planner) || builtin();
   }
-  return resolveDashboardConfig(surfaceId, config.dashboards);
+  return resolveDashboardConfig(surfaceId, config.dashboards) || builtin();
 }
 
 function normalizeDashboardConfigShape(value) {
