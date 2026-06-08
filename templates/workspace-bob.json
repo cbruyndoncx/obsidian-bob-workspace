@@ -526,31 +526,30 @@
         [
           {
             "kind": "actions",
-            "title": "Jump / Create",
             "actions": [
               {
-                "label": "Inbox",
-                "surface": "planner.inbox",
-                "icon": "inbox"
+                "label": "Quick capture",
+                "action": "quick-capture",
+                "icon": "plus-circle"
               },
               {
-                "label": "Today",
-                "surface": "planner.today",
-                "icon": "sun"
+                "label": "New Task",
+                "entityKey": "task",
+                "icon": "circle-check-big"
               },
               {
-                "label": "Calendar",
-                "surface": "planner.calendar",
-                "icon": "calendar-days"
-              },
-              {
-                "label": "Pipeline",
-                "surface": "crm.pipeline",
+                "label": "New Deal",
+                "entityKey": "deal",
                 "icon": "trending-up"
               },
               {
-                "label": "Activities",
-                "surface": "crm.activities",
+                "label": "New Contact",
+                "entityKey": "contact",
+                "icon": "users"
+              },
+              {
+                "label": "New Activity",
+                "entityKey": "activity",
                 "icon": "calendar"
               }
             ]
@@ -576,7 +575,7 @@
               "section": "inbox"
             },
             "limit": 5,
-            "empty": "Inbox zero — capture anything with + Inbox above."
+            "empty": "Inbox zero — capture anything with Quick capture above."
           }
         ],
         [
@@ -589,7 +588,7 @@
               "section": "today"
             },
             "limit": 8,
-            "empty": "No tasks yet — add one with + Task above."
+            "empty": "No tasks yet — create one above."
           },
           {
             "kind": "list",
@@ -624,7 +623,7 @@
               "section": "pipeline"
             },
             "limit": 5,
-            "empty": "No open deals — hit + Deal above."
+            "empty": "No open deals — create one above."
           }
         ],
         [
@@ -648,7 +647,7 @@
               "section": "projects"
             },
             "limit": 3,
-            "empty": "No projects yet — hit + Project above."
+            "empty": "No projects yet."
           }
         ],
         [

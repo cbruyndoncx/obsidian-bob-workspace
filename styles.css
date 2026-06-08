@@ -322,11 +322,84 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
 .cad-app-nav {
   width: 220px;
   flex-shrink: 0;
-  padding: 12px 10px;
+  padding: 0 10px 12px;
   border-right: 1px solid var(--background-modifier-border);
   background: var(--background-secondary);
   overflow-y: auto;
 }
+
+.cad-nav-pinned {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--background-secondary);
+  margin: 0 0 8px;
+  padding: 2px 2px 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
+}
+.cad-nav-pinned-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 0;
+}
+.cad-nav-pinned-item-wrap {
+  position: relative;
+  width: 30px;
+  height: 30px;
+}
+.cad-nav-pinned-item {
+  width: 100%;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 7px;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+  position: relative;
+}
+.cad-nav-pinned-item:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.cad-nav-pinned-item.active {
+  background: color-mix(in srgb, var(--interactive-accent) 14%, var(--background-primary));
+  border-color: color-mix(in srgb, var(--interactive-accent) 35%, var(--background-modifier-border));
+  color: var(--interactive-accent);
+}
+.cad-nav-pinned-icon { display: inline-flex; align-items: center; }
+.cad-nav-pinned-icon svg { width: 14px; height: 14px; }
+.cad-nav-pinned-remove {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  background: var(--background-primary);
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 120ms ease, color 120ms ease, background-color 120ms ease, transform 120ms ease;
+}
+.cad-nav-pinned-item-wrap:hover .cad-nav-pinned-remove,
+.cad-nav-pinned-item-wrap:focus-within .cad-nav-pinned-remove {
+  opacity: 1;
+  transform: scale(1);
+}
+.cad-nav-pinned-remove:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.cad-nav-pinned-remove svg { width: 10px; height: 10px; }
 
 .cad-nav-group { margin-bottom: 12px; }
 .cad-nav-separator { border: none; border-top: 2px solid var(--background-modifier-border); margin: 10px 8px 8px; opacity: 0.8; }
@@ -353,7 +426,7 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 10px 6px 16px;
+  padding: 4px 30px 4px 16px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-normal);
@@ -390,6 +463,34 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
 .cad-app-nav-icon { display: inline-flex; align-items: center; flex-shrink: 0; }
 .cad-app-nav-icon svg { width: 16px; height: 16px; }
 .cad-app-nav-label { flex: 1; }
+.cad-nav-pin-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background-color 120ms ease;
+}
+.cad-app-nav-item:hover .cad-nav-pin-toggle,
+.cad-app-nav-item:focus-within .cad-nav-pin-toggle {
+  opacity: 1;
+}
+.cad-nav-pin-toggle:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.cad-nav-pin-toggle svg { width: 14px; height: 14px; }
 .cad-app-nav-badge {
   font-size: 9px;
   font-weight: 600;
@@ -1762,6 +1863,15 @@ textarea.cad-schema-designer-input {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+.cad-workspace-template-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cad-workspace-template-row select {
+  min-width: min(360px, 100%);
+}
 .cad-workbook-group-select {
   min-width: 220px;
   max-width: 280px;
@@ -2719,6 +2829,8 @@ select.cad-form-input {
     transition: transform 220ms ease;
     box-shadow: 4px 0 24px -6px rgba(0, 0, 0, 0.35);
   }
+  .cad-nav-pinned-item { width: 34px; height: 34px; }
+  .cad-nav-pin-toggle { opacity: 0; }
   .cad-mobile-nav-open .cad-app-nav { transform: translateX(0); }
   .cad-mobile-backdrop { display: block; }
   .cad-mobile-nav-open .cad-mobile-backdrop { opacity: 1; pointer-events: auto; }
@@ -3060,6 +3172,74 @@ select.cad-form-input {
   background: color-mix(in srgb, var(--interactive-accent) 6%, transparent);
   border-radius: 8px;
 }
+
+.cad-review-summary,
+.cad-review-section {
+  padding: 0 32px 20px;
+}
+.cad-review-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.cad-review-summary-card {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background: var(--background-secondary);
+  padding: 12px;
+}
+.cad-review-summary-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-normal);
+}
+.cad-review-summary-label {
+  margin-top: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.cad-review-section { margin-top: 18px; }
+.cad-review-table-wrap {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background: var(--background-primary);
+}
+.cad-review-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  min-width: 0;
+}
+.cad-review-table th,
+.cad-review-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  vertical-align: top;
+  text-align: left;
+  font-size: 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.cad-review-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.cad-review-table tbody tr:hover { background: var(--background-modifier-hover); }
 .cad-widget-gap-title {
   font-size: 12px;
   font-weight: 700;
