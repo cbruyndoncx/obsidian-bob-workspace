@@ -150,20 +150,12 @@ const {
   );
 })();
 
-// Render-time fallback: surfaces missing from the user's workspace.json fall
-// back to the shipped builtin dashboard, so an older/sparser workspace.json
-// still renders newer surfaces instead of "Add dashboards.xxx" everywhere.
+// Surface config is resolved ONLY from the user's workspace.json — no hidden
+// builtin fallback. Applying a template must write the config explicitly so it
+// is visible and editable (see template-bundle.test.js for completeness).
 (() => {
-  const withBuiltins = loadMainFunctions(
-    ['normalizeDashboardConfigShape', 'resolveDashboardConfig', 'resolvePlannerConfig', 'resolveSurfaceConfig'],
-    { BUILTIN_DASHBOARD_DEFAULTS: { 'crm.pipeline': { title: 'Builtin Pipeline' }, home: { title: 'Builtin Home' } } }
-  );
-  // Surface absent from the user's config → builtin is used
-  assert.strictEqual(withBuiltins.resolveSurfaceConfig('crm.pipeline', { dashboards: {} }).title, 'Builtin Pipeline');
-  // A user override still wins over the builtin
-  assert.strictEqual(withBuiltins.resolveSurfaceConfig('home', { dashboards: { home: { title: 'User Home' } } }).title, 'User Home');
-  // Truly-unconfigured surface (not in builtins) still returns null → setup message
-  assert.strictEqual(withBuiltins.resolveSurfaceConfig('crm.contacts', { dashboards: {} }), null);
+  assert.strictEqual(resolveSurfaceConfig('crm.pipeline', { dashboards: {} }), null);
+  assert.strictEqual(resolveSurfaceConfig('home', { dashboards: { home: { title: 'User Home' } } }).title, 'User Home');
 })();
 
 console.log('dashboard-config.test.js: ok');

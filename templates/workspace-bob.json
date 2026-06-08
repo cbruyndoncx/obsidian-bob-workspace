@@ -1055,6 +1055,113 @@
         ]
       ]
     },
+    "crm.pipeline": {
+      "title": "Pipeline",
+      "subtitle": "Open deals and follow-up work",
+      "controls": [
+        {
+          "kind": "selector",
+          "key": "groupBy",
+          "label": "Group by",
+          "default": "stage",
+          "allLabel": "Stage",
+          "options": [
+            {
+              "value": "stage",
+              "label": "Stage"
+            },
+            {
+              "value": "owner",
+              "label": "Owner"
+            },
+            {
+              "value": "company",
+              "label": "Company"
+            }
+          ]
+        },
+        {
+          "kind": "selector",
+          "key": "stage",
+          "label": "Stage",
+          "entity": "deal",
+          "field": "stage",
+          "allLabel": "All stages"
+        }
+      ],
+      "stats": [
+        {
+          "label": "OPEN DEALS",
+          "entity": "deal",
+          "count": "open",
+          "source": {
+            "source": "recent-open",
+            "filters": "stage != \"Won\" && stage != \"Lost\" && {{stageFilter}}"
+          },
+          "sub": {
+            "entity": "deal",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "sky"
+        },
+        {
+          "label": "WEIGHTED",
+          "entity": "deal",
+          "metric": "weightedForecast",
+          "source": {
+            "source": "recent-open",
+            "filters": "stage != \"Won\" && stage != \"Lost\" && {{stageFilter}}"
+          },
+          "sub": "forecast on open",
+          "accent": "mint"
+        },
+        {
+          "label": "WON",
+          "entity": "deal",
+          "metric": "sum",
+          "source": {
+            "source": "recent",
+            "filters": "stage == \"Won\" && {{stageFilter}}"
+          },
+          "field": "value",
+          "sub": "won revenue",
+          "accent": "emerald"
+        },
+        {
+          "label": "LOST",
+          "entity": "deal",
+          "metric": "sum",
+          "source": {
+            "source": "recent",
+            "filters": "stage == \"Lost\" && {{stageFilter}}"
+          },
+          "field": "value",
+          "sub": "closed lost",
+          "accent": "rose"
+        },
+        {
+          "label": "WIN RATE",
+          "entity": "deal",
+          "metric": "winRate",
+          "sub": "closed deals",
+          "accent": "warn"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "kind": "kanban",
+            "entity": "deal",
+            "source": {
+              "source": "recent-open",
+              "filters": "stage != \"Won\" && stage != \"Lost\" && {{stageFilter}}"
+            },
+            "groupBy": "stage"
+          }
+        ]
+      ]
+    },
     "workspace.base-links": {
       "title": "Base Links",
       "subtitle": "Jump into the Base views behind key records",

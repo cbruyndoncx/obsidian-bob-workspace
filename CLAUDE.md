@@ -212,10 +212,19 @@ weekDates(anchor, weekStartsOn) // [Mon, Tue, ..., Sun] as Date[]
 ### Testing/Development Cycle
 
 1. Edit `main.js`, `styles.css`, or file-backed templates/docs as needed
-2. Copy to test vault: `cp main.js styles.css manifest.json vendor/xlsx.full.min.js <vault>/.obsidian/plugins/bob-workspace/`
-3. Reload in Obsidian: Settings → Community plugins → BOB Workspace → Disable/Enable
-4. Check console: Command palette → "Toggle developer tools"
-5. Run `node tests/run-tests.js` for the lightweight regression suite
+2. **If you edited any `templates/workspace-*.json`, run `node scripts/bundle-templates.js`** — this inlines them into `main.js` (see Workspace templates below). The regression suite fails if the bundle is stale.
+3. Copy to test vault: `cp main.js styles.css manifest.json vendor/xlsx.full.min.js <vault>/.obsidian/plugins/bob-workspace/`
+4. Reload in Obsidian: Settings → Community plugins → BOB Workspace → Disable/Enable
+5. Check console: Command palette → "Toggle developer tools"
+6. Run `node tests/run-tests.js` for the lightweight regression suite
+
+### Workspace templates (bundled)
+
+Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it does **not** ship the `templates/` folder, and `fs`/`__dirname` reads don't work in the plugin runtime. So the workspace templates are **bundled into `main.js`** as `BUNDLED_WORKSPACE_TEMPLATES` (between generated markers near the top of the file).
+
+- `templates/workspace-*.json` remain the editable **source of truth**. After editing one, regenerate the bundle: `node scripts/bundle-templates.js`.
+- `loadWorkspaceTemplates()` serves the bundled templates (authoritative for shipped names); on-disk templates can only **add** custom ones.
+- Applying a template writes the full config — including all dashboards — into `workspace.json`, so it is visible and editable in Settings. There is no hidden builtin-dashboard fallback: a surface with no entry in `workspace.json` shows the "Add dashboards.xxx" prompt by design.
 
 ### Code Style
 
