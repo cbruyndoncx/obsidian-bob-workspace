@@ -112,7 +112,7 @@ Use **BOB Workspace** when you want the full EMAI/BOB structure immediately. Use
 6. **Make BOB Workspace your homepage** — Settings → BOB Workspace → toggle "Open BOB Workspace on Obsidian startup"
 7. **Seed schemas if needed** — when schema support is enabled, the plugin can generate missing canonical schema YAML in the configured source folder and then write the derived FileClasses and JSON Schema outputs.
 
-BOB Workspace creates folders on demand: `Cadence/Contacts/`, `Cadence/Pipeline/`, `Cadence/Partners/`, etc. Move them anywhere afterwards — change paths in Settings if you do.
+BOB Workspace creates folders on demand. The shipped defaults follow a numbered vault layout — contacts in `10-ME/10-PEOPLE/`, clients and deals in `30-CLIENTS/`, partners in `20-COMPANY/35-PARTNERS/`, etc. Move them anywhere afterwards — change paths in Settings if you do.
 
 ---
 
@@ -169,14 +169,13 @@ Bind your favourites under Settings → Hotkeys → search "BOB Workspace".
 your-vault/
   daily/                          ← daily notes (your existing setup)
     2026-05-05.md
-  Cadence/
-    Contacts/Jane Smith.md
-    Companies/Acme.md
-    Pipeline/Acme — FTTH expansion.md
-    Partners/Distribution Co.md
-    Activities/Discovery call with Jane.md
-    Projects/Q3 launch.md
-    ...
+  10-ME/10-PEOPLE/Jane Smith.md
+  20-COMPANY/00-PROFILE/Acme.md
+  20-COMPANY/35-PARTNERS/Distribution Co.md
+  30-CLIENTS/Acme — FTTH expansion.md
+  30-CLIENTS/Discovery call with Jane.md
+  30-CLIENTS/Q3 launch.md
+  ...
 ```
 
 Each entity is plain markdown with YAML frontmatter — readable, editable, scriptable, portable. BOB Workspace's views are just rich lenses over these files; everything you do in the UI writes back to them.

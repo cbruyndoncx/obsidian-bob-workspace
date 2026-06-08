@@ -1259,6 +1259,11 @@ select.cad-create-input {
   position: sticky;
   bottom: 0;
 }
+.cad-confirm-modal p { margin: 4px 0; color: var(--text-normal); white-space: pre-wrap; }
+.cad-confirm-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 14px;
+}
 .cad-btn-disabled,
 .cad-btn:disabled {
   opacity: 0.45;

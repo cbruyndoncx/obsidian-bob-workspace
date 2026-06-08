@@ -1,26 +1,24 @@
 # Submission walkthrough
 
-Step-by-step to get Cadence into the Obsidian community plugin store. Follow in order. Every command is copy-paste runnable from `~/Documents/obsidian-cadence/`.
+Step-by-step to get BOB Workspace into the Obsidian community plugin store. Follow in order. Every command is copy-paste runnable from the repo root (`/home/cb/projects/github/obsidian-bob-workspace`).
 
 ## Pre-flight
 
 Confirm these:
 
-- [ ] `manifest.json` `id` is `cadence-planner` (locked — already in use by your local vault; changing it would orphan your data)
-- [ ] `manifest.json` `name` is `Cadence`
-- [ ] `manifest.json` `version` matches the tag you're about to create (`0.13.0`)
-- [ ] `versions.json` lists `0.13.0` → `1.4.0`
+- [ ] `manifest.json` `id` is `bob-workspace` (locked — already in use by your local vault; changing it would orphan your data)
+- [ ] `manifest.json` `name` is `BOB Workspace`
+- [ ] `manifest.json` `version` matches the tag you're about to create (currently `0.14.4-bob.14`)
+- [ ] `versions.json` lists that version → `1.4.0`
 - [ ] `LICENSE` is in place
-- [ ] Code audit clean (no `console.log`, no `innerHTML`, frontmatter via `processFrontMatter`, vault events via `registerEvent`, intervals via `registerInterval`) ✓
-- [ ] Author + authorUrl in `manifest.json` are correct (currently `Wesley Swart` + `https://github.com/wesswart77` — change if your handle differs)
+- [ ] Code audit clean (no `console.log`, no `innerHTML`, frontmatter via `processFrontMatter`, vault events via `registerEvent`, intervals via `registerInterval`, destructive prompts via `CadenceConfirmModal` not `window.confirm()`) ✓
+- [ ] Author + authorUrl in `manifest.json` are correct (`cbruyndoncx` + `https://github.com/cbruyndoncx` — change if your handle differs)
 
 ## Step 1 — Take screenshots
 
-Run from `~/Documents/obsidian-cadence/`. For each, navigate Obsidian to the surface, then run the command. macOS shows a window-picker cursor — click your Obsidian window once.
+Run from the repo root. For each, navigate Obsidian to the surface, then run the command. macOS shows a window-picker cursor — click your Obsidian window once.
 
 ```bash
-cd ~/Documents/obsidian-cadence
-
 # 1. Home / Command Centre — both columns visible
 screencapture -W -x docs/screenshots/01-home.png
 
@@ -48,35 +46,38 @@ Tip: maximize the Obsidian window first (or resize to ~1440×900) for clean fram
 ## Step 2 — Install GitHub CLI (one-time)
 
 ```bash
-brew install gh
+brew install gh   # or your platform's package manager
 gh auth login
 ```
 
 Choose GitHub.com → HTTPS → Login with a web browser.
 
-## Step 3 — Create the repo + push
+## Step 3 — Push the repo
+
+The repo already exists at `cbruyndoncx/obsidian-bob-workspace`. Commit and push your changes:
 
 ```bash
-cd ~/Documents/obsidian-cadence
-git init
 git add .
-git commit -m "Initial release of Cadence v0.13.0"
-gh repo create wesswart77/obsidian-cadence --public --source=. --push --description "A workspace for working life in Obsidian — CRM, PRM, Planner, Reports. Markdown source-of-truth."
+git commit -m "Release v0.14.4-bob.14"
+git push
 ```
 
 Verify it's live: `gh repo view --web`.
 
-## Step 4 — Create the release with the three required assets
+## Step 4 — Create the release with the required assets
 
 ```bash
-cd ~/Documents/obsidian-cadence
-gh release create 0.13.0 \
+gh release create 0.14.4-bob.14 \
   main.js manifest.json styles.css \
-  --title "0.13.0 — initial submission" \
-  --notes "First public release. CRM, PRM, Planner, Reports, Inbox + reminders, rich Project detail. Markdown source-of-truth."
+  vendor/xlsx.full.min.js \
+  templates/workspace-*.json \
+  --title "0.14.4-bob.14" \
+  --notes "CRM, PRM, Client Work, Finance, Procurement, Planner, Reports, Inbox + reminders, rich Project detail. Markdown source-of-truth."
 ```
 
 **The tag must match `manifest.json.version` exactly** — no `v` prefix. The bot rejects mismatches.
+
+Required release assets: `main.js`, `manifest.json`, `styles.css`, `vendor/xlsx.full.min.js`, and `templates/workspace-*.json`. The XLSX vendor bundle and workspace templates are loaded at runtime — omitting them breaks export/import and first-run bootstrap.
 
 ## Step 5 — Submit the PR to obsidian-releases
 
@@ -84,18 +85,18 @@ gh release create 0.13.0 \
 cd /tmp
 gh repo clone obsidianmd/obsidian-releases
 cd obsidian-releases
-git checkout -b add-cadence
+git checkout -b add-bob-workspace
 ```
 
-Open `community-plugins.json`. Find a sensible alphabetical spot for `cadence-planner` and add:
+Open `community-plugins.json`. Find a sensible alphabetical spot for `bob-workspace` and add:
 
 ```json
 {
-  "id": "cadence-planner",
-  "name": "Cadence",
-  "author": "Wesley Swart",
-  "description": "A workspace for working life: Home command centre, CRM, PRM, Planner with reminders and rich projects, Reports. Markdown source-of-truth, no server required.",
-  "repo": "wesswart77/obsidian-cadence"
+  "id": "bob-workspace",
+  "name": "BOB Workspace",
+  "author": "cbruyndoncx",
+  "description": "A unified workspace: Home command centre, CRM, PRM, Client Work, Finance, Procurement, Planner with reminders and rich projects, Reports. Markdown source-of-truth, no server required.",
+  "repo": "cbruyndoncx/obsidian-bob-workspace"
 },
 ```
 
@@ -103,26 +104,26 @@ Then:
 
 ```bash
 git add community-plugins.json
-git commit -m "Add Cadence plugin"
-git push -u origin add-cadence
+git commit -m "Add BOB Workspace plugin"
+git push -u origin add-bob-workspace
 gh pr create --repo obsidianmd/obsidian-releases \
-  --title "Add plugin: Cadence" \
+  --title "Add plugin: BOB Workspace" \
   --body "$(cat <<'EOF'
 ## I am submitting a new Community Plugin
 
 ### Repo URL
-https://github.com/wesswart77/obsidian-cadence
+https://github.com/cbruyndoncx/obsidian-bob-workspace
 
 ### Release
-https://github.com/wesswart77/obsidian-cadence/releases/tag/0.13.0
+https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.14
 
 ### Description
-A unified workspace plugin: Home command centre, CRM, PRM, Planner with reminders, rich Project Management, Reports. All on top of plain markdown — no server, no sync service.
+A unified workspace plugin: Home command centre, CRM, PRM, Client Work, Finance, Procurement, Planner with reminders, rich Project Management, Reports. All on top of plain markdown — no server, no sync service.
 
 ### Confirmation
 - [x] I have read the [developer policies](https://docs.obsidian.md/Developer+policies) and the [submission requirements](https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin).
 - [x] My plugin's `manifest.json` is in the root of the repo.
-- [x] My GitHub release is tagged `0.13.0` (matches `manifest.json` version exactly, no `v` prefix).
+- [x] My GitHub release is tagged to match `manifest.json` version exactly, no `v` prefix.
 - [x] `main.js`, `manifest.json`, and `styles.css` are uploaded as release assets.
 - [x] I have tested the plugin on the latest Obsidian version.
 - [x] My plugin does not include "obsidian" in its name or id.
@@ -135,26 +136,20 @@ EOF
 - The **`obsidian-bot`** runs automated checks within minutes. If it flags anything, fix in your repo (push a new tag if needed) and comment on the PR.
 - A **human reviewer** picks it up over the next 1–4 weeks. They may request changes — common asks:
   - Description rewording (no "obsidian" mentions, no marketing-y language for a separate product)
-  - Use Obsidian's `Modal` instead of `confirm()` for destructive actions (currently we use `confirm()` for project/entity delete)
+  - Use Obsidian's `Modal` instead of `confirm()` for destructive actions — **already done** (`CadenceConfirmModal` / `confirmModal()`)
   - Use `requestUrl` for any HTTP (we don't make any yet)
-- Push fixes by editing your repo, creating a new release tag (e.g. `0.11.5`), and comment on the PR with the new release link.
+- Push fixes by editing your repo, creating a new release tag, and comment on the PR with the new release link.
 
 ## After approval
 
 - Your plugin appears in Settings → Community plugins → Browse.
-- For future updates: bump `version` in `manifest.json`, add `"<new-version>": "<min-app-version>"` to `versions.json`, commit, push, `gh release create <new-version> main.js manifest.json styles.css --title "<new-version>"`. The store auto-detects new releases — no PR needed for updates.
+- For future updates: bump `version` in `manifest.json`, add `"<new-version>": "<min-app-version>"` to `versions.json`, commit, push, then `gh release create <new-version> main.js manifest.json styles.css vendor/xlsx.full.min.js templates/workspace-*.json --title "<new-version>"`. The store auto-detects new releases — no PR needed for updates.
 
 ## If a reviewer asks for changes
 
 Common ones:
 
-1. **`window.confirm()` for delete** — replace with a Cadence-styled `Modal` showing `Cancel` / `Delete`. Keep `confirm()` calls in two places:
-   - `renderEntityDetail` delete button
-   - `_renderMilestoneSection` and `_renderTaskSection` delete buttons
-   - Inbox row delete button
+1. **Idle timers on unload** — wrap `setTimeout`s in the views with cleanup. Most are short-debounced auto-saves; safe in practice but might get flagged.
+2. **Settings descriptions** — they may want shorter / less marketing-y copy in the manifest description.
 
-2. **Idle timers on unload** — wrap `setTimeout`s in the views with cleanup. Most are short-debounced auto-saves; safe in practice but might get flagged.
-
-3. **Settings descriptions** — they may want shorter / less marketing-y copy in the manifest description.
-
-I'll iterate on whatever the reviewers raise.
+Iterate on whatever the reviewers raise.

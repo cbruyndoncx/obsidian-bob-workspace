@@ -89,7 +89,7 @@ function loadBuiltinDashboardDefaults() {
       Object.entries(parsed.dashboards || {}).forEach(([surfaceId, config]) => {
         defaults[surfaceId] = cloneConfig(config);
       });
-    } catch (_) {}
+    } catch (_) { /* a malformed template file is skipped; other defaults still load */ }
   });
   return defaults;
 }
@@ -2503,7 +2503,7 @@ async function buildHomeSnapshot(app, settings = {}) {
         if (meta.next?.date && meta.next.date >= today && meta.next.date <= addDays(today, 7)) {
           upcoming.push({ date: meta.next.date, title: `${entityValue(e, 'project_name', projectDef) || entityValue(e, 'name', projectDef) || e.basename} — ${meta.next.title || 'milestone'}`, type: 'Milestone', file: e.file });
         }
-      } catch (_) {}
+      } catch (_) { /* skip a project whose milestone metadata won't parse; widget still renders the rest */ }
     }
   }
   if (configuredEntities.has('registration')) {
@@ -2583,7 +2583,7 @@ async function buildHomeSnapshot(app, settings = {}) {
           items.push({ title: `${openTasks} open ${openTasks === 1 ? 'task' : 'tasks'} on today\\'s note`, meta: 'planner.today', tone: 'emerald', action: { surface: 'planner.today' } });
         }
       }
-    } catch (_) {}
+    } catch (_) { /* today's note missing or unreadable — the open-tasks hint is skipped */ }
     const overdue = reminders.filter((r) => r.when && new Date(r.when).getTime() <= nowMs);
     if (overdue.length) items.push({ title: `${overdue.length} overdue reminder${overdue.length === 1 ? '' : 's'}`, meta: overdue[0].text, tone: 'rose', action: { surface: 'planner.inbox' } });
     if (openDeals.length) items.push({ title: `${openDeals.length} open deal${openDeals.length === 1 ? '' : 's'}`, meta: `${fmtValue(openDeals.reduce((s, e) => s + (Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0), 0), 'currency')} pipeline`, tone: 'sky', action: { surface: 'crm.pipeline' } });
@@ -3509,7 +3509,7 @@ function bootstrapSchemaEntityKeys(app, config = WORKSPACE_CONFIG, opts = {}) {
     Object.keys(ENTITIES).forEach((key) => {
       try {
         if (listEntityFiles(app, key).length) addConfiguredEntityKey(keys, key);
-      } catch (_) {}
+      } catch (_) { /* a misconfigured entity is skipped so the rest still enumerate */ }
     });
   }
   return [...keys]
@@ -5098,7 +5098,7 @@ class CadenceReminderEditModal extends obsidian.Modal {
       del.type = 'button';
       del.style.marginRight = 'auto';
       del.addEventListener('click', async () => {
-        if (!confirm('Delete this reminder?')) return;
+        if (!(await confirmModal(this.app, 'Delete this reminder?', { title: 'Delete reminder', cta: 'Delete' }))) return;
         await this.plugin.deleteReminder(this.reminder.id);
         this._submitted = true;
         this.close();
@@ -5259,7 +5259,7 @@ function getXLSX(app) {
   ];
   try {
     if (app?.vault?.adapter?.getFullPath) candidates.push(app.vault.adapter.getFullPath(relPath));
-  } catch (_) {}
+  } catch (_) { /* getFullPath unavailable on this adapter — fall back to other candidates */ }
   const errors = [];
   for (const candidate of candidates) {
     try {
@@ -6169,6 +6169,45 @@ class CadencePromptModal extends obsidian.Modal {
     if (!this._submitted && this.onSubmit) this.onSubmit(null);
     this.contentEl.empty();
   }
+}
+
+/* ─────────── Yes/No confirmation modal ─────────── */
+class CadenceConfirmModal extends obsidian.Modal {
+  constructor(app, opts) {
+    super(app);
+    this.message = opts.message || 'Are you sure?';
+    this.heading = opts.title || 'Confirm';
+    this.cta = opts.cta || 'Confirm';
+    this.danger = opts.danger !== false; // destructive styling by default
+    this.onResolve = opts.onResolve;
+    this._answered = false;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass('cad-confirm-modal');
+    contentEl.createEl('h3', { text: this.heading });
+    String(this.message).split('\n').forEach((line) => contentEl.createEl('p', { text: line }));
+
+    const row = contentEl.createDiv({ cls: 'cad-confirm-actions' });
+    const cancel = row.createEl('button', { text: 'Cancel' });
+    cancel.addEventListener('click', () => this.close());
+    const ok = row.createEl('button', { text: this.cta, cls: this.danger ? 'mod-warning' : 'mod-cta' });
+    ok.addEventListener('click', () => { this._answered = true; this.close(); this.onResolve(true); });
+
+    setTimeout(() => ok.focus(), 0);
+  }
+  onClose() {
+    if (!this._answered && this.onResolve) this.onResolve(false);
+    this.contentEl.empty();
+  }
+}
+
+// Promise-based replacement for window.confirm(); resolves true on confirm, false otherwise.
+function confirmModal(app, message, opts = {}) {
+  return new Promise((resolve) => {
+    new CadenceConfirmModal(app, { message, ...opts, onResolve: resolve }).open();
+  });
 }
 
 /* ─────────── Obsidian icon picker ─────────── */
@@ -7144,7 +7183,7 @@ class CadenceAppView extends obsidian.ItemView {
         .filter(Boolean);
       if (!filesToDelete.length) return;
       const names = filesToDelete.map((f) => f.basename).join('\n• ');
-      if (!confirm(`Move to trash:\n• ${names}\n\n${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} will be deleted.`)) return;
+      if (!(await confirmModal(this.app, `Move to trash:\n• ${names}\n\n${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} will be deleted.`, { title: 'Delete files', cta: 'Move to trash' }))) return;
       for (const file of filesToDelete) {
         try { await this.app.vault.trash(file, true); } catch (e) { new obsidian.Notice(`Delete failed for ${file.basename}: ${e.message}`); }
       }
@@ -8774,7 +8813,9 @@ class CadenceAppView extends obsidian.ItemView {
 
     const file = this.app.vault.getAbstractFileByPath(sourcePath);
     if (!(file instanceof obsidian.TFile)) return { text: '', sourcePath };
-    const content = await this.app.vault.read(file);
+    let content;
+    try { content = await this.app.vault.read(file); }
+    catch (_) { return { text: '', sourcePath: file.path }; } // file removed mid-render
     if (!heading) return { text: content, sourcePath: file.path };
 
     const sections = parseH2Sections(content);
@@ -10907,7 +10948,7 @@ class CadenceAppView extends obsidian.ItemView {
     openNote.addEventListener('click', () => this.app.workspace.openLinkText(file.path, '', false));
     const deleteBtn = headRight.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Delete' });
     deleteBtn.addEventListener('click', async () => {
-      if (!confirm(`Delete this ${def.label.toLowerCase()}? This moves the file to trash.`)) return;
+      if (!(await confirmModal(this.app, `Delete this ${def.label.toLowerCase()}? This moves the file to trash.`, { title: 'Delete', cta: 'Delete' }))) return;
       try {
         await this.app.vault.trash(file, true);
         new obsidian.Notice(`Deleted ${def.label}: ${file.basename}`);
@@ -11057,7 +11098,7 @@ class CadenceAppView extends obsidian.ItemView {
     openNote.addEventListener('click', () => this.app.workspace.openLinkText(file.path, '', false));
     const deleteBtn = headRight.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Delete' });
     deleteBtn.addEventListener('click', async () => {
-      if (!confirm(`Delete this project? This moves the file to trash.`)) return;
+      if (!(await confirmModal(this.app, `Delete this project? This moves the file to trash.`, { title: 'Delete project', cta: 'Delete' }))) return;
       try {
         await this.app.vault.trash(file, true);
         new obsidian.Notice(`Deleted project: ${file.basename}`);
@@ -11728,8 +11769,8 @@ class CadenceAppView extends obsidian.ItemView {
       if (r.text) await this._propagateTaskComplete(r.text, true, { kind: 'reminder', id: r.id });
     });
     doneBtn.classList.add('primary');
-    const delBtn = mk('×', 'Delete', () => {
-      if (confirm('Delete this reminder?')) this.plugin.deleteReminder(r.id);
+    const delBtn = mk('×', 'Delete', async () => {
+      if (await confirmModal(this.app, 'Delete this reminder?', { title: 'Delete reminder', cta: 'Delete' })) this.plugin.deleteReminder(r.id);
     });
     delBtn.classList.add('cad-btn-danger');
   }
@@ -11741,13 +11782,17 @@ class CadenceAppView extends obsidian.ItemView {
       cta: 'Add task',
     });
     if (!text) return;
-    const file = await ensureDailyNote(this.app, this.plugin.settings);
-    const content = await this.app.vault.read(file);
-    const parsed = parseSections(content, this.plugin.settings);
-    const newTasks = [...parsed.tasks, `- [ ] ${text}`];
-    const next = replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n'));
-    await this.app.vault.modify(file, next);
-    new obsidian.Notice('Added to today');
+    try {
+      const file = await ensureDailyNote(this.app, this.plugin.settings);
+      const content = await this.app.vault.read(file);
+      const parsed = parseSections(content, this.plugin.settings);
+      const newTasks = [...parsed.tasks, `- [ ] ${text}`];
+      const next = replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n'));
+      await this.app.vault.modify(file, next);
+      new obsidian.Notice('Added to today');
+    } catch (e) {
+      new obsidian.Notice(`Couldn't add task: ${e.message}`);
+    }
   }
 
   /* ── Pipeline kanban (deals grouped by stage) ───── */
@@ -14314,7 +14359,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     schemaBootstrapBanner.createSpan({ text: ' ' });
     const bootstrapAction = schemaBootstrapBanner.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Bootstrap schemas' });
     bootstrapAction.addEventListener('click', async () => {
-      if (!confirm('Create canonical schema YAML from the current workspace entity definitions? Existing source files will be left untouched.')) return;
+      if (!(await confirmModal(this.plugin.app, 'Create canonical schema YAML from the current workspace entity definitions? Existing source files will be left untouched.', { title: 'Bootstrap schemas', cta: 'Bootstrap', danger: false }))) return;
       try {
         const result = await bootstrapCanonicalSchemaSources(this.plugin.app, this.plugin.settings);
         const regen = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
@@ -14649,14 +14694,14 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       await loadSourceSchema(target);
     };
     schemaSelect.addEventListener('change', async () => {
-      if (schemaDirty && !confirm('Discard unsaved schema changes?')) {
+      if (schemaDirty && !(await confirmModal(this.plugin.app, 'Discard unsaved schema changes?', { title: 'Discard changes', cta: 'Discard' }))) {
         schemaSelect.value = sourceSchemaPath;
         return;
       }
       await loadSourceSchema(schemaSelect.value);
     });
     schemaReload.addEventListener('click', async () => {
-      if (schemaDirty && !confirm('Discard unsaved schema changes?')) return;
+      if (schemaDirty && !(await confirmModal(this.plugin.app, 'Discard unsaved schema changes?', { title: 'Discard changes', cta: 'Discard' }))) return;
       await refreshSchemaSelect(sourceSchemaPath);
     });
     schemaNew.addEventListener('click', () => {
@@ -14699,7 +14744,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         await ensureFolderSync(this.plugin.app, schemaFolder);
         const renamedPath = `${schemaFolder}/${sourceSchema.entity}.yaml`;
         if (sourceSchemaPath !== renamedPath && await adapter.exists(sourceSchemaPath)) {
-          if (!confirm(`Rename schema source file to ${sourceSchema.entity}.yaml to match its entity key?`)) {
+          if (!(await confirmModal(this.plugin.app, `Rename schema source file to ${sourceSchema.entity}.yaml to match its entity key?`, { title: 'Rename schema source', cta: 'Rename', danger: false }))) {
             throw new Error('Entity key changes require renaming the canonical source file');
           }
           if (await adapter.exists(renamedPath)) throw new Error(`${renamedPath} already exists`);
@@ -14734,7 +14779,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     schemaSaveGenerate.addEventListener('click', async () => saveSchemaSource(true));
     schemaDelete.addEventListener('click', async () => {
       if (!sourceSchemaPath || !(await adapter.exists(sourceSchemaPath))) return;
-      if (!confirm(`Archive ${sourceSchemaPath}? It will stop loading as a record type and remain available as a timestamped backup.`)) return;
+      if (!(await confirmModal(this.plugin.app, `Archive ${sourceSchemaPath}? It will stop loading as a record type and remain available as a timestamped backup.`, { title: 'Archive schema source', cta: 'Archive' }))) return;
       try {
         const archivedPath = `${sourceSchemaPath}.archived-${Date.now()}`;
         await adapter.rename(sourceSchemaPath, archivedPath);
@@ -15382,7 +15427,8 @@ class CadencePlugin extends obsidian.Plugin {
   }
 
   onunload() {
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_CADENCE_APP);
+    // Obsidian manages view leaf lifecycle on unload; detaching here is a
+    // documented anti-pattern that disrupts the user's saved layout.
   }
 
   async loadSettings() {
