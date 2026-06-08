@@ -50,6 +50,11 @@ is present, it replaces the built-in left-navigation definition. Its
 object replaces hardcoded dashboard/report compositions when the route id
 matches.
 
+When `schemas.enabled` is true and the configured source folder is empty,
+BOB Workspace can bootstrap canonical schema YAML from the current workspace
+entity definitions before applying schemas. The derived FileClasses and JSON
+Schema outputs are then written from that source folder.
+
 Entity-backed configured surfaces use the generic record table/detail UI.
 Dashboard and report routes such as `home`, `crm.pipeline`, and
 `crm.dashboard`, and `reports.*` render from `workspace.json.dashboards`.
@@ -249,11 +254,10 @@ The plugin can find entity files by:
 - `typeFilters`: match several frontmatter key-value pairs
 - `folders`: scan one or more folders
 - `folder`: scan one fallback folder
-- `typesFilter`: match one of several `type` values
 
 These filters are combined carefully:
 
-- `folders` and `typesFilter` are OR lists internally.
+- `folders` are OR lists internally.
 - Different filter categories are AND-combined.
 - For type-only entities such as People, avoid adding folder restrictions unless the model really requires them.
 
@@ -263,6 +267,9 @@ Schema files are the canonical way to define BOB Workspace record types. With
 schema support enabled, author `00-CORE/Schemas/source/*.yaml` through the
 Settings **Data model designer** or carefully as YAML source. Treat generated
 FileClasses, JSON Schemas and data-model documentation as downstream outputs.
+If the source folder is empty, use the schema bootstrap action or save/apply a
+schema-enabled workspace to seed canonical YAML from the current workspace
+entity definitions before regenerating outputs.
 
 Example:
 
@@ -455,10 +462,15 @@ for dropdowns, checkboxes, and buttons).
 
 Click **Save and regenerate** to write downstream artifacts:
 
-- `00-CORE/FileClasses/{Entity}.md` — Metadata Menu FileClass
-- `00-CORE/Schemas/json/{type_value}.json` — JSON Schema for validation
+- `<schema folder>/fileClasses/{Entity}.md` — Metadata Menu FileClass
+- `<schema folder>/json-schema/{type_value}.schema.json` — JSON Schema for validation
 - Injects an entity table and definition block into `DATAMODEL.md` and
   `DATAMODEL-FULL.md` between the `<!-- BEGIN/END GENERATED -->` markers
+
+If the source folder is empty, the Settings schema section exposes a
+**Bootstrap schemas** button. That command seeds canonical YAML from the
+current workspace entity definitions without overwriting existing sources,
+then regenerates the derived outputs.
 
 ### Step 2 — Place the entity in navigation
 

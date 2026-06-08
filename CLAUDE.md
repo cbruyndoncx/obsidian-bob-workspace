@@ -118,10 +118,9 @@ const ENTITIES = {
 | `typeFilters` object | Multi-field frontmatter match (e.g. `{type:'profile', profile_type:'partner'}`) | `"typeFilters": {"type": "profile", "profile_type": "partner"}` |
 | `typeFilter` string | Single frontmatter `type:` value (e.g. `type: person`) | `"typeFilter": "person"` |
 | `folders` array | Files under any of the listed root paths (OR within array) | `"folders": ["10-ME", "20-COMPANY", "30-CLIENTS"]` |
-| `typesFilter` array | Files whose `type:` matches any listed value (OR within array) | `"typesFilter": ["meeting", "research", "deliverable"]` |
 | `folder` (default) | Single folder prefix — the standard case | Configured via Settings → BOB Workspace → Folders |
 
-All filter conditions are **independent and AND-combined** — any subset can be used together. Within each array (`folders`, `typesFilter`) the logic is OR. Between different filter types the logic is AND.
+All filter conditions are **independent and AND-combined** — any subset can be used together. Within the `folders` array the logic is OR. Between different filter types the logic is AND.
 
 New entities created via BOB Workspace get their `type:` frontmatter set from `typeFilter` / `typeFilters.type` (not the entity key). For `typeFilters` entities, extra discriminator fields (e.g. `profile_type`) are also written.
 
@@ -142,6 +141,7 @@ Entity folders are resolved at runtime via `ENTITY_FOLDERS` (a module-level obje
 ### Schema Loading (`applySchemas`)
 
 When `settings.useSchemas = true`, `applySchemas(app, settings)` reads YAML schema files from `settings.schemasFolder` (default `00-CORE/Schemas/source`) and merges field/column definitions into `ENTITIES` at runtime. This lets Metadata Menu schema files drive the entity model without editing source.
+If the configured schema source folder is empty, the plugin bootstrap path seeds canonical YAML from the current workspace entity definitions before schema application, then regenerates the derived FileClasses and JSON Schema outputs.
 
 ### Surfaces (Views)
 

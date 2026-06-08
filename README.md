@@ -2,7 +2,7 @@
 
 A unified Obsidian plugin for **CRM, PRM, project management, daily planning, and reminders** — all on top of plain markdown. No server, no sync service, no lock-in. Your vault stays your vault.
 
-This repository is a BOB Workspace customization of the original Cadence plugin. The plugin is intended to stay vault-model aware: built-in fields are only fallbacks, while real vault behavior should come from schemas, Bases, and `workspace.json` overrides.
+This repository is a BOB Workspace customization of the original Cadence plugin. The plugin is intended to stay vault-model aware: built-in fields are only fallbacks, while real vault behavior should come from schemas, Bases, and `workspace.json` overrides. When schema support is enabled and the source folder is empty, the plugin can bootstrap canonical schema YAML from the current workspace entity definitions and then regenerate the derived FileClasses and JSON Schema outputs.
 
 For extension guidance, see [Extending BOB Workspace Without Code Changes](docs/extending-bob-workspace.md).
 
@@ -79,9 +79,26 @@ Bring an entire client list, pipeline, or partner roster in from a spreadsheet. 
 3. Install → Enable
 
 ### Manual install (works today)
-1. Download `main.js`, `manifest.json`, `styles.css` from the [latest release](https://github.com/wesswart77/obsidian-cadence/releases/latest)
-2. Drop them into `<your-vault>/.obsidian/plugins/cadence-planner/`
+1. Download `main.js`, `manifest.json`, `styles.css`, `versions.json`, `vendor/xlsx.full.min.js`, and `templates/` from the [latest release](https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/latest)
+2. Drop them into `<your-vault>/.obsidian/plugins/bob-workspace/`
 3. Settings → Community plugins → Reload → Enable **BOB Workspace**
+
+### First run in a new vault
+When you install the plugin into a fresh vault, BOB Workspace opens with a setup picker if no `workspace.json` exists yet. Choose a starter template, or skip for now and build the workspace yourself.
+
+After you apply a template, the plugin writes the active `workspace.json` into the plugin folder and reloads the workspace. If schema support is enabled and the schema source folder is empty, it also bootstraps canonical schema YAML from the current workspace entity definitions and generates the derived FileClasses and JSON Schema outputs.
+
+The plugin then creates note folders on demand as you use the surfaces. It does not require you to pre-create the full folder tree before testing.
+
+### Starter templates
+The shipped templates are:
+
+- **BOB Workspace** - the full vault model: Planner, CRM, PRM, Client Work, Finance, Suppliers & Procurement, Reports, AI Workspace.
+- **CRM Only** - a narrower workspace focused on CRM, Planner basics, and Reports.
+- **Cadence Classic** - the original Cadence-style layout with the legacy folder model.
+- **Minimal** - a blank starting point with only Home and Settings.
+
+Use **BOB Workspace** when you want the full EMAI/BOB structure immediately. Use **CRM Only** if you want a lighter starting point. Use **Minimal** if you want to build everything by hand.
 
 ---
 
@@ -93,6 +110,7 @@ Bring an entire client list, pipeline, or partner roster in from a spreadsheet. 
 4. **Plan a project** — Planner → Projects → `+ New Project` → click into it → tick milestones, fill in Brief
 5. **Set a reminder** — `Cmd+Shift+I` → "Call John" → Remind me → +1h → Capture. Wait. The notification fires.
 6. **Make BOB Workspace your homepage** — Settings → BOB Workspace → toggle "Open BOB Workspace on Obsidian startup"
+7. **Seed schemas if needed** — when schema support is enabled, the plugin can generate missing canonical schema YAML in the configured source folder and then write the derived FileClasses and JSON Schema outputs.
 
 BOB Workspace creates folders on demand: `Cadence/Contacts/`, `Cadence/Pipeline/`, `Cadence/Partners/`, etc. Move them anywhere afterwards — change paths in Settings if you do.
 
@@ -102,14 +120,28 @@ BOB Workspace creates folders on demand: `Cadence/Contacts/`, `Cadence/Pipeline/
 
 Settings → BOB Workspace:
 
-- **Workspace** — raw `workspace.json` editor for dashboards, navigation, schemas, Bases, templates, and workbook groups.
-- **Navigation** — edit module groups and secondary tabs.
-- **Dashboards** — configure home, CRM, pipeline, reports, and custom surfaces with widgets.
-- **Widgets** — browse the widget catalog and built-in dashboard inventory.
-- **Modules** — toggle Planner / CRM / PRM / Client Work / Finance / Procurement.
-- **Reminders** — desktop notifications (opt-in), clear completed.
-- **Currency** — USD default; ZAR, EUR, GBP, AUD, CAD, CHF, JPY, INR, BRL, AED.
-- **App** — open on startup, default tab, week starts on, daily-note folder, tasks/journal headings.
+The surface areas are easiest to understand in this order:
+
+1. **Workspace** - the source-of-truth `workspace.json` for schemas, Bases, navigation, dashboards, templates, and workbook groups.
+2. **Data model** - canonical schema YAML, plus bootstrap/regenerate actions when the schema folder is empty.
+3. **Bases** - view configuration for each entity, either through `workspace.json.bases` or the Base selectors in Settings.
+4. **Navigation** - the left rail, secondary tabs, and module groups.
+5. **Dashboards** - Home, CRM, Reports, and any custom surfaces composed from widgets.
+6. **Widgets** - the widget catalog and inventory used by dashboards and reports.
+7. **Modules** - Planner / CRM / PRM / Client Work / Finance / Procurement toggles.
+8. **App** - startup behavior, tab choice, week start, daily-note folder, task/journal headings, and similar portable defaults.
+9. **Reminders** - reminder notifications and cleanup.
+10. **Currency** - money formatting across the workspace.
+
+When you are customizing a vault, use this order:
+
+1. Pick a starter template or apply your own `workspace.json`.
+2. Define or bootstrap the schema layer.
+3. Associate `.base` files for entities that need view behavior.
+4. Adjust navigation groups and secondary tabs.
+5. Tune dashboards and report widgets.
+6. Set modules, folders, and app defaults.
+7. Test the resulting workspace in the vault before copying it elsewhere.
 
 ---
 
@@ -148,6 +180,8 @@ your-vault/
 ```
 
 Each entity is plain markdown with YAML frontmatter — readable, editable, scriptable, portable. BOB Workspace's views are just rich lenses over these files; everything you do in the UI writes back to them.
+
+With schema support enabled, the plugin also writes canonical schema YAML to the configured schema source folder and derives `fileClasses/` plus `json-schema/` outputs from that source.
 
 ---
 
