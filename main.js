@@ -1502,6 +1502,12 @@ function dashboardWidgetSchema(kind) {
       requiresBaseOrEntity: true,
       supports: ['base', 'view', 'entity', 'source', 'titleFields', 'metaFields', 'limit'],
     },
+    'base-view': {
+      label: 'Base view (live)',
+      allowSourceOnly: true,
+      requiresBaseOrEntity: true,
+      supports: ['base', 'view', 'entity', 'height', 'fallback', 'title'],
+    },
     markdown: {
       label: 'Markdown',
       allowSourceOnly: true,
@@ -1842,7 +1848,9 @@ function applyWorkspaceRegistries(config = {}) {
   normalizeStandaloneNavigationSurfaces(NAV_GROUPS, SECONDARY_TABS, Array.isArray(navigation.groups));
   if (Array.isArray(config.workbookGroups)) WORKBOOK_EXPORT_GROUPS = cloneConfig(config.workbookGroups);
   NAV_GROUPS.flatMap((group) => group.items || []).forEach((surface) => {
-    if (surface.entityKey || SECONDARY_TABS[surface.id]) BUILT_SURFACES.add(surface.id);
+    if (surface.entityKey || SECONDARY_TABS[surface.id] || config.dashboards?.[surface.id] || config.planner?.[surface.id]) {
+      BUILT_SURFACES.add(surface.id);
+    }
   });
   rebuildSurfaceLookups();
 }
@@ -5977,6 +5985,7 @@ const PURE_DASHBOARD_WIDGET_TYPES = [
   'actions',
   'base-link',
   'base-embed',
+  'base-view',
   'merge',
 ];
 
@@ -6052,6 +6061,14 @@ const DASHBOARD_WIDGET_CATALOG = [
     description: 'Compact embedded preview of a Base-backed result set with open-base fallback for non-table views.',
     config: ['base', 'view', 'entity', 'source', 'titleFields', 'metaFields', 'limit'],
     examples: ['workspace.base-preview', 'report sections'],
+  },
+  {
+    id: 'base-view',
+    label: 'Base view (live)',
+    status: 'implemented',
+    description: 'Live inline Obsidian Base view mounted inside a dashboard cell with preview, link, or error fallback.',
+    config: ['title', 'entity', 'base', 'view', 'height', 'fallback'],
+    examples: ['workspace.base-view', 'task board'],
   },
   {
     id: 'markdown',
@@ -8083,6 +8100,10 @@ class CadenceAppView extends obsidian.ItemView {
       await this._renderBaseEmbedWidget(col, card, getWidgetEntities);
       return true;
     }
+    if (kind === 'base-view') {
+      await this._renderBaseViewWidget(col, card, getWidgetEntities);
+      return true;
+    }
     if (kind === 'markdown') {
       await this._renderMarkdownWidget(col, card);
       return true;
@@ -8261,6 +8282,175 @@ class CadenceAppView extends obsidian.ItemView {
         main.createDiv({ cls: 'cad-home-row-meta', text: metaBits.join(' · ') });
       }
     });
+  }
+
+  _normalizeBaseViewHeight(value) {
+    if (value === undefined || value === null || value === '' || value === 0 || value === '0') return null;
+    if (String(value).trim().toLowerCase() === 'auto') return null;
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : 360;
+  }
+
+  async _renderBaseViewWidget(root, card, getWidgetEntities) {
+    const target = await this._resolveBaseWidgetTarget(card);
+    const { basePath, viewName, label } = target;
+
+    if (!basePath) {
+      await this._renderBaseViewFallback(root, card, getWidgetEntities, 'No Base file configured');
+      return;
+    }
+
+    const file = this.app.vault.getAbstractFileByPath(basePath);
+    if (!(file instanceof obsidian.TFile)) {
+      await this._renderBaseViewFallback(root, card, getWidgetEntities, `Base file not found: ${basePath}`);
+      return;
+    }
+
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-base-view-card' });
+    this._applyCardTone(cardEl, Object.assign({ kind: 'base-view' }, card));
+    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
+    head.createDiv({ cls: 'cad-dash-card-title', text: label || card.title || 'Base view' });
+    if (viewName) head.createSpan({ cls: 'cad-widget-catalog-badge', text: viewName });
+
+    const body = cardEl.createDiv({ cls: 'cad-dash-card-body cad-base-view-body' });
+    const normalizedHeight = this._normalizeBaseViewHeight(card.height);
+    if (normalizedHeight) body.style.height = `${normalizedHeight}px`;
+
+    try {
+      await this._mountLiveBaseView(body, file, basePath, viewName);
+    } catch (err) {
+      body.empty();
+      await this._renderBaseViewFallbackContent(body, card, getWidgetEntities, err?.message || String(err || 'Base view unavailable'));
+    }
+  }
+
+  async _mountLiveBaseView(body, file, basePath, viewName) {
+    const linktext = viewName ? `${basePath}#${viewName}` : basePath;
+    const md = `![[${linktext}]]`;
+    if (obsidian.MarkdownRenderer?.renderMarkdown) {
+      try {
+        await obsidian.MarkdownRenderer.renderMarkdown(md, body, basePath, this);
+        await this._waitForBaseEmbedRender();
+        if (this._hasLiveBaseEmbedContent(body, md, linktext)) return;
+      } finally {
+        if (!this._hasLiveBaseEmbedContent(body, md, linktext)) body.empty();
+      }
+    }
+    await this._mountLiveBaseViewViaEmbedRegistry(body, file, basePath, viewName);
+  }
+
+  async _waitForBaseEmbedRender() {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => {
+      const raf = typeof requestAnimationFrame === 'function'
+        ? requestAnimationFrame
+        : (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function' ? window.requestAnimationFrame.bind(window) : null);
+      if (raf) raf(resolve);
+      else setTimeout(resolve, 0);
+    });
+  }
+
+  _hasLiveBaseEmbedContent(body, md, linktext) {
+    const renderedText = String(body.textContent || '').trim();
+    const basePathOnly = String(linktext || '').split('#')[0] || '';
+    if (!body.childElementCount) return false;
+    if (renderedText === md || renderedText === linktext) return false;
+    if (basePathOnly && renderedText === basePathOnly) return false;
+    if (basePathOnly && renderedText.replace(/\s+/g, ' ').trim() === basePathOnly) return false;
+    const baseEmbed = body.querySelector?.([
+      '.bases-embed',
+      '.base-embed',
+      '.bases-view',
+      '.bases-embed-container',
+      '.bases-view-container',
+      '[data-type="base"]',
+      '[data-embed-type="base"]',
+      '[src$=".base"]',
+    ].join(','));
+    if (baseEmbed) return true;
+    const genericEmbed = body.querySelector?.('.internal-embed, .markdown-embed, .file-embed');
+    if (!genericEmbed) return false;
+    const genericText = String(genericEmbed.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!genericText) return false;
+    if (genericText === md || genericText === linktext || genericText === basePathOnly) return false;
+    if (basePathOnly && genericText.includes(basePathOnly) && genericText.length <= basePathOnly.length + 24) return false;
+    return genericText.length > 0;
+  }
+
+  async _mountLiveBaseViewViaEmbedRegistry(body, file, basePath, viewName) {
+    const reg = this.app.embedRegistry;
+    const creator = reg?.embedByExtension?.base || reg?.getEmbedCreator?.(file);
+    if (!creator) throw new Error('Base embed creator unavailable');
+    const linktext = viewName ? `${basePath}#${viewName}` : basePath;
+    const embed = creator(
+      { app: this.app, containerEl: body, sourcePath: basePath, linktext, showInline: true, depth: 0 },
+      file,
+      viewName || ''
+    );
+    if (!embed) throw new Error('Base embed creator returned no embed');
+    if (typeof this.addChild === 'function') this.addChild(embed);
+    await (embed.loadFile?.() ?? embed.load?.());
+    await this._waitForBaseEmbedRender();
+    const linktextAfterLoad = viewName ? `${basePath}#${viewName}` : basePath;
+    const mdAfterLoad = `![[${linktextAfterLoad}]]`;
+    if (!this._hasLiveBaseEmbedContent(body, mdAfterLoad, linktextAfterLoad)) {
+      throw new Error('Base embed creator did not render an inline view');
+    }
+  }
+
+  async _renderBaseViewFallback(root, card, getWidgetEntities, reason) {
+    const mode = String(card.fallback || 'preview').trim().toLowerCase();
+    if (mode === 'preview') {
+      await this._renderBaseEmbedWidget(root, card, getWidgetEntities);
+      return;
+    }
+    if (mode === 'link') {
+      await this._renderBaseLinkWidget(root, card, getWidgetEntities);
+      return;
+    }
+    const fallbackCard = root.createDiv({ cls: 'cad-dash-card cad-base-view-card cad-base-view-fallback' });
+    this._applyCardTone(fallbackCard, Object.assign({ kind: 'base-view' }, card));
+    const head = fallbackCard.createDiv({ cls: 'cad-dash-card-head' });
+    head.createDiv({ cls: 'cad-dash-card-title', text: card.title || 'Base view' });
+    fallbackCard.createDiv({ cls: 'cad-dash-card-body' })
+      .createDiv({ cls: 'cad-soon-desc', text: `Base view unavailable (${reason})` });
+  }
+
+  async _renderBaseViewFallbackContent(body, card, getWidgetEntities, reason) {
+    const mode = String(card.fallback || 'preview').trim().toLowerCase();
+    if (mode === 'link') {
+      const target = await this._resolveBaseWidgetTarget(card);
+      body.createDiv({ cls: 'cad-soon-desc', text: reason });
+      if (target.basePath) {
+        const btn = body.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Open Base' });
+        btn.addEventListener('click', () => this.app.workspace.openLinkText(target.basePath, '', false));
+      }
+      return;
+    }
+    if (mode === 'preview' && typeof getWidgetEntities === 'function') {
+      const target = await this._resolveBaseWidgetTarget(card);
+      const resolved = target.entityKey
+        ? await getWidgetEntities(this._widgetSourceSpec(card, target.entityKey), target.entityKey).catch(() => null)
+        : null;
+      const entities = Array.isArray(resolved?.entities) ? resolved.entities : [];
+      const rows = entities.slice(0, Math.max(1, Number(card.limit || 5) || 5));
+      body.createDiv({ cls: 'cad-soon-desc', text: reason });
+      if (rows.length) {
+        const list = body.createDiv({ cls: 'cad-base-embed-list cad-base-view-preview-list' });
+        rows.forEach((entity) => {
+          const row = list.createDiv({ cls: 'cad-base-embed-row' });
+          row.createDiv({ cls: 'cad-home-row-title', text: entity?.title || entity?.name || entity?.file?.basename || entity?.basename || 'Untitled' });
+        });
+      } else {
+        body.createDiv({ cls: 'cad-empty', text: 'No rows available for preview.' });
+      }
+      if (target.basePath) {
+        const btn = body.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Open Base' });
+        btn.addEventListener('click', () => this.app.workspace.openLinkText(target.basePath, '', false));
+      }
+      return;
+    }
+    body.createDiv({ cls: 'cad-soon-desc', text: `Base view unavailable (${reason})` });
   }
 
   async _resolveMarkdownWidgetContent(card) {
@@ -9636,7 +9826,7 @@ class CadenceAppView extends obsidian.ItemView {
       lbl.addEventListener('input', () => { control.label = lbl.value; triggerPreview(); });
       const typ = chip.createEl('select', { cls: 'cad-de-stat-select' });
       typ.disabled = !editable;
-      ['selector', 'date-range', 'markdown', 'actions', 'base-link', 'base-embed'].forEach((type) => {
+      ['selector', 'date-range', 'markdown', 'actions', 'base-link', 'base-embed', 'base-view'].forEach((type) => {
         const o = typ.createEl('option', { value: type, text: type });
         if (type === (control.kind || 'selector')) o.selected = true;
       });
@@ -9954,6 +10144,9 @@ class CadenceAppView extends obsidian.ItemView {
     addRow('Value field', 'valueField');
     addRow('Group by', 'groupBy');
     addRow('Limit', 'limit');
+    addRow('View', 'view');
+    addRow('Height', 'height');
+    addRow('Fallback', 'fallback', ['preview', 'link', 'error']);
 
     const typeRow = form.createDiv({ cls: 'cad-de-form-row' });
     typeRow.createDiv({ cls: 'cad-de-form-label', text: 'Widget type' });

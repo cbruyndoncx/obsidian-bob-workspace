@@ -294,6 +294,12 @@
             "desc": "Team members, roles, seats — admin view of your BOB Workspace."
           },
           {
+            "id": "workspace.base-links",
+            "label": "Base Links",
+            "icon": "table-2",
+            "desc": "Test surface for live Base dashboard widgets and configured Base shortcuts."
+          },
+          {
             "id": "settings",
             "label": "Settings",
             "icon": "settings-2",
@@ -671,23 +677,58 @@
         "title": "Inbox",
         "subtitle": "Capture and reminders",
         "stats": [
-          { "label": "REMINDERS", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "inboxCount", "accent": "sky" },
-          { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "rose" },
-          { "label": "TODAY TASKS", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayCount", "accent": "emerald" }
+          {
+            "label": "REMINDERS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "inbox"
+            },
+            "field": "inboxCount",
+            "accent": "sky"
+          },
+          {
+            "label": "OVERDUE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "inbox"
+            },
+            "field": "overdueCount",
+            "accent": "rose"
+          },
+          {
+            "label": "TODAY TASKS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "today"
+            },
+            "field": "todayCount",
+            "accent": "emerald"
+          }
         ],
         "layout": [
           [
             {
               "kind": "list",
               "title": "REMINDERS",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "inbox"
+              },
               "limit": 10,
               "empty": "Inbox zero — capture something to get started."
             },
             {
               "kind": "list",
               "title": "TODAY TASKS",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "today" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "today"
+              },
               "limit": 12,
               "empty": "No tasks on today's note."
             }
@@ -696,7 +737,11 @@
             {
               "kind": "list",
               "title": "OVERVIEW",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "overview"
+              },
               "limit": 4,
               "empty": "Nothing urgent right now."
             }
@@ -708,23 +753,58 @@
         "title": "Today",
         "subtitle": "Daily tasks and journal",
         "stats": [
-          { "label": "OPEN", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayOpenCount", "accent": "sky" },
-          { "label": "DONE", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayDoneCount", "accent": "mint" },
-          { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "warn" }
+          {
+            "label": "OPEN",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "today"
+            },
+            "field": "todayOpenCount",
+            "accent": "sky"
+          },
+          {
+            "label": "DONE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "today"
+            },
+            "field": "todayDoneCount",
+            "accent": "mint"
+          },
+          {
+            "label": "OVERDUE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "inbox"
+            },
+            "field": "overdueCount",
+            "accent": "warn"
+          }
         ],
         "layout": [
           [
             {
               "kind": "list",
               "title": "TODAY TASKS",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "today" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "today"
+              },
               "limit": 12,
               "empty": "No tasks on today's note."
             },
             {
               "kind": "list",
               "title": "OVERVIEW",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "overview"
+              },
               "limit": 4,
               "empty": "Planner overview is empty."
             }
@@ -736,16 +816,47 @@
         "title": "Calendar",
         "subtitle": "Weekly task rhythm",
         "stats": [
-          { "label": "DAYS", "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" }, "field": "calendarCount", "accent": "sky" },
-          { "label": "OPEN", "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" }, "field": "calendarOpenCount", "accent": "warn" },
-          { "label": "DONE", "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" }, "field": "calendarDoneCount", "accent": "emerald" }
+          {
+            "label": "DAYS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "calendar"
+            },
+            "field": "calendarCount",
+            "accent": "sky"
+          },
+          {
+            "label": "OPEN",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "calendar"
+            },
+            "field": "calendarOpenCount",
+            "accent": "warn"
+          },
+          {
+            "label": "DONE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "calendar"
+            },
+            "field": "calendarDoneCount",
+            "accent": "emerald"
+          }
         ],
         "layout": [
           [
             {
               "kind": "bar-chart",
               "title": "DAY BREAKDOWN",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "calendar" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "calendar"
+              },
               "valueField": "done",
               "limit": 7,
               "empty": "No daily note data yet."
@@ -755,7 +866,11 @@
             {
               "kind": "list",
               "title": "WEEK OVERVIEW",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "overview"
+              },
               "limit": 4,
               "empty": "Nothing to summarise yet."
             }
@@ -767,23 +882,58 @@
         "title": "Projects",
         "subtitle": "Project progress and milestones",
         "stats": [
-          { "label": "PROJECTS", "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" }, "field": "projectCount", "accent": "mint" },
-          { "label": "ACTIVE", "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" }, "field": "projectCount", "accent": "sky" },
-          { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "warn" }
+          {
+            "label": "PROJECTS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "projects"
+            },
+            "field": "projectCount",
+            "accent": "mint"
+          },
+          {
+            "label": "ACTIVE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "projects"
+            },
+            "field": "projectCount",
+            "accent": "sky"
+          },
+          {
+            "label": "OVERDUE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "inbox"
+            },
+            "field": "overdueCount",
+            "accent": "warn"
+          }
         ],
         "layout": [
           [
             {
               "kind": "list",
               "title": "PROJECTS",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "projects"
+              },
               "limit": 8,
               "empty": "No active projects yet."
             },
             {
               "kind": "list",
               "title": "OVERVIEW",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "overview"
+              },
               "limit": 4,
               "empty": "No planner overview available."
             }
@@ -911,16 +1061,53 @@
       "layout": [
         [
           {
-            "kind": "base-link",
+            "kind": "base-embed",
             "title": "Deal Base",
             "entity": "deal",
-            "description": "Opens the configured Base view for deals."
+            "description": "Opens the configured Base view for deals.",
+            "limit": 5,
+            "titleFields": [
+              "title",
+              "deal_name",
+              "name"
+            ],
+            "metaFields": [
+              "stage",
+              "status",
+              "deal_value",
+              "expected_close"
+            ]
           },
           {
-            "kind": "base-link",
+            "kind": "base-embed",
             "title": "Project Base",
             "entity": "project",
-            "description": "Opens the configured Base view for projects."
+            "description": "Opens the configured Base view for projects.",
+            "limit": 5,
+            "titleFields": [
+              "project_name",
+              "name",
+              "title"
+            ],
+            "metaFields": [
+              "status",
+              "client_id",
+              "due"
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "base-view",
+            "title": "Task Board",
+            "entity": "task",
+            "base": {
+              "file": "00-CORE/TaskNotes/Views/kanban-default.base",
+              "view": "Kanban Board"
+            },
+            "height": 420,
+            "fallback": "preview",
+            "view": "Kanban Board"
           }
         ]
       ]
@@ -1835,6 +2022,566 @@
           }
         ]
       ]
+    },
+    "reports.pipeline": {
+      "kind": "report",
+      "title": "Pipeline Report",
+      "subtitle": "Deal flow by current stage",
+      "controls": [
+        {
+          "kind": "selector",
+          "key": "groupBy",
+          "label": "Group by",
+          "default": "stage",
+          "allLabel": "Stage",
+          "options": [
+            {
+              "value": "stage",
+              "label": "Stage"
+            },
+            {
+              "value": "owner",
+              "label": "Owner"
+            },
+            {
+              "value": "company",
+              "label": "Company"
+            }
+          ]
+        },
+        {
+          "kind": "selector",
+          "key": "stage",
+          "label": "Stage",
+          "entity": "deal",
+          "field": "stage",
+          "allLabel": "All stages"
+        },
+        {
+          "kind": "date-range",
+          "key": "dateRange",
+          "label": "Close date",
+          "field": "expected_close",
+          "allLabel": "All dates",
+          "default": "this-quarter"
+        }
+      ],
+      "stats": [
+        {
+          "label": "OPEN DEALS",
+          "entity": "deal",
+          "count": "open",
+          "source": {
+            "source": "recent-open",
+            "filters": "stage != \"Won\" && stage != \"Lost\" && {{stageFilter}} && {{dateRangeFilter}}"
+          },
+          "sub": "open pipeline",
+          "accent": "sky"
+        },
+        {
+          "label": "WEIGHTED",
+          "entity": "deal",
+          "metric": "weightedForecast",
+          "source": {
+            "source": "recent-open",
+            "filters": "stage != \"Won\" && stage != \"Lost\" && {{stageFilter}} && {{dateRangeFilter}}"
+          },
+          "sub": "forecast on open",
+          "accent": "mint"
+        },
+        {
+          "label": "WON",
+          "entity": "deal",
+          "metric": "sum",
+          "source": {
+            "source": "recent",
+            "filters": "stage == \"Won\" && {{stageFilter}} && {{dateRangeFilter}}"
+          },
+          "field": "value",
+          "sub": "won revenue",
+          "accent": "emerald"
+        },
+        {
+          "label": "LOST",
+          "entity": "deal",
+          "metric": "sum",
+          "source": {
+            "source": "recent",
+            "filters": "stage == \"Lost\" && {{stageFilter}} && {{dateRangeFilter}}"
+          },
+          "field": "value",
+          "sub": "closed lost",
+          "accent": "rose"
+        },
+        {
+          "label": "WIN RATE",
+          "entity": "deal",
+          "metric": "winRate",
+          "sub": "closed deals",
+          "accent": "warn"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "kind": "kanban",
+            "title": "OPEN DEALS BY {{groupBy}}",
+            "entity": "deal",
+            "source": {
+              "source": "recent-open",
+              "filters": "stage != \"Won\" && stage != \"Lost\" && {{stageFilter}} && {{dateRangeFilter}}"
+            },
+            "groupBy": "{{groupBy}}"
+          },
+          {
+            "title": "RECENT WINS",
+            "empty": "No recent wins.",
+            "entity": "deal",
+            "source": {
+              "source": "recent",
+              "filters": "stage == \"Won\" && {{stageFilter}} && {{dateRangeFilter}}"
+            },
+            "titleFields": [
+              "title",
+              "deal_name"
+            ],
+            "metaFields": [
+              "stage",
+              "value",
+              "closeBy"
+            ]
+          }
+        ]
+      ]
+    },
+    "reports.sales": {
+      "kind": "report",
+      "title": "Sales Report",
+      "subtitle": "Closed wins, losses and recent movement",
+      "controls": [
+        {
+          "kind": "selector",
+          "key": "owner",
+          "label": "Owner",
+          "entity": "deal",
+          "field": "owner",
+          "allLabel": "All owners"
+        },
+        {
+          "kind": "date-range",
+          "key": "dateRange",
+          "label": "Close date",
+          "field": "expected_close",
+          "allLabel": "All dates",
+          "default": "this-quarter"
+        }
+      ],
+      "stats": [
+        {
+          "label": "REVENUE",
+          "entity": "deal",
+          "metric": "sum",
+          "source": {
+            "source": "recent",
+            "filters": "stage == \"Won\" && {{ownerFilter}} && {{dateRangeFilter}}"
+          },
+          "field": "value",
+          "sub": "won deals",
+          "accent": "emerald"
+        },
+        {
+          "label": "LOST",
+          "entity": "deal",
+          "metric": "sum",
+          "source": {
+            "source": "recent",
+            "filters": "stage == \"Lost\" && {{ownerFilter}} && {{dateRangeFilter}}"
+          },
+          "field": "value",
+          "sub": "closed lost",
+          "accent": "rose"
+        },
+        {
+          "label": "CAPTURE",
+          "entity": "deal",
+          "metric": "captureRate",
+          "sub": "of closed value",
+          "accent": "mint"
+        },
+        {
+          "label": "AVG DEAL",
+          "entity": "deal",
+          "metric": "avg",
+          "source": {
+            "source": "recent",
+            "filters": "stage == \"Won\" && {{ownerFilter}} && {{dateRangeFilter}}"
+          },
+          "field": "value",
+          "sub": "won deals",
+          "accent": "sky"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "title": "WON DEALS",
+            "empty": "No won deals.",
+            "entity": "deal",
+            "source": {
+              "source": "recent",
+              "filters": "stage == \"Won\" && {{ownerFilter}} && {{dateRangeFilter}}"
+            },
+            "titleFields": [
+              "title",
+              "deal_name"
+            ],
+            "metaFields": [
+              "stage",
+              "value",
+              "closeBy"
+            ]
+          },
+          {
+            "title": "LOST DEALS",
+            "empty": "No lost deals.",
+            "entity": "deal",
+            "source": {
+              "source": "recent",
+              "filters": "stage == \"Lost\" && {{ownerFilter}} && {{dateRangeFilter}}"
+            },
+            "titleFields": [
+              "title",
+              "deal_name"
+            ],
+            "metaFields": [
+              "stage",
+              "value",
+              "closeBy"
+            ]
+          }
+        ],
+        [
+          {
+            "title": "OPEN DEALS",
+            "empty": "No open deals.",
+            "entity": "deal",
+            "source": {
+              "source": "recent-open",
+              "filters": "stage != \"Won\" && stage != \"Lost\" && {{ownerFilter}} && {{dateRangeFilter}}"
+            },
+            "titleFields": [
+              "title",
+              "deal_name"
+            ],
+            "metaFields": [
+              "stage",
+              "value",
+              "closeBy"
+            ]
+          }
+        ]
+      ]
+    },
+    "reports.activity": {
+      "kind": "report",
+      "title": "Activity Report",
+      "subtitle": "Calls, meetings and follow-ups",
+      "controls": [
+        {
+          "kind": "date-range",
+          "key": "dateRange",
+          "label": "Date range",
+          "field": "date",
+          "allLabel": "All dates",
+          "default": "this-month"
+        },
+        {
+          "kind": "selector",
+          "key": "channel",
+          "label": "Channel",
+          "entity": "activity",
+          "field": "channel",
+          "allLabel": "All channels"
+        }
+      ],
+      "stats": [
+        {
+          "label": "TOTAL",
+          "entity": "activity",
+          "count": "all",
+          "source": {
+            "source": "recent",
+            "filters": "{{dateRangeFilter}}"
+          },
+          "sub": "all activities",
+          "accent": "emerald"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "title": "RECENT ACTIVITIES",
+            "empty": "No activities.",
+            "entity": "activity",
+            "source": {
+              "source": "recent",
+              "filters": "{{dateRangeFilter}} && {{channelFilter}}"
+            },
+            "titleFields": [
+              "title",
+              "subject",
+              "name"
+            ],
+            "metaFields": [
+              "activity_type",
+              "status",
+              "date"
+            ]
+          },
+          {
+            "title": "RECENT CONTACTS",
+            "empty": "No contacts.",
+            "entity": "contact",
+            "source": "recent",
+            "titleFields": [
+              "name",
+              "company"
+            ],
+            "metaFields": [
+              "email",
+              "status",
+              "lastContact"
+            ]
+          }
+        ]
+      ]
+    },
+    "reports.productivity": {
+      "kind": "report",
+      "title": "Productivity",
+      "subtitle": "Task and project momentum",
+      "stats": [
+        {
+          "label": "DONE",
+          "entity": "task",
+          "field": "totalDone",
+          "source": {
+            "mode": "built-in",
+            "builtIn": "productivity"
+          },
+          "sub": "tasks completed",
+          "accent": "emerald"
+        },
+        {
+          "label": "OPEN",
+          "entity": "task",
+          "field": "totalOpen",
+          "source": {
+            "mode": "built-in",
+            "builtIn": "productivity"
+          },
+          "sub": "open tasks",
+          "accent": "sky"
+        },
+        {
+          "label": "STREAK",
+          "entity": "task",
+          "field": "streak",
+          "source": {
+            "mode": "built-in",
+            "builtIn": "productivity"
+          },
+          "sub": "active days",
+          "accent": "mint"
+        },
+        {
+          "label": "ACTIVE DAYS",
+          "entity": "task",
+          "field": "activeDays",
+          "source": {
+            "mode": "built-in",
+            "builtIn": "productivity"
+          },
+          "sub": "days with activity",
+          "accent": "warn"
+        },
+        {
+          "label": "JOURNAL",
+          "entity": "task",
+          "field": "totalJournalChars",
+          "source": {
+            "mode": "built-in",
+            "builtIn": "productivity"
+          },
+          "sub": "chars written",
+          "accent": "rose"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "kind": "bar-chart",
+            "title": "TASK FLOW — LAST 14 DAYS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "productivity",
+              "section": "per-day"
+            },
+            "field": "done",
+            "limit": 14
+          },
+          {
+            "kind": "bar-chart",
+            "title": "COMPLETION TREND — LAST 12 WEEKS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "productivity",
+              "section": "weeks"
+            },
+            "field": "done",
+            "limit": 12
+          }
+        ],
+        [
+          {
+            "kind": "bar-chart",
+            "title": "WEEKDAY MIX",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "productivity",
+              "section": "weekday"
+            },
+            "limit": 7
+          },
+          {
+            "kind": "list",
+            "title": "TASK NOTES",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "productivity",
+              "section": "task-notes"
+            },
+            "limit": 10,
+            "empty": "No TaskNotes in the selected range."
+          }
+        ]
+      ]
+    },
+    "reports.partners": {
+      "title": "Partners Report",
+      "subtitle": "Partner operations overview across registrations, commissions and certifications",
+      "stats": [
+        {
+          "label": "PARTNERS",
+          "entity": "partner",
+          "count": "all",
+          "sub": "partner records",
+          "accent": "sky"
+        },
+        {
+          "label": "REGISTRATIONS",
+          "entity": "registration",
+          "count": "open",
+          "sub": {
+            "entity": "registration",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "mint"
+        },
+        {
+          "label": "COMMISSIONS",
+          "entity": "commission",
+          "count": "open",
+          "sub": {
+            "entity": "commission",
+            "count": "all",
+            "suffix": "total"
+          },
+          "accent": "warn"
+        },
+        {
+          "label": "CERTIFICATIONS",
+          "entity": "certification",
+          "count": "all",
+          "sub": "cert records",
+          "accent": "emerald"
+        },
+        {
+          "label": "PARTNER DEALS",
+          "entity": "deal",
+          "count": {
+            "field": "partner"
+          },
+          "sub": "attributed deals",
+          "accent": "rose"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "title": "PENDING REGISTRATIONS",
+            "empty": "No pending registrations.",
+            "entity": "registration",
+            "source": "recent-open",
+            "titleFields": [
+              "deal_name",
+              "registration_id"
+            ],
+            "metaFields": [
+              "status",
+              "partner_ref",
+              "expiry_date"
+            ]
+          },
+          {
+            "title": "OPEN COMMISSIONS",
+            "empty": "No open commissions.",
+            "entity": "commission",
+            "source": "recent-open",
+            "titleFields": [
+              "commission_id",
+              "partner_ref"
+            ],
+            "metaFields": [
+              "status",
+              "amount",
+              "currency"
+            ]
+          }
+        ],
+        [
+          {
+            "title": "CERTIFICATIONS EXPIRING",
+            "empty": "No certifications expiring soon.",
+            "entity": "certification",
+            "source": "due",
+            "dateFields": [
+              "expires_date",
+              "renewal_date"
+            ],
+            "titleFields": [
+              "name",
+              "certification_id"
+            ]
+          },
+          {
+            "title": "RECENT PARTNERS",
+            "empty": "No partners.",
+            "entity": "partner",
+            "source": "recent",
+            "titleFields": [
+              "partner_name",
+              "name"
+            ],
+            "metaFields": [
+              "tier",
+              "status"
+            ]
+          }
+        ]
+      ],
+      "kind": "report"
     }
   },
   "workbookGroups": [

@@ -3080,6 +3080,13 @@ select.cad-form-input {
 .cad-de-textarea:read-only { opacity: 0.7; cursor: default; }
 .cad-de-textarea:focus { outline: 1px solid var(--interactive-accent); }
 .cad-de-actions { display: flex; gap: 8px; padding: 4px 0 8px; flex-wrap: wrap; }
+.cad-base-view-body {
+  min-height: 220px;
+  overflow: auto;
+}
+.cad-base-view-fallback .cad-soon-desc {
+  margin-top: 0.5rem;
+}
 .cad-widget-catalog,
 .cad-dashboard-inventory {
   padding: 0 32px 24px;
