@@ -993,6 +993,10 @@ select.cad-cell-input { padding: 5px 8px; }
   transition: border-color 90ms ease;
 }
 .cad-home-proj:hover { border-color: var(--interactive-accent); }
+
+.cad-proj-card {
+  cursor: pointer;
+}
 .cad-home-proj-head { display: flex; justify-content: space-between; align-items: baseline; }
 .cad-home-proj-title { font-size: 13px; font-weight: 500; color: var(--text-normal); }
 .cad-home-proj-pct {

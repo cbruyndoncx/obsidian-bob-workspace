@@ -828,6 +828,7 @@ const ENTITIES = {
       { key: 'project_id', label: 'Project ID' },
       { key: 'project', label: 'Project' },
       { key: 'owner', label: 'Owner' },
+      { key: 'partner_ref', label: 'Partner' },
       { key: 'stage',   label: 'Stage',   type: 'enum', options: ['lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'], defaultValue: 'lead' },
       { key: 'deal_value', label: 'Deal Value', type: 'currency' },
       { key: 'deal_source', label: 'Source', type: 'enum', options: ['referral', 'inbound', 'outbound', 'event', 'partner'] },
@@ -837,7 +838,7 @@ const ENTITIES = {
       { key: 'next_action_note', label: 'Next Action Note' },
       { key: 'last_contact', label: 'Last Contact', type: 'date' },
     ],
-    columns: ['title', 'client_id', 'end_client_id', 'project_id', 'owner', 'stage', 'deal_value', 'expected_close'],
+    columns: ['title', 'client_id', 'end_client_id', 'project_id', 'owner', 'partner_ref', 'stage', 'deal_value', 'expected_close'],
   },
 
   playbook: {
@@ -1812,6 +1813,8 @@ async function saveWorkspaceConfig(app, jsonText) {
     await adapter.write(WORKSPACE_BACKUP_PATH, await adapter.read(WORKSPACE_CONFIG_PATH));
   }
   await adapter.write(WORKSPACE_CONFIG_PATH, JSON.stringify(parsed, null, 2));
+  WORKSPACE_CONFIG = parsed;
+  WORKSPACE_HAS_NAVIGATION = Array.isArray(parsed.navigation?.groups);
   return parsed;
 }
 
@@ -3291,7 +3294,13 @@ async function reloadEntityConfiguration(app, settings = {}) {
   resetEntityRegistry(settings);
   applyWorkspaceRegistries(WORKSPACE_CONFIG);
   const effectiveSettings = effectiveSchemaSettings(settings);
-  if (effectiveSettings.useSchemas) await applySchemas(app, effectiveSettings);
+  if (effectiveSettings.useSchemas) {
+    const bootstrap = await bootstrapCanonicalSchemaSourcesIfMissing(app, effectiveSettings);
+    if (bootstrap.count) {
+      await regenerateSchemaOutputs(app, effectiveSettings);
+    }
+    await applySchemas(app, effectiveSettings);
+  }
   await applyConfiguredBaseOverrides(app, settings);
   await applyBaseOverrides(app, settings);
   rebuildSurfaceLookups();
@@ -3397,16 +3406,158 @@ function removeSurfaceFromGroups(groups, surfaceId) {
 }
 
 function schemaFieldFromEntityField(field) {
+  const type = String(field?.type || 'string').toLowerCase();
   const result = {
     name: field.key,
-    type: field.type === 'number' || field.type === 'currency' ? 'number'
-      : field.type === 'tags' ? 'array'
+    type: type === 'number' || type === 'currency' ? 'number'
+      : type === 'integer' ? 'integer'
+      : type === 'boolean' ? 'boolean'
+      : type === 'array' || type === 'tags' ? 'array'
       : 'string',
     required: !!field.primary,
   };
-  if (field.type === 'date') result.format = 'date';
-  if (field.type === 'enum' && Array.isArray(field.options)) result.enum = field.options;
+  if (type === 'date') result.format = 'date';
+  else if (type === 'datetime' || type === 'date-time') result.format = 'date-time';
+  else if (type === 'email') result.format = 'email';
+  if (type === 'enum' && Array.isArray(field.options)) result.enum = field.options;
+  if (Object.prototype.hasOwnProperty.call(field || {}, 'defaultValue')) {
+    const defaultValue = resolveEntityFieldDefault(field);
+    if (defaultValue !== undefined) result.default = defaultValue;
+  }
+  if (field.description) result.description = field.description;
   return result;
+}
+
+function entityLocationPattern(def, entityKey) {
+  const patterns = [];
+  if (Array.isArray(def?.folders) && def.folders.length) patterns.push(...def.folders);
+  else if (String(def?.folder || '').trim()) patterns.push(def.folder);
+  if (!patterns.length && entityKey) {
+    const folder = entityFolder(entityKey);
+    if (folder) patterns.push(folder);
+  }
+  return [...new Set(patterns.map((pattern) => String(pattern || '').trim().replace(/\/$/, '')).filter(Boolean))].join(' or ');
+}
+
+function schemaFieldArrayFromEntityFields(fields = []) {
+  return fields
+    .filter((field) => field && field.key && field.key !== 'type')
+    .map((field) => schemaFieldFromEntityField(field))
+    .filter((field) => field && field.name);
+}
+
+function schemaBobBlockFromEntityDefinition(def = {}) {
+  const bob = {};
+  [
+    'stageField',
+    'valueField',
+    'closeByField',
+    'wonStages',
+    'lostStages',
+    'detailMetaFields',
+    'detailSections',
+    'terminalStatuses',
+    'stageConfidence',
+    'template',
+    'folders',
+    'dateField',
+    'titleField',
+    'baseFilters',
+    'baseSort',
+    'baseGroupBy',
+    'baseView',
+    'externalBaseView',
+    'unsupportedBaseFilters',
+    'unsupportedBaseFeatures',
+    'desc',
+    'description',
+    'scope',
+  ].forEach((key) => {
+    if (def[key] != null) bob[key] = cloneConfig(def[key]);
+  });
+  if (def.fieldAliases) bob.field_aliases = cloneConfig(def.fieldAliases);
+  return bob;
+}
+
+function schemaSourceFromEntityDefinition(entityKey, def = ENTITIES[entityKey] || {}) {
+  const fields = schemaFieldArrayFromEntityFields(def.fields || []);
+  const primaryField = fields.find((field) => field.required)?.name || def.titleField || fields[0]?.name || '';
+  const schema = {
+    entity: entityKey,
+    label: def.label || schemaFieldLabel(entityKey),
+    plural: def.plural || pluralizeEntityLabel(def.label || schemaFieldLabel(entityKey)),
+    icon: def.icon || 'file-text',
+    location_pattern: entityLocationPattern(def, entityKey),
+    fields,
+  };
+  const typeValue = def.filenameFilter ? '' : String(def.typeFilter || entityKey || '').trim();
+  if (typeValue) schema.type_value = typeValue;
+  if (primaryField) schema.key_fields = [primaryField];
+  if (def.desc || def.description) schema.description = def.desc || def.description;
+  if (def.fieldAliases && Object.keys(def.fieldAliases).length) schema.field_aliases = cloneConfig(def.fieldAliases);
+  const bob = schemaBobBlockFromEntityDefinition(def);
+  if (Object.keys(bob).length) schema.bob = bob;
+  return schema;
+}
+
+function bootstrapSchemaEntityKeys(app, config = WORKSPACE_CONFIG, opts = {}) {
+  const keys = new Set(workspaceConfiguredEntityKeys(config, Object.assign({ includeFallback: false }, opts)));
+  if (!keys.size) {
+    Object.keys(ENTITIES).forEach((key) => addConfiguredEntityKey(keys, key));
+  }
+  if (app && opts.includeVaultEntities !== false) {
+    Object.keys(ENTITIES).forEach((key) => {
+      try {
+        if (listEntityFiles(app, key).length) addConfiguredEntityKey(keys, key);
+      } catch (_) {}
+    });
+  }
+  return [...keys]
+    .filter((key) => !!ENTITIES[key])
+    .sort((a, b) => String(ENTITIES[a]?.plural || ENTITIES[a]?.label || a).localeCompare(String(ENTITIES[b]?.plural || ENTITIES[b]?.label || b)));
+}
+
+async function bootstrapCanonicalSchemaSources(app, settings = {}, opts = {}) {
+  const folder = (WORKSPACE_CONFIG.schemas?.folder || settings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
+  await ensureFolderSync(app, folder);
+  const keys = bootstrapSchemaEntityKeys(app, WORKSPACE_CONFIG, opts);
+  const written = [];
+  const skipped = [];
+  for (const entityKey of keys) {
+    const def = ENTITIES[entityKey];
+    if (!def) continue;
+    const schemaPath = `${folder}/${entityKey}.yaml`;
+    const schema = validateSourceSchemaDefinition(schemaSourceFromEntityDefinition(entityKey, def));
+    if (await app.vault.adapter.exists(schemaPath)) {
+      skipped.push(schemaPath);
+      continue;
+    }
+    await app.vault.adapter.write(schemaPath, `${obsidian.stringifyYaml(schema)}\n`);
+    written.push(schemaPath);
+  }
+  return {
+    folder,
+    count: written.length,
+    skipped: skipped.length,
+    written,
+    skippedPaths: skipped,
+    entityKeys: keys,
+  };
+}
+
+async function bootstrapCanonicalSchemaSourcesIfMissing(app, settings = {}, opts = {}) {
+  const loaded = await loadCanonicalSchemaSources(app, settings);
+  if (loaded.schemas.length) return {
+    folder: loaded.folder,
+    count: 0,
+    skipped: 0,
+    written: [],
+    skippedPaths: [],
+    entityKeys: loaded.schemas.map((item) => item.schema.entity).sort(),
+    alreadyPresent: true,
+  };
+  const result = await bootstrapCanonicalSchemaSources(app, settings, opts);
+  return Object.assign({ alreadyPresent: false }, result);
 }
 
 function validateSourceSchemaDefinition(schema) {
@@ -3613,6 +3764,10 @@ function sourceSchemaToJsonSchema(schema) {
 }
 
 function sourceSchemaToFileClass(schema) {
+  const filesPaths = String(schema.location_pattern || '')
+    .split(/\s+or\s+/i)
+    .map((item) => String(item || '').trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean);
   const fields = (schema.fields || []).map((field) => {
     const config = {
       name: field.name,
@@ -3630,7 +3785,7 @@ function sourceSchemaToFileClass(schema) {
     fileClass: schema.entity,
     version: '1.0',
     mapWithTag: false,
-    filesPaths: [schema.location_pattern],
+    filesPaths: filesPaths.length ? filesPaths : [schema.location_pattern],
     fields,
     ...(schema.description ? { description: schema.description } : {}),
   };
@@ -4161,7 +4316,6 @@ function projectTemplate(name) {
       project_id: projectId,
       project_name: projectName,
       today: ymd(),
-      entityKey: 'project',
       label: def.label || 'Project',
       plural: def.plural || 'Projects',
     }, {
@@ -4904,8 +5058,8 @@ class CadenceReminderEditModal extends obsidian.Modal {
             this._submitted = true;
             this.close();
             const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
-            if (leaf && leaf.view && typeof leaf.view.openEntityDetail === 'function') {
-              leaf.view.openEntityDetail('project', file);
+            if (leaf && leaf.view && typeof leaf.view.openEntityDetailFromFile === 'function') {
+              leaf.view.openEntityDetailFromFile(file);
             }
           }
         });
@@ -6346,8 +6500,8 @@ class CadenceAppView extends obsidian.ItemView {
     await this.render();
   }
 
-  async openEntityDetailFromFile(file) {
-    const key = entityKeyFromFile(this.app, file);
+  async openEntityDetailFromFile(file, entityKey = null) {
+    const key = entityKey || entityKeyFromFile(this.app, file);
     if (!key) {
       // Not a Cadence entity — fall back to opening the markdown
       this.app.workspace.openLinkText(file.path, '', false);
@@ -8427,6 +8581,10 @@ class CadenceAppView extends obsidian.ItemView {
       if (metaBits.length) {
         main.createDiv({ cls: 'cad-home-row-meta', text: metaBits.join(' · ') });
       }
+      if (entity.file) {
+        row.classList.add('clickable');
+        row.addEventListener('click', () => this.openEntityDetailFromFile(entity.file));
+      }
     });
   }
 
@@ -8586,6 +8744,10 @@ class CadenceAppView extends obsidian.ItemView {
         rows.forEach((entity) => {
           const row = list.createDiv({ cls: 'cad-base-embed-row' });
           row.createDiv({ cls: 'cad-home-row-title', text: entity?.title || entity?.name || entity?.file?.basename || entity?.basename || 'Untitled' });
+          if (entity?.file) {
+            row.classList.add('clickable');
+            row.addEventListener('click', () => this.openEntityDetailFromFile(entity.file));
+          }
         });
       } else {
         body.createDiv({ cls: 'cad-empty', text: 'No rows available for preview.' });
@@ -9262,6 +9424,10 @@ class CadenceAppView extends obsidian.ItemView {
         item.classList.add('clickable');
         item.addEventListener('click', async () => {
           if (row.file) {
+            if (row.entityKey) {
+              this.openEntityDetail(row.entityKey, row.file);
+              return;
+            }
             this.openEntityDetailFromFile(row.file);
             return;
           }
@@ -9386,7 +9552,14 @@ class CadenceAppView extends obsidian.ItemView {
       col.createDiv({ cls: 'cad-bar-label', text: entry.group.label });
       col.createDiv({ cls: 'cad-bar-value', text: String(entry.value) });
       if (entry.items.length && entry.items[0]?.file) {
-        col.addEventListener('click', () => this.openEntityDetailFromFile(entry.items[0].file));
+        col.addEventListener('click', () => {
+          const first = entry.items[0];
+          if (first.entityKey) {
+            this.openEntityDetail(first.entityKey, first.file);
+            return;
+          }
+          this.openEntityDetailFromFile(first.file);
+        });
       }
     });
   }
@@ -11273,7 +11446,9 @@ class CadenceAppView extends obsidian.ItemView {
       const card = grid.createDiv({ cls: 'cad-proj-card' });
       const head = card.createDiv({ cls: 'cad-proj-card-head' });
       const title = head.createEl('a', { cls: 'cad-proj-title', text: entityValue(p.entity, 'name', def) || p.entity.basename });
-      title.addEventListener('click', (ev) => { ev.preventDefault(); this.openEntityDetail('project', p.entity.file); });
+      title.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); this.openEntityDetailFromFile(p.entity.file); });
+      card.classList.add('clickable');
+      card.addEventListener('click', () => this.openEntityDetailFromFile(p.entity.file));
       const status = String(entityValue(p.entity, 'status', def) || 'active');
       const priority = String(entityValue(p.entity, 'priority', def) || '');
       const pillRow = head.createDiv({ cls: 'cad-proj-pills' });
@@ -11325,7 +11500,9 @@ class CadenceAppView extends obsidian.ItemView {
         const card = section.createDiv({ cls: 'cad-proj-card' });
         const head = card.createDiv({ cls: 'cad-proj-card-head' });
         const title = head.createEl('a', { cls: 'cad-proj-title', text: entityValue(p.entity, 'name', def) || p.entity.basename });
-        title.addEventListener('click', (ev) => { ev.preventDefault(); this.openEntityDetail('project', p.entity.file); });
+        title.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); this.openEntityDetailFromFile(p.entity.file); });
+        card.classList.add('clickable');
+        card.addEventListener('click', () => this.openEntityDetailFromFile(p.entity.file));
         const status = String(entityValue(p.entity, 'status', def) || 'active');
         const priority = String(entityValue(p.entity, 'priority', def) || '');
         const pillRow = head.createDiv({ cls: 'cad-proj-pills' });
@@ -11445,7 +11622,7 @@ class CadenceAppView extends obsidian.ItemView {
       const card = wrap.createDiv({ cls: 'cad-pt-group' });
       const head = card.createDiv({ cls: 'cad-pt-group-head' });
       const link = head.createEl('a', { cls: 'cad-pt-group-link', text: '📁 ' + g.name });
-      link.addEventListener('click', (e) => { e.preventDefault(); this.openEntityDetail('project', g.file); });
+      link.addEventListener('click', (e) => { e.preventDefault(); this.openEntityDetailFromFile(g.file); });
       head.createSpan({ cls: 'cad-pt-group-meta', text: `${g.tasks.length} open` });
 
       const list = card.createDiv({ cls: 'cad-pt-list' });
@@ -11478,7 +11655,7 @@ class CadenceAppView extends obsidian.ItemView {
             }, { isNew: true }).open();
           }
         });
-        row.addEventListener('click', () => this.openEntityDetail('project', g.file));
+        row.addEventListener('click', () => this.openEntityDetailFromFile(g.file));
       });
     });
   }
@@ -11508,7 +11685,7 @@ class CadenceAppView extends obsidian.ItemView {
         ev.preventDefault();
         ev.stopPropagation();
         const file = this.app.vault.getAbstractFileByPath(r.project);
-        if (file && file instanceof obsidian.TFile) this.openEntityDetail('project', file);
+        if (file && file instanceof obsidian.TFile) this.openEntityDetailFromFile(file);
       });
     }
 
@@ -11821,7 +11998,13 @@ class CadenceAppView extends obsidian.ItemView {
       const row = body.createDiv({ cls: 'cad-dash-row' });
       row.createDiv({ cls: 'cad-dash-row-title', text: r.title });
       row.createDiv({ cls: 'cad-dash-row-meta', text: r.meta });
-      if (r.file) row.addEventListener('click', () => this.openEntityDetailFromFile(r.file));
+      if (r.file) row.addEventListener('click', () => {
+        if (r.entityKey) {
+          this.openEntityDetail(r.entityKey, r.file);
+          return;
+        }
+        this.openEntityDetailFromFile(r.file);
+      });
     });
   }
 
@@ -12204,7 +12387,7 @@ class CadenceAppView extends obsidian.ItemView {
             chip.addEventListener('click', (ev) => {
               ev.preventDefault(); ev.stopPropagation();
               const f = this.app.vault.getAbstractFileByPath(linkedProject);
-              if (f instanceof obsidian.TFile) this.openEntityDetail('project', f);
+              if (f instanceof obsidian.TFile) this.openEntityDetailFromFile(f);
             });
           }
           const linkBtn = row.createEl('button', { cls: 'cad-task-link-btn' + (linkedProject ? ' linked' : ''), text: linkedProject ? '✎' : '📁' });
@@ -12590,7 +12773,14 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     const workspaceSaveBtn = workspaceBtns.createEl('button', { text: 'Save and apply', cls: 'mod-cta' });
     workspaceSaveBtn.addEventListener('click', async () => {
       try {
+        const parsed = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(workspaceTa.value)));
         await saveWorkspaceConfig(this.plugin.app, workspaceTa.value);
+        if (parsed.schemas?.enabled) {
+          const bootstrap = await bootstrapCanonicalSchemaSourcesIfMissing(this.plugin.app, this.plugin.settings);
+          if (bootstrap.count) {
+            await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
+          }
+        }
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
         new obsidian.Notice('BOB Workspace: workspace.json saved and applied.');
@@ -14116,6 +14306,27 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           }
         }));
 
+    const schemaBootstrapBanner = schemasPanel.createDiv({ cls: 'cad-managed-banner cad-schema-bootstrap-banner' });
+    schemaBootstrapBanner.style.display = 'none';
+    const bootstrapIcon = schemaBootstrapBanner.createSpan({ cls: 'cad-managed-banner-icon' });
+    try { obsidian.setIcon(bootstrapIcon, 'database'); } catch (_) {}
+    const bootstrapText = schemaBootstrapBanner.createSpan({ text: 'No schema sources found in the configured folder.' });
+    schemaBootstrapBanner.createSpan({ text: ' ' });
+    const bootstrapAction = schemaBootstrapBanner.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Bootstrap schemas' });
+    bootstrapAction.addEventListener('click', async () => {
+      if (!confirm('Create canonical schema YAML from the current workspace entity definitions? Existing source files will be left untouched.')) return;
+      try {
+        const result = await bootstrapCanonicalSchemaSources(this.plugin.app, this.plugin.settings);
+        const regen = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
+        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        this.plugin.refreshOpenViews();
+        new obsidian.Notice(`BOB Workspace: bootstrapped ${result.count} schema source file${result.count === 1 ? '' : 's'}${result.skipped ? `; skipped ${result.skipped} existing source file${result.skipped === 1 ? '' : 's'}` : ''}. Generated ${regen.count} FileClass and JSON Schema output(s).`);
+        this.display();
+      } catch (e) {
+        new obsidian.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
+      }
+    });
+
     const schemaDesigner = schemasPanel.createDiv({ cls: 'cad-schema-designer' });
     const schemaDesignerHead = schemaDesigner.createDiv({ cls: 'cad-schema-designer-head' });
     schemaDesignerHead.createEl('h4', { text: 'Data model designer' });
@@ -14138,6 +14349,18 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     let schemaFiles = [];
     const initialSchemaPath = this._schemaDesignerSelectedPath || '';
     const schemaFolder = (schemaSettings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
+    (async () => {
+      try {
+        const loaded = await loadCanonicalSchemaSources(this.plugin.app, this.plugin.settings);
+        const empty = !loaded.schemas.length;
+        schemaBootstrapBanner.style.display = empty ? '' : 'none';
+        bootstrapText.setText(empty
+          ? `No schema sources found in ${schemaFolder}.`
+          : `Found ${loaded.schemas.length} schema source${loaded.schemas.length === 1 ? '' : 's'} in ${schemaFolder}.`);
+      } catch (_) {
+        schemaBootstrapBanner.style.display = 'none';
+      }
+    })();
 
     const setSchemaStatus = (text, ok = true) => {
       schemaStatus.setText(text || '');
@@ -14743,6 +14966,12 @@ async function applyWorkspaceTemplate(app, plugin, template) {
   plugin.settings.setupDismissed = true;
   plugin.settings = applyWorkspaceOwnedSettings(plugin.settings);
   await plugin.saveSettings();
+  if (parsed.schemas?.enabled) {
+    const bootstrap = await bootstrapCanonicalSchemaSourcesIfMissing(app, plugin.settings);
+    if (bootstrap.count) {
+      await regenerateSchemaOutputs(app, plugin.settings);
+    }
+  }
   await reloadEntityConfiguration(app, plugin.settings);
   plugin.refreshOpenViews();
   return _template;
@@ -14957,6 +15186,22 @@ class CadencePlugin extends obsidian.Plugin {
         await reloadEntityConfiguration(this.app, this.settings);
         this.refreshOpenViews();
         new obsidian.Notice('BOB Workspace: workspace configuration reloaded.');
+      },
+    });
+
+    this.addCommand({
+      id: 'bootstrap-canonical-schemas',
+      name: 'Bootstrap canonical schemas from workspace',
+      callback: async () => {
+        try {
+          const result = await bootstrapCanonicalSchemaSources(this.app, this.settings);
+          const regen = await regenerateSchemaOutputs(this.app, this.settings);
+          await reloadEntityConfiguration(this.app, this.settings);
+          this.refreshOpenViews();
+          new obsidian.Notice(`BOB Workspace: bootstrapped ${result.count} schema source file${result.count === 1 ? '' : 's'}${result.skipped ? `; skipped ${result.skipped} existing source file${result.skipped === 1 ? '' : 's'}` : ''}. Generated ${regen.count} FileClass and JSON Schema output(s).`);
+        } catch (e) {
+          new obsidian.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
+        }
       },
     });
 
