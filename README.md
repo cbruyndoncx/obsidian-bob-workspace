@@ -79,7 +79,7 @@ Bring an entire client list, pipeline, or partner roster in from a spreadsheet. 
 3. Install → Enable
 
 ### Manual install (works today)
-1. Download `main.js`, `manifest.json`, `styles.css`, `versions.json`, `vendor/xlsx.full.min.js`, and `templates/` from the [latest release](https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/latest)
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/latest) (workspace templates and the XLSX library are bundled inside `main.js`)
 2. Drop them into `<your-vault>/.obsidian/plugins/bob-workspace/`
 3. Settings → Community plugins → Reload → Enable **BOB Workspace**
 
@@ -206,8 +206,8 @@ A matching **Cadence** theme is available separately for vaults that want a full
 git clone https://github.com/cbruyndoncx/obsidian-bob-workspace
 cd obsidian-bob-workspace
 # Plugin is plain JS, no build step. Drop main.js + manifest.json + styles.css
-# + vendor/xlsx.full.min.js + templates/ into <vault>/.obsidian/plugins/bob-workspace/
-# to test.
+# into <vault>/.obsidian/plugins/bob-workspace/ to test.
+# (Workspace templates and the XLSX library are bundled into main.js.)
 ```
 
 PRs welcome. For bug reports, please include your Obsidian version, OS, and a minimal vault to reproduce.

@@ -10,13 +10,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **BOB Workspace** is an Obsidian plugin (forked from Cadence) providing a unified workspace for CRM, PRM, Client Work, Finance, Procurement, project management, daily planning, reminders, dashboards, and reports - all backed by plain markdown.
 
-The plugin has **no build step**. It's pure JavaScript loaded directly by Obsidian's plugin system. Shipping artifacts are copied directly to `<vault>/.obsidian/plugins/bob-workspace/` and used as-is:
+The plugin has **no build step** for editing logic, but it has two **generated bundles** inside `main.js` (workspace templates and the SheetJS XLSX library) — see "Generated bundles" below. The only artifacts Obsidian loads are:
 
-- `main.js`
+- `main.js` — includes the bundled templates and XLSX library
 - `manifest.json`
 - `styles.css`
-- `vendor/xlsx.full.min.js`
-- `templates/`
+
+`vendor/` and `templates/` remain in the repo as the **editable sources** for the bundles, but Obsidian's installer does not deliver them and they are not required at runtime.
 
 Plugin ID: `bob-workspace` (not `cadence-planner` — the upstream Cadence ID).
 
@@ -32,7 +32,7 @@ Plugin ID: `bob-workspace` (not `cadence-planner` — the upstream Cadence ID).
   - Settings: `DEFAULT_SETTINGS`, `CURRENT_CURRENCY`, `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`
   - Schema loader: `applySchemas()` — reads Metadata Menu YAML schema files into `ENTITIES` at runtime
   - Dashboard/report config: `resolveDashboardConfig()`, `renderConfigDashboard()`, widget catalog helpers, runtime-backed widget sources
-  - XLSX export: `getXLSX()`, `exportEntitiesXLSX()` via bundled `vendor/xlsx.full.min.js`
+  - XLSX export: `getXLSX()`, `exportEntitiesXLSX()` via the inlined `loadBundledXLSX()` (SheetJS mini)
   - Utility functions: date/time, file I/O, parsing, formatting
   - Modal classes: `CadenceCaptureModal`, `CadenceReminderEditModal`, `CadenceImportModal`, `CadenceEntityCreateModal`, `CadencePromptModal`
   - Main view: `CadenceAppView`
@@ -45,7 +45,7 @@ Plugin ID: `bob-workspace` (not `cadence-planner` — the upstream Cadence ID).
 
 - **`versions.json`** — Version → min-app-version mapping for Obsidian store.
 
-- **`vendor/xlsx.full.min.js`** — Bundled SheetJS library for XLSX workbook export.
+- **`vendor/xlsx.mini.min.js`** — Source for the SheetJS (mini) library that `scripts/bundle-xlsx.js` inlines into `main.js`. Not loaded directly at runtime.
 
 ### Key Classes
 
@@ -174,7 +174,7 @@ Small dashboard UI choices that should survive restart, such as selector picks a
 
 ### XLSX Workbook Export
 
-`exportEntitiesXLSX(app, entityKeys, suffix, settings)` exports one sheet per entity type into an `.xlsx` file. The library is loaded lazily via `getXLSX(app)` from `vendor/xlsx.full.min.js` (bundled with the plugin, not in the vault). Output path: `settings.workbookExportFolder` (default `BOB Workspace/Exports`). Commands: `bob-workspace-export-xlsx`, `bob-workspace-import-xlsx`.
+`exportEntitiesXLSX(app, entityKeys, suffix, settings)` exports one sheet per entity type into an `.xlsx` file. The library is loaded lazily via `getXLSX(app)`, which calls the inlined `loadBundledXLSX()` (SheetJS mini, bundled into `main.js`). Output path: `settings.workbookExportFolder` (default `BOB Workspace/Exports`). Commands: `bob-workspace-export-xlsx`, `bob-workspace-import-xlsx`.
 
 ### Key Patterns
 
@@ -213,17 +213,25 @@ weekDates(anchor, weekStartsOn) // [Mon, Tue, ..., Sun] as Date[]
 
 1. Edit `main.js`, `styles.css`, or file-backed templates/docs as needed
 2. **If you edited any `templates/workspace-*.json`, run `node scripts/bundle-templates.js`** — this inlines them into `main.js` (see Workspace templates below). The regression suite fails if the bundle is stale.
-3. Copy to test vault: `cp main.js styles.css manifest.json vendor/xlsx.full.min.js <vault>/.obsidian/plugins/bob-workspace/`
+3. Copy to test vault: `cp main.js styles.css manifest.json <vault>/.obsidian/plugins/bob-workspace/` (templates and XLSX are bundled into `main.js`)
 4. Reload in Obsidian: Settings → Community plugins → BOB Workspace → Disable/Enable
 5. Check console: Command palette → "Toggle developer tools"
 6. Run `node tests/run-tests.js` for the lightweight regression suite
 
-### Workspace templates (bundled)
+### Generated bundles
 
-Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it does **not** ship the `templates/` folder, and `fs`/`__dirname` reads don't work in the plugin runtime. So the workspace templates are **bundled into `main.js`** as `BUNDLED_WORKSPACE_TEMPLATES` (between generated markers near the top of the file).
+Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it does **not** ship the `templates/` or `vendor/` folders, and `fs`/`__dirname`/`require()` against plugin paths don't work in the plugin runtime. So two things are **bundled into `main.js`** (between generated markers near the top):
 
-- `templates/workspace-*.json` remain the editable **source of truth**. After editing one, regenerate the bundle: `node scripts/bundle-templates.js`.
+| Bundle | Marker | Source | Regenerate with |
+|--------|--------|--------|-----------------|
+| Workspace templates | `BUNDLED_WORKSPACE_TEMPLATES` | `templates/workspace-*.json` | `node scripts/bundle-templates.js` |
+| XLSX library (SheetJS mini) | `loadBundledXLSX()` | `vendor/xlsx.mini.min.js` | `node scripts/bundle-xlsx.js` |
+
+**Always re-run the matching generator after editing a source, and copy the regenerated `main.js`.** The regression suite fails if either bundle is stale.
+
+- `templates/workspace-*.json` and `vendor/xlsx.mini.min.js` remain the editable **sources of truth**; they are not loaded at runtime.
 - `loadWorkspaceTemplates()` serves the bundled templates (authoritative for shipped names); on-disk templates can only **add** custom ones.
+- The XLSX lib is embedded as a **function body** (not a string + `eval`), so V8 compiles it lazily on first `getXLSX()` use and there is no `eval` for the store reviewer to flag.
 - Applying a template writes the full config — including all dashboards — into `workspace.json`, so it is visible and editable in Settings. There is no hidden builtin-dashboard fallback: a surface with no entry in `workspace.json` shows the "Add dashboards.xxx" prompt by design.
 
 ### Code Style
@@ -288,7 +296,7 @@ await app.vault.modify(file, replaceSection(content, settings.tasksHeading, stri
 
 **Moving entity folders.** Rename the folder in the vault first, then update the path in Settings → BOB Workspace → Folders. Files are not moved automatically.
 
-**XLSX export fails.** Ensure `vendor/xlsx.full.min.js` was copied alongside `main.js` to the plugin folder.
+**XLSX export fails.** The library is inlined into `main.js` via `loadBundledXLSX()`. If it errors, the bundle is likely stale or missing — run `node scripts/bundle-xlsx.js` and recopy `main.js`.
 
 ---
 
@@ -299,5 +307,5 @@ See `SUBMISSION.md` for the full release checklist.
 Key reminders:
 - `manifest.json` version must match the git tag exactly (no `v` prefix)
 - `versions.json` must map the new version → min-app-version
-- Release assets must include `main.js`, `manifest.json`, `styles.css`, `vendor/xlsx.full.min.js`, and `templates/workspace-*.json`
+- Release assets only need `main.js`, `manifest.json`, `styles.css` (and `versions.json`) — templates and the XLSX library are bundled into `main.js`. Verify both bundles are current (`node scripts/bundle-templates.js && node scripts/bundle-xlsx.js`) before tagging.
 - No `console.log`, unsanitized `innerHTML`, or raw frontmatter string manipulation in shipping code

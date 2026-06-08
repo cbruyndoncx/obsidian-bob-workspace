@@ -69,15 +69,13 @@ Verify it's live: `gh repo view --web`.
 ```bash
 gh release create 0.14.4-bob.14 \
   main.js manifest.json styles.css \
-  vendor/xlsx.full.min.js \
-  templates/workspace-*.json \
   --title "0.14.4-bob.14" \
   --notes "CRM, PRM, Client Work, Finance, Procurement, Planner, Reports, Inbox + reminders, rich Project detail. Markdown source-of-truth."
 ```
 
 **The tag must match `manifest.json.version` exactly** — no `v` prefix. The bot rejects mismatches.
 
-Required release assets: `main.js`, `manifest.json`, `styles.css`, `vendor/xlsx.full.min.js`, and `templates/workspace-*.json`. The XLSX vendor bundle and workspace templates are loaded at runtime — omitting them breaks export/import and first-run bootstrap.
+Required release assets: `main.js`, `manifest.json`, `styles.css`. The workspace templates and the SheetJS XLSX library are **bundled into `main.js`** (see CLAUDE.md → Generated bundles), so they don't need to be uploaded — Obsidian's installer wouldn't deliver them anyway. Before tagging, regenerate both bundles: `node scripts/bundle-templates.js && node scripts/bundle-xlsx.js`.
 
 ## Step 5 — Submit the PR to obsidian-releases
 
@@ -143,7 +141,7 @@ EOF
 ## After approval
 
 - Your plugin appears in Settings → Community plugins → Browse.
-- For future updates: bump `version` in `manifest.json`, add `"<new-version>": "<min-app-version>"` to `versions.json`, commit, push, then `gh release create <new-version> main.js manifest.json styles.css vendor/xlsx.full.min.js templates/workspace-*.json --title "<new-version>"`. The store auto-detects new releases — no PR needed for updates.
+- For future updates: bump `version` in `manifest.json`, add `"<new-version>": "<min-app-version>"` to `versions.json`, commit, push, then `gh release create <new-version> main.js manifest.json styles.css --title "<new-version>"`. The store auto-detects new releases — no PR needed for updates.
 
 ## If a reviewer asks for changes
 
