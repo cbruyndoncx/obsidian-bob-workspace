@@ -2122,7 +2122,30 @@ select.cad-form-input {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
-  padding: 0 32px 16px 32px;
+  padding: 0;
+}
+
+.cad-dash-filter-group {
+  margin: 0 32px 16px 32px;
+  padding: 12px 12px 14px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--background-secondary) 60%, var(--background-primary));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cad-dash-filter-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cad-dash-filter-group-note {
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .cad-dash-card {

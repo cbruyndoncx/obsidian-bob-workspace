@@ -343,23 +343,58 @@
         "title": "Inbox",
         "subtitle": "Capture and reminders",
         "stats": [
-          { "label": "REMINDERS", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "inboxCount", "accent": "sky" },
-          { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "rose" },
-          { "label": "TODAY TASKS", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayCount", "accent": "emerald" }
+          {
+            "label": "REMINDERS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "inbox"
+            },
+            "field": "inboxCount",
+            "accent": "sky"
+          },
+          {
+            "label": "OVERDUE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "inbox"
+            },
+            "field": "overdueCount",
+            "accent": "rose"
+          },
+          {
+            "label": "TODAY TASKS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "today"
+            },
+            "field": "todayCount",
+            "accent": "emerald"
+          }
         ],
         "layout": [
           [
             {
               "kind": "list",
               "title": "REMINDERS",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "inbox"
+              },
               "limit": 10,
               "empty": "Inbox zero — capture something to get started."
             },
             {
               "kind": "list",
               "title": "TODAY TASKS",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "today" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "today"
+              },
               "limit": 12,
               "empty": "No tasks on today's note."
             }
@@ -368,7 +403,11 @@
             {
               "kind": "list",
               "title": "OVERVIEW",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "overview"
+              },
               "limit": 4,
               "empty": "Nothing urgent right now."
             }
@@ -380,23 +419,58 @@
         "title": "Today",
         "subtitle": "Daily tasks and journal",
         "stats": [
-          { "label": "OPEN", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayOpenCount", "accent": "sky" },
-          { "label": "DONE", "source": { "mode": "built-in", "builtIn": "planner", "section": "today" }, "field": "todayDoneCount", "accent": "mint" },
-          { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "warn" }
+          {
+            "label": "OPEN",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "today"
+            },
+            "field": "todayOpenCount",
+            "accent": "sky"
+          },
+          {
+            "label": "DONE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "today"
+            },
+            "field": "todayDoneCount",
+            "accent": "mint"
+          },
+          {
+            "label": "OVERDUE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "inbox"
+            },
+            "field": "overdueCount",
+            "accent": "warn"
+          }
         ],
         "layout": [
           [
             {
               "kind": "list",
               "title": "TODAY TASKS",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "today" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "today"
+              },
               "limit": 12,
               "empty": "No tasks on today's note."
             },
             {
               "kind": "list",
               "title": "OVERVIEW",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "overview"
+              },
               "limit": 4,
               "empty": "Planner overview is empty."
             }
@@ -408,23 +482,58 @@
         "title": "Projects",
         "subtitle": "Project progress and milestones",
         "stats": [
-          { "label": "PROJECTS", "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" }, "field": "projectCount", "accent": "mint" },
-          { "label": "ACTIVE", "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" }, "field": "projectCount", "accent": "sky" },
-          { "label": "OVERDUE", "source": { "mode": "built-in", "builtIn": "planner", "section": "inbox" }, "field": "overdueCount", "accent": "warn" }
+          {
+            "label": "PROJECTS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "projects"
+            },
+            "field": "projectCount",
+            "accent": "mint"
+          },
+          {
+            "label": "ACTIVE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "projects"
+            },
+            "field": "projectCount",
+            "accent": "sky"
+          },
+          {
+            "label": "OVERDUE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "planner",
+              "section": "inbox"
+            },
+            "field": "overdueCount",
+            "accent": "warn"
+          }
         ],
         "layout": [
           [
             {
               "kind": "list",
               "title": "PROJECTS",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "projects" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "projects"
+              },
               "limit": 8,
               "empty": "No active projects yet."
             },
             {
               "kind": "list",
               "title": "OVERVIEW",
-              "source": { "mode": "built-in", "builtIn": "planner", "section": "overview" },
+              "source": {
+                "mode": "built-in",
+                "builtIn": "planner",
+                "section": "overview"
+              },
               "limit": 4,
               "empty": "No planner overview available."
             }
@@ -780,7 +889,7 @@
     "reports.pipeline": {
       "kind": "report",
       "title": "Pipeline Report",
-      "subtitle": "Deal flow by current stage",
+      "subtitle": "Deal flow, stage risk and owner balance",
       "controls": [
         {
           "kind": "selector",
@@ -827,7 +936,7 @@
           "count": "open",
           "source": {
             "source": "recent-open",
-            "filters": "stage != \"Won\" && stage != \"Lost\" && {{stageFilter}} && {{dateRangeFilter}}"
+            "filters": "stage != \"won\" && stage != \"lost\" && {{stageFilter}} && {{dateRangeFilter}}"
           },
           "sub": "open pipeline",
           "accent": "sky"
@@ -838,7 +947,7 @@
           "metric": "weightedForecast",
           "source": {
             "source": "recent-open",
-            "filters": "stage != \"Won\" && stage != \"Lost\" && {{stageFilter}} && {{dateRangeFilter}}"
+            "filters": "stage != \"won\" && stage != \"lost\" && {{stageFilter}} && {{dateRangeFilter}}"
           },
           "sub": "forecast on open",
           "accent": "mint"
@@ -849,9 +958,9 @@
           "metric": "sum",
           "source": {
             "source": "recent",
-            "filters": "stage == \"Won\" && {{stageFilter}} && {{dateRangeFilter}}"
+            "filters": "stage == \"won\" && {{stageFilter}} && {{dateRangeFilter}}"
           },
-          "field": "value",
+          "field": "deal_value",
           "sub": "won revenue",
           "accent": "emerald"
         },
@@ -861,9 +970,9 @@
           "metric": "sum",
           "source": {
             "source": "recent",
-            "filters": "stage == \"Lost\" && {{stageFilter}} && {{dateRangeFilter}}"
+            "filters": "stage == \"lost\" && {{stageFilter}} && {{dateRangeFilter}}"
           },
-          "field": "value",
+          "field": "deal_value",
           "sub": "closed lost",
           "accent": "rose"
         },
@@ -871,6 +980,10 @@
           "label": "WIN RATE",
           "entity": "deal",
           "metric": "winRate",
+          "source": {
+            "source": "recent",
+            "filters": "(stage == \"won\" || stage == \"lost\") && {{stageFilter}} && {{dateRangeFilter}}"
+          },
           "sub": "closed deals",
           "accent": "warn"
         }
@@ -878,14 +991,59 @@
       "layout": [
         [
           {
-            "kind": "kanban",
-            "title": "OPEN DEALS BY {{groupBy}}",
+            "kind": "bar-chart",
+            "title": "OPEN VALUE BY STAGE",
             "entity": "deal",
             "source": {
               "source": "recent-open",
-              "filters": "stage != \"Won\" && stage != \"Lost\" && {{stageFilter}} && {{dateRangeFilter}}"
+              "filters": "stage != \"won\" && stage != \"lost\" && {{stageFilter}} && {{dateRangeFilter}}"
             },
-            "groupBy": "{{groupBy}}"
+            "groupBy": "stage",
+            "metric": "sum",
+            "field": "deal_value",
+            "limit": 6
+          },
+          {
+            "kind": "bar-chart",
+            "title": "OPEN DEALS BY OWNER",
+            "entity": "deal",
+            "source": {
+              "source": "recent-open",
+              "filters": "stage != \"won\" && stage != \"lost\" && {{stageFilter}} && {{dateRangeFilter}}"
+            },
+            "groupBy": "owner",
+            "metric": "count",
+            "limit": 10
+          }
+        ],
+        [
+          {
+            "title": "STALE OR RISKY OPEN DEALS",
+            "empty": "No risky open deals.",
+            "entity": "deal",
+            "source": {
+              "source": "recent-open",
+              "filters": "stage != \"won\" && stage != \"lost\" && {{stageFilter}} && {{dateRangeFilter}} && (date(expected_close) <= today() + 14d || date(last_contact) <= today() - 30d || next_action.isEmpty())",
+              "sort": [
+                {
+                  "property": "expected_close",
+                  "direction": "ASC"
+                }
+              ]
+            },
+            "titleFields": [
+              "title",
+              "deal_name"
+            ],
+            "metaFields": [
+              "owner",
+              "stage",
+              "deal_value",
+              "expected_close",
+              "last_contact",
+              "next_action"
+            ],
+            "limit": 8
           },
           {
             "title": "RECENT WINS",
@@ -893,7 +1051,13 @@
             "entity": "deal",
             "source": {
               "source": "recent",
-              "filters": "stage == \"Won\" && {{stageFilter}} && {{dateRangeFilter}}"
+              "filters": "stage == \"won\" && {{stageFilter}} && {{dateRangeFilter}}",
+              "sort": [
+                {
+                  "property": "deal_value",
+                  "direction": "DESC"
+                }
+              ]
             },
             "titleFields": [
               "title",
@@ -901,9 +1065,18 @@
             ],
             "metaFields": [
               "stage",
-              "value",
-              "closeBy"
-            ]
+              "deal_value",
+              "expected_close"
+            ],
+            "limit": 8
+          }
+        ],
+        [
+          {
+            "kind": "markdown",
+            "title": "PIPELINE NOTES",
+            "subtitle": "How the report is calculated",
+            "body": "## What this measures\n- Open pipeline excludes Won and Lost deals.\n- Weighted forecast uses the deal stage confidence table and `deal_value`.\n- Close-date filtering uses `expected_close`.\n- The risk list flags deals that are due soon, have not been contacted recently, or have no next action.\n\n## Notes\n- The stage selector narrows all pipeline widgets to the chosen stage.\n- Open pipeline review is still a note-level proxy until deals expose richer risk fields such as structured aging or last-activity rollups."
           }
         ]
       ]
@@ -911,7 +1084,7 @@
     "reports.sales": {
       "kind": "report",
       "title": "Sales Report",
-      "subtitle": "Closed wins, losses and recent movement",
+      "subtitle": "Closed wins, losses and close timing",
       "controls": [
         {
           "kind": "selector",
@@ -920,6 +1093,22 @@
           "entity": "deal",
           "field": "owner",
           "allLabel": "All owners"
+        },
+        {
+          "kind": "selector",
+          "key": "source",
+          "label": "Source",
+          "entity": "deal",
+          "field": "deal_source",
+          "allLabel": "All sources"
+        },
+        {
+          "kind": "selector",
+          "key": "client",
+          "label": "Client",
+          "entity": "deal",
+          "field": "client_id",
+          "allLabel": "All clients"
         },
         {
           "kind": "date-range",
@@ -937,9 +1126,9 @@
           "metric": "sum",
           "source": {
             "source": "recent",
-            "filters": "stage == \"Won\" && {{ownerFilter}} && {{dateRangeFilter}}"
+            "filters": "stage == \"won\" && {{ownerFilter}} && {{sourceFilter}} && {{clientFilter}} && {{dateRangeFilter}}"
           },
-          "field": "value",
+          "field": "deal_value",
           "sub": "won deals",
           "accent": "emerald"
         },
@@ -949,9 +1138,9 @@
           "metric": "sum",
           "source": {
             "source": "recent",
-            "filters": "stage == \"Lost\" && {{ownerFilter}} && {{dateRangeFilter}}"
+            "filters": "stage == \"lost\" && {{ownerFilter}} && {{sourceFilter}} && {{clientFilter}} && {{dateRangeFilter}}"
           },
-          "field": "value",
+          "field": "deal_value",
           "sub": "closed lost",
           "accent": "rose"
         },
@@ -959,6 +1148,10 @@
           "label": "CAPTURE",
           "entity": "deal",
           "metric": "captureRate",
+          "source": {
+            "source": "recent",
+            "filters": "(stage == \"won\" || stage == \"lost\") && {{ownerFilter}} && {{sourceFilter}} && {{clientFilter}} && {{dateRangeFilter}}"
+          },
           "sub": "of closed value",
           "accent": "mint"
         },
@@ -968,9 +1161,9 @@
           "metric": "avg",
           "source": {
             "source": "recent",
-            "filters": "stage == \"Won\" && {{ownerFilter}} && {{dateRangeFilter}}"
+            "filters": "stage == \"won\" && {{ownerFilter}} && {{sourceFilter}} && {{clientFilter}} && {{dateRangeFilter}}"
           },
-          "field": "value",
+          "field": "deal_value",
           "sub": "won deals",
           "accent": "sky"
         }
@@ -978,60 +1171,91 @@
       "layout": [
         [
           {
-            "title": "WON DEALS",
-            "empty": "No won deals.",
+            "kind": "bar-chart",
+            "title": "WON REVENUE BY OWNER",
             "entity": "deal",
             "source": {
               "source": "recent",
-              "filters": "stage == \"Won\" && {{ownerFilter}} && {{dateRangeFilter}}"
+              "filters": "stage == \"won\" && {{ownerFilter}} && {{sourceFilter}} && {{clientFilter}} && {{dateRangeFilter}}"
             },
-            "titleFields": [
-              "title",
-              "deal_name"
-            ],
-            "metaFields": [
-              "stage",
-              "value",
-              "closeBy"
-            ]
+            "groupBy": "owner",
+            "metric": "sum",
+            "field": "deal_value",
+            "limit": 10
           },
           {
-            "title": "LOST DEALS",
-            "empty": "No lost deals.",
+            "kind": "bar-chart",
+            "title": "WON / LOST BY CLOSE DATE",
             "entity": "deal",
             "source": {
               "source": "recent",
-              "filters": "stage == \"Lost\" && {{ownerFilter}} && {{dateRangeFilter}}"
+              "filters": "(stage == \"won\" || stage == \"lost\") && {{ownerFilter}} && {{sourceFilter}} && {{clientFilter}} && {{dateRangeFilter}}"
             },
-            "titleFields": [
-              "title",
-              "deal_name"
-            ],
-            "metaFields": [
-              "stage",
-              "value",
-              "closeBy"
-            ]
+            "groupBy": "expected_close",
+            "metric": "count",
+            "limit": 12
           }
         ],
         [
           {
-            "title": "OPEN DEALS",
-            "empty": "No open deals.",
+            "title": "LARGEST WON DEALS",
+            "empty": "No won deals.",
             "entity": "deal",
             "source": {
-              "source": "recent-open",
-              "filters": "stage != \"Won\" && stage != \"Lost\" && {{ownerFilter}} && {{dateRangeFilter}}"
+              "source": "recent",
+              "filters": "stage == \"won\" && {{ownerFilter}} && {{sourceFilter}} && {{clientFilter}} && {{dateRangeFilter}}",
+              "sort": [
+                {
+                  "property": "deal_value",
+                  "direction": "DESC"
+                }
+              ]
             },
             "titleFields": [
               "title",
               "deal_name"
             ],
             "metaFields": [
-              "stage",
-              "value",
-              "closeBy"
-            ]
+              "owner",
+              "deal_value",
+              "expected_close",
+              "deal_source"
+            ],
+            "limit": 8
+          },
+          {
+            "title": "LARGEST LOST DEALS",
+            "empty": "No lost deals.",
+            "entity": "deal",
+            "source": {
+              "source": "recent",
+              "filters": "stage == \"lost\" && {{ownerFilter}} && {{sourceFilter}} && {{clientFilter}} && {{dateRangeFilter}}",
+              "sort": [
+                {
+                  "property": "deal_value",
+                  "direction": "DESC"
+                }
+              ]
+            },
+            "titleFields": [
+              "title",
+              "deal_name"
+            ],
+            "metaFields": [
+              "owner",
+              "deal_value",
+              "expected_close",
+              "deal_source"
+            ],
+            "limit": 8
+          }
+        ],
+        [
+          {
+            "kind": "markdown",
+            "title": "SALES NOTES",
+            "subtitle": "How capture rate and timing are read",
+            "body": "## What this measures\n- Revenue and lost value use the selected owner, source, client and close-date filters.\n- Capture rate is the won value divided by won plus lost value for the current filter set.\n- The close-date chart uses `expected_close` as the only available timing field, so it shows raw close dates until period buckets are materialized.\n\n## Notes\n- Source and client selectors are proxies for pipeline slicing until the deal schema carries richer account rollups."
           }
         ]
       ]
@@ -1056,6 +1280,14 @@
           "entity": "activity",
           "field": "channel",
           "allLabel": "All channels"
+        },
+        {
+          "kind": "selector",
+          "key": "owner",
+          "label": "Owner",
+          "entity": "activity",
+          "field": "owner",
+          "allLabel": "All owners"
         }
       ],
       "stats": [
@@ -1065,13 +1297,84 @@
           "count": "all",
           "source": {
             "source": "recent",
-            "filters": "{{dateRangeFilter}}"
+            "filters": "{{dateRangeFilter}} && {{channelFilter}}"
           },
           "sub": "all activities",
           "accent": "emerald"
+        },
+        {
+          "label": "MEETINGS",
+          "entity": "activity",
+          "count": "all",
+          "source": {
+            "source": "recent",
+            "filters": "channel == \"meeting\" && {{dateRangeFilter}} && {{channelFilter}}"
+          },
+          "sub": "meeting activities",
+          "accent": "sky"
+        },
+        {
+          "label": "CALLS + MSGS",
+          "entity": "activity",
+          "count": "all",
+          "source": {
+            "source": "recent",
+            "filters": "(channel == \"call\" || channel == \"email\" || channel == \"telegram\" || channel == \"whatsapp\") && {{dateRangeFilter}} && {{channelFilter}}"
+          },
+          "sub": "calls and messages",
+          "accent": "mint"
+        },
+        {
+          "label": "FOLLOW UPS",
+          "entity": "activity",
+          "count": "all",
+          "source": {
+            "source": "recent",
+            "filters": "date(next_action_date) <= today() && {{dateRangeFilter}} && {{channelFilter}}"
+          },
+          "sub": "overdue follow-ups",
+          "accent": "warn"
         }
       ],
       "layout": [
+        [
+          {
+            "kind": "bar-chart",
+            "title": "ACTIVITY BY CHANNEL",
+            "entity": "activity",
+            "source": {
+              "source": "recent",
+              "filters": "{{dateRangeFilter}} && {{channelFilter}}",
+              "sort": [
+                {
+                  "property": "date",
+                  "direction": "DESC"
+                }
+              ]
+            },
+            "groupBy": "channel",
+            "metric": "count",
+            "limit": 8
+          },
+          {
+            "kind": "bar-chart",
+            "title": "ACTIVITY BY DIRECTION",
+            "entity": "activity",
+            "source": {
+              "source": "recent",
+              "filters": "{{dateRangeFilter}} && {{channelFilter}}",
+              "sort": [
+                {
+                  "property": "date",
+                  "direction": "DESC"
+                }
+              ]
+            },
+            "groupBy": "direction",
+            "metric": "count",
+            "limit": 6
+          }
+        ],
         [
           {
             "title": "RECENT ACTIVITIES",
@@ -1079,7 +1382,13 @@
             "entity": "activity",
             "source": {
               "source": "recent",
-              "filters": "{{dateRangeFilter}} && {{channelFilter}}"
+              "filters": "{{dateRangeFilter}} && {{channelFilter}}",
+              "sort": [
+                {
+                  "property": "date",
+                  "direction": "DESC"
+                }
+              ]
             },
             "titleFields": [
               "title",
@@ -1087,25 +1396,47 @@
               "name"
             ],
             "metaFields": [
-              "activity_type",
-              "status",
-              "date"
-            ]
+              "channel",
+              "direction",
+              "date",
+              "next_action_date"
+            ],
+            "limit": 10
           },
           {
-            "title": "RECENT CONTACTS",
-            "empty": "No contacts.",
-            "entity": "contact",
-            "source": "recent",
+            "title": "FOLLOW UPS NEEDED",
+            "empty": "No overdue follow-ups.",
+            "entity": "activity",
+            "source": {
+              "source": "recent",
+              "filters": "date(next_action_date) <= today() && {{dateRangeFilter}} && {{channelFilter}}",
+              "sort": [
+                {
+                  "property": "next_action_date",
+                  "direction": "ASC"
+                }
+              ]
+            },
             "titleFields": [
-              "name",
-              "company"
+              "title",
+              "subject",
+              "name"
             ],
             "metaFields": [
-              "email",
-              "status",
-              "lastContact"
-            ]
+              "channel",
+              "direction",
+              "date",
+              "next_action_date"
+            ],
+            "limit": 10
+          }
+        ],
+        [
+          {
+            "kind": "markdown",
+            "title": "ACTIVITY NOTES",
+            "subtitle": "How the activity counts are grouped",
+            "body": "## What this measures\n- Meetings count channel = `meeting`.\n- Calls + messages count `call`, `email`, `telegram`, and `whatsapp`.\n- Follow-ups are activity notes whose `next_action_date` is due or overdue.\n- The channel selector narrows every widget on the report.\n\n## Notes\n- There is no owner field in the current activity fallback schema, so owner-based slicing is not enabled yet."
           }
         ]
       ]
@@ -1138,6 +1469,17 @@
           "accent": "sky"
         },
         {
+          "label": "COMPLETE",
+          "entity": "task",
+          "field": "completion",
+          "source": {
+            "mode": "built-in",
+            "builtIn": "productivity"
+          },
+          "sub": "completion rate",
+          "accent": "mint"
+        },
+        {
           "label": "STREAK",
           "entity": "task",
           "field": "streak",
@@ -1146,7 +1488,7 @@
             "builtIn": "productivity"
           },
           "sub": "active days",
-          "accent": "mint"
+          "accent": "warn"
         },
         {
           "label": "ACTIVE DAYS",
@@ -1199,24 +1541,57 @@
         [
           {
             "kind": "bar-chart",
-            "title": "WEEKDAY MIX",
+            "title": "TASKS BY PROJECT",
             "source": {
               "mode": "built-in",
               "builtIn": "productivity",
-              "section": "weekday"
+              "section": "projects"
             },
-            "limit": 7
+            "field": "value",
+            "limit": 8
+          },
+          {
+            "kind": "bar-chart",
+            "title": "TASKS BY CONTEXT",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "productivity",
+              "section": "contexts"
+            },
+            "field": "value",
+            "limit": 8
+          }
+        ],
+        [
+          {
+            "kind": "list",
+            "title": "OVERDUE TASKS",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "productivity",
+              "section": "overdue-open"
+            },
+            "limit": 10,
+            "empty": "No overdue open tasks."
           },
           {
             "kind": "list",
-            "title": "TASK NOTES",
+            "title": "HIGH PRIORITY TASKS",
             "source": {
               "mode": "built-in",
               "builtIn": "productivity",
-              "section": "task-notes"
+              "section": "high-priority"
             },
             "limit": 10,
-            "empty": "No TaskNotes in the selected range."
+            "empty": "No high-priority open tasks."
+          }
+        ],
+        [
+          {
+            "kind": "markdown",
+            "title": "PRODUCTIVITY NOTES",
+            "subtitle": "How the time window and completion rate are read",
+            "body": "## What this measures\n- The snapshot covers the last 30 days of daily notes plus the last 12 weeks of TaskNotes rollups.\n- Completion rate is done tasks divided by done plus open tasks in the snapshot window.\n- Task splits by project and context come from TaskNotes metadata when those frontmatter fields are present.\n- Overdue and high-priority lists are driven by TaskNotes due/scheduled dates and priority values.\n\n## Notes\n- The current list is the evidence trail behind the charts rather than a ranked task queue."
           }
         ]
       ]

@@ -1999,6 +1999,28 @@ function normalizeWidgetSourceConfig(source, fallbackEntityKey = null) {
   };
 }
 
+function normalizeWidgetSortSpec(sort) {
+  if (!sort) return [];
+  const items = Array.isArray(sort) ? sort : [sort];
+  return items.map((item) => {
+    if (typeof item === 'string') {
+      const match = item.trim().match(/^(.+?)(?:\s+(asc|desc))?$/i);
+      if (!match) return null;
+      return {
+        property: basePropKey(match[1]),
+        direction: String(match[2] || 'ASC').toUpperCase(),
+      };
+    }
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+    const property = basePropKey(item.property || item.field || item.key || item.sort || '');
+    if (!property) return null;
+    return {
+      property,
+      direction: String(item.direction || item.order || 'ASC').toUpperCase(),
+    };
+  }).filter((item) => item && item.property);
+}
+
 function filterEntitiesByBaseConfig(app, entityKey, entities, baseConfig, warnings = []) {
   if (!entityKey || !Array.isArray(entities) || !baseConfig) return Array.isArray(entities) ? entities : [];
   let filtered = [...entities];
@@ -2057,6 +2079,28 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
   const normalized = normalizeWidgetSourceConfig(source, fallbackEntityKey);
   const warnings = [];
   const entityKey = normalized.entityKey;
+  const normalizedSort = (() => {
+    const sort = normalized.sort;
+    if (!sort) return [];
+    const items = Array.isArray(sort) ? sort : [sort];
+    return items.map((item) => {
+      if (typeof item === 'string') {
+        const match = item.trim().match(/^(.+?)(?:\s+(asc|desc))?$/i);
+        if (!match) return null;
+        return {
+          property: basePropKey(match[1]),
+          direction: String(match[2] || 'ASC').toUpperCase(),
+        };
+      }
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+      const property = basePropKey(item.property || item.field || item.key || item.sort || '');
+      if (!property) return null;
+      return {
+        property,
+        direction: String(item.direction || item.order || 'ASC').toUpperCase(),
+      };
+    }).filter((item) => item && item.property);
+  })();
   const basePath = typeof normalized.base === 'string'
     ? normalized.base
     : normalized.base?.file || normalized.base?.base || normalized.base?.path || normalized.base?.basePath || '';
@@ -2101,7 +2145,7 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
         metadata.baseConfig = baseConfig;
         if (normalized.filters) baseConfig.filters = normalized.filters;
         if (normalized.groupBy) baseConfig.groupBy = normalized.groupBy;
-        if (normalized.sort) baseConfig.sort = normalized.sort;
+        if (normalizedSort.length) baseConfig.baseSort = normalizedSort;
         if (normalized.limit) baseConfig.limit = normalized.limit;
         entities = filterEntitiesByBaseConfig(app, entityKey, entities, baseConfig, warnings);
         def = Object.assign({}, def, {
@@ -2118,6 +2162,9 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
   }
   if (normalized.filters && !basePath) {
     entities = filterEntitiesByBaseConfig(app, entityKey, entities, { filters: normalized.filters }, warnings);
+  }
+  if (normalizedSort.length && !basePath) {
+    entities = [...entities].sort((a, b) => compareEntitiesByBaseSort(a, b, Object.assign({}, def || {}, { baseSort: normalizedSort })));
   }
   if (normalized.limit) {
     entities = entities.slice(0, normalized.limit);
@@ -2149,6 +2196,18 @@ async function buildProductivitySnapshot(app, settings = {}) {
     if (!taskNotesByDate.has(task.date)) taskNotesByDate.set(task.date, []);
     taskNotesByDate.get(task.date).push(task);
   });
+  const projectBuckets = new Map();
+  const contextBuckets = new Map();
+  const overdueTasks = [];
+  const highPriorityTasks = [];
+  const todayIso = ymd(today);
+  const upsertBucket = (bucketMap, title) => {
+    const key = String(title || '').trim();
+    if (!key) return null;
+    const current = bucketMap.get(key) || { title: key, value: 0, values: { open: 0, done: 0, total: 0 }, meta: '' };
+    bucketMap.set(key, current);
+    return current;
+  };
   let totalOpen = 0, totalDone = 0, totalJournalChars = 0;
   let activeDays = 0;
   let streak = 0, streakBroken = false;
@@ -2183,6 +2242,31 @@ async function buildProductivitySnapshot(app, settings = {}) {
       else streakBroken = true;
     }
   }
+
+  taskNotes.forEach((task) => {
+    const dueTime = task.due ? new Date(`${task.due}T00:00:00`).getTime() : NaN;
+    const scheduledTime = task.scheduled ? new Date(`${task.scheduled}T00:00:00`).getTime() : NaN;
+    const isOverdue = !task.done && ((Number.isFinite(dueTime) && dueTime < new Date(`${todayIso}T00:00:00`).getTime()) || (Number.isFinite(scheduledTime) && scheduledTime < new Date(`${todayIso}T00:00:00`).getTime()));
+    const isHighPriority = !task.done && ['high', 'urgent', 'critical'].includes(String(task.priority || '').toLowerCase());
+    if (isOverdue) overdueTasks.push(task);
+    if (isHighPriority) highPriorityTasks.push(task);
+    (Array.isArray(task.projects) ? task.projects : []).forEach((project) => {
+      const bucket = upsertBucket(projectBuckets, project);
+      if (!bucket) return;
+      bucket.value += 1;
+      bucket.values.total += 1;
+      if (task.done) bucket.values.done += 1; else bucket.values.open += 1;
+      bucket.meta = `${bucket.values.open} open · ${bucket.values.done} done`;
+    });
+    (Array.isArray(task.contexts) ? task.contexts : []).forEach((context) => {
+      const bucket = upsertBucket(contextBuckets, context);
+      if (!bucket) return;
+      bucket.value += 1;
+      bucket.values.total += 1;
+      if (task.done) bucket.values.done += 1; else bucket.values.open += 1;
+      bucket.meta = `${bucket.values.open} open · ${bucket.values.done} done`;
+    });
+  });
 
   const completion = totalOpen + totalDone === 0 ? 0 : Math.round((totalDone / (totalOpen + totalDone)) * 100);
   const weeks = [];
@@ -2234,6 +2318,13 @@ async function buildProductivitySnapshot(app, settings = {}) {
     streak,
     completion,
     taskNotes,
+    projectBuckets: [...projectBuckets.values()].sort((a, b) => b.value - a.value),
+    contextBuckets: [...contextBuckets.values()].sort((a, b) => b.value - a.value),
+    overdueTasks: overdueTasks.sort((a, b) => String(a.due || a.scheduled || '9999-12-31').localeCompare(String(b.due || b.scheduled || '9999-12-31'))),
+    highPriorityTasks: highPriorityTasks.sort((a, b) => {
+      const rank = { critical: 0, urgent: 1, high: 2 };
+      return (rank[String(a.priority || '').toLowerCase()] ?? 9) - (rank[String(b.priority || '').toLowerCase()] ?? 9);
+    }),
   };
 }
 
@@ -4373,7 +4464,22 @@ function listTaskNotesForProductivity(app, settings, start, end) {
       const status = taskNoteStatus(fm);
       const done = status === 'done' || status === 'completed' || status === 'archived';
       const date = taskNoteDateValue(file, fm, done);
-      return { file, fm, status, done, date };
+      return {
+        file,
+        fm,
+        status,
+        done,
+        date,
+        priority: String(fm.priority || '').trim().toLowerCase(),
+        due: fm.due ? String(fm.due).slice(0, 10) : '',
+        scheduled: fm.scheduled ? String(fm.scheduled).slice(0, 10) : '',
+        projects: Array.isArray(fm.projects)
+          ? fm.projects
+          : String(fm.projects || '').split(/[,\n]/).map((item) => item.trim()).filter(Boolean),
+        contexts: Array.isArray(fm.contexts)
+          ? fm.contexts
+          : String(fm.contexts || '').split(/[,\n]/).map((item) => item.trim()).filter(Boolean),
+      };
     })
     .filter((item) => {
       const time = item.date ? new Date(item.date + 'T00:00:00').getTime() : NaN;
@@ -7630,6 +7736,17 @@ class CadenceAppView extends obsidian.ItemView {
       );
     }
 
+    if (Array.isArray(config.controls) && config.controls.length) {
+      const controlsSection = root.createDiv({ cls: 'cad-dash-filter-group' });
+      const controlsHead = controlsSection.createDiv({ cls: 'cad-dash-filter-group-head' });
+      controlsHead.createDiv({ cls: 'cad-dash-card-title', text: 'FILTERS' });
+      controlsHead.createDiv({ cls: 'cad-dash-filter-group-note', text: 'All filters are combined with AND.' });
+      const controlsWrap = controlsSection.createDiv({ cls: 'cad-dash-controls' });
+      for (const control of config.controls) {
+        await this._renderConfigCard(controlsWrap.createDiv({ cls: 'cad-dash-col' }), control, getWidgetEntities);
+      }
+    }
+
     if (config.stats?.length) {
       const statItems = await Promise.all(config.stats.map(async (s) => {
         const resolved = await getWidgetEntities(s.source || s, s.entity);
@@ -7687,13 +7804,6 @@ class CadenceAppView extends obsidian.ItemView {
         return { label: s.label, value, sub, accent: s.accent, mode: s.mode };
       }));
       this._dashboardStats(root, statItems);
-    }
-
-    if (Array.isArray(config.controls) && config.controls.length) {
-      const controlsWrap = root.createDiv({ cls: 'cad-dash-controls' });
-      for (const control of config.controls) {
-        await this._renderConfigCard(controlsWrap.createDiv({ cls: 'cad-dash-col' }), control, getWidgetEntities);
-      }
     }
 
     for (const row of config.layout || []) {
@@ -7970,12 +8080,14 @@ class CadenceAppView extends obsidian.ItemView {
     if (sourceSpec.mode === 'built-in') {
       return this._resolveBuiltInRows(def, resolved);
     }
-    if (source === 'recent') return this._recentRows(def.entity, all, def.titleFields, def.metaFields);
-    if (source === 'recent-open') return this._recentRows(def.entity, all.filter(e => this._isOpenEntity(e, def.entity)), def.titleFields, def.metaFields);
-    if (source === 'due') return this._dueRows(def.entity, all, def.dateFields, def.titleFields);
-    if (source === 'due-open') return this._dueRows(def.entity, all.filter(e => this._isOpenEntity(e, def.entity)), def.dateFields, def.titleFields);
+    const sortSpec = sourceSpec.sort || def.sort || null;
+    const limit = sourceSpec.limit || def.limit || 6;
+    if (source === 'recent') return this._recentRows(def.entity, all, def.titleFields, def.metaFields, sortSpec, limit);
+    if (source === 'recent-open') return this._recentRows(def.entity, all.filter(e => this._isOpenEntity(e, def.entity)), def.titleFields, def.metaFields, sortSpec, limit);
+    if (source === 'due') return this._dueRows(def.entity, all, def.dateFields, def.titleFields, limit);
+    if (source === 'due-open') return this._dueRows(def.entity, all.filter(e => this._isOpenEntity(e, def.entity)), def.dateFields, def.titleFields, limit);
     if (source === 'base' || source === 'table' || source === 'list' || source === 'entity') {
-      return this._recentRows(def.entity, all, def.titleFields, def.metaFields, entityDef);
+      return this._recentRows(def.entity, all, def.titleFields, def.metaFields, sortSpec, limit, entityDef);
     }
     return [];
   }
@@ -8067,6 +8179,40 @@ class CadenceAppView extends obsidian.ItemView {
       return (builtInData.taskNotes || []).map((task) => ({
         title: task.text || task.title || 'Task note',
         meta: `${task.date || '—'} · ${task.done ? 'done' : 'open'}`,
+        file: task.file || null,
+      }));
+    }
+    if (section === 'projects' || section === 'project') {
+      return (builtInData.projectBuckets || []).map((item) => ({
+        title: item.title || 'Project',
+        meta: item.meta || '',
+        value: Number(item.value) || 0,
+        values: Object.assign({}, item.values || {}),
+      }));
+    }
+    if (section === 'contexts' || section === 'context') {
+      return (builtInData.contextBuckets || []).map((item) => ({
+        title: item.title || 'Context',
+        meta: item.meta || '',
+        value: Number(item.value) || 0,
+        values: Object.assign({}, item.values || {}),
+      }));
+    }
+    if (section === 'overdue' || section === 'overdue-open') {
+      return (builtInData.overdueTasks || []).map((task) => ({
+        title: task.title || task.file?.basename || 'Task note',
+        meta: [task.due ? `due ${task.due}` : '', task.scheduled ? `scheduled ${task.scheduled}` : '', task.priority ? task.priority : '']
+          .filter(Boolean)
+          .join(' · '),
+        file: task.file || null,
+      }));
+    }
+    if (section === 'high-priority' || section === 'priority-open') {
+      return (builtInData.highPriorityTasks || []).map((task) => ({
+        title: task.title || task.file?.basename || 'Task note',
+        meta: [task.priority || '', task.due ? `due ${task.due}` : '', task.scheduled ? `scheduled ${task.scheduled}` : '']
+          .filter(Boolean)
+          .join(' · '),
         file: task.file || null,
       }));
     }
@@ -9327,11 +9473,17 @@ class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _recentRows(entityKey, entities, titleFields = ['title', 'name'], metaFields = ['status']) {
+  _recentRows(entityKey, entities, titleFields = ['title', 'name'], metaFields = ['status'], sortSpec = null, limit = 6) {
     const def = ENTITIES[entityKey];
-    return [...entities]
-      .sort((a, b) => (b.file?.stat?.mtime || 0) - (a.file?.stat?.mtime || 0))
-      .slice(0, 6)
+    const sort = normalizeWidgetSortSpec(sortSpec);
+    const sorted = [...entities];
+    if (sort.length) {
+      sorted.sort((a, b) => compareEntitiesByBaseSort(a, b, Object.assign({}, def || {}, { baseSort: sort })));
+    } else {
+      sorted.sort((a, b) => (b.file?.stat?.mtime || 0) - (a.file?.stat?.mtime || 0));
+    }
+    return sorted
+      .slice(0, Math.max(1, Number(limit) || 6))
       .map((entity) => {
         const titleField = titleFields.find((field) => entityValue(entity, field, def));
         const title = (titleField ? entityValue(entity, titleField, def) : '') || entity.basename;
@@ -9340,7 +9492,7 @@ class CadenceAppView extends obsidian.ItemView {
       });
   }
 
-  _dueRows(entityKey, entities, dateFields, titleFields = ['title', 'name']) {
+  _dueRows(entityKey, entities, dateFields, titleFields = ['title', 'name'], limit = 6) {
     const today = startOfDay(new Date());
     const horizon = addDays(today, 30);
     const def = ENTITIES[entityKey];
@@ -9348,7 +9500,7 @@ class CadenceAppView extends obsidian.ItemView {
       .map((entity) => ({ entity, date: this._dateValue(entity, entityKey, dateFields) }))
       .filter((item) => item.date && item.date.getTime() <= horizon.getTime())
       .sort((a, b) => a.date - b.date)
-      .slice(0, 6)
+      .slice(0, Math.max(1, Number(limit) || 6))
       .map(({ entity, date }) => {
         const titleField = titleFields.find((field) => entityValue(entity, field, def));
         return {
