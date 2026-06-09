@@ -9813,28 +9813,42 @@ function resolveBasesFolder(settings = {}) {
   return String(settings.basesFolder || DEFAULT_SETTINGS.basesFolder || '00-CORE/Bases').replace(/\/+$/, '');
 }
 
+// Default .base filename for an entity that has no explicit baseFiles/bases
+// mapping — derived from its label/plural so schema-defined entities still get
+// a sensible, stable file (e.g. area → Areas.base).
+function defaultBaseFileName(def, entityKey) {
+  const raw = String((def && (def.plural || def.label)) || entityKey).trim();
+  const safe = raw.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, '-').replace(/^-+|-+$/g, '');
+  return `${safe || entityKey}.base`;
+}
+
 function entityBasePath(settings = {}, entityKey) {
   // basesFolder is authoritative for the directory. The filename comes from
-  // (in order) workspace.json bases[key].file, plugin baseFiles[key], or the
-  // built-in default — but we always strip to the basename and compose with
-  // basesFolder, so changing the Bases folder relocates EVERY base, including
-  // ones the starter template wrote into workspace.json with a full path.
+  // (in order) workspace.json bases[key].file, plugin baseFiles[key], the
+  // built-in default, or — for schema-defined entities with none of those — a
+  // name derived from the entity. We always strip to the basename and compose
+  // with basesFolder, so changing the Bases folder relocates EVERY base.
   const base = configuredBaseDefinition(entityKey);
-  const raw = base?.file || base?.base
+  let raw = base?.file || base?.base
     || (settings.baseFiles || {})[entityKey]
     || (DEFAULT_SETTINGS.baseFiles || {})[entityKey]
     || '';
+  if (!raw && typeof ENTITIES !== 'undefined' && ENTITIES[entityKey]) {
+    raw = defaultBaseFileName(ENTITIES[entityKey], entityKey);
+  }
   const name = String(raw).split('/').pop();
   if (!name) return '';
   return `${resolveBasesFolder(settings)}/${name}`;
 }
 
-// Entities that have a known/default .base mapping (used by the generator).
+// Entities the generator should consider — anything with a base mapping plus
+// every schema-registered entity (so vault-defined entities get bases too).
 function baseEntityKeys(settings = {}) {
   return Array.from(new Set([
     ...Object.keys(WORKSPACE_CONFIG.bases || {}),
     ...Object.keys(DEFAULT_SETTINGS.baseFiles || {}),
     ...Object.keys(settings.baseFiles || {}),
+    ...(typeof SCHEMA_ENTITY_KEYS !== 'undefined' ? SCHEMA_ENTITY_KEYS : []),
   ])).sort();
 }
 

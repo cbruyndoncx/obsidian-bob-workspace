@@ -96,4 +96,26 @@ const { resolveBasesFolder, entityBasePath, baseFileFromEntityDefinition } = san
   assert.ok(folderOnly.views[0].order.includes('file.name'));
 })();
 
+// 7. Schema-registered entities with no explicit base mapping get a derived
+//    filename and are included in baseEntityKeys (so the generator covers them).
+(() => {
+  const s = loadMainFunctions(
+    ['resolveBasesFolder', 'configuredBaseDefinition', 'defaultBaseFileName', 'entityBasePath', 'baseEntityKeys'],
+    {
+      DEFAULT_SETTINGS: { basesFolder: '00-CORE/Bases', baseFiles: { contact: 'People.base' } },
+      WORKSPACE_CONFIG: { bases: {} },
+      ENTITIES: { area: { label: 'Area', plural: 'Areas', typeFilter: 'area' }, video: { label: 'Video', plural: 'Videos' } },
+      SCHEMA_ENTITY_KEYS: ['area', 'video'],
+    }
+  );
+  // derived filename from plural, composed with basesFolder
+  assert.strictEqual(s.defaultBaseFileName({ plural: 'Areas' }, 'area'), 'Areas.base');
+  assert.strictEqual(s.entityBasePath({ basesFolder: 'Machine/Bases' }, 'area'), 'Machine/Bases/Areas.base');
+  // an entity with neither a mapping nor an ENTITIES def still resolves to nothing
+  assert.strictEqual(s.entityBasePath({ basesFolder: 'Machine/Bases' }, 'ghost'), '');
+  // baseEntityKeys now includes schema-registered entities
+  const keys = s.baseEntityKeys({ baseFiles: {} });
+  assert.ok(keys.includes('area') && keys.includes('video'), 'schema entities included');
+})();
+
 console.log('bases.test.js: ok');
