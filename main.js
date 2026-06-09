@@ -8295,6 +8295,7 @@ const DEFAULT_SETTINGS = {
     'document-retention': '00-CORE/Bases/Document-Retention.base',
   },  // { [entityKey]: 'path/to/entity.base' }
   baseViews: {},  // { [entityKey]: 'View name inside selected .base' }
+  basesFolder: '00-CORE/Bases',  // vault folder where entity .base files live (authoritative; baseFiles supplies the filename)
   schemasFolder: '00-CORE/Schemas/source',  // Metadata Menu schema source folder
   useSchemas: false,    // toggle: read entity defs from schema YAML files
 };
@@ -8948,6 +8949,7 @@ const WORKSPACE_OWNED_SETTING_KEYS = [
   'workbookExportFolder',
   'baseFiles',
   'baseViews',
+  'basesFolder',
   'schemasFolder',
   'useSchemas',
   'folderContacts',
@@ -9807,9 +9809,101 @@ async function buildHomeSnapshot(app, settings = {}) {
   return { briefing, inbox, todayRows, weekRows, upcomingRows, partners, projects, pipelineRows, activityRows };
 }
 
+function resolveBasesFolder(settings = {}) {
+  return String(settings.basesFolder || DEFAULT_SETTINGS.basesFolder || '00-CORE/Bases').replace(/\/+$/, '');
+}
+
 function entityBasePath(settings = {}, entityKey) {
+  // 1. workspace.json bases — full path, the power-user escape hatch.
   const base = configuredBaseDefinition(entityKey);
-  return base?.file || base?.base || (settings.baseFiles || {})[entityKey] || '';
+  if (base?.file || base?.base) return base.file || base.base;
+  // 2. Otherwise compose the authoritative basesFolder with the configured/default
+  //    filename. We always strip to the basename so changing basesFolder relocates
+  //    every base, regardless of any directory saved in baseFiles.
+  const raw = (settings.baseFiles || {})[entityKey] || (DEFAULT_SETTINGS.baseFiles || {})[entityKey] || '';
+  const name = String(raw).split('/').pop();
+  if (!name) return '';
+  return `${resolveBasesFolder(settings)}/${name}`;
+}
+
+// Entities that have a known/default .base mapping (used by the generator).
+function baseEntityKeys(settings = {}) {
+  return Array.from(new Set([
+    ...Object.keys(WORKSPACE_CONFIG.bases || {}),
+    ...Object.keys(DEFAULT_SETTINGS.baseFiles || {}),
+    ...Object.keys(settings.baseFiles || {}),
+  ])).sort();
+}
+
+// Build an Obsidian Bases (.base) config object from an entity definition:
+// a filter that selects the entity's notes, and a table view listing its columns.
+function baseFileFromEntityDefinition(entityKey, def) {
+  const conditions = [];
+  const typeFilters = def.typeFilters && typeof def.typeFilters === 'object' && !Array.isArray(def.typeFilters)
+    ? def.typeFilters
+    : null;
+  if (typeFilters) {
+    for (const [k, v] of Object.entries(typeFilters)) conditions.push(`note.${k} == "${v}"`);
+  } else if (def.typeFilter) {
+    conditions.push(`note.type == "${def.typeFilter}"`);
+  } else {
+    // No frontmatter discriminator — scope by folder so the base isn't empty.
+    const folder = (Array.isArray(def.folders) && def.folders[0]) || def.folder;
+    if (folder) conditions.push(`file.inFolder("${folder}")`);
+  }
+
+  const fields = Array.isArray(def.fields) ? def.fields : [];
+  const columns = Array.isArray(def.columns) && def.columns.length
+    ? def.columns
+    : fields.map((f) => f.key);
+  // In a Base, `order` (columns) and `sort` use BARE property names, while
+  // `properties` keys and `filters` use the note.<prop> form. file.name is the
+  // primary field's column. (Matches the vault's hand-authored .base files.)
+  const order = [];
+  const properties = {};
+  for (const key of columns) {
+    const field = fields.find((f) => f.key === key);
+    const orderId = field?.primary ? 'file.name' : key;
+    const propKey = field?.primary ? 'file.name' : `note.${key}`;
+    if (order.includes(orderId)) continue;
+    order.push(orderId);
+    if (field?.label && field.label !== key) properties[propKey] = { displayName: field.label };
+  }
+  if (!order.includes('file.name')) order.unshift('file.name');
+
+  const out = {};
+  if (conditions.length === 1) out.filters = conditions[0];
+  else if (conditions.length > 1) out.filters = { and: conditions };
+  if (Object.keys(properties).length) out.properties = properties;
+  out.views = [{ type: 'table', name: def.plural || def.label || entityKey, order }];
+  return out;
+}
+
+// Create a .base file for every known entity that doesn't already have one.
+// Missing-only: existing files are never overwritten.
+async function generateMissingBases(app, settings = {}) {
+  const folder = resolveBasesFolder(settings);
+  await ensureFolderSync(app, folder);
+  const written = [];
+  const skipped = [];
+  const failed = [];
+  for (const entityKey of baseEntityKeys(settings)) {
+    const def = ENTITIES[entityKey];
+    if (!def) continue;
+    const path = entityBasePath(settings, entityKey);
+    if (!path) continue;
+    if (await app.vault.adapter.exists(path)) { skipped.push(path); continue; }
+    try {
+      const dir = path.split('/').slice(0, -1).join('/');
+      if (dir) await ensureFolderSync(app, dir);
+      const base = baseFileFromEntityDefinition(entityKey, def);
+      await app.vault.adapter.write(path, obsidian.stringifyYaml(base));
+      written.push(path);
+    } catch (e) {
+      failed.push(`${path}: ${e.message}`);
+    }
+  }
+  return { folder, count: written.length, skipped: skipped.length, failed, written, skippedPaths: skipped };
 }
 
 function entityBaseViewName(settings = {}, entityKey) {
@@ -21495,6 +21589,39 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
 
     /* ─── Schemas ─── */
     pDm.createEl('h3', { text: 'Data model' });
+
+    /* ─── Bases ─── */
+    const basesGroup = pDm.createDiv({ cls: 'setting-group cad-settings-section' });
+    const basesPanel = basesGroup.createDiv({ cls: 'setting-items' });
+    new obsidian.Setting(basesPanel)
+      .setName('Bases folder')
+      .setDesc('Vault folder where entity .base files live. Changing it relocates where every base is resolved. Per-entity overrides in workspace.json (bases) take precedence.')
+      .addText((t) => t
+        .setPlaceholder('00-CORE/Bases')
+        .setValue(this.plugin.settings.basesFolder || '00-CORE/Bases')
+        .onChange(async (v) => {
+          this.plugin.settings.basesFolder = v.trim() || '00-CORE/Bases';
+          await this.plugin.saveSettings();
+          await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+          this.plugin.refreshOpenViews();
+        }));
+    new obsidian.Setting(basesPanel)
+      .setName('Generate missing bases')
+      .setDesc('Create a .base file (filter + table view) for each entity that does not have one yet, in the Bases folder. Existing files are left untouched.')
+      .addButton((button) => button
+        .setButtonText('Generate missing bases')
+        .onClick(async () => {
+          if (!(await confirmModal(this.plugin.app, "Generate .base files for entities that don't have one yet? Existing files are left untouched.", { title: 'Generate missing bases', cta: 'Generate', danger: false }))) return;
+          try {
+            const result = await generateMissingBases(this.plugin.app, this.plugin.settings);
+            await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+            this.plugin.refreshOpenViews();
+            new obsidian.Notice(`BOB Workspace: created ${result.count} base${result.count === 1 ? '' : 's'} in ${result.folder}${result.skipped ? `; skipped ${result.skipped} existing` : ''}${result.failed.length ? `; ${result.failed.length} failed` : ''}.`);
+          } catch (e) {
+            new obsidian.Notice(`BOB Workspace: generate bases failed — ${e.message}`);
+          }
+        }));
+
     const schemasGroup = pDm.createDiv({ cls: 'setting-group cad-settings-section' });
     const schemasPanel = schemasGroup.createDiv({ cls: 'setting-items' });
     const configuredSchemas = WORKSPACE_CONFIG.schemas || {};
@@ -22460,6 +22587,21 @@ class CadencePlugin extends obsidian.Plugin {
           new obsidian.Notice(`BOB Workspace: bootstrapped ${result.count} schema source file${result.count === 1 ? '' : 's'}${result.skipped ? `; skipped ${result.skipped} existing source file${result.skipped === 1 ? '' : 's'}` : ''}. Generated ${regen.count} FileClass and JSON Schema output(s).`);
         } catch (e) {
           new obsidian.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
+        }
+      },
+    });
+
+    this.addCommand({
+      id: 'generate-missing-bases',
+      name: 'Generate missing bases',
+      callback: async () => {
+        try {
+          const result = await generateMissingBases(this.app, this.settings);
+          await reloadEntityConfiguration(this.app, this.settings);
+          this.refreshOpenViews();
+          new obsidian.Notice(`BOB Workspace: created ${result.count} base${result.count === 1 ? '' : 's'} in ${result.folder}${result.skipped ? `; skipped ${result.skipped} existing` : ''}${result.failed.length ? `; ${result.failed.length} failed` : ''}.`);
+        } catch (e) {
+          new obsidian.Notice(`BOB Workspace: generate bases failed — ${e.message}`);
         }
       },
     });

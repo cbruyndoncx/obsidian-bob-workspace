@@ -250,10 +250,18 @@ Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it
 4. Add a nav item to the appropriate group in `NAV_GROUPS` (include `entityKey`, `folderKey`, `module`)
 5. Add to `BUILT_SURFACES` set
 6. Add a route entry in the `route` map inside `CadenceAppView.render()` pointing to `renderEntityList()`
-7. Add a `baseFiles` entry in `DEFAULT_SETTINGS` pointing to the `.base` file path
+7. Add a `baseFiles` entry in `DEFAULT_SETTINGS` — just the **filename** matters (e.g. `'People.base'`); see Bases below
 8. Add to `WORKBOOK_EXPORT_GROUPS` in the appropriate group's `entityKeys` array
 
 For vault-configured entity types without touching source, use a schema YAML file instead.
+
+### Bases (.base files)
+
+`entityBasePath(settings, key)` resolves an entity's `.base` file in this order:
+1. `WORKSPACE_CONFIG.bases[key].file` — full path, the power-user escape hatch.
+2. Otherwise `${basesFolder}/${basename(baseFiles[key])}` — `settings.basesFolder` (default `00-CORE/Bases`) is **authoritative**; the directory in any `baseFiles` value is stripped to its basename, so changing the Bases folder relocates every base. (With the default folder, composition reproduces the historical `00-CORE/Bases/*.base` paths.)
+
+`generateMissingBases(app, settings)` (command **"Generate missing bases"** / Settings → Data model → Bases) writes a `.base` for each known entity lacking one — a `filters` clause from the entity's `typeFilter`/`typeFilters` (`note.x == "y"`) or folder, and a `table` view whose `order` lists the entity columns (`file.name` for the primary field, `note.<key>` otherwise), with `properties.<id>.displayName` for readable headers. Missing-only: existing files are never overwritten.
 
 ### Adding a new surface with custom rendering
 

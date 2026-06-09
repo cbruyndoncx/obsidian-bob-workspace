@@ -1,4 +1,5 @@
 require('./base-filter.test');
+require('./bases.test');
 require('./dashboard-config.test');
 require('./dashboard-state.test');
 require('./project-note.test');
