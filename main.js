@@ -9814,13 +9814,16 @@ function resolveBasesFolder(settings = {}) {
 }
 
 function entityBasePath(settings = {}, entityKey) {
-  // 1. workspace.json bases — full path, the power-user escape hatch.
+  // basesFolder is authoritative for the directory. The filename comes from
+  // (in order) workspace.json bases[key].file, plugin baseFiles[key], or the
+  // built-in default — but we always strip to the basename and compose with
+  // basesFolder, so changing the Bases folder relocates EVERY base, including
+  // ones the starter template wrote into workspace.json with a full path.
   const base = configuredBaseDefinition(entityKey);
-  if (base?.file || base?.base) return base.file || base.base;
-  // 2. Otherwise compose the authoritative basesFolder with the configured/default
-  //    filename. We always strip to the basename so changing basesFolder relocates
-  //    every base, regardless of any directory saved in baseFiles.
-  const raw = (settings.baseFiles || {})[entityKey] || (DEFAULT_SETTINGS.baseFiles || {})[entityKey] || '';
+  const raw = base?.file || base?.base
+    || (settings.baseFiles || {})[entityKey]
+    || (DEFAULT_SETTINGS.baseFiles || {})[entityKey]
+    || '';
   const name = String(raw).split('/').pop();
   if (!name) return '';
   return `${resolveBasesFolder(settings)}/${name}`;
@@ -21595,7 +21598,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     const basesPanel = basesGroup.createDiv({ cls: 'setting-items' });
     new obsidian.Setting(basesPanel)
       .setName('Bases folder')
-      .setDesc('Vault folder where entity .base files live. Changing it relocates where every base is resolved. Per-entity overrides in workspace.json (bases) take precedence.')
+      .setDesc('Vault folder where entity .base files live. Authoritative: changing it relocates where every base is resolved (the filename comes from the entity config, the folder from here).')
       .addText((t) => t
         .setPlaceholder('00-CORE/Bases')
         .setValue(this.plugin.settings.basesFolder || '00-CORE/Bases')

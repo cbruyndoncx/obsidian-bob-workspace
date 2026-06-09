@@ -257,9 +257,7 @@ For vault-configured entity types without touching source, use a schema YAML fil
 
 ### Bases (.base files)
 
-`entityBasePath(settings, key)` resolves an entity's `.base` file in this order:
-1. `WORKSPACE_CONFIG.bases[key].file` — full path, the power-user escape hatch.
-2. Otherwise `${basesFolder}/${basename(baseFiles[key])}` — `settings.basesFolder` (default `00-CORE/Bases`) is **authoritative**; the directory in any `baseFiles` value is stripped to its basename, so changing the Bases folder relocates every base. (With the default folder, composition reproduces the historical `00-CORE/Bases/*.base` paths.)
+`entityBasePath(settings, key)` resolves an entity's `.base` file as `${basesFolder}/${basename(filename)}`, where `settings.basesFolder` (default `00-CORE/Bases`) is **authoritative for the directory** and the filename comes (in order) from `WORKSPACE_CONFIG.bases[key].file`, `settings.baseFiles[key]`, or the built-in default. The directory portion of any of those is stripped to its basename, so changing the Bases folder relocates **every** base — including ones the starter template wrote into `workspace.json` `bases` as full paths. (With the default folder, composition reproduces the historical `00-CORE/Bases/*.base` paths.) `bases[key].view` still selects which view to use.
 
 `generateMissingBases(app, settings)` (command **"Generate missing bases"** / Settings → Data model → Bases) writes a `.base` for each known entity lacking one — a `filters` clause from the entity's `typeFilter`/`typeFilters` (`note.x == "y"`) or folder, and a `table` view whose `order` lists the entity columns (`file.name` for the primary field, `note.<key>` otherwise), with `properties.<id>.displayName` for readable headers. Missing-only: existing files are never overwritten.
 

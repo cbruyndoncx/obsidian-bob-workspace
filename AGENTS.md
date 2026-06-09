@@ -13,7 +13,7 @@ Current plugin identity in `manifest.json`:
 
 - ID: `bob-workspace`
 - Name: `BOB Workspace`
-- Version: see `manifest.json` (authoritative — currently `0.14.4-bob.20`)
+- Version: see `manifest.json` (authoritative — currently `0.14.4-bob.21`)
 - Minimum Obsidian version: `1.4.0`
 - Author: `cbruyndoncx`
 

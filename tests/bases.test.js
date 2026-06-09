@@ -47,10 +47,14 @@ const { resolveBasesFolder, entityBasePath, baseFileFromEntityDefinition } = san
   assert.strictEqual(entityBasePath({ basesFolder: 'B' }, 'unknownEntity'), '');
 })();
 
-// 4. workspace.json bases is the full-path escape hatch (wins over folder composition).
+// 4. basesFolder is authoritative even over a workspace.json bases full path:
+//    only the filename is taken from bases[key].file; the folder is basesFolder.
+//    (The starter template writes full paths for every entity — those must still
+//    follow the configured Bases folder.)
 (() => {
-  WORKSPACE_CONFIG.bases = { contact: { file: 'Custom/Anywhere/People.base' } };
-  assert.strictEqual(entityBasePath(DEFAULT_SETTINGS, 'contact'), 'Custom/Anywhere/People.base');
+  WORKSPACE_CONFIG.bases = { contact: { file: 'Machine/Bases/People.base' } };
+  assert.strictEqual(entityBasePath({ basesFolder: 'New/Bases' }, 'contact'), 'New/Bases/People.base');
+  assert.strictEqual(entityBasePath(DEFAULT_SETTINGS, 'contact'), '00-CORE/Bases/People.base');
   WORKSPACE_CONFIG.bases = {};
 })();
 
