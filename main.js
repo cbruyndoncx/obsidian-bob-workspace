@@ -7619,6 +7619,18 @@ function normalizePinnedSurfaces(value) {
   });
 }
 
+// Move draggedId to targetId's position within a (deduped) pinned list.
+// Returns the new array, or null if it's a no-op / either id is absent.
+function reorderPinnedList(list, draggedId, targetId) {
+  const ids = (Array.isArray(list) ? list : []).filter((id, i, arr) => id && arr.indexOf(id) === i);
+  const from = ids.indexOf(draggedId);
+  const to = ids.indexOf(targetId);
+  if (from < 0 || to < 0 || from === to) return null;
+  ids.splice(from, 1);
+  ids.splice(to, 0, draggedId);
+  return ids;
+}
+
 function migrateWorkspacePlannerConfig(config) {
   if (!config || typeof config !== 'object' || Array.isArray(config)) return config;
   const next = JSON.parse(JSON.stringify(config));
@@ -14277,6 +14289,15 @@ class CadenceAppView extends obsidian.ItemView {
     await this.plugin.saveSettings();
   }
 
+  // Move a pinned surface to another pinned surface's position. Operates on the
+  // raw (deduped) settings list so pins for surfaces not currently shown survive.
+  _reorderPinnedSurface(draggedId, targetId) {
+    const next = reorderPinnedList(this.plugin.settings.pinnedSurfaces, draggedId, targetId);
+    if (!next) return false;
+    this.plugin.settings.pinnedSurfaces = next;
+    return true;
+  }
+
   /* Link a daily-note task to a project. Keyed by (dailyPath, taskText). */
   _taskLinkKey(dailyPath, text) { return `${dailyPath}::${(text || '').trim()}`; }
 
@@ -14492,12 +14513,43 @@ class CadenceAppView extends obsidian.ItemView {
           attr: { type: 'button', 'aria-label': `Unpin ${surface.label}` },
         });
         remove.title = `Unpin ${surface.label}`;
+        remove.draggable = false;
         try { obsidian.setIcon(remove, 'pin-off'); } catch (_) {}
         remove.addEventListener('click', async (ev) => {
           ev.preventDefault();
           ev.stopPropagation();
           await this._togglePinnedNavSurface(surfaceId);
           await this.render();
+        });
+
+        // Drag to reorder pins.
+        pinWrap.draggable = true;
+        pinWrap.addEventListener('dragstart', (ev) => {
+          this._pinDragId = surfaceId;
+          pinWrap.addClass('dragging');
+          try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', surfaceId); } catch (_) {}
+        });
+        pinWrap.addEventListener('dragend', () => {
+          this._pinDragId = null;
+          pinWrap.removeClass('dragging');
+          pinnedRow.findAll('.drag-over').forEach((el) => el.removeClass('drag-over'));
+        });
+        pinWrap.addEventListener('dragover', (ev) => {
+          if (!this._pinDragId || this._pinDragId === surfaceId) return;
+          ev.preventDefault();
+          try { ev.dataTransfer.dropEffect = 'move'; } catch (_) {}
+          pinWrap.addClass('drag-over');
+        });
+        pinWrap.addEventListener('dragleave', () => pinWrap.removeClass('drag-over'));
+        pinWrap.addEventListener('drop', async (ev) => {
+          ev.preventDefault();
+          pinWrap.removeClass('drag-over');
+          const dragged = this._pinDragId || (ev.dataTransfer && ev.dataTransfer.getData('text/plain'));
+          this._pinDragId = null;
+          if (dragged && dragged !== surfaceId && this._reorderPinnedSurface(dragged, surfaceId)) {
+            await this.plugin.saveSettings();
+            await this.render();
+          }
         });
       });
     }

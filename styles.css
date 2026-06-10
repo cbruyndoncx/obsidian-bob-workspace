@@ -348,6 +348,14 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   position: relative;
   width: 30px;
   height: 30px;
+  cursor: grab;
+}
+.cad-nav-pinned-item-wrap.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+.cad-nav-pinned-item-wrap.drag-over {
+  box-shadow: -2px 0 0 0 var(--interactive-accent);
 }
 .cad-nav-pinned-item {
   width: 100%;
