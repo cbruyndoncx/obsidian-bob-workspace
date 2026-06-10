@@ -75,7 +75,7 @@ gh release create 0.14.4-bob.14 \
 
 **The tag must match `manifest.json.version` exactly** — no `v` prefix. The bot rejects mismatches.
 
-Required release assets: `main.js`, `manifest.json`, `styles.css`. The workspace templates and the SheetJS XLSX library are **bundled into `main.js`** (see CLAUDE.md → Generated bundles), so they don't need to be uploaded — Obsidian's installer wouldn't deliver them anyway. Before tagging, regenerate both bundles: `node scripts/bundle-templates.js && node scripts/bundle-xlsx.js`.
+Required release assets: `main.js`, `manifest.json`, `styles.css`. The workspace templates and the SheetJS XLSX library are **bundled into `main.js`** (see CLAUDE.md → Bundled assets), so they don't need to be uploaded — Obsidian's installer wouldn't deliver them anyway. Before tagging, rebuild and verify: `npm run check` (the build-freshness test fails if the committed `main.js` is stale).
 
 ## Step 5 — Submit the PR to obsidian-releases
 

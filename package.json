@@ -1,0 +1,23 @@
+{
+  "name": "bob-workspace",
+  "version": "0.14.4-bob.28",
+  "description": "BOB Workspace — unified vault-native workspace for CRM, PRM, client work, finance, procurement, planning, dashboards, and AI playbooks (Obsidian plugin).",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "build": "node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node tests/run-tests.js",
+    "check": "npm run typecheck && npm run build && node --check main.js && node tests/run-tests.js"
+  },
+  "keywords": ["obsidian", "obsidian-plugin"],
+  "author": "cbruyndoncx",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.24.0",
+    "obsidian": "^1.7.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -218,9 +218,10 @@ A matching **Cadence** theme is available separately for vaults that want a full
 ```bash
 git clone https://github.com/cbruyndoncx/obsidian-bob-workspace
 cd obsidian-bob-workspace
-# Plugin is plain JS, no build step. Drop main.js + manifest.json + styles.css
+npm install
+npm run build   # bundles src/ TypeScript (+ templates and the XLSX library) into main.js
+# Drop main.js + manifest.json + styles.css
 # into <vault>/.obsidian/plugins/bob-workspace/ to test.
-# (Workspace templates and the XLSX library are bundled into main.js.)
 ```
 
 PRs welcome. For bug reports, please include your Obsidian version, OS, and a minimal vault to reproduce.

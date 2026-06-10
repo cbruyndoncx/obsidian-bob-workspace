@@ -20,13 +20,13 @@ Current plugin identity (`manifest.json`):
 - Minimum Obsidian version: `1.4.0`
 - Author: `cbruyndoncx`
 
-The plugin has **no build step** for editing logic, but `main.js` carries two **generated bundles** (workspace templates and the SheetJS XLSX library) — see "Generated bundles". The only artifacts Obsidian loads:
+The plugin is written in **TypeScript** under `src/` and bundled by **esbuild** into a single committed `main.js` (`npm run build`). The workspace templates (`templates/workspace-*.json`) and the SheetJS XLSX library (`vendor/xlsx.mini.min.js`) are inlined into `main.js` at build time — see "Bundled assets". The only artifacts Obsidian loads:
 
-- `main.js` — all plugin behavior, including the bundled templates and XLSX library
+- `main.js` — **generated** by esbuild from `src/` (never edit by hand); includes the bundled templates and XLSX library
 - `manifest.json`
 - `styles.css`
 
-`vendor/` and `templates/` remain in the repo as the **editable sources** for the bundles; Obsidian's installer does not deliver them and they are not required at runtime. Manual test installs need only copy `main.js`/`manifest.json`/`styles.css` into `<vault>/.obsidian/plugins/bob-workspace/`. Do not use the upstream `cadence-planner` plugin folder for this fork unless testing an explicit migration/compatibility scenario.
+`vendor/` and `templates/` are **editable sources** consumed by the build; Obsidian's installer does not deliver them and they are not required at runtime. Manual test installs need only copy `main.js`/`manifest.json`/`styles.css` into `<vault>/.obsidian/plugins/bob-workspace/`. Do not use the upstream `cadence-planner` plugin folder for this fork unless testing an explicit migration/compatibility scenario.
 
 ---
 
@@ -47,12 +47,13 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 
 ## Repository Layout
 
-- `main.js` — monolithic, directly loaded plugin source (all behavior).
+- `src/` — TypeScript plugin source (modular; see "File Organization"). `src/main.ts` is the entry point.
+- `main.js` — **generated** esbuild bundle of `src/`, committed because Obsidian installs it directly. Never edit by hand — edit `src/` and run `npm run build`.
 - `styles.css` — theme-agnostic UI styles, dark mode, responsive/mobile rules, entity table editing, dashboards, modals, and Playbook Runner styles.
 - `manifest.json` and `versions.json` — current BOB Workspace release metadata (`versions.json` maps version → min app version).
-- `vendor/xlsx.mini.min.js` and `vendor/xlsx.LICENSE` — SheetJS (mini) source + license; the library is inlined into `main.js` via `scripts/bundle-xlsx.js` (not loaded at runtime).
-- `templates/workspace-*.json` — human-readable starter workspace templates; the canonical sources, inlined into `main.js` via `scripts/bundle-templates.js`. Do not mirror them as hardcoded workspace definitions in `main.js`.
-- `scripts/bundle-templates.js`, `scripts/bundle-xlsx.js` — bundle generators (see "Generated bundles").
+- `vendor/xlsx.mini.min.js` and `vendor/xlsx.LICENSE` — SheetJS (mini) source + license; bundled into `main.js` by esbuild as a lazily-initialized CommonJS module (not loaded from disk at runtime).
+- `templates/workspace-*.json` — human-readable starter workspace templates; the canonical sources, imported as JSON by `src/bundled/templates.ts` and inlined at build time. Do not mirror them as hardcoded workspace definitions in source.
+- `package.json`, `tsconfig.json`, `esbuild.config.mjs`, `esbuild.shared.cjs` — build toolchain (`npm run build` / `dev` / `typecheck` / `check`). `esbuild.shared.cjs` is the single source of the bundle options, shared with the build-freshness test.
 - `tests/` — lightweight regression suite (`node tests/run-tests.js`).
 - `docs/extending-bob-workspace.md` — schema/Base/entities extension model.
 - `docs/navigation-inventory.md`, `docs/entity-setup-audit.md` — useful generated snapshots, but confirm against current code before editing.
@@ -66,26 +67,32 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 
 ### File Organization
 
-- **`main.js`** — All plugin logic. Organized top-to-bottom as:
-  - Generated bundles near the top: `BUNDLED_WORKSPACE_TEMPLATES`, `loadBundledXLSX()` (between markers)
-  - Nav structure: `NAV_GROUPS`, `ALL_SURFACES`, `SURFACE_BY_ID`, `SURFACES_BY_ENTITY_KEY`, `SECONDARY_TABS`, `WORKBOOK_EXPORT_GROUPS`
-  - Entity registry: `ENTITIES`, `BUILTIN_ENTITY_DEFAULTS`, `DEAL_STAGES`, deal/activity field accessor functions
-  - Settings & folders: `DEFAULT_SETTINGS`, `CURRENT_CURRENCY`, `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`, `WORKSPACE_OWNED_SETTING_KEYS`
-  - Runtime configuration layers: `loadWorkspaceConfig()`, `applyWorkspaceRegistries()`, `applySchemas()`, `applyConfiguredBaseOverrides()`, `applyBaseOverrides()`, `workspaceConfigTemplate()`, `reloadEntityConfiguration()`
-  - Base parsing/evaluation: `parseBaseFile()`, Base filter helpers, grouping/sorting helpers
-  - Dashboard/report config: `resolveDashboardConfig()`/`resolveSurfaceConfig()`, `renderConfigDashboard()`, widget catalog helpers, runtime-backed widget sources
-  - XLSX export: `getXLSX()`, `exportEntitiesXLSX()` via the inlined `loadBundledXLSX()` (SheetJS mini)
-  - Utility functions: date/time, file I/O, parsing, formatting
-  - Modal classes: `CadenceCaptureModal`, `CadenceReminderEditModal`, `CadenceImportModal`, `CadenceEntityCreateModal`, `CadencePromptModal`, `CadenceConfirmModal`, `CadenceWorkspaceSetupModal`
-  - Main view: `CadenceAppView`
-  - Settings UI: `CadenceSettingTab`
-  - Optional Bases custom view: `CadencePlaybookRunnerView`
-  - Plugin entry: `CadencePlugin`
+- **`src/`** — all plugin logic, one concern per module (originally migrated mechanically from the monolithic `main.js`; runtime behavior preserved):
+  - `src/main.ts` — entry point; default-exports `CadencePlugin`
+  - `src/plugin.ts` — `CadencePlugin`: registers views, commands, hotkeys, settings, reminders, workbook commands
+  - `src/bundled/templates.ts` — `BUNDLED_WORKSPACE_TEMPLATES` via explicit JSON imports of `templates/workspace-*.json` (a new shipped template must be added here; the template-bundle test enforces coverage)
+  - `src/bundled/xlsx.ts` — `loadBundledXLSX()`: lazy `require()` of `vendor/xlsx.mini.min.js`, inlined by esbuild (no eval; compiled on first `getXLSX()` use)
+  - `src/nav.ts` — `VIEW_TYPE_CADENCE_APP`, `BUILTIN_NAV_GROUPS`, runtime registries (`NAV_GROUPS`, `ALL_SURFACES`, `SURFACE_BY_ID`, `SURFACES_BY_ENTITY_KEY`, `SECONDARY_TABS`, `WORKBOOK_EXPORT_GROUPS`), `resetWorkspaceRegistries()`, `applyWorkspaceRegistries()`
+  - `src/entities.ts` — `ENTITIES`, `BUILTIN_ENTITY_DEFAULTS`, `DEAL_STAGES`, deal/activity field accessors, `BUILT_SURFACES`
+  - `src/settings.ts` — `DEFAULT_SETTINGS`, `CURRENT_CURRENCY` (+`setCurrentCurrency()`), `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`, create-folder/template helpers
+  - `src/workspace-config.ts` — plugin paths, `WORKSPACE_CONFIG` (+`setWorkspaceConfig()`), load/save/validate, `WORKSPACE_OWNED_SETTING_KEYS`, dashboard config validation/resolution
+  - `src/widgets.ts`, `src/snapshots.ts`, `src/dashboards.ts` — widget source resolution, home/planner/productivity snapshots, widget catalog
+  - `src/bases-config.ts`, `src/bases-parse.ts` — Base paths, `generateMissingBases()`, `applyEntityDefinitions()`; `parseBaseFile()` + Base overrides
+  - `src/schemas.ts`, `src/schema-designer.ts`, `src/runtime-config.ts`, `src/nav-helpers.ts` — schema loading/bootstrap, designer/codegen helpers, `reloadEntityConfiguration()`, nav-surface helpers
+  - `src/utils.ts`, `src/entity-files.ts`, `src/csv.ts`, `src/workbook.ts` — date/format utils, entity file resolution + Base filter evaluation, CSV, XLSX export/import
+  - `src/project-notes.ts`, `src/task-notes.ts`, `src/notes.ts`, `src/reminders.ts` — H2 sections/milestones, TaskNotes, entity/daily-note creation, reminder helpers
+  - `src/modals/` — `capture.ts`, `import.ts`, `entity-create.ts`, `common.ts` (prompt/confirm/icon picker), `workspace-setup.ts`
+  - `src/views/app-view.ts` — `CadenceAppView` (largest module; renders all surfaces)
+  - `src/settings-tab.ts` — `CadenceSettingTab`
+  - `src/views/playbook-runner.ts` — optional Bases custom view
+  - `src/workspace-templates.ts` — template seeding/loading/applying, `_assets`, archive-on-switch
+
+  Module-level mutable registries (`WORKSPACE_CONFIG`, `CURRENT_CURRENCY`) are reassigned across modules only via their exported setters — ES module imports are read-only live bindings.
 
 - **`styles.css`** — Fallback styles for any theme. Organized by component: app shell, dark mode, nav, cards, modals, inputs, tables, kanban.
 - **`manifest.json`** — Plugin metadata (id `bob-workspace`, version, min app version).
 - **`versions.json`** — Version → min-app-version mapping for the Obsidian store.
-- **`vendor/xlsx.mini.min.js`** — Source for the SheetJS (mini) library that `scripts/bundle-xlsx.js` inlines into `main.js`. Not loaded directly at runtime.
+- **`vendor/xlsx.mini.min.js`** — Source for the SheetJS (mini) library that the build inlines into `main.js`. Not loaded directly at runtime.
 
 ### Key Classes
 
@@ -313,49 +320,49 @@ weekDates(anchor, weekStartsOn);  // [Mon..Sun] as Date[]
 
 ### Testing / development cycle
 
-1. Edit `main.js`, `styles.css`, or file-backed templates/docs as needed.
-2. **If you edited any `templates/workspace-*.json`, run `node scripts/bundle-templates.js`**; if you edited `vendor/xlsx.mini.min.js`, run `node scripts/bundle-xlsx.js`. These inline the sources into `main.js`. The regression suite fails if a bundle is stale.
-3. Copy to test vault: `cp main.js styles.css manifest.json <vault>/.obsidian/plugins/bob-workspace/` (templates and XLSX are bundled into `main.js`).
+1. Edit `src/**/*.ts`, `styles.css`, `templates/workspace-*.json`, or `vendor/xlsx.mini.min.js` as needed. **Never edit `main.js` directly — it is generated.**
+2. Run `npm run build` (one-shot) or `npm run dev` (watch) to regenerate `main.js`. Templates and the XLSX library are bundled in automatically; the regression suite fails if the committed `main.js` is stale.
+3. Copy to test vault: `cp main.js styles.css manifest.json <vault>/.obsidian/plugins/bob-workspace/`.
 4. Reload in Obsidian: Settings → Community plugins → BOB Workspace → Disable/Enable (a full restart may be required for `main.js` changes).
 5. Check console: Command palette → "Toggle developer tools".
-6. Run `node tests/run-tests.js` for the lightweight regression suite, and `node --check main.js` for a syntax check.
+6. Run `npm run check` — typecheck (`tsc --noEmit`), production build, `node --check main.js`, and the regression suite (`node tests/run-tests.js`).
 
-### Generated bundles
+### Bundled assets (templates + XLSX)
 
-Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it does **not** ship `templates/` or `vendor/`, and `fs`/`__dirname`/`require()` against plugin paths don't work in the runtime. So two things are **bundled into `main.js`** (between generated markers near the top):
+Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it does **not** ship `templates/` or `vendor/`, and `fs`/`__dirname`/`require()` against plugin paths don't work in the runtime. So two asset sets are **bundled into `main.js`** by esbuild:
 
-| Bundle | Marker | Source | Regenerate with |
-|--------|--------|--------|-----------------|
-| Workspace templates | `BUNDLED_WORKSPACE_TEMPLATES` | `templates/workspace-*.json` | `node scripts/bundle-templates.js` |
-| XLSX library (SheetJS mini) | `loadBundledXLSX()` | `vendor/xlsx.mini.min.js` | `node scripts/bundle-xlsx.js` |
+| Bundle | Module | Source | Mechanism |
+|--------|--------|--------|-----------|
+| Workspace templates | `src/bundled/templates.ts` | `templates/workspace-*.json` | explicit esbuild JSON imports (add a new shipped template's import + key there) |
+| XLSX library (SheetJS mini) | `src/bundled/xlsx.ts` | `vendor/xlsx.mini.min.js` | lazy `require()` inlined as an esbuild CommonJS closure |
 
-**Always re-run the matching generator after editing a source, and copy the regenerated `main.js`.** The regression suite fails if either bundle is stale.
+**`npm run build` after editing any source, and copy the regenerated `main.js`.** The build-freshness test fails if the committed `main.js` is stale; the template-bundle test fails if a `templates/workspace-*.json` file is not wired into `src/bundled/templates.ts`.
 
 - `templates/workspace-*.json` and `vendor/xlsx.mini.min.js` remain the editable **sources of truth**; they are not loaded at runtime.
 - `loadWorkspaceTemplates()` serves the bundled templates (authoritative for shipped names); on-disk templates can only **add** custom ones.
-- The XLSX lib is embedded as a **function body** (not a string + `eval`), so V8 compiles it lazily on first `getXLSX()` use and there is no `eval` for the store reviewer to flag.
+- The XLSX lib is inlined as a lazily-executed CommonJS module (no string + `eval`), so V8 compiles it on first `getXLSX()` use and there is no `eval` for the store reviewer to flag.
 - Applying a template writes the full config — including all dashboards — into `workspace.json`, so it is visible/editable in Settings. There is no hidden builtin-dashboard fallback: a surface with no entry in `workspace.json` shows the "Add dashboards.xxx" prompt by design.
 - **Template `_assets`** — a template may carry `_assets: { schemas: {<entity>: <yaml>}, bases: {<file>: <yaml>} }`. `applyWorkspaceTemplate()` strips `_assets` (and `_template`) before validating the config, then `writeTemplateAssets()` writes those files (missing-only) into the schema folder / Bases folder **before** the bootstrap. This is how a template whose entities are NOT built-in (e.g. `workspace-emai`, a PARA workspace with `tasks`/`people`/`video`/…) seeds exactly its own entities: the schemas exist first, so `bootstrapCanonicalSchemaSourcesIfMissing` stays gated and the full built-in entity set is never written.
 - **Clean template switching** — when `applyWorkspaceTemplate()` is called with a template whose id differs from `settings.activeWorkspaceTemplate`, `archiveTemplateAssets()` first moves the OUTGOING template's full schema state — source YAML, the derived `fileClasses/` + `json-schema/` outputs (same `/source$`→root derivation as `regenerateSchemaOutputs`), `.base` files, and a labelled `workspace-<prevKey>-<stamp>.json` — into sibling `<folder>-archive-<prevKey>-<timestamp>` folders. Reversible (moves, never deletes). This prevents switches from compounding files on disk; `regenerateSchemaOutputs` only prunes the *active* schema folder, so without this the old derived outputs would orphan when templates use different schema roots. Re-applying the same template skips archiving (idempotent, missing-only).
 
 ### Code style & development rules
 
-- No build step for logic — ES6, compatible with Obsidian's Chromium runtime. Keep the no-build constraint unless the user explicitly requests a migration. Prefer small, scoped edits in `main.js`/`styles.css`.
+- TypeScript in `src/`, bundled by esbuild (cjs, target es2021) into the committed `main.js`. Gradual typing: `strict` is off and many migrated signatures use `any` — add real types opportunistically when touching a module; type-only changes must never alter runtime behavior. Prefer small, scoped edits in `src/`/`styles.css`.
 - Frontmatter I/O via `processFrontMatter()` only; vault body writes only for markdown sections/tasks outside frontmatter.
 - DOM: `createDiv()`, `createEl()`, `appendChild()`/`setText()`; keep BEM-style class names prefixed `cad-`/`cadence-`; verify light and dark.
 - Events: `registerEvent()` for vault/metadata; standard `addEventListener` for DOM. Use `CadenceConfirmModal`/`confirmModal()` instead of `window.confirm()`.
 - No `console.log` in shipping code; no unsafe raw `innerHTML` for untrusted vault content.
 - Respect responsive/mobile behavior for interactive changes.
 - Preserve BOB Workspace branding and compatibility names unless deliberately changing public identity.
-- Keep `vendor/xlsx.mini.min.js` in the repo and re-run `scripts/bundle-xlsx.js` after updating it.
+- Keep `vendor/xlsx.mini.min.js` in the repo and re-run `npm run build` after updating it.
 
 ### Adding a new built-in entity type (in code)
 
-1. Add to `ENTITIES` with `folder`, `typeFilter`, `label`, `plural`, `fields`, `columns`.
-2. Add a folder setting key to `DEFAULT_SETTINGS` and handle it in `syncEntityFolders()` + the Folders settings UI.
-3. Add a nav item to `NAV_GROUPS` (include `entityKey`, `folderKey`, `module`).
-4. Add to the `BUILT_SURFACES` set.
-5. Add a route entry in `CadenceAppView.render()` pointing to `renderEntityList()`.
+1. Add to `ENTITIES` (`src/entities.ts`) with `folder`, `typeFilter`, `label`, `plural`, `fields`, `columns`.
+2. Add a folder setting key to `DEFAULT_SETTINGS` and handle it in `syncEntityFolders()` (`src/settings.ts`) + the Folders settings UI (`src/settings-tab.ts`).
+3. Add a nav item to the navigation groups (workspace.json `navigation.groups`, or `BUILTIN_NAV_GROUPS` in `src/nav.ts` for built-ins) — include `entityKey`, `folderKey`, `module`.
+4. Add to the `BUILT_SURFACES` set (`src/entities.ts`).
+5. Add a route entry in `CadenceAppView.render()` (`src/views/app-view.ts`) pointing to `renderEntityList()`.
 6. Add a `baseFiles` entry in `DEFAULT_SETTINGS` — just the **filename** matters (e.g. `'People.base'`; see Bases).
 7. Add inner tabs in `SECONDARY_TABS` if it belongs under a workspace.
 8. Add to `WORKBOOK_EXPORT_GROUPS` in the appropriate group's `entityKeys`.
@@ -373,9 +380,9 @@ A Base mapping is optional for simple lists (which render from folder/type), but
 
 ### Adding a new surface with custom rendering
 
-1. Add a nav item to `NAV_GROUPS` (`{ id: 'group.surface', label, icon, module }`).
-2. Add to `BUILT_SURFACES` (prevents the "soon" badge).
-3. Add a route in `CadenceAppView.render()`: `'group.surface': () => this.renderMySurface(content)`.
+1. Add a nav item to the navigation groups (`{ id: 'group.surface', label, icon, module }`).
+2. Add to `BUILT_SURFACES` in `src/entities.ts` (prevents the "soon" badge).
+3. Add a route in `CadenceAppView.render()` (`src/views/app-view.ts`): `'group.surface': () => this.renderMySurface(content)`.
 4. Implement `renderMySurface(root)` on `CadenceAppView`, preserving mobile/theme behavior.
 
 For inner tabs, add an entry to `SECONDARY_TABS` mapping the parent surface ID to `{ label, entityKey? | route? }` definitions.
@@ -410,10 +417,10 @@ When supporting an existing vault, prefer an explicit import path that reads vau
 
 ### Validation
 
-There is no automated application build. For relevant changes:
+For relevant changes:
 
-1. `node --check main.js` (syntax) and `node tests/run-tests.js` (regression suite).
-2. Review edits for untrusted DOM insertion, frontmatter mutation, and stale/missing bundle artifacts.
+1. `npm run check` — `tsc --noEmit`, production build, `node --check main.js`, and the regression suite.
+2. Review edits for untrusted DOM insertion, frontmatter mutation, and a stale committed `main.js` (rebuild + commit together with `src/`).
 3. Copy shipping files to a test vault plugin folder.
 4. Reload or restart Obsidian and inspect the developer console.
 5. Exercise affected surfaces, settings, light/dark appearance, and mobile layout where UI changed.
@@ -422,7 +429,7 @@ There is no automated application build. For relevant changes:
 
 ## Common Issues
 
-**Changes to `main.js` don't take effect.** Full restart of Obsidian required, not just disable/enable.
+**Changes to `src/` don't take effect.** Run `npm run build` and re-copy `main.js` to the vault plugin folder first; then a full restart of Obsidian is required, not just disable/enable.
 
 **Frontmatter corrupted.** Always use `processFrontMatter()`. Never string-replace YAML.
 
@@ -430,7 +437,7 @@ There is no automated application build. For relevant changes:
 
 **Moving entity folders.** Rename the folder in the vault first, then update the path in Settings → BOB Workspace → Folders. Files are not moved automatically.
 
-**XLSX export fails.** The library is inlined into `main.js` via `loadBundledXLSX()`. If it errors, the bundle is likely stale — run `node scripts/bundle-xlsx.js` and recopy `main.js`.
+**XLSX export fails.** The library is inlined into `main.js` from `vendor/xlsx.mini.min.js` at build time. If it errors, the committed bundle is likely stale — run `npm run build` and recopy `main.js`.
 
 **Complete built-in entity set appears in a custom vault.** The schema bootstrap seeds built-in entities when the schema folder is empty. Keep the vault's own schemas present (or use a template with `_assets`) so the bootstrap stays gated.
 
@@ -441,6 +448,6 @@ There is no automated application build. For relevant changes:
 See `SUBMISSION.md` for the full release checklist. Key reminders:
 
 - `manifest.json` version must match the git tag exactly (no `v` prefix); `versions.json` must map the new version → min-app-version.
-- Release assets only need `main.js`, `manifest.json`, `styles.css` (and `versions.json`) — templates and the XLSX library are bundled into `main.js`. Regenerate both bundles before tagging: `node scripts/bundle-templates.js && node scripts/bundle-xlsx.js`.
+- Release assets only need `main.js`, `manifest.json`, `styles.css` (and `versions.json`) — templates and the XLSX library are bundled into `main.js`. Rebuild and verify before tagging: `npm run check` (the build-freshness test fails if the committed `main.js` is stale).
 - No `console.log`, unsafe/untrusted `innerHTML`, or raw frontmatter string manipulation in shipping code.
 - Treat `manifest.json`/`versions.json` as authoritative; confirm any inherited `SUBMISSION.md` instructions before reusing old plugin IDs, repo URLs, or asset lists.

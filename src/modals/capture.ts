@@ -1,0 +1,376 @@
+import { listEntityFiles } from '../entity-files';
+import { VIEW_TYPE_CADENCE_APP } from '../nav';
+import { projectNameFromPath, reminderTimeStr } from '../reminders';
+import { confirmModal } from './common';
+import * as obsidian from 'obsidian';
+export function attachRequiredValidation(submitBtn, requiredInputs) {
+  if (!submitBtn || !requiredInputs?.length) return;
+  const check = () => {
+    const allFilled = requiredInputs.every(inp => {
+      if (!inp) return true;
+      if (inp.type === 'checkbox' || inp.type === 'radio') return inp.checked;
+      return (inp.value || '').trim().length > 0;
+    });
+    submitBtn.disabled = !allFilled;
+    submitBtn.classList.toggle('cad-btn-disabled', !allFilled);
+  };
+  requiredInputs.forEach(inp => {
+    if (!inp) return;
+    inp.addEventListener('input', check);
+    inp.addEventListener('change', check);
+  });
+  check();
+}
+
+/* ─────────── Quick-capture modal ─────────── */
+export class CadenceCaptureModal extends obsidian.Modal {
+  // Migrated from untyped main.js: instance fields are not yet declared.
+  [key: string]: any;
+  constructor(app, opts) {
+    super(app);
+    this.onSubmit = opts.onSubmit;
+    this.defaultText = opts.defaultText || '';
+    this.defaultWhen = opts.defaultWhen || null; // ISO or null
+    this.defaultRepeat = opts.defaultRepeat || 'none';
+    this._submitted = false;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass('cad-capture-modal');
+    contentEl.createEl('h3', { text: 'Quick capture' });
+
+    const textRow = contentEl.createDiv({ cls: 'cad-form-row' });
+    textRow.createDiv({ cls: 'cad-form-label', text: 'WHAT' });
+    const textInput = textRow.createEl('input', { type: 'text', cls: 'cad-form-input' });
+    textInput.placeholder = 'What needs doing?';
+    textInput.value = this.defaultText;
+
+    // Schedule toggle
+    const schedToggleRow = contentEl.createDiv();
+    schedToggleRow.style.marginTop = '14px';
+    schedToggleRow.style.display = 'flex';
+    schedToggleRow.style.alignItems = 'center';
+    schedToggleRow.style.gap = '8px';
+    const schedCb = schedToggleRow.createEl('input', { type: 'checkbox' });
+    const schedLbl = schedToggleRow.createEl('label', { text: 'Remind me' });
+    schedLbl.style.fontSize = '13px';
+    schedLbl.style.cursor = 'pointer';
+    schedLbl.addEventListener('click', () => { schedCb.checked = !schedCb.checked; schedCb.dispatchEvent(new Event('change')); });
+
+    // Schedule fields (hidden until toggled)
+    const schedFields = contentEl.createDiv({ cls: 'cad-capture-sched' });
+    schedFields.style.display = 'none';
+    schedFields.style.marginTop = '12px';
+    schedFields.style.gap = '12px';
+    schedFields.style.display = 'none';
+
+    const dateRow = schedFields.createDiv({ cls: 'cad-form-row' });
+    dateRow.createDiv({ cls: 'cad-form-label', text: 'WHEN' });
+    const dateInput = dateRow.createEl('input', { type: 'datetime-local', cls: 'cad-form-input' });
+    if (this.defaultWhen) {
+      const d = new Date(this.defaultWhen);
+      if (!isNaN(d.getTime())) dateInput.value = toLocalDatetimeValue(d);
+    } else {
+      // Default to now + 1 hour, rounded to next 15min
+      const dft = new Date(Date.now() + 60 * 60 * 1000);
+      dft.setMinutes(Math.ceil(dft.getMinutes() / 15) * 15, 0, 0);
+      dateInput.value = toLocalDatetimeValue(dft);
+    }
+
+    // Quick-pick buttons
+    const quick = schedFields.createDiv();
+    quick.style.display = 'flex';
+    quick.style.gap = '6px';
+    quick.style.marginTop = '8px';
+    quick.style.flexWrap = 'wrap';
+    const setQuick = (deltaMs) => {
+      const d = new Date(Date.now() + deltaMs);
+      d.setSeconds(0, 0);
+      dateInput.value = toLocalDatetimeValue(d);
+    };
+    const mkQ = (label, deltaMs) => {
+      const b = quick.createEl('button', { cls: 'cad-btn cad-btn-sm', text: label });
+      b.type = 'button';
+      b.addEventListener('click', () => setQuick(deltaMs));
+    };
+    mkQ('+15m', 15 * 60 * 1000);
+    mkQ('+1h',  60 * 60 * 1000);
+    mkQ('+3h',  3 * 60 * 60 * 1000);
+    mkQ('Tomorrow 9am', () => {});
+    quick.lastChild.addEventListener('click', () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setHours(9, 0, 0, 0);
+      dateInput.value = toLocalDatetimeValue(d);
+    });
+
+    const repeatRow = schedFields.createDiv({ cls: 'cad-form-row' });
+    repeatRow.style.marginTop = '10px';
+    repeatRow.createDiv({ cls: 'cad-form-label', text: 'REPEAT' });
+    const repeatSelect = repeatRow.createEl('select', { cls: 'cad-form-input' });
+    [['none', 'No repeat'], ['daily', 'Daily'], ['weekly', 'Weekly']].forEach(([v, l]) => {
+      const o = repeatSelect.createEl('option', { value: v, text: l });
+      if (v === this.defaultRepeat) o.selected = true;
+    });
+
+    schedCb.addEventListener('change', () => {
+      schedFields.style.display = schedCb.checked ? 'block' : 'none';
+    });
+    if (this.defaultWhen) { schedCb.checked = true; schedFields.style.display = 'block'; }
+
+    // Action row
+    const row = contentEl.createDiv();
+    row.style.display = 'flex';
+    row.style.justifyContent = 'flex-end';
+    row.style.gap = '8px';
+    row.style.marginTop = '18px';
+    const cancel = row.createEl('button', { cls: 'cad-btn', text: 'Cancel' });
+    cancel.type = 'button';
+    cancel.addEventListener('click', () => this.close());
+    const ok = row.createEl('button', { cls: 'cad-btn primary', text: 'Capture' });
+    ok.type = 'button';
+    attachRequiredValidation(ok, [textInput]);
+
+    const submit = () => {
+      const text = textInput.value.trim();
+      if (!text) { textInput.focus(); return; }
+      const result = { text, when: null, repeat: 'none' };
+      if (schedCb.checked && dateInput.value) {
+        const d = fromLocalDatetimeValue(dateInput.value);
+        if (d && !isNaN(d.getTime())) {
+          result.when = d.toISOString();
+          result.repeat = repeatSelect.value || 'none';
+        }
+      }
+      this._submitted = true;
+      this.close();
+      this.onSubmit(result);
+    };
+    ok.addEventListener('click', submit);
+    textInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); submit(); }
+      if (e.key === 'Escape') this.close();
+    });
+
+    setTimeout(() => textInput.focus(), 0);
+  }
+  onClose() {
+    if (!this._submitted && this.onSubmit) this.onSubmit(null);
+    this.contentEl.empty();
+  }
+}
+
+/* Helpers for <input type="datetime-local"> ↔ Date in local TZ */
+export function toLocalDatetimeValue(d) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+export function fromLocalDatetimeValue(s) {
+  if (!s) return null;
+  // datetime-local has no timezone — interpret as local time
+  return new Date(s);
+}
+
+/* ─────────── Reminder edit modal (text/when/repeat/notes/delete) ─────────── */
+export class CadenceReminderEditModal extends obsidian.Modal {
+  // Migrated from untyped main.js: instance fields are not yet declared.
+  [key: string]: any;
+  constructor(app, plugin, reminder, opts?) {
+    super(app);
+    this.plugin = plugin;
+    this.reminder = reminder;
+    this.isNew = (opts && opts.isNew) || false;
+    this._submitted = false;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass('cad-create-modal');
+    contentEl.addClass('cad-reminder-edit-modal');
+    contentEl.createEl('h3', { cls: 'cad-create-title', text: this.isNew ? 'New reminder' : 'Edit reminder' });
+
+    const form = contentEl.createDiv({ cls: 'cad-create-form' });
+
+    /* Text */
+    const textRow = form.createDiv({ cls: 'cad-create-row' });
+    textRow.createDiv({ cls: 'cad-create-label', text: 'WHAT *' });
+    const textInput = textRow.createEl('input', { type: 'text', cls: 'cad-create-input' });
+    textInput.value = this.reminder.text || '';
+    textInput.placeholder = 'What needs doing?';
+
+    /* When */
+    const whenRow = form.createDiv({ cls: 'cad-create-row' });
+    whenRow.createDiv({ cls: 'cad-create-label', text: 'WHEN' });
+    const whenWrap = whenRow.createDiv();
+    whenWrap.style.display = 'flex';
+    whenWrap.style.gap = '8px';
+    whenWrap.style.alignItems = 'center';
+    const dateInput = whenWrap.createEl('input', { type: 'datetime-local', cls: 'cad-create-input' });
+    dateInput.style.flex = '1';
+    if (this.reminder.when) {
+      const d = new Date(this.reminder.when);
+      if (!isNaN(d.getTime())) dateInput.value = toLocalDatetimeValue(d);
+    }
+    const clearBtn = whenWrap.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Clear' });
+    clearBtn.type = 'button';
+    clearBtn.title = 'Move to unscheduled';
+    clearBtn.addEventListener('click', () => { dateInput.value = ''; });
+
+    /* Repeat */
+    const repeatRow = form.createDiv({ cls: 'cad-create-row' });
+    repeatRow.createDiv({ cls: 'cad-create-label', text: 'REPEAT' });
+    const repeatSel = repeatRow.createEl('select', { cls: 'cad-create-input' });
+    [['none', 'No repeat'], ['daily', 'Daily'], ['weekly', 'Weekly']].forEach(([v, l]) => {
+      const o = repeatSel.createEl('option', { value: v, text: l });
+      if (v === (this.reminder.repeat || 'none')) o.selected = true;
+    });
+
+    /* Project link */
+    const projectRow = form.createDiv({ cls: 'cad-create-row' });
+    projectRow.createDiv({ cls: 'cad-create-label', text: 'PROJECT' });
+    const projectField = projectRow.createDiv({ cls: 'cad-rem-project-field' });
+    const renderProjectField = () => {
+      projectField.empty();
+      if (this.reminder.project) {
+        const chip = projectField.createEl('a', { cls: 'cad-rem-project-chip', text: '📁 ' + (projectNameFromPath(this.app, this.reminder.project) || 'Project') });
+        chip.title = 'Open project (closes this modal)';
+        chip.addEventListener('click', (e) => {
+          e.preventDefault();
+          const file = this.app.vault.getAbstractFileByPath(this.reminder.project);
+          if (file && file instanceof obsidian.TFile) {
+            this._submitted = true;
+            this.close();
+            const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
+            const leafView: any = leaf?.view;
+            if (leaf && leafView && typeof leafView.openEntityDetailFromFile === 'function') {
+              leafView.openEntityDetailFromFile(file);
+            }
+          }
+        });
+        const changeBtn = projectField.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Change' });
+        changeBtn.type = 'button';
+        changeBtn.addEventListener('click', () => this._openReminderProjectPicker(renderProjectField));
+        const removeBtn = projectField.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: 'Remove' });
+        removeBtn.type = 'button';
+        removeBtn.addEventListener('click', () => {
+          this.reminder.project = null;
+          renderProjectField();
+        });
+      } else {
+        const linkBtn = projectField.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '📁 Link to project' });
+        linkBtn.type = 'button';
+        linkBtn.addEventListener('click', () => this._openReminderProjectPicker(renderProjectField));
+      }
+    };
+    renderProjectField();
+
+    /* Notes */
+    const notesRow = form.createDiv({ cls: 'cad-create-row' });
+    notesRow.style.alignItems = 'flex-start';
+    notesRow.createDiv({ cls: 'cad-create-label', text: 'NOTES' });
+    const notesArea = notesRow.createEl('textarea', { cls: 'cad-create-input' });
+    notesArea.rows = 6;
+    notesArea.placeholder = 'Context, follow-ups, what happened, related links…';
+    notesArea.value = this.reminder.notes || '';
+    notesArea.style.resize = 'vertical';
+    notesArea.style.fontFamily = 'inherit';
+
+    /* Actions */
+    const actions = contentEl.createDiv({ cls: 'cad-create-actions' });
+    if (!this.isNew) {
+      const del = actions.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Delete' });
+      del.type = 'button';
+      del.style.marginRight = 'auto';
+      del.addEventListener('click', async () => {
+        if (!(await confirmModal(this.app, 'Delete this reminder?', { title: 'Delete reminder', cta: 'Delete' }))) return;
+        await this.plugin.deleteReminder(this.reminder.id);
+        this._submitted = true;
+        this.close();
+      });
+    }
+    const cancel = actions.createEl('button', { cls: 'cad-btn', text: 'Cancel' });
+    cancel.type = 'button';
+    cancel.addEventListener('click', () => this.close());
+    const save = actions.createEl('button', { cls: 'cad-btn primary', text: this.isNew ? 'Create reminder' : 'Save' });
+    save.type = 'button';
+    attachRequiredValidation(save, [textInput]);
+
+    const submit = async () => {
+      const text = textInput.value.trim();
+      if (!text) { textInput.focus(); return; }
+      const fields: any = {
+        text,
+        notes: notesArea.value,
+        repeat: repeatSel.value || 'none',
+        project: this.reminder.project || null,
+      };
+      if (dateInput.value) {
+        const d = fromLocalDatetimeValue(dateInput.value);
+        if (d && !isNaN(d.getTime())) {
+          fields.when = d.toISOString();
+          if (fields.when !== this.reminder.when) fields.notified = false;
+        }
+      } else {
+        fields.when = null;
+        fields.notified = false;
+      }
+      if (this.isNew) {
+        await this.plugin.addReminder(fields);
+        new obsidian.Notice(fields.when
+          ? `Reminder set · ${reminderTimeStr(fields.when)}`
+          : 'Captured to Inbox');
+      } else {
+        await this.plugin.updateReminder(this.reminder.id, fields);
+      }
+      this._submitted = true;
+      this.close();
+    };
+    save.addEventListener('click', submit);
+
+    // Submit on Cmd/Ctrl+Enter from notes area; Esc cancels
+    notesArea.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); submit(); }
+      if (e.key === 'Escape') this.close();
+    });
+    textInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); submit(); }
+      if (e.key === 'Escape') this.close();
+    });
+
+    setTimeout(() => textInput.focus(), 0);
+  }
+
+  onClose() { this.contentEl.empty(); }
+
+  _openReminderProjectPicker(rerender) {
+    const projectFiles = listEntityFiles(this.app, 'project');
+    if (!projectFiles.length) {
+      new obsidian.Notice('No projects yet. Create one in Planner → Projects first.');
+      return;
+    }
+    const projects = projectFiles.map((f) => ({ file: f, name: projectNameFromPath(this.app, f.path) }));
+    const reminder = this.reminder;
+    const picker: any = new (class extends obsidian.SuggestModal<any> {
+      projs: any;
+      constructor(app, projs) {
+        super(app);
+        this.projs = projs;
+        this.setPlaceholder('Search projects to link this reminder to…');
+      }
+      getSuggestions(query) {
+        const q = (query || '').toLowerCase();
+        return this.projs.filter((p) => p.name.toLowerCase().includes(q));
+      }
+      renderSuggestion(item, el) { el.setText('📁  ' + item.name); }
+      onChooseSuggestion(item) {
+        reminder.project = item.file.path;
+        rerender();
+      }
+    })(this.app, projects);
+    picker.open();
+  }
+}
+
+/* ─────────── CSV parser (handles quoted fields, escaped quotes, newlines) ─────────── */

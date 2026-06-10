@@ -1,6 +1,43 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const esbuild = require('esbuild');
+
+/*
+ * Test loader: extracts individual top-level functions from the src/
+ * TypeScript modules (transpiled to plain JS) and evaluates them in a vm
+ * sandbox. Free identifiers inside a function resolve against the sandbox,
+ * so tests inject collaborators/registries (ENTITIES, WORKSPACE_CONFIG, …)
+ * as plain stub globals — same contract as when the functions lived in the
+ * monolithic main.js.
+ */
+
+let cachedSource = null;
+function combinedSource() {
+  if (cachedSource) return cachedSource;
+  const srcDir = path.join(__dirname, '..', 'src');
+  const parts = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const p = path.join(dir, entry.name);
+      if (entry.isDirectory()) { walk(p); continue; }
+      if (!entry.name.endsWith('.ts')) continue;
+      const ts = fs.readFileSync(p, 'utf8');
+      const { code } = esbuild.transformSync(ts, { loader: 'ts', target: 'es2021' });
+      // Drop module syntax: declarations become plain top-level statements.
+      parts.push(
+        code
+          .replace(/^export default .*$/gm, '')
+          .replace(/^export \{[^}]*\};?\s*$/gm, '')
+          .replace(/^export /gm, '')
+          .replace(/^import .*$/gm, '')
+      );
+    }
+  };
+  walk(srcDir);
+  cachedSource = parts.join('\n');
+  return cachedSource;
+}
 
 function extractFunctionSource(source, name) {
   const markers = [`function ${name}(`, `async function ${name}(`];
@@ -12,6 +49,8 @@ function extractFunctionSource(source, name) {
   const marker = source.startsWith(`async function ${name}(`, start)
     ? `async function ${name}(`
     : `function ${name}(`;
+  // Prefer slicing at the next top-level declaration: the brace scanner below
+  // cannot distinguish regex literals from strings/comments.
   const followingDeclarations = [
     '\nfunction ',
     '\nasync function ',
@@ -25,7 +64,7 @@ function extractFunctionSource(source, name) {
     .filter((idx) => idx >= 0)
     .sort((a, b) => a - b)[0];
   if (next != null) return source.slice(start, next);
-  const braceStart = source.indexOf('{', start);
+  const braceStart = source.indexOf('{', start + marker.length - 1);
   if (braceStart < 0) throw new Error(`Function body not found: ${name}`);
   let depth = 0;
   let state = 'code';
@@ -78,7 +117,7 @@ function extractFunctionSource(source, name) {
 }
 
 function loadMainFunctions(names, stubs = {}) {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
+  const source = combinedSource();
   const sandbox = Object.assign({
     console,
     Math,
@@ -103,7 +142,7 @@ function loadMainFunctions(names, stubs = {}) {
   sandbox.self = sandbox;
   for (const name of names) {
     const fnSource = extractFunctionSource(source, name);
-    vm.runInNewContext(`${fnSource}\nthis.${name} = ${name};`, sandbox, { filename: 'main.js' });
+    vm.runInNewContext(`${fnSource}\nthis.${name} = ${name};`, sandbox, { filename: `src:${name}` });
   }
   return sandbox;
 }

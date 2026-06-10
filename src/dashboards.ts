@@ -1,0 +1,250 @@
+import { loadBuiltinDashboardDefaults } from './nav';
+export const BUILTIN_DASHBOARD_DEFAULTS = loadBuiltinDashboardDefaults();
+
+export const INTERNAL_DASHBOARD_PROVIDERS = [
+  'briefing',
+  'home-inbox',
+  'home-today',
+  'home-week',
+  'home-upcoming',
+  'home-partners',
+  'home-projects',
+  'home-pipeline',
+  'home-activities',
+  'productivity-summary',
+  'productivity-trend',
+  'productivity-weekday',
+  'productivity-notes',
+];
+
+export const PURE_DASHBOARD_WIDGET_TYPES = [
+  'list',
+  'metric',
+  'bar-chart',
+  'date-range',
+  'kanban',
+  'selector',
+  'markdown',
+  'actions',
+  'base-link',
+  'base-embed',
+  'base-view',
+  'merge',
+];
+
+export const DASHBOARD_WIDGET_CATALOG = [
+  {
+    id: 'metric',
+    label: 'Metric stat',
+    status: 'implemented',
+    description: 'Top-row KPI cards driven by count and aggregate stats. Supports count, open, sum, avg, weighted forecast, win rate, capture rate and unique counts.',
+    config: ['label', 'entity', 'count', 'metric', 'field', 'source', 'sub', 'accent'],
+    examples: ['client-work.dashboard', 'crm.pipeline', 'reports.sales'],
+  },
+  {
+    id: 'card-list',
+    label: 'Card list',
+    status: 'implemented',
+    description: 'Recent, open, and due entity cards rendered from entity notes or filtered Base-backed entity sets.',
+    config: ['title', 'entity', 'source', 'titleFields', 'metaFields', 'dateFields', 'empty'],
+    examples: ['client-work.dashboard', 'reports.activity'],
+  },
+  {
+    id: 'list',
+    label: 'List widget',
+    status: 'implemented',
+    description: 'Compact row list for entity results, similar to a lightweight report section.',
+    config: ['title', 'entity', 'source', 'titleFields', 'metaFields', 'limit', 'empty'],
+    examples: ['workspace.entity-list', 'report sections'],
+  },
+  {
+    id: 'bar-chart',
+    label: 'Bar chart',
+    status: 'implemented',
+    description: 'Grouped count or value bars driven by a field, groups, or explicit columns.',
+    config: ['title', 'entity', 'source', 'groupBy', 'groups', 'columns', 'metric', 'field', 'limit'],
+    examples: ['reports.sales', 'pipeline summaries'],
+  },
+  {
+    id: 'kanban',
+    label: 'Kanban board',
+    status: 'implemented',
+    description: 'Grouped entity board for stage-style workflows. Supports group ordering, custom labels, WIP limits, drag/drop stage changes and per-column totals.',
+    config: ['entity', 'source', 'groupBy', 'groups', 'columns', 'sort', 'titleFields', 'metaFields', 'cardTitleFields', 'cardMetaFields', 'valueField', 'wipLimit'],
+    examples: ['crm.pipeline'],
+  },
+  {
+    id: 'merge',
+    label: 'Merged card',
+    status: 'implemented',
+    description: 'Combines several source definitions into one card section.',
+    config: ['merge', 'title', 'empty'],
+    examples: ['finance.setup.overview', 'tax.dashboard'],
+  },
+  {
+    id: 'table',
+    label: 'Table view',
+    status: 'planned',
+    description: 'Planned Base-backed table widget for directly embedding tabular report sections.',
+    config: ['entity', 'base', 'view', 'columns', 'filters', 'sort'],
+    examples: ['future report/table widgets'],
+  },
+  {
+    id: 'base-link',
+    label: 'Base link',
+    status: 'implemented',
+    description: 'Direct link widget for a selected .base file or named view without duplicating the Base UI.',
+    config: ['base', 'view', 'label', 'description'],
+    examples: ['reports', 'pipeline review'],
+  },
+  {
+    id: 'base-embed',
+    label: 'Base embed',
+    status: 'partial',
+    description: 'Compact embedded preview of a Base-backed result set with open-base fallback for non-table views.',
+    config: ['base', 'view', 'entity', 'source', 'titleFields', 'metaFields', 'limit'],
+    examples: ['workspace.base-preview', 'report sections'],
+  },
+  {
+    id: 'base-view',
+    label: 'Base view (live)',
+    status: 'implemented',
+    description: 'Live inline Obsidian Base view mounted inside a dashboard cell with preview, link, or error fallback.',
+    config: ['title', 'entity', 'base', 'view', 'height', 'fallback'],
+    examples: ['workspace.base-view', 'task board'],
+  },
+  {
+    id: 'markdown',
+    label: 'Markdown note',
+    status: 'implemented',
+    description: 'Static commentary widget for notes, guidance, or report narrative. Supports raw markdown bodies and note-backed sources.',
+    config: ['title', 'body', 'source', 'heading', 'section'],
+    examples: ['workspace.report-note', 'report commentary'],
+  },
+  {
+    id: 'actions',
+    label: 'Actions',
+    status: 'implemented',
+    description: 'Configured button bar for surface switches, commands, note links and record-creation shortcuts.',
+    config: ['actions', 'buttons', 'label', 'icon', 'entityKey', 'surface', 'command', 'path', 'url'],
+    examples: ['workspace.quick-actions', 'report controls'],
+  },
+  {
+    id: 'selector',
+    label: 'Selector',
+    status: 'implemented',
+    description: 'A dashboard control that stores a selected value and exposes it for placeholder-driven filters.',
+    config: ['key', 'label', 'entity', 'field', 'options', 'allLabel', 'default'],
+    examples: ['workspace.report-filters', 'report controls'],
+  },
+  {
+    id: 'date-range',
+    label: 'Date range',
+    status: 'implemented',
+    description: 'A dashboard control for preset or custom date ranges. Exposes start/end/filter placeholders for report widgets.',
+    config: ['key', 'label', 'field', 'default', 'presets', 'allLabel'],
+    examples: ['reports.activity', 'reports.pipeline'],
+  },
+];
+
+export function dashboardWidgetKind(card) {
+  if (!card || typeof card !== 'object') return '';
+  return String(card.kind || '').trim();
+}
+
+export function collectDashboardWidgetKinds(card, kinds = new Set<any>()) {
+  if (!card || typeof card !== 'object' || Array.isArray(card)) return kinds;
+  const kind = dashboardWidgetKind(card);
+  if (kind) kinds.add(kind);
+  if (Array.isArray(card.merge)) {
+    kinds.add('merge');
+    card.merge.forEach((source) => collectDashboardWidgetKinds(source, kinds));
+  }
+  return kinds;
+}
+
+export function countDashboardCards(config: any = {}) {
+  let count = 0;
+  for (const row of config.layout || []) {
+    for (const col of row || []) {
+      count += Array.isArray(col) ? col.length : 1;
+    }
+  }
+  count += (config.conditionalRows || []).reduce((sum, row) => sum + (Array.isArray(row?.cards) ? row.cards.length : 0), 0);
+  return count;
+}
+
+export function summarizeDashboardBlueprint(id, config: any = {}) {
+  const widgetKinds = new Set<any>();
+  const sourceKinds = new Set<any>();
+  const kind = String(
+    config.kind || (String(id || '').startsWith('reports.') ? 'report' : String(id || '').startsWith('planner.') ? 'planner' : 'dashboard')
+  ).trim().toLowerCase() || 'dashboard';
+  (config.stats || []).forEach((stat) => {
+    widgetKinds.add('metric');
+    if (stat.metric) sourceKinds.add(`metric:${stat.metric}`);
+    if (stat.count === 'open') sourceKinds.add('count:open');
+    if (stat.count === 'all' || stat.count == null) sourceKinds.add('count:all');
+  });
+  (config.controls || []).forEach((card) => {
+    collectDashboardWidgetKinds(card, widgetKinds);
+    if (typeof card.source === 'string') sourceKinds.add(card.source);
+    else if (card.source && typeof card.source === 'object') {
+      sourceKinds.add(String(card.source.source || card.source.kind || 'object'));
+    }
+  });
+  for (const row of config.layout || []) {
+    for (const col of row || []) {
+      for (const card of (Array.isArray(col) ? col : [col])) {
+        collectDashboardWidgetKinds(card, widgetKinds);
+        if (typeof card.source === 'string') sourceKinds.add(card.source);
+        else if (card.source && typeof card.source === 'object') {
+          sourceKinds.add(String(card.source.source || card.source.kind || 'object'));
+        }
+      }
+    }
+  }
+  (config.conditionalRows || []).forEach((row) => {
+    (row.cards || []).forEach((card) => {
+      collectDashboardWidgetKinds(card, widgetKinds);
+      if (typeof card.source === 'string') sourceKinds.add(card.source);
+      else if (card.source && typeof card.source === 'object') {
+        sourceKinds.add(String(card.source.source || card.source.kind || 'object'));
+      }
+    });
+  });
+  return {
+    id,
+    title: config.title || id,
+    subtitle: config.subtitle || '',
+    contextFilter: config.contextFilter || '',
+    legend: config.legend || '',
+    kind,
+    statsCount: (config.stats || []).length,
+    cardCount: countDashboardCards(config),
+    widgetKinds: [...widgetKinds].sort(),
+    sourceKinds: [...sourceKinds].sort(),
+  };
+}
+
+export function dashboardProviderRowValue(row, field = '') {
+  if (!row || typeof row !== 'object') return 0;
+  const key = String(field || '').trim();
+  if (key && row.values && Object.prototype.hasOwnProperty.call(row.values, key)) {
+    return Number(row.values[key]) || 0;
+  }
+  if (key && Object.prototype.hasOwnProperty.call(row, key)) {
+    return Number(row[key]) || 0;
+  }
+  if (row.value != null) return Number(row.value) || 0;
+  if (row.values) {
+    for (const candidate of ['value', 'done', 'count', 'total', 'pct', 'open']) {
+      if (Object.prototype.hasOwnProperty.call(row.values, candidate)) {
+        return Number(row.values[candidate]) || 0;
+      }
+    }
+  }
+  return 0;
+}
+
+/* ─────────── The unified Cadence app view ─────────── */

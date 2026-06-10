@@ -1,26 +1,17 @@
 const assert = require('assert');
-const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 
-const root = path.join(__dirname, '..');
-const main = fs.readFileSync(path.join(root, 'main.js'), 'utf8');
+/*
+ * The SheetJS (mini) library ships inside main.js: src/bundled/xlsx.ts
+ * require()s vendor/xlsx.mini.min.js and esbuild inlines it as a lazy
+ * CommonJS module (build-freshness.test.js guarantees main.js reflects the
+ * vendored source). Here we require the vendored lib the same way and
+ * round-trip the exact export → import path the plugin uses.
+ */
 
-// Pull the inlined loadBundledXLSX() out of main.js by its markers.
-const BEGIN = '/* ===BEGIN BUNDLED_XLSX';
-const END = '/* ===END BUNDLED_XLSX=== */';
-const begin = main.indexOf(BEGIN);
-const end = main.indexOf(END);
-assert.ok(begin >= 0 && end > begin, 'BUNDLED_XLSX markers present in main.js');
-let fnText = main.slice(main.indexOf('function loadBundledXLSX', begin), end).trim();
-assert.ok(fnText.startsWith('function loadBundledXLSX'), 'loadBundledXLSX inlined (run: node scripts/bundle-xlsx.js)');
-assert.ok(fnText.length > 100000, 'XLSX library appears inlined, not a stub');
+const XLSX = require(path.join(__dirname, '..', 'vendor', 'xlsx.mini.min.js'));
 
-// Evaluate in this context so the lib sees node's real globals (typed arrays, etc.).
-const loadBundledXLSX = vm.runInThisContext(`(${fnText})`);
-const XLSX = loadBundledXLSX();
-
-assert.ok(XLSX && XLSX.utils, 'bundled XLSX exposes utils');
+assert.ok(XLSX && XLSX.utils, 'vendored XLSX exposes utils');
 for (const fn of ['book_new', 'json_to_sheet', 'book_append_sheet', 'sheet_to_json', 'sheet_to_csv']) {
   assert.strictEqual(typeof XLSX.utils[fn], 'function', `utils.${fn} present`);
 }
@@ -36,5 +27,10 @@ const wb2 = XLSX.read(buf, { type: 'array', cellDates: true });
 const rows = XLSX.utils.sheet_to_json(wb2.Sheets['Deals'], { defval: '', raw: false });
 assert.strictEqual(rows.length, 2, 'round-trip preserves rows');
 assert.strictEqual(rows[0].name, 'Acme', 'round-trip preserves values');
+
+// And the built artifact must actually carry the inlined library.
+const fs = require('fs');
+const main = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
+assert.ok(main.includes('vendor/xlsx.mini.min.js'), 'main.js carries the inlined vendored XLSX module');
 
 console.log('xlsx-bundle.test.js: ok');

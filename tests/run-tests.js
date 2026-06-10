@@ -8,4 +8,6 @@ require('./template-bundle.test');
 require('./xlsx-bundle.test');
 require('./widget-source.test');
 require('./workspace-config.test');
+require('./plugin-load.test');
+require('./build-freshness.test');
 console.log('all tests passed');
