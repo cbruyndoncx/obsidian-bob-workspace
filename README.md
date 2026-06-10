@@ -6,6 +6,8 @@ This repository is a BOB Workspace customization of the original Cadence plugin.
 
 For extension guidance, see [Extending BOB Workspace Without Code Changes](docs/extending-bob-workspace.md).
 
+💬 **Docs, support, and community:** join the **ThirdBrain BOB** Skool community → https://www.skool.com/thirdbrain-tech-3102
+
 ![BOB Workspace Home](docs/screenshots/01-home.png)
 
 ---
@@ -225,16 +227,22 @@ PRs welcome. For bug reports, please include your Obsidian version, OS, and a mi
 
 ---
 
-## Support
+## Community & support
 
-If BOB Workspace saves you time or makes your day a bit smoother, a coffee keeps the dev nights going. ☕
+For documentation, questions, and support, join the **ThirdBrain BOB** community on Skool:
+
+👉 **https://www.skool.com/thirdbrain-tech-3102**
+
+That's the best place for setup help, template/workspace guidance, and to share how you use BOB Workspace.
+
+### Support the original author
+
+BOB Workspace is a fork of the Cadence plugin. If it saves you time, a coffee for the original author keeps the dev nights going. ☕
 
 <a href="https://www.buymeacoffee.com/wesswart77" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="50"></a>
-
-Or via the heart icon next to BOB Workspace in Obsidian's community plugin browser once you have it installed.
 
 ---
 
 ## License
 
-[MIT](LICENSE) © Wesley Swart
+[MIT](LICENSE) © Wesley Swart (original Cadence plugin) · © Carine Bruyndoncx (BOB Workspace fork)
