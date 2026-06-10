@@ -22766,6 +22766,14 @@ async function archiveTemplateAssets(app, schemaFolder, basesFolder, prevKey) {
   const p2 = (n) => String(n).padStart(2, '0');
   const stamp = `${prevKey || 'previous'}-${ymd()}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
   const schemas = await archiveFolderContents(app, schemaFolder, stamp, ['.yaml', '.yml']);
+  // Derived schema outputs live as siblings of the source folder (same
+  // derivation regenerateSchemaOutputs uses). Archive them too, otherwise a
+  // switch between templates with different schema folders leaves the old
+  // template's FileClasses / JSON Schema orphaned (prune only touches the new
+  // folder).
+  const root = String(schemaFolder || '').replace(/\/source$/, '');
+  const fileClasses = await archiveFolderContents(app, `${root}/fileClasses`, stamp, ['.md']);
+  const jsonSchemas = await archiveFolderContents(app, `${root}/json-schema`, stamp, ['.json']);
   const bases = await archiveFolderContents(app, basesFolder, stamp, ['.base']);
   // Keep a labelled copy of the outgoing workspace.json (the shared backup is
   // overwritten on every save and carries no template identity).
@@ -22776,7 +22784,7 @@ async function archiveTemplateAssets(app, schemaFolder, basesFolder, prevKey) {
       await app.vault.adapter.write(dest, await app.vault.adapter.read(WORKSPACE_CONFIG_PATH));
     }
   } catch (_) {}
-  return { schemas: schemas.count, bases: bases.count, stamp };
+  return { schemas: schemas.count, fileClasses: fileClasses.count, jsonSchemas: jsonSchemas.count, bases: bases.count, stamp };
 }
 
 async function applyWorkspaceTemplate(app, plugin, template) {
@@ -22792,8 +22800,9 @@ async function applyWorkspaceTemplate(app, plugin, template) {
   const parsed = validateWorkspaceConfig(config);
   if (switching) {
     const archived = await archiveTemplateAssets(app, oldSchemaFolder, oldBasesFolder, prevKey);
-    if (archived.schemas || archived.bases) {
-      new obsidian.Notice(`BOB Workspace: archived ${archived.schemas} schema + ${archived.bases} base file(s) from "${prevKey}" before applying "${newKey}".`);
+    const total = archived.schemas + archived.fileClasses + archived.jsonSchemas + archived.bases;
+    if (total) {
+      new obsidian.Notice(`BOB Workspace: archived ${archived.schemas} schema, ${archived.fileClasses} FileClass, ${archived.jsonSchemas} JSON Schema, and ${archived.bases} base file(s) from "${prevKey}" before applying "${newKey}".`);
     }
   }
   await saveWorkspaceConfig(app, JSON.stringify(parsed, null, 2));
