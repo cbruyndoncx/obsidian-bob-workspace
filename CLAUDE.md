@@ -113,11 +113,11 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 - `navLevel` — `'secondary'` (shown only when parent is active) or `'setup'` (shown only when Setup nav is enabled)
 - `parent` — surface ID of the parent when `navLevel` is set
 
-Nav groups: `home_group`, `planner`, `crm`, `prm`, `client-work`, `finance`, `procurement`, `reports`, `misc`. Navigation is module-driven; `showSecondaryNav` and `showSetupNav` control whether lower-frequency children appear in the left rail (still reachable via parent tabs).
+**Built-in vs configured nav.** The hardcoded `BUILTIN_NAV_GROUPS` ships only two groups — **`home_group`** (Home) and **`misc`** (Team, Settings, Surface Designer, Export, Import) — and both have an **empty `label`**. The renderer draws a group header only when `group.label` is truthy (`if (group.label)` in `CadenceAppView.render()`), so a label-less group's items render directly with no section heading — which is why `misc` shows no label. The rich groups (CRM, PRM, Planner, Client Work, Finance, Procurement, Reports, AI Workspace) are **not hardcoded**; they come from the active `workspace.json` `navigation.groups`, applied at runtime by `applyWorkspaceRegistries()`. `BUILTIN_SECONDARY_TABS` and `BUILTIN_WORKBOOK_EXPORT_GROUPS` are likewise empty and populated from `workspace.json`. Navigation is module-driven; `showSecondaryNav` and `showSetupNav` control whether lower-frequency children appear in the left rail (still reachable via parent tabs).
 
-**`SECONDARY_TABS`** — object mapping parent surface IDs to arrays of sub-tab definitions, used by workspace surfaces (e.g. `client-work.overview`, `finance.gl`, `prm.partners`) to render an inner tab bar. A surface with `SECONDARY_TABS` entries renders its first sub-tab automatically (see `CadenceAppView.render()`), which is how custom parent surfaces work without a hardcoded renderer.
+**`SECONDARY_TABS`** — runtime object (built from `workspace.json` `navigation.secondaryTabs`) mapping parent surface IDs to arrays of sub-tab definitions, used by workspace surfaces (e.g. `client-work.overview`, `finance.gl`, `prm.partners`) to render an inner tab bar. A surface with `SECONDARY_TABS` entries renders its first sub-tab automatically (see `CadenceAppView.render()`), which is how custom parent surfaces work without a hardcoded renderer.
 
-**`WORKBOOK_EXPORT_GROUPS`** — how entities are grouped into sheets for XLSX export. Groups: Planner, CRM, Client Work, PRM, Finance, Suppliers & Procurement, AI Workspace.
+**`WORKBOOK_EXPORT_GROUPS`** — runtime object (from `workspace.json` `workbookGroups`) grouping entities into sheets for XLSX export. The shipped templates define groups such as Planner, CRM, Client Work, PRM, Finance, Suppliers & Procurement, and AI Workspace.
 
 ### Current Surfaces and Modules
 
