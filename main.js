@@ -22738,13 +22738,67 @@ async function writeTemplateAssets(app, assets, settings = {}) {
   return result;
 }
 
+// Move files with the given extensions out of `folder` into a sibling
+// "<name>-archive-<stamp>" folder. Returns the count moved. Reversible.
+async function archiveFolderContents(app, folder, stamp, exts) {
+  const dir = String(folder || '').replace(/\/+$/, '');
+  if (!dir || !await app.vault.adapter.exists(dir)) return { dest: '', count: 0 };
+  const listed = await app.vault.adapter.list(dir);
+  const files = (listed.files || []).filter((f) => exts.some((e) => f.toLowerCase().endsWith(e)));
+  if (!files.length) return { dest: '', count: 0 };
+  const parent = dir.split('/').slice(0, -1).join('/');
+  const base = dir.split('/').pop();
+  const dest = `${parent ? parent + '/' : ''}${base}-archive-${stamp}`;
+  await ensureFolderSync(app, dest);
+  let count = 0;
+  for (const f of files) {
+    const name = f.split('/').pop();
+    try { await app.vault.adapter.rename(f, `${dest}/${name}`); count++; } catch (_) {}
+  }
+  return { dest, count };
+}
+
+// Before switching to a different template, archive the outgoing template's
+// schema YAML, base files, and workspace.json (labelled with the template key
+// and a timestamp) so applying a new template never compounds onto the old one.
+async function archiveTemplateAssets(app, schemaFolder, basesFolder, prevKey) {
+  const d = new Date();
+  const p2 = (n) => String(n).padStart(2, '0');
+  const stamp = `${prevKey || 'previous'}-${ymd()}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
+  const schemas = await archiveFolderContents(app, schemaFolder, stamp, ['.yaml', '.yml']);
+  const bases = await archiveFolderContents(app, basesFolder, stamp, ['.base']);
+  // Keep a labelled copy of the outgoing workspace.json (the shared backup is
+  // overwritten on every save and carries no template identity).
+  try {
+    if (await app.vault.adapter.exists(WORKSPACE_CONFIG_PATH)) {
+      const dest = `${schemas.dest || basesFolder}/workspace-${stamp}.json`;
+      await ensureFolderSync(app, dest.split('/').slice(0, -1).join('/'));
+      await app.vault.adapter.write(dest, await app.vault.adapter.read(WORKSPACE_CONFIG_PATH));
+    }
+  } catch (_) {}
+  return { schemas: schemas.count, bases: bases.count, stamp };
+}
+
 async function applyWorkspaceTemplate(app, plugin, template) {
   if (!template?._template) throw new Error('Invalid workspace template');
   const { _template, _assets, ...config } = template;
+  const newKey = workspaceTemplateKey(template);
+  const prevKey = plugin.settings.activeWorkspaceTemplate;
+  const switching = !!(prevKey && newKey && prevKey !== newKey);
+  // Capture the OUTGOING template's folders before config/settings are replaced.
+  const oldSchemaFolder = (WORKSPACE_CONFIG.schemas?.folder || plugin.settings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
+  const oldBasesFolder = resolveBasesFolder(plugin.settings);
+
   const parsed = validateWorkspaceConfig(config);
+  if (switching) {
+    const archived = await archiveTemplateAssets(app, oldSchemaFolder, oldBasesFolder, prevKey);
+    if (archived.schemas || archived.bases) {
+      new obsidian.Notice(`BOB Workspace: archived ${archived.schemas} schema + ${archived.bases} base file(s) from "${prevKey}" before applying "${newKey}".`);
+    }
+  }
   await saveWorkspaceConfig(app, JSON.stringify(parsed, null, 2));
   WORKSPACE_CONFIG = parsed;
-  plugin.settings.activeWorkspaceTemplate = workspaceTemplateKey(template);
+  plugin.settings.activeWorkspaceTemplate = newKey;
   plugin.settings.setupDismissed = true;
   plugin.settings = applyWorkspaceOwnedSettings(plugin.settings);
   await plugin.saveSettings();
