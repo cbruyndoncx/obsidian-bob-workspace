@@ -233,6 +233,7 @@ Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it
 - `loadWorkspaceTemplates()` serves the bundled templates (authoritative for shipped names); on-disk templates can only **add** custom ones.
 - The XLSX lib is embedded as a **function body** (not a string + `eval`), so V8 compiles it lazily on first `getXLSX()` use and there is no `eval` for the store reviewer to flag.
 - Applying a template writes the full config — including all dashboards — into `workspace.json`, so it is visible and editable in Settings. There is no hidden builtin-dashboard fallback: a surface with no entry in `workspace.json` shows the "Add dashboards.xxx" prompt by design.
+- **Template `_assets`** — a template may carry an `_assets: { schemas: {<entity>: <yaml>}, bases: {<file>: <yaml>} }` block. `applyWorkspaceTemplate()` strips `_assets` (and `_template`) before validating the config, then `writeTemplateAssets()` writes those files (missing-only) into the schema folder / Bases folder **before** the bootstrap. This is how a template whose entities are NOT built-in (e.g. `workspace-emai`, a PARA workspace with `tasks`/`people`/`video`/…) seeds exactly its own entities: the schemas exist first, so `bootstrapCanonicalSchemaSourcesIfMissing` stays gated and the full built-in entity set is never written.
 
 ### Code Style
 

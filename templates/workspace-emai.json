@@ -1,0 +1,348 @@
+{
+  "_template": {
+    "id": "emai",
+    "label": "EMAI Starter",
+    "description": "PARA-style personal workspace: Human (tasks, projects, areas, resources, people, daily, reviews), Content (videos, briefs, calendar, research), and Machine (workflows, SOPs, agents, code, skills). Schema-driven; brings its own entity definitions.",
+    "order": 5
+  },
+  "schemas": {
+    "enabled": true,
+    "folder": "Machine/Schemas/source"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "id": "home_group",
+        "label": "",
+        "items": [
+          {
+            "id": "home",
+            "label": "Home",
+            "icon": "home",
+            "desc": "Command centre — task board, content pipeline, inbox"
+          }
+        ]
+      },
+      {
+        "id": "human",
+        "label": "Human",
+        "items": [
+          {
+            "id": "human",
+            "label": "Human",
+            "icon": "user",
+            "desc": "Tasks, projects, areas, people, resources"
+          }
+        ]
+      },
+      {
+        "id": "content",
+        "label": "Content",
+        "items": [
+          {
+            "id": "content",
+            "label": "Content",
+            "icon": "video",
+            "desc": "Videos, briefs, calendar & research"
+          }
+        ]
+      },
+      {
+        "id": "context",
+        "label": "Context",
+        "items": [
+          {
+            "id": "context-hub",
+            "label": "Context",
+            "icon": "book-open",
+            "desc": "Context & profile notes",
+            "entityKey": "context"
+          }
+        ]
+      },
+      {
+        "id": "machine",
+        "label": "Machine",
+        "items": [
+          {
+            "id": "machine",
+            "label": "Machine",
+            "icon": "bot",
+            "desc": "Workflows, SOPs, research, agents, code, skills"
+          }
+        ]
+      },
+      {
+        "id": "misc",
+        "label": "",
+        "items": [
+          {
+            "id": "team",
+            "label": "Team",
+            "icon": "user-cog",
+            "desc": "Team members, roles, seats"
+          },
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "settings-2",
+            "desc": "BOB Workspace settings"
+          }
+        ]
+      }
+    ],
+    "secondaryTabs": {
+      "human": [
+        {
+          "label": "Tasks",
+          "entityKey": "tasks"
+        },
+        {
+          "label": "Projects",
+          "entityKey": "projects"
+        },
+        {
+          "label": "Areas",
+          "entityKey": "area"
+        },
+        {
+          "label": "People",
+          "entityKey": "people"
+        },
+        {
+          "label": "Resources",
+          "entityKey": "resource"
+        },
+        {
+          "label": "Inbox",
+          "entityKey": "inbox"
+        },
+        {
+          "label": "Daily",
+          "entityKey": "daily"
+        },
+        {
+          "label": "Reviews",
+          "entityKey": "review"
+        },
+        {
+          "label": "Concepts",
+          "entityKey": "concept"
+        }
+      ],
+      "content": [
+        {
+          "label": "Videos",
+          "entityKey": "video"
+        },
+        {
+          "label": "Briefs",
+          "entityKey": "video-brief"
+        },
+        {
+          "label": "Calendar",
+          "entityKey": "content-event"
+        },
+        {
+          "label": "Research",
+          "entityKey": "content-research"
+        }
+      ],
+      "machine": [
+        {
+          "label": "Workflows",
+          "entityKey": "workflow"
+        },
+        {
+          "label": "SOPs",
+          "entityKey": "sop"
+        },
+        {
+          "label": "Research",
+          "entityKey": "research"
+        },
+        {
+          "label": "Agents",
+          "entityKey": "agent"
+        },
+        {
+          "label": "Code",
+          "entityKey": "code"
+        },
+        {
+          "label": "Skills",
+          "entityKey": "skills"
+        }
+      ]
+    }
+  },
+  "workbookGroups": [],
+  "bases": {
+    "tasks": {
+      "file": "Machine/Bases/Tasks.base"
+    },
+    "projects": {
+      "file": "Machine/Bases/Projects.base"
+    },
+    "content-event": {
+      "file": "Machine/Bases/Content.base"
+    },
+    "people": {
+      "file": "Machine/Bases/People.base"
+    },
+    "inbox": {
+      "file": "Machine/Bases/Inbox.base"
+    }
+  },
+  "dashboards": {
+    "home": {
+      "title": "Home",
+      "subtitle": "EMAI workspace command centre",
+      "layout": [
+        [
+          {
+            "kind": "actions",
+            "title": "Create",
+            "actions": [
+              {
+                "label": "Quick capture",
+                "action": "quick-capture",
+                "icon": "plus-circle"
+              },
+              {
+                "label": "New Task",
+                "entityKey": "tasks",
+                "icon": "circle-check-big"
+              },
+              {
+                "label": "New Project",
+                "entityKey": "projects",
+                "icon": "folder-kanban"
+              },
+              {
+                "label": "New Person",
+                "entityKey": "people",
+                "icon": "users"
+              },
+              {
+                "label": "New Resource",
+                "entityKey": "resource",
+                "icon": "bookmark"
+              },
+              {
+                "label": "New Video",
+                "entityKey": "video",
+                "icon": "video"
+              },
+              {
+                "label": "New Workflow",
+                "entityKey": "workflow",
+                "icon": "workflow"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "base-embed",
+            "title": "TASK BOARD",
+            "entity": "tasks",
+            "view": "Board",
+            "titleFields": [
+              "title",
+              "name"
+            ],
+            "limit": 8
+          }
+        ],
+        [
+          {
+            "kind": "base-embed",
+            "title": "CONTENT PIPELINE",
+            "entity": "content-event",
+            "view": "Pipeline",
+            "titleFields": [
+              "title",
+              "name"
+            ],
+            "limit": 8
+          },
+          {
+            "kind": "base-embed",
+            "title": "INBOX",
+            "entity": "inbox",
+            "view": "Triage",
+            "titleFields": [
+              "title",
+              "name"
+            ],
+            "limit": 8
+          }
+        ],
+        [
+          {
+            "kind": "base-embed",
+            "title": "PROJECTS",
+            "entity": "projects",
+            "view": "By Status",
+            "titleFields": [
+              "title",
+              "name"
+            ],
+            "limit": 8
+          },
+          {
+            "kind": "base-embed",
+            "title": "PEOPLE",
+            "entity": "people",
+            "view": "Directory",
+            "titleFields": [
+              "title",
+              "name"
+            ],
+            "limit": 8
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "modules": {},
+    "baseViews": {
+      "content-event": "Calendar"
+    },
+    "basesFolder": "Machine/Bases",
+    "dailyNoteFolder": "00 Human/10 Daily Notes"
+  },
+  "_assets": {
+    "schemas": {
+      "agent": "entity: agent\nlabel: Agent\nplural: Agents\nicon: bot\nlocation_pattern: Machine/Agents\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: model\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: agent\nkey_fields:\n  - name\n",
+      "area": "entity: area\nlabel: Area\nplural: Areas\nicon: layers\nlocation_pattern: 00 Human/60 Areas\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: area\nkey_fields:\n  - name\n",
+      "code": "entity: code\nlabel: Code\nplural: Code\nicon: code\nlocation_pattern: Machine/Code\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: language\n    type: string\n    required: false\n  - name: repository\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: code\nkey_fields:\n  - name\n",
+      "concept": "entity: concept\nlabel: Concept\nplural: Concepts\nicon: lightbulb\nlocation_pattern: 00 Human/70 Context\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: concept\nkey_fields:\n  - name\n",
+      "content-event": "entity: content-event\nlabel: Content Event\nplural: Calendar\nicon: calendar\nlocation_pattern: 00 Human/90 Content\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: date\n    type: string\n    required: false\n    format: date\n  - name: end_date\n    type: string\n    required: false\n    format: date\n  - name: time\n    type: string\n    required: false\n  - name: platform\n    type: string\n    required: false\n  - name: channel\n    type: string\n    required: false\n  - name: format\n    type: string\n    required: false\n  - name: content_stage\n    type: string\n    required: false\n  - name: priority\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: content-event\nkey_fields:\n  - name\n",
+      "content-research": "entity: content-research\nlabel: Content Research\nplural: Content Research\nicon: search\nlocation_pattern: 00 Human/90 Content\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: created\n    type: string\n    required: false\n  - name: date\n    type: string\n    required: false\n    format: date\n  - name: time\n    type: string\n    required: false\n  - name: topic\n    type: string\n    required: false\n  - name: platform\n    type: string\n    required: false\n  - name: content_stage\n    type: string\n    required: false\n  - name: signal_score\n    type: string\n    required: false\n  - name: source\n    type: string\n    required: false\n  - name: related_content\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: content-research\nkey_fields:\n  - name\n",
+      "context": "entity: context\nlabel: Context\nplural: Context\nicon: info\nlocation_pattern: 00 Human/70 Context\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: updated\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: context\nkey_fields:\n  - name\n",
+      "daily": "entity: daily\nlabel: Daily Note\nplural: Daily\nicon: calendar-days\nlocation_pattern: 00 Human/10 Daily Notes\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: date\n    type: string\n    required: false\n    format: date\n  - name: tags\n    type: array\n    required: false\ntype_value: daily\nkey_fields:\n  - name\n",
+      "inbox": "entity: inbox\nlabel: Inbox Item\nplural: Inbox\nicon: inbox\nlocation_pattern: 00 Human/00 Inbox\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\n  - name: captured\n    type: string\n    required: false\n  - name: source\n    type: string\n    required: false\n  - name: capture_source\n    type: string\n    required: false\n  - name: triage_target\n    type: string\n    required: false\n  - name: related_note\n    type: string\n    required: false\ntype_value: inbox\nkey_fields:\n  - name\n",
+      "people": "entity: people\nlabel: Person\nplural: People\nicon: users\nlocation_pattern: 00 Human/50 People\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: company\n    type: string\n    required: false\n  - name: relationship\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: person\nkey_fields:\n  - name\n",
+      "projects": "entity: projects\nlabel: Project\nplural: Projects\nicon: folder-kanban\nlocation_pattern: 00 Human/30 Projects\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: date_started\n    type: string\n    required: false\n    format: date\n  - name: due_date\n    type: string\n    required: false\n    format: date\n  - name: area\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: project\nkey_fields:\n  - name\n",
+      "research": "entity: research\nlabel: Research\nplural: Research\nicon: microscope\nlocation_pattern: Machine/Research\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: date\n    type: string\n    required: false\n    format: date\n  - name: topic\n    type: string\n    required: false\n  - name: source\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\n  - name: query\n    type: string\n    required: false\n  - name: sources\n    type: array\n    required: false\n  - name: created\n    type: string\n    required: false\ntype_value: research\nkey_fields:\n  - name\n",
+      "resource": "entity: resource\nlabel: Resource\nplural: Resources\nicon: book-open\nlocation_pattern: 00 Human/40 Resources\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: source\n    type: string\n    required: false\n  - name: date_clipped\n    type: string\n    required: false\n    format: date\n  - name: project\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\n  - name: date\n    type: string\n    required: false\n    format: date\ntype_value: resource\nkey_fields:\n  - name\n",
+      "review": "entity: review\nlabel: Review\nplural: Reviews\nicon: clipboard-check\nlocation_pattern: 00 Human/10 Daily Notes\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: week\n    type: string\n    required: false\n  - name: date\n    type: string\n    required: false\n    format: date\n  - name: tags\n    type: array\n    required: false\ntype_value: review\nkey_fields:\n  - name\n",
+      "skills": "entity: skills\nlabel: Skill\nplural: Skills\nicon: sparkles\nlocation_pattern: Machine/Skills\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: trigger\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: skill\nkey_fields:\n  - name\n",
+      "sop": "entity: sop\nlabel: SOP\nplural: SOPs\nicon: list-checks\nlocation_pattern: Machine/SOPs\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: owner\n    type: string\n    required: false\n  - name: last_verified\n    type: string\n    required: false\n    format: date\n  - name: tags\n    type: array\n    required: false\ntype_value: sop\nkey_fields:\n  - name\n",
+      "tasks": "entity: tasks\nlabel: Task\nplural: Tasks\nicon: check-square\nlocation_pattern: 00 Human/20 Tasks\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: date_added\n    type: string\n    required: false\n    format: date\n  - name: date_completed\n    type: string\n    required: false\n    format: date\n  - name: due_date\n    type: string\n    required: false\n    format: date\n  - name: project\n    type: string\n    required: false\n  - name: area\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: task\nkey_fields:\n  - name\n",
+      "video-brief": "entity: video-brief\nlabel: Video Brief\nplural: Briefs\nicon: file-text\nlocation_pattern: 00 Human/90 Content\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: created\n    type: string\n    required: false\n  - name: tags\n    type: array\n    required: false\ntype_value: video-brief\nkey_fields:\n  - name\n",
+      "video": "entity: video\nlabel: Video\nplural: Videos\nicon: video\nlocation_pattern: 00 Human/90 Content/Videos\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: date\n    type: string\n    required: false\n    format: date\n  - name: tags\n    type: array\n    required: false\n  - name: time\n    type: string\n    required: false\n  - name: end_date\n    type: string\n    required: false\n    format: date\n  - name: platform\n    type: string\n    required: false\n  - name: channel\n    type: string\n    required: false\n  - name: format\n    type: string\n    required: false\n  - name: content_stage\n    type: string\n    required: false\n  - name: priority\n    type: string\n    required: false\n  - name: topic\n    type: string\n    required: false\n  - name: hook_style\n    type: string\n    required: false\n  - name: thumbnail_style\n    type: string\n    required: false\ntype_value: video\nkey_fields:\n  - name\n",
+      "workflow": "entity: workflow\nlabel: Workflow\nplural: Workflows\nicon: workflow\nlocation_pattern: Machine/Workflows\nfields:\n  - name: name\n    type: string\n    required: true\n  - name: status\n    type: string\n    required: false\n  - name: trigger\n    type: string\n    required: false\n  - name: last_verified\n    type: string\n    required: false\n    format: date\n  - name: tags\n    type: array\n    required: false\n  - name: schedule\n    type: string\n    required: false\ntype_value: workflow\nkey_fields:\n  - name\n"
+    },
+    "bases": {
+      "Content.base": "filters:\n  and:\n    - note.type == \"content-event\"\nformulas:\n  open: link(file.path, \"🔍\")\nproperties:\n  file.name:\n    displayName: Content\n  note.status:\n    displayName: Status\n  note.content_stage:\n    displayName: Stage\n  note.platform:\n    displayName: Platform\n  note.channel:\n    displayName: Channel\n  note.format:\n    displayName: Format\n  note.priority:\n    displayName: Priority\n  note.date:\n    displayName: Date\n  note.end_date:\n    displayName: End\nviews:\n  - type: cards\n    name: Pipeline\n    groupBy:\n      property: content_stage\n      direction: ASC\n    order:\n      - formula.open\n      - file.name\n      - status\n      - platform\n      - format\n      - priority\n      - date\n    sort:\n      - property: date\n        direction: ASC\n    columnSize:\n      formula.open: 52\n  - type: table\n    name: Calendar\n    order:\n      - formula.open\n      - file.name\n      - date\n      - content_stage\n      - status\n      - platform\n      - channel\n      - format\n      - priority\n    sort:\n      - property: date\n        direction: ASC\n    columnSize:\n      formula.open: 52\n",
+      "Inbox.base": "filters:\n  and:\n    - note.type == \"inbox\"\nformulas:\n  open: link(file.path, \"🔍\")\nproperties:\n  file.name:\n    displayName: Capture\n  note.status:\n    displayName: Status\n  note.captured:\n    displayName: Captured\n  note.capture_source:\n    displayName: Source\n  note.triage_target:\n    displayName: Triage To\nviews:\n  - type: table\n    name: Triage\n    order:\n      - formula.open\n      - file.name\n      - status\n      - captured\n      - capture_source\n      - triage_target\n    sort:\n      - property: captured\n        direction: DESC\n    columnSize:\n      formula.open: 52\n  - type: cards\n    name: By Status\n    groupBy:\n      property: status\n      direction: ASC\n    order:\n      - formula.open\n      - file.name\n      - captured\n      - capture_source\n    sort:\n      - property: captured\n        direction: DESC\n    columnSize:\n      formula.open: 52\n",
+      "People.base": "filters:\n  and:\n    - note.type == \"person\"\nformulas:\n  open: link(file.path, \"🔍\")\nproperties:\n  file.name:\n    displayName: Name\n  note.company:\n    displayName: Company\n  note.relationship:\n    displayName: Relationship\nviews:\n  - type: table\n    name: Directory\n    order:\n      - formula.open\n      - file.name\n      - company\n      - relationship\n    sort:\n      - property: file.name\n        direction: ASC\n    columnSize:\n      formula.open: 52\n  - type: cards\n    name: By Relationship\n    groupBy:\n      property: relationship\n      direction: ASC\n    order:\n      - formula.open\n      - file.name\n      - company\n    sort:\n      - property: file.name\n        direction: ASC\n    columnSize:\n      formula.open: 52\n",
+      "Projects.base": "filters:\n  and:\n    - note.type == \"project\"\nformulas:\n  open: link(file.path, \"🔍\")\nproperties:\n  file.name:\n    displayName: Project\n  note.status:\n    displayName: Status\n  note.area:\n    displayName: Area\n  note.date_started:\n    displayName: Started\n  note.due_date:\n    displayName: Due\nviews:\n  - type: cards\n    name: By Status\n    groupBy:\n      property: status\n      direction: ASC\n    order:\n      - formula.open\n      - file.name\n      - area\n      - date_started\n      - due_date\n    sort:\n      - property: due_date\n        direction: ASC\n    columnSize:\n      formula.open: 52\n  - type: table\n    name: All Projects\n    order:\n      - formula.open\n      - file.name\n      - status\n      - area\n      - date_started\n      - due_date\n    sort:\n      - property: date_started\n        direction: DESC\n    columnSize:\n      formula.open: 52\n",
+      "Tasks.base": "filters:\n  and:\n    - note.type == \"task\"\nformulas:\n  open: link(file.path, \"🔍\")\nproperties:\n  file.name:\n    displayName: Task\n  note.status:\n    displayName: Status\n  note.project:\n    displayName: Project\n  note.area:\n    displayName: Area\n  note.due_date:\n    displayName: Due\n  note.date_added:\n    displayName: Added\n  note.date_completed:\n    displayName: Completed\nviews:\n  - type: cards\n    name: Board\n    groupBy:\n      property: status\n      direction: ASC\n    order:\n      - formula.open\n      - file.name\n      - project\n      - area\n      - due_date\n    sort:\n      - property: due_date\n        direction: ASC\n    columnSize:\n      formula.open: 52\n  - type: table\n    name: Open\n    filters:\n      and:\n        - note.status != \"done\"\n        - note.status != \"archived\"\n    order:\n      - formula.open\n      - file.name\n      - status\n      - project\n      - area\n      - due_date\n    sort:\n      - property: due_date\n        direction: ASC\n    columnSize:\n      formula.open: 52\n  - type: table\n    name: All Tasks\n    order:\n      - formula.open\n      - file.name\n      - status\n      - project\n      - area\n      - due_date\n      - date_added\n      - date_completed\n    sort:\n      - property: date_added\n        direction: DESC\n    columnSize:\n      formula.open: 52\n"
+    }
+  }
+}

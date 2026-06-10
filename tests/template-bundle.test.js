@@ -54,4 +54,21 @@ assert.deepStrictEqual(
   `main.js invokes renderConfigDashboard for surfaces not in the completeness list: ${uncovered.join(', ')}`
 );
 
+// The EMAI template must carry its own entity definitions as embedded assets,
+// since its entities aren't built-in — otherwise applying it bootstraps the full
+// built-in set instead of the EMAI entities.
+(() => {
+  const emai = bundle['workspace-emai.json'];
+  assert.ok(emai && emai._template && emai._template.id === 'emai', 'EMAI template present with _template');
+  assert.ok(emai._assets && emai._assets.schemas && emai._assets.bases, 'EMAI template has _assets.schemas + _assets.bases');
+  const schemaCount = Object.keys(emai._assets.schemas).length;
+  assert.ok(schemaCount >= 20, `EMAI embeds its schemas (got ${schemaCount})`);
+  // every embedded schema string declares an entity + type_value
+  for (const [key, body] of Object.entries(emai._assets.schemas)) {
+    assert.ok(/(^|\n)entity:/.test(body), `schema ${key} declares entity`);
+  }
+  // _assets must NOT leak into the validated config (apply strips _template/_assets)
+  assert.ok(!('_assets' in (emai.navigation || {})), 'assets are top-level, not inside config');
+})();
+
 console.log('template-bundle.test.js: ok');
