@@ -111,7 +111,7 @@ Use **BOB Workspace** for the full business model, **EMAI Starter** for a PARA p
 
 **Templates bring their own entities.** A template can embed its entity definitions (schema YAML) and `.base` files. Applying it writes *exactly* those into the configured schema/Bases folders, so a template like EMAI Starter provisions only its own entities on a fresh vault — it never falls back to the full built-in business model. (Built-in templates whose entities are built-in, like BOB Workspace, bootstrap from the built-in definitions as before.)
 
-**Switching templates is clean.** Applying a *different* template first archives the outgoing template's schema YAML, `.base` files, and a labelled copy of `workspace.json` into sibling `…-archive-<template>-<timestamp>` folders — reversible (moved, never deleted). So you can try several templates in one vault without files compounding. Re-applying the *same* template is idempotent (only fills in what's missing).
+**Switching templates is clean.** Applying a *different* template first archives the outgoing template's full schema state — source YAML, the derived `fileClasses/` and `json-schema/` outputs, `.base` files, and a labelled copy of `workspace.json` — into sibling `…-archive-<template>-<timestamp>` folders, reversible (moved, never deleted). So you can try several templates in one vault without files compounding. Re-applying the *same* template is idempotent (only fills in what's missing).
 
 ---
 

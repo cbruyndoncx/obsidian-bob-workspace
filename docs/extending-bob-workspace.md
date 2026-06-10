@@ -253,7 +253,7 @@ A workspace template (`templates/workspace-*.json`, bundled into `main.js`) may 
 
 On apply, `applyWorkspaceTemplate()` strips `_template`/`_assets`, validates the config, then `writeTemplateAssets()` writes the embedded schema YAML (to the schema folder) and `.base` files (to the Bases folder) **missing-only, before** the bootstrap. Because the template's own schemas now exist, the built-in schema bootstrap stays gated — so a template whose entities are **not** built-in (like EMAI) seeds exactly its own entities instead of the full built-in set.
 
-Switching to a *different* template first archives the outgoing template's schema YAML, `.base` files, and a labelled `workspace-<template>-<timestamp>.json` into sibling `…-archive-…` folders (reversible), so trying multiple templates never compounds files on disk. Re-applying the same template is idempotent.
+Switching to a *different* template first archives the outgoing template's full schema state — source YAML, the derived `fileClasses/` and `json-schema/` outputs, `.base` files, and a labelled `workspace-<template>-<timestamp>.json` — into sibling `…-archive-…` folders (reversible). This matters because `regenerateSchemaOutputs` only prunes stale outputs in the *active* schema folder; when two templates use different schema roots, the old derived outputs would otherwise orphan. So trying multiple templates never compounds files on disk. Re-applying the same template is idempotent.
 
 ## Entity Identity
 
