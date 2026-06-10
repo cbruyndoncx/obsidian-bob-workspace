@@ -7604,10 +7604,16 @@ function cloneConfig(value) {
 }
 
 function normalizePinnedSurfaces(value) {
+  // Dedupe + drop blanks only. Do NOT filter against SURFACE_BY_ID here: this
+  // runs during loadSettings (via applyWorkspaceOwnedSettings) BEFORE the
+  // workspace.json navigation surfaces are built, so filtering would discard
+  // every pin for a configured surface and the next save would persist the
+  // emptied list. Rendering and the pin toggle already guard surface existence,
+  // so a pin for a not-yet-registered (or removed) surface is harmless.
   const list = Array.isArray(value) ? value : [];
   const seen = new Set();
   return list.filter((surfaceId) => {
-    if (!surfaceId || !SURFACE_BY_ID[surfaceId] || seen.has(surfaceId)) return false;
+    if (!surfaceId || typeof surfaceId !== 'string' || seen.has(surfaceId)) return false;
     seen.add(surfaceId);
     return true;
   });
