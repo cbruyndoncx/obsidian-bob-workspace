@@ -69,6 +69,12 @@ Bring an entire client list, pipeline, or partner roster in from a spreadsheet. 
 
 ![CSV import modal](docs/screenshots/07-import.png)
 
+### XLSX workbook export / import
+Export your entities to a multi-sheet `.xlsx` workbook (one sheet per entity type, grouped by area) with **BOB Workspace: Export to XLSX**, and round-trip edits back in with **Import XLSX**. The SheetJS library is bundled into the plugin, so export/import works offline with no extra files to install.
+
+### Bases-backed views
+Entity lists can be driven by Obsidian **Bases** (`.base`) files for richer filtering, sorting, and column control. A single **Bases folder** setting controls where every `.base` lives, and **Generate missing bases** creates a starter `.base` (filter + table view) for any entity that doesn't have one — including entities you define purely via schema YAML. See *Configuration* below.
+
 ---
 
 ## Install
@@ -94,11 +100,16 @@ The plugin then creates note folders on demand as you use the surfaces. It does 
 The shipped templates are:
 
 - **BOB Workspace** - the full vault model: Planner, CRM, PRM, Client Work, Finance, Suppliers & Procurement, Reports, AI Workspace.
+- **EMAI Starter** - a PARA-style personal workspace: **Human** (tasks, projects, areas, resources, people, daily, reviews), **Content** (videos, briefs, calendar, research), and **Machine** (workflows, SOPs, agents, code, skills).
 - **CRM Only** - a narrower workspace focused on CRM, Planner basics, and Reports.
 - **Cadence Classic** - the original Cadence-style layout with the legacy folder model.
 - **Minimal** - a blank starting point with only Home and Settings.
 
-Use **BOB Workspace** when you want the full EMAI/BOB structure immediately. Use **CRM Only** if you want a lighter starting point. Use **Minimal** if you want to build everything by hand.
+Use **BOB Workspace** for the full business model, **EMAI Starter** for a PARA personal-productivity workspace, **CRM Only** for a lighter start, or **Minimal** to build everything by hand.
+
+**Templates bring their own entities.** A template can embed its entity definitions (schema YAML) and `.base` files. Applying it writes *exactly* those into the configured schema/Bases folders, so a template like EMAI Starter provisions only its own entities on a fresh vault — it never falls back to the full built-in business model. (Built-in templates whose entities are built-in, like BOB Workspace, bootstrap from the built-in definitions as before.)
+
+**Switching templates is clean.** Applying a *different* template first archives the outgoing template's schema YAML, `.base` files, and a labelled copy of `workspace.json` into sibling `…-archive-<template>-<timestamp>` folders — reversible (moved, never deleted). So you can try several templates in one vault without files compounding. Re-applying the *same* template is idempotent (only fills in what's missing).
 
 ---
 
@@ -123,8 +134,8 @@ Settings → BOB Workspace:
 The surface areas are easiest to understand in this order:
 
 1. **Workspace** - the source-of-truth `workspace.json` for schemas, Bases, navigation, dashboards, templates, and workbook groups.
-2. **Data model** - canonical schema YAML, plus bootstrap/regenerate actions when the schema folder is empty.
-3. **Bases** - view configuration for each entity, either through `workspace.json.bases` or the Base selectors in Settings.
+2. **Data model** - canonical schema YAML, plus bootstrap/regenerate actions when the schema folder is empty. Also home to the **Bases folder** setting (authoritative location for every `.base`) and the **Generate missing bases** action (creates a starter `.base` for any entity — built-in or schema-defined — that lacks one).
+3. **Bases** - view configuration for each entity, either through `workspace.json.bases` or the Base selectors in Settings. Changing the Bases folder relocates where every base is resolved; the filename comes from the entity config, the folder from the setting.
 4. **Navigation** - the left rail, secondary tabs, and module groups.
 5. **Dashboards** - Home, CRM, Reports, and any custom surfaces composed from widgets.
 6. **Widgets** - the widget catalog and inventory used by dashboards and reports.

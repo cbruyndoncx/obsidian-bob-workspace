@@ -236,6 +236,25 @@ BOB Workspace ignores entity files located inside folder segments named `Templat
 
 This lets starter vaults ship valid example/template notes with normal frontmatter, such as `type: meeting`, without those files appearing in dashboards, entity lists, workbook exports, or counts. Prefer putting reusable templates under paths such as `00-CORE/Templates/...` instead of relying on filename filters like `!file.name.contains("Template")`.
 
+### Workspace templates that bring their own entities
+
+A workspace template (`templates/workspace-*.json`, bundled into `main.js`) may include an `_assets` block:
+
+```jsonc
+{
+  "_template": { "id": "emai", "label": "EMAI Starter", "order": 5 },
+  // …schemas / navigation / dashboards / bases / settings…
+  "_assets": {
+    "schemas": { "tasks": "<schema yaml string>", "people": "<…>" },
+    "bases":   { "Tasks.base": "<base yaml string>" }
+  }
+}
+```
+
+On apply, `applyWorkspaceTemplate()` strips `_template`/`_assets`, validates the config, then `writeTemplateAssets()` writes the embedded schema YAML (to the schema folder) and `.base` files (to the Bases folder) **missing-only, before** the bootstrap. Because the template's own schemas now exist, the built-in schema bootstrap stays gated — so a template whose entities are **not** built-in (like EMAI) seeds exactly its own entities instead of the full built-in set.
+
+Switching to a *different* template first archives the outgoing template's schema YAML, `.base` files, and a labelled `workspace-<template>-<timestamp>.json` into sibling `…-archive-…` folders (reversible), so trying multiple templates never compounds files on disk. Re-applying the same template is idempotent.
+
 ## Entity Identity
 
 Each entity type normally needs:
@@ -380,6 +399,16 @@ schema fields from create or import workflows.
 
 If the plugin cannot support a Base feature directly, it should show the unsupported filter/view information rather than silently pretending it is applied.
 
+### Bases folder (authoritative location)
+
+`Settings → BOB Workspace → Data model → Bases folder` (default `00-CORE/Bases`) is the single, authoritative location for every entity's `.base`. `entityBasePath()` composes `${basesFolder}/${basename}`, where the filename comes from `workspace.json` `bases[key].file`, the plugin `baseFiles` map, or — for schema-defined entities with neither — a name derived from the entity (e.g. `area` → `Areas.base`). Changing the folder relocates **every** base; only the directory portion of any saved path is replaced, so the filename and `bases[key].view` selection are preserved.
+
+### Generate missing bases
+
+`Settings → BOB Workspace → Data model → Generate missing bases` (command: **Generate missing bases**) writes a starter `.base` for every known entity that lacks one — a `filters` clause from the entity's `type_value`/folder, a `table` view listing its columns (`file.name` for the primary field, `note.<key>` otherwise), and `properties.<id>.displayName` for readable headers. It covers entities defined via schema YAML, not just built-ins. Missing-only: existing `.base` files are never overwritten.
+
+In a Base, `order`/`sort` use **bare** property names (`person_category`), while `properties` keys and `filters` use the `note.<prop>` form; `file.name` is the primary field's column. (Match this when hand-authoring.)
+
 ## Derived Workspace Views
 
 Some workspace screens are derived views over existing entities rather than separate entity types.
@@ -494,8 +523,7 @@ Click **Save and apply** to persist the navigation arrangement to
 
 ### Step 3 — Create a Base (optional)
 
-If the entity needs a custom view — filtered subsets, a specific column
-order, or a non-table layout — create a `.base` file:
+Quickest path: run **Generate missing bases** (Settings → Data model, or the command) to scaffold a starter `.base` for the new entity automatically. Then customize it. To hand-author one instead — for filtered subsets, a specific column order, or a non-table layout — create a `.base` file:
 
 ```yaml
 # 00-CORE/Bases/Orders.base
