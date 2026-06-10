@@ -1633,6 +1633,25 @@ select.cad-create-input {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.cad-nav-designer-group-title-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--text-normal);
+}
+.cad-nav-designer-group-title-input:hover {
+  border-color: var(--background-modifier-border);
+}
+.cad-nav-designer-group-title-input:focus {
+  border-color: var(--interactive-accent);
+  background: var(--background-primary);
+  outline: none;
+}
 .cad-nav-designer-icon-preview {
   display: inline-flex;
   align-items: center;

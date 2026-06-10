@@ -21310,7 +21310,20 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         });
         groupHead.addEventListener('dragend', clearDragPayload);
         groupHead.createSpan({ cls: 'cad-nav-designer-handle', text: '::' });
-        groupHead.createSpan({ cls: 'cad-nav-designer-group-title', text: group.label || group.id });
+        const groupTitleInput = groupHead.createEl('input', { cls: 'cad-nav-designer-group-title-input', type: 'text' });
+        groupTitleInput.value = group.label || '';
+        groupTitleInput.placeholder = group.id;
+        groupTitleInput.title = 'Group label (leave blank for no heading)';
+        groupTitleInput.draggable = false;
+        groupTitleInput.addEventListener('mousedown', (event) => event.stopPropagation());
+        groupTitleInput.addEventListener('dragstart', (event) => event.stopPropagation());
+        groupTitleInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); groupTitleInput.blur(); } });
+        groupTitleInput.addEventListener('change', () => {
+          const next = groupTitleInput.value.trim();
+          if (next === (group.label || '')) return;
+          group.label = next;
+          updateWorkspaceDraft(config, `${next || group.id} label updated - click Save and apply`);
+        });
         createIconPickerButton(groupHead, group.icon, (iconId) => {
           if (iconId) group.icon = iconId;
           else delete group.icon;
