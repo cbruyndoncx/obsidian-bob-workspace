@@ -1,9 +1,22 @@
 import { applyWorkspaceTemplate } from '../workspace-templates';
 import * as obsidian from 'obsidian';
+import type { App } from 'obsidian';
+import type { CadencePlugin } from '../plugin';
+import type { WorkspaceConfig } from '../types';
+
+/** Bundled starter template: a WorkspaceConfig carrying `_template` metadata. */
+interface WorkspaceTemplateMeta {
+  id?: string;
+  label?: string;
+  description?: string;
+}
+type WorkspaceTemplate = WorkspaceConfig & { _template?: WorkspaceTemplateMeta };
+
 export class CadenceWorkspaceSetupModal extends obsidian.Modal {
-  // Migrated from untyped main.js: instance fields are not yet declared.
-  [key: string]: any;
-  constructor(app, plugin, templates) {
+  declare plugin: CadencePlugin;
+  declare templates: WorkspaceTemplate[];
+  declare selected: WorkspaceTemplate | null;
+  constructor(app: App, plugin: CadencePlugin, templates: WorkspaceTemplate[]) {
     super(app);
     this.plugin = plugin;
     this.templates = templates;

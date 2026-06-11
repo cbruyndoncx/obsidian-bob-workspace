@@ -1,6 +1,23 @@
 import { entityValue } from './entity-files';
 import { entityFolder } from './settings';
-export const ENTITIES: Record<string, any> = {
+import type { App, TFile } from 'obsidian';
+import type { EntityDef, EntityField, EntityRecord, EntityRegistry, JsonValue } from './types';
+
+/* The shared EntityDef misses a few keys the built-in registry actually
+   carries: `locationPattern`/`location_pattern` (create-folder patterns,
+   also merged in from schema YAML) and `defaultValue` on fields (deal
+   stage default; schema YAML can set any JSON default via applySchemas).
+   Extend locally until types.ts models them. */
+export interface BobEntityField extends EntityField {
+  defaultValue?: JsonValue;
+}
+export interface BobEntityDef extends EntityDef {
+  fields?: BobEntityField[];
+  locationPattern?: string;
+  location_pattern?: string;
+}
+
+export const ENTITIES: Record<string, BobEntityDef> = {
   contact: {
     folder: '10-ME/10-PEOPLE',
     typeFilter: 'person',
@@ -765,21 +782,21 @@ export const ENTITIES: Record<string, any> = {
     columns: ['name', 'category', 'version', 'disable-model-invocation', 'user-invocable', 'pricing-tier'],
   },
 };
-export const BUILTIN_ENTITY_DEFAULTS = JSON.parse(JSON.stringify(ENTITIES));
+export const BUILTIN_ENTITY_DEFAULTS: Record<string, BobEntityDef> = JSON.parse(JSON.stringify(ENTITIES));
 
-export const DEAL_STAGES = ['lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'];
+export const DEAL_STAGES: string[] = ['lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'];
 
 /* Deal field accessors — read entity definition overrides with safe defaults */
-export function dealStageField(def)    { return def.stageField    || 'stage'; }
-export function dealValueField(def)    { return def.valueField    || 'deal_value'; }
-export function dealCloseByField(def)  { return def.closeByField  || 'expected_close'; }
-export function dealWonStages(def)     { return def.wonStages     || ['won']; }
-export function dealLostStages(def)    { return def.lostStages    || ['lost']; }
-export function dealTerminalStages(def){ return [...dealWonStages(def), ...dealLostStages(def)]; }
-export function normalizeStatusValue(value) {
+export function dealStageField(def: EntityDef): string    { return def.stageField    || 'stage'; }
+export function dealValueField(def: EntityDef): string    { return def.valueField    || 'deal_value'; }
+export function dealCloseByField(def: EntityDef): string  { return def.closeByField  || 'expected_close'; }
+export function dealWonStages(def: EntityDef): string[]     { return def.wonStages     || ['won']; }
+export function dealLostStages(def: EntityDef): string[]    { return def.lostStages    || ['lost']; }
+export function dealTerminalStages(def: EntityDef): string[]{ return [...dealWonStages(def), ...dealLostStages(def)]; }
+export function normalizeStatusValue(value: unknown): string {
   return String(value || '').toLowerCase().replace(/[\s_]+/g, '-').trim();
 }
-export function entityStatusField(def) {
+export function entityStatusField(def: EntityDef): string {
   if (!def) return 'status';
   if (String(def.statusField || '').trim()) return def.statusField;
   if (String(def.stageField || '').trim()) return def.stageField;
@@ -790,7 +807,7 @@ export function entityStatusField(def) {
   if (suffixed) return suffixed.key;
   return 'status';
 }
-export function entityTerminalStatuses(def) {
+export function entityTerminalStatuses(def: EntityDef): Set<string> {
   const statuses = new Set(['done', 'completed', 'closed', 'cancelled', 'canceled', 'archived', 'paid', 'filed', 'submitted', 'approved', 'rejected', 'expired', 'written-off', 'won', 'lost'].map(normalizeStatusValue));
   (Array.isArray(def?.terminalStatuses) ? def.terminalStatuses : []).forEach((status) => {
     const normalized = normalizeStatusValue(status);
@@ -807,7 +824,7 @@ export function entityTerminalStatuses(def) {
   return statuses;
 }
 
-export function isOpenEntityRecord(entity, entityKey, entities = ENTITIES) {
+export function isOpenEntityRecord(entity: EntityRecord, entityKey: string, entities: EntityRegistry = ENTITIES): boolean {
   const def = entities[entityKey];
   const statusField = entityStatusField(def);
   const status = normalizeStatusValue(entityValue(entity, statusField, def));
@@ -815,39 +832,39 @@ export function isOpenEntityRecord(entity, entityKey, entities = ENTITIES) {
   return !entityTerminalStatuses(def).has(status);
 }
 /* Activity field accessors — configurable with mtime fallback for dateField */
-export function activityDate(entity, def) {
+export function activityDate(entity: EntityRecord, def: EntityDef): string {
   const field = def.dateField || 'date';
   const val = entity.frontmatter?.[field];
   if (val) return String(val);
   return entity.file?.stat?.mtime ? new Date(entity.file.stat.mtime).toISOString().slice(0, 10) : '';
 }
-export function activityTitle(entity, def) {
+export function activityTitle(entity: EntityRecord, def: EntityDef): string {
   const field = def.titleField || 'title';
   return entity.frontmatter?.[field] || entity.basename || '';
 }
 
-export function primaryField(def) {
+export function primaryField(def: EntityDef): EntityField | null {
   return def?.fields?.find((f) => f.primary) || def?.fields?.[0] || null;
 }
 
-export function primaryFieldKey(def) {
+export function primaryFieldKey(def: EntityDef): string {
   return primaryField(def)?.key || '';
 }
 
-export function getDealStages(def) {
+export function getDealStages(def: EntityDef): string[] {
   const sf = dealStageField(def);
   return def.fields?.find((f) => f.key === sf)?.options || DEAL_STAGES;
 }
 
 /* Resolve which entity an arbitrary file belongs to, by frontmatter `type`
    first, then path-prefix fallback. Returns null if not a Cadence entity. */
-export function entityKeyFromFile(app, file) {
+export function entityKeyFromFile(app: App, file: TFile | null): string | null {
   if (!file) return null;
   const cache = app.metadataCache.getFileCache(file);
   const t = cache && cache.frontmatter && cache.frontmatter.type;
   if (t) {
     if (ENTITIES[t]) return t;
-    for (const [key, def] of Object.entries<any>(ENTITIES)) {
+    for (const [key, def] of Object.entries(ENTITIES)) {
       if (def.typeFilter && def.typeFilter === t) return key;
     }
   }
@@ -859,7 +876,7 @@ export function entityKeyFromFile(app, file) {
   return null;
 }
 
-export const BUILT_SURFACES = new Set([
+export const BUILT_SURFACES: Set<string> = new Set([
   'home',
   'planner.inbox', 'planner.today', 'planner.calendar', 'planner.projects',
   'crm.dashboard', 'crm.pipeline', 'crm.contacts', 'crm.leads', 'crm.campaigns', 'crm.sequences', 'crm.clients', 'crm.companies', 'crm.activities',
@@ -872,6 +889,6 @@ export const BUILT_SURFACES = new Set([
   'team', 'settings', 'misc.dashboard-editor', 'misc.export', 'misc.import',
   'ai.playbooks', 'ai.skills',
 ]);
-export const BUILTIN_SURFACE_IDS = new Set(BUILT_SURFACES);
+export const BUILTIN_SURFACE_IDS: Set<string> = new Set(BUILT_SURFACES);
 
 /* ─────────── Settings ─────────── */

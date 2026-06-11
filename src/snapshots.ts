@@ -1,3 +1,4 @@
+import type { TAbstractFile } from 'obsidian';
 import { ENTITIES, activityDate, activityTitle, dealStageField, dealTerminalStages, dealValueField } from './entities';
 import { entityValue, fmtValue, listEntities, listEntityFiles } from './entity-files';
 import { ensureDailyNote, parseSections } from './notes';
@@ -7,7 +8,19 @@ import { listTaskNotesForProductivity } from './task-notes';
 import { addDays, dailyNotePath, startOfDay, startOfWeek, weekDates, ymd } from './utils';
 import { WORKSPACE_CONFIG, workspaceConfiguredEntityKeys } from './workspace-config';
 import * as obsidian from 'obsidian';
-export async function buildProductivitySnapshot(app, settings: any = {}) {
+import type { App, TFile } from 'obsidian';
+import type { ProductivityTaskNote } from './task-notes';
+import type { PartialSettings } from './types';
+
+/** Open/done tally bucket for the Productivity report (per project/context). */
+interface ProductivityBucket {
+  title: string;
+  value: number;
+  values: { open: number; done: number; total: number };
+  meta: string;
+}
+
+export async function buildProductivitySnapshot(app: App, settings: PartialSettings = {}) {
   const taskMode = settings.taskMode || 'checkbox';
   const includeCheckboxTasks = taskMode === 'checkbox' || taskMode === 'hybrid';
   const includeTaskNotes = taskMode === 'tasknotes' || taskMode === 'hybrid';
@@ -18,17 +31,17 @@ export async function buildProductivitySnapshot(app, settings: any = {}) {
   const oldestWeekStart = addDays(weekStart, -11 * 7);
   const taskNoteStart = oldestWeekStart.getTime() < oldestDay.getTime() ? oldestWeekStart : oldestDay;
   const taskNotes = includeTaskNotes ? listTaskNotesForProductivity(app, settings, taskNoteStart, today) : [];
-  const taskNotesByDate = new Map();
+  const taskNotesByDate = new Map<string, ProductivityTaskNote[]>();
   taskNotes.forEach((task) => {
     if (!taskNotesByDate.has(task.date)) taskNotesByDate.set(task.date, []);
     taskNotesByDate.get(task.date).push(task);
   });
-  const projectBuckets = new Map();
-  const contextBuckets = new Map();
-  const overdueTasks = [];
-  const highPriorityTasks = [];
+  const projectBuckets = new Map<string, ProductivityBucket>();
+  const contextBuckets = new Map<string, ProductivityBucket>();
+  const overdueTasks: ProductivityTaskNote[] = [];
+  const highPriorityTasks: ProductivityTaskNote[] = [];
   const todayIso = ymd(today);
-  const upsertBucket = (bucketMap, title) => {
+  const upsertBucket = (bucketMap: Map<string, ProductivityBucket>, title: string) => {
     const key = String(title || '').trim();
     if (!key) return null;
     const current = bucketMap.get(key) || { title: key, value: 0, values: { open: 0, done: 0, total: 0 }, meta: '' };
@@ -149,13 +162,13 @@ export async function buildProductivitySnapshot(app, settings: any = {}) {
     contextBuckets: [...contextBuckets.values()].sort((a, b) => b.value - a.value),
     overdueTasks: overdueTasks.sort((a, b) => String(a.due || a.scheduled || '9999-12-31').localeCompare(String(b.due || b.scheduled || '9999-12-31'))),
     highPriorityTasks: highPriorityTasks.sort((a, b) => {
-      const rank = { critical: 0, urgent: 1, high: 2 };
+      const rank: Record<string, number> = { critical: 0, urgent: 1, high: 2 };
       return (rank[String(a.priority || '').toLowerCase()] ?? 9) - (rank[String(b.priority || '').toLowerCase()] ?? 9);
     }),
   };
 }
 
-export async function buildPlannerSnapshot(app, settings: any = {}) {
+export async function buildPlannerSnapshot(app: App, settings: PartialSettings = {}) {
   const today = startOfDay(new Date());
   const nowMs = Date.now();
   const reminders = (settings.reminders || []).filter((r) => !r.done);
@@ -177,8 +190,8 @@ export async function buildPlannerSnapshot(app, settings: any = {}) {
       action: { surface: 'planner.inbox' },
     }));
 
-  const dailyFile = await ensureDailyNote(app, settings).catch(() => null);
-  const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.read(dailyFile), settings) : { tasks: [] };
+  const dailyFile = await ensureDailyNote(app, settings).catch((): TAbstractFile | null => null);
+  const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.read(dailyFile), settings) : { tasks: [] as string[] };
   const todayRows = (todayTasks.tasks || [])
     .slice(0, 12)
     .map((line) => {
@@ -196,7 +209,7 @@ export async function buildPlannerSnapshot(app, settings: any = {}) {
   const calendarRows = await Promise.all(weekDays.map(async (date) => {
     const path = dailyNotePath(settings, date);
     const file = app.vault.getAbstractFileByPath(path);
-    let tasks = [];
+    let tasks: string[] = [];
     let journal = '';
     if (file instanceof obsidian.TFile) {
       const parsed = parseSections(await app.vault.read(file), settings);
@@ -269,7 +282,7 @@ export async function buildPlannerSnapshot(app, settings: any = {}) {
   };
 }
 
-export async function buildHomeSnapshot(app, settings: any = {}) {
+export async function buildHomeSnapshot(app: App, settings: PartialSettings = {}) {
   const today = startOfDay(new Date());
   const nowMs = Date.now();
   const configuredEntities = workspaceConfiguredEntityKeys(WORKSPACE_CONFIG);
@@ -296,8 +309,8 @@ export async function buildHomeSnapshot(app, settings: any = {}) {
       action: { surface: 'planner.inbox' },
     }));
 
-  const dailyFile = await ensureDailyNote(app, settings).catch(() => null);
-  const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.read(dailyFile), settings) : { tasks: [] };
+  const dailyFile = await ensureDailyNote(app, settings).catch((): TAbstractFile | null => null);
+  const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.read(dailyFile), settings) : { tasks: [] as string[] };
   const todayRows = (todayTasks.tasks || [])
     .slice(0, 8)
     .map((line) => ({
@@ -305,14 +318,14 @@ export async function buildHomeSnapshot(app, settings: any = {}) {
       meta: / \[(x|X)\] /.test(line) ? 'done' : 'open',
       action: { surface: 'planner.today' },
     }));
-  const week = await buildProductivitySnapshot(app, settings).catch(() => null);
+  const week = await buildProductivitySnapshot(app, settings).catch((): Awaited<ReturnType<typeof buildProductivitySnapshot>> | null => null);
   const weekRows = week ? [{
     title: 'This week',
     meta: `${week.streak}d streak · ${week.activeDays} active days · ${week.completion}% complete`,
     action: { surface: 'planner.calendar' },
   }] : [];
 
-  const upcoming = [];
+  const upcoming: { date: Date; title: string; type: string; file: TFile }[] = [];
   if (configuredEntities.has('project')) {
     for (const e of listEntities(app, 'project')) {
       const due = entityValue(e, 'due', projectDef) || entityValue(e, 'deadline', projectDef);
@@ -350,7 +363,7 @@ export async function buildHomeSnapshot(app, settings: any = {}) {
       }
     });
   }
-  upcoming.sort((a, b) => a.date - b.date);
+  upcoming.sort((a, b) => (a.date as unknown as number) - (b.date as unknown as number));
   const upcomingRows = upcoming.slice(0, 6).map((it) => ({
     title: it.title,
     meta: `${fmtValue(it.date, 'date')} · ${it.type}`,

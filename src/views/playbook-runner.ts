@@ -1,22 +1,42 @@
 import * as obsidian from 'obsidian';
+import type { App, WorkspaceLeaf } from 'obsidian';
 export const PLAYBOOK_RUNNER_VIEW_TYPE = 'agent-client-playbook-runner';
 export const PLAYBOOK_RUNNER_PINNED_KEY = 'bob-pinned-playbooks';
 
+/* The Bases custom-view API is not in obsidian's public typings — these are
+   local structural shapes for the pieces this view actually reads. */
+interface BasesEntry {
+  file: { path: string; basename: string };
+  getValue?: (key: string) => unknown;
+}
+interface BasesGroup {
+  entries: BasesEntry[];
+}
+
+/** Agent-client chat view (third-party plugin), reached via duck typing. */
+interface AgentChatView extends obsidian.View {
+  setInputState(state: { text: string; files: unknown[] }): void;
+  sendMessage?: () => unknown;
+}
+
 export class CadencePlaybookRunnerView extends ((obsidian as any).BasesView || class {}) {
-  // Migrated from untyped main.js: instance fields are not yet declared.
-  [key: string]: any;
-  constructor(controller, parentEl, app) {
+  declare _app: App;
+  declare _pinned: Set<string>;
+  declare _root: HTMLDivElement;
+  /** Provided by the BasesView base class at runtime. */
+  declare data?: { groupedData?: BasesGroup[] };
+  constructor(controller: unknown, parentEl: HTMLElement, app: App) {
     super(controller);
     this._app = app;
     this._pinned = CadencePlaybookRunnerView._loadPinned();
     this._root = parentEl.createDiv({ cls: 'cad-pb-runner' });
   }
 
-  static _loadPinned() {
+  static _loadPinned(): Set<string> {
     try { return new Set(JSON.parse(localStorage.getItem(PLAYBOOK_RUNNER_PINNED_KEY) || '[]')); }
-    catch { return new Set<any>(); }
+    catch { return new Set<string>(); }
   }
-  static _savePinned(set) {
+  static _savePinned(set: Set<string>) {
     localStorage.setItem(PLAYBOOK_RUNNER_PINNED_KEY, JSON.stringify([...set]));
   }
 
@@ -54,12 +74,12 @@ export class CadencePlaybookRunnerView extends ((obsidian as any).BasesView || c
     if (total === 0) this._root.createDiv({ cls: 'cad-empty-state-title', text: 'No playbooks found' });
   }
 
-  async _runPlaybook(title) {
+  async _runPlaybook(title: string) {
     const ACW_CHAT = 'agent-client-chat-view';
     const cmd = `/playbook-runner ${title}`;
     const { workspace } = this._app;
 
-    const send = async (view) => {
+    const send = async (view: AgentChatView) => {
       view.setInputState({ text: cmd, files: [] });
       if (typeof view.sendMessage === 'function') await view.sendMessage();
     };
@@ -68,12 +88,12 @@ export class CadencePlaybookRunnerView extends ((obsidian as any).BasesView || c
     const existing = workspace.getLeavesOfType(ACW_CHAT);
     if (existing.length > 0) {
       workspace.revealLeaf(existing[0]);
-      await send(existing[0].view);
+      await send(existing[0].view as AgentChatView);
       return;
     }
 
     // Open a new split and wait for the view to mount
-    const leaf = workspace.getLeaf('split', 'vertical');
+    const leaf = workspace.getLeaf('split', 'vertical') as WorkspaceLeaf & { view: AgentChatView };
     try {
       await leaf.setViewState({ type: ACW_CHAT, active: true });
       workspace.revealLeaf(leaf);

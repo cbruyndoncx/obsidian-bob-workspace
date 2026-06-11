@@ -1,14 +1,43 @@
 import { applyEntityDefinitions } from './bases-config';
-import { ENTITIES } from './entities';
+import { ENTITIES, type BobEntityDef, type BobEntityField } from './entities';
 import { cloneConfig } from './nav';
 import { SCHEMA_ENTITY_KEYS } from './workspace-config';
 import * as obsidian from 'obsidian';
+import type { JsonValue, PartialSettings } from './types';
+
+/** A canonical schema YAML document as authored in the schema source folder. */
+interface SchemaYamlField {
+  name: string;
+  type?: string;
+  format?: string;
+  label?: string;
+  required?: boolean;
+  primary?: boolean;
+  enum?: string[];
+  bob_type?: string;
+  default?: JsonValue;
+}
+
+interface SchemaYaml {
+  entity?: string;
+  label?: string;
+  plural?: string;
+  icon?: string;
+  type_value?: string;
+  location_pattern?: string;
+  key_fields?: string[];
+  fields?: SchemaYamlField[];
+  field_aliases?: Record<string, string[]>;
+  status_lifecycle?: string[];
+  bob?: BobEntityDef;
+}
+
 export const SCHEMA_FOLDER_DEFAULT = '00-CORE/Schemas/source';
-export const SCHEMA_TO_ENTITY_KEY = {
+export const SCHEMA_TO_ENTITY_KEY: Record<string, string> = {
   person: 'contact',
 };
 
-export function _schemaTypeToFieldType(schemaType, schemaField: any = {}) {
+export function _schemaTypeToFieldType(schemaType: string | undefined, schemaField: Partial<SchemaYamlField> = {}): 'date' | 'number' | 'tags' | null {
   if ((schemaField.format || '').toLowerCase() === 'date') return 'date';
   switch ((schemaType || '').toLowerCase()) {
     case 'number':  return 'number';
@@ -19,17 +48,17 @@ export function _schemaTypeToFieldType(schemaType, schemaField: any = {}) {
   }
 }
 
-export function schemaFieldLabel(name) {
+export function schemaFieldLabel(name: unknown): string {
   return String(name || '')
     .replace(/_/g, ' ')
     .replace(/-/g, ' ')
     .replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
-export function pluralizeEntityLabel(label) {
+export function pluralizeEntityLabel(label: unknown): string {
   const value = String(label || '').trim();
   if (!value) return '';
-  const irregular = {
+  const irregular: Record<string, string> = {
     analysis: 'Analyses',
     person: 'People',
   };
@@ -41,14 +70,14 @@ export function pluralizeEntityLabel(label) {
   return `${value}s`;
 }
 
-export function fieldsFromSchema(schema, existingFields: any[] = []) {
+export function fieldsFromSchema(schema: SchemaYaml, existingFields: BobEntityField[] = []): BobEntityField[] | null {
   if (!Array.isArray(schema.fields)) return null;
-  const existingByKey = new Map((existingFields || []).map((f) => [f.key, f]));
+  const existingByKey = new Map<string, Partial<BobEntityField>>((existingFields || []).map((f) => [f.key, f]));
   const schemaFields = schema.fields.filter((sf) => sf && sf.name && sf.name !== 'type');
   if (!schemaFields.length) return null;
   const primaryKey = schemaFields.find((field) => field.primary)?.name ||
     (schema.key_fields || []).find((key) => key && key !== 'type') || schemaFields[0].name;
-  const fields = schemaFields.map((sf) => {
+  const fields: BobEntityField[] = schemaFields.map((sf) => {
     const existing = existingByKey.get(sf.name) || {};
     const field = Object.assign({}, existing, {
       key: sf.name,
@@ -79,7 +108,7 @@ export function fieldsFromSchema(schema, existingFields: any[] = []) {
   return fields;
 }
 
-export async function applySchemas(app, settings: any = {}) {
+export async function applySchemas(app: obsidian.App, settings: PartialSettings = {}): Promise<void> {
   const folder = (settings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
   if (!await app.vault.adapter.exists(folder)) return;
 
@@ -87,7 +116,7 @@ export async function applySchemas(app, settings: any = {}) {
   const yamlFiles = (list.files || []).filter(f => f.endsWith('.yaml') || f.endsWith('.yml'));
 
   for (const filePath of yamlFiles) {
-    let schema;
+    let schema: SchemaYaml | null;
     try {
       const raw = await app.vault.adapter.read(filePath);
       schema = obsidian.parseYaml(raw);

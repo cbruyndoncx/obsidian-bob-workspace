@@ -1,6 +1,6 @@
 import { entityBasePath, entityBaseViewName } from '../bases-config';
 import { hasBaseValue, parseBaseFile, readBaseSummary } from '../bases-parse';
-import { BUILTIN_DASHBOARD_DEFAULTS, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
+import { BUILTIN_DASHBOARD_DEFAULTS, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
 import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
 import { CadenceReminderEditModal } from '../modals/capture';
@@ -21,10 +21,314 @@ import { filterEntitiesByBaseConfig, normalizeWidgetSortSpec, normalizeWidgetSou
 import { exportEntitiesXLSX, selectedWorkbookEntityKeys, workbookExportFolder, workbookExportGroups } from '../workbook';
 import { WORKSPACE_CONFIG, WORKSPACE_HAS_NAVIGATION, configuredDashboardDefinition, configuredSurfaceActions, normalizeDashboardConfigShape, resolveSurfaceConfig, saveWorkspaceConfig, validateDashboardConfig, workspaceConfiguredEntityEntries, workspaceConfiguredEntityKeys, workspaceHasEntity } from '../workspace-config';
 import * as obsidian from 'obsidian';
+import type { CadencePlugin } from '../plugin';
+import type {
+  BaseConfig,
+  BobSettings,
+  DashboardCard,
+  DashboardConfig,
+  EntityDef,
+  EntityField,
+  EntityRecord,
+  Frontmatter,
+  NavGroup,
+  NavSurface,
+  Reminder,
+  SecondaryTab,
+  WidgetSourceConfig,
+} from '../types';
+
+/* ── Module-local types (type-only; erased by esbuild) ─────────── */
+
+/**
+ * CadencePlugin with the members this view consumes sharpened (signatures
+ * read from src/plugin.ts) while remaining assignable to CadencePlugin.
+ */
+interface PluginHandle extends CadencePlugin {
+  settings: BobSettings;
+  saveSettings(): Promise<void>;
+  refreshOpenViews(): void;
+  openQuickCapture(prefill?: { text?: string; when?: string | null; repeat?: string }): void;
+  updateReminder(id: string, patch: Partial<Reminder>): Promise<Reminder | null>;
+  deleteReminder(id: string): Promise<void>;
+  snoozeReminder(id: string, ms: number): Promise<Reminder | null>;
+  completeReminder(id: string): Promise<Reminder | null>;
+}
+
+/** Obsidian internals used by this view that are not part of the public API. */
+type AppWithInternals = obsidian.App & {
+  commands: { executeCommandById: (id: string) => unknown };
+  setting: { open: () => void; openTabById: (id: string) => void };
+  embedRegistry?: {
+    embedByExtension?: Record<string, BaseEmbedCreator | undefined>;
+    getEmbedCreator?: (file: obsidian.TFile) => BaseEmbedCreator | undefined;
+  };
+  openWithDefaultApp: (path: string) => void;
+};
+
+/** Inline embed component created by the (internal) embed registry. */
+type BaseEmbed = obsidian.Component & { loadFile?: () => Promise<unknown>; load?: () => unknown };
+type BaseEmbedCreator = (
+  context: { app: obsidian.App; containerEl: HTMLElement; sourcePath: string; linktext: string; showInline: boolean; depth: number },
+  file: obsidian.TFile,
+  subpath: string
+) => BaseEmbed | null;
+
+/**
+ * workspace.json dashboard card / config blobs as the renderers read them —
+ * authored JSON with many ad-hoc keys. This is a genuinely dynamic
+ * parsed-config boundary (see the Frontmatter rationale in types.ts).
+ */
+type CardLike = DashboardCard & Frontmatter;
+type DashConfigLike = DashboardConfig & Frontmatter;
+
+/** Result of normalizeWidgetSourceConfig() — authored source spec, normalized. */
+type NormalizedWidgetSource = WidgetSourceConfig & Frontmatter;
+
+/** Result shape of resolveWidgetSource() (src/widgets.ts). */
+interface ResolvedWidgetSource {
+  entityKey?: string | null;
+  def?: EntityDef | null;
+  entities: EntityRecord[];
+  warnings?: string[];
+  source?: NormalizedWidgetSource;
+  metadata?: Frontmatter;
+  displayFields?: EntityField[];
+}
+
+/** Widget data loader shared by the config-dashboard renderers (cached per surface render). */
+type GetWidgetEntities = (source: unknown, fallbackEntityKey?: string | null) => Promise<ResolvedWidgetSource>;
+
+/** Progress descriptor accepted by `_renderRowProgress`. */
+interface ProgressLike {
+  value?: number | string;
+  percent?: number | string;
+  pct?: number | string;
+  label?: string;
+}
+
+/** Row produced for dashboard list/bar widgets and snapshot providers. */
+interface ProviderRow extends Frontmatter {
+  title?: string;
+  meta?: string;
+  file?: obsidian.TFile | null;
+  entityKey?: string;
+  surface?: string;
+  command?: string;
+  url?: string;
+  action?: ActionInput;
+  value?: number;
+  values?: Record<string, number>;
+  progress?: ProgressLike;
+}
+
+/** Normalized action spec for dashboard/header actions (authored JSON). */
+interface ActionSpec extends Frontmatter {
+  label?: string;
+  type?: string;
+  command?: string;
+  surface?: string;
+  entityKey?: string;
+  path?: string;
+  url?: string;
+  primary?: boolean;
+  danger?: boolean;
+  description?: string;
+  route?: string;
+  action?: string;
+}
+type ActionInput = string | ActionSpec | null | undefined;
+
+/** Reminder plus the free-form `notes` body the modal/inbox read (not yet in types.Reminder). */
+type ReminderLike = Reminder & { notes?: string };
+
+/** Nav structures come from workspace.json (extra ad-hoc keys allowed). */
+type NavSurfaceLike = NavSurface & { placement?: string };
+type NavGroupLike = Omit<NavGroup, 'items'> & { module?: string; icon?: string; items?: NavSurfaceLike[] };
+type SecondaryTabLike = SecondaryTab & { children?: SecondaryTabLike[] };
+
+/** Persisted per-surface dashboard control state (user-authored JSON values). */
+type DashboardState = Record<string, any>;
+
+/** Option entry of a selector control card (authored JSON: scalar or object). */
+type SelectorOptionLike = string | number | { value?: unknown; id?: unknown; key?: unknown; label?: unknown; title?: unknown; filter?: unknown } | null;
+
+/** Normalized dropdown option built by the selector / date-range widgets. */
+interface SelectorOption { value: string; label?: string; filter?: string }
+
+/** Options bag for `renderConfigDashboard` (also fed from EntityListOptions). */
+interface DashboardRenderOptions {
+  config?: DashConfigLike | null;
+  skipHeader?: boolean;
+}
+
+/** Options bag for `renderEntityList` / `renderEntityTabs`. */
+interface EntityListOptions {
+  filter?: (entity: EntityRecord) => boolean;
+  forceInternal?: boolean;
+  title?: string;
+  titleSuffix?: string;
+  renderHeaderControls?: (right: HTMLElement, entityKey?: string) => void;
+  emptyDescription?: string | null;
+  columns?: string[];
+  config?: DashConfigLike;
+  skipHeader?: boolean;
+}
+
+/** Header-render options for `_renderPageHeader`. */
+interface PageHeaderOptions {
+  surfaceId?: string;
+  configuredActions?: boolean;
+}
+type PageHeaderActionsFn = (right: HTMLElement, ctx: { surfaceId: string; configuredActionCount: number; hasConfiguredActions: boolean }) => void;
+
+/** Daily-note sections as returned by parseSections() (src/notes.ts). */
+interface DailySections {
+  tasks: string[];
+  journal: string;
+}
+
+/** Project metadata as returned by readProjectMeta() (src/project-notes.ts). */
+interface ProjectMetaLike {
+  milestones: MilestoneItem[];
+  sections: Record<string, string>;
+  done: number;
+  total: number;
+  percent: number;
+  next?: MilestoneItem | null;
+}
+/** Milestone row as parsed/serialized by project-notes.ts (richer than types.Milestone). */
+interface MilestoneItem {
+  done: boolean;
+  date?: Date | null;
+  title: string;
+  notes?: string;
+}
+/** Task row in a project's `## Tasks` section. */
+interface ProjectTaskItem {
+  done: boolean;
+  title: string;
+  id?: string;
+}
+/** Text-section descriptor consumed by `_renderProjectTextSection` (runtime
+ * shape of `EntityDef.detailSections` items — `string[]` in types.ts; gap). */
+interface ProjectTextSectionDef {
+  key: string;
+  label: string;
+  rows?: number;
+  placeholder?: string;
+}
+
+/** Where a task-completion propagation originated. */
+interface TaskCompleteSource {
+  kind?: 'project' | 'reminder' | 'daily' | (string & {});
+  file?: obsidian.TFile;
+  id?: string;
+  date?: Date;
+}
+
+/** Item shape for the daily-task → project picker SuggestModal. */
+interface ProjectPickItem {
+  file?: obsidian.TFile;
+  name: string;
+  unlink?: boolean;
+}
+
+/** Inline-editable table cell / saved-badge DOM expandos. */
+type EditableCellEl = HTMLTableCellElement & { _cadEditing?: boolean; _cadEditTimer?: ReturnType<typeof setTimeout> };
+type SavedBadgeEl = HTMLSpanElement & { _t?: ReturnType<typeof setTimeout> };
+
+/** Drag payload for the dashboard designer layout board. */
+interface DesignerDragPos { rowIdx: number; colIdx: number; cardIdx: number }
+
+/** Normalized kanban column produced by `_renderKanbanWidget`'s normalizeGroup. */
+interface KanbanGroup {
+  value: string;
+  label: string;
+  empty: string;
+  description?: string;
+  limit?: number | null;
+  wipLimit?: number | null;
+}
+/** Authored kanban column spec: scalar shorthand or an object with ad-hoc keys. */
+type KanbanGroupInput = string | number | Frontmatter | null;
+
+/** One bar of the bar-chart widget (entity-grouped or provider-row backed). */
+interface BarChartEntry {
+  group: { value: string; label: string };
+  /** Entities backing the bar; the click handler also probes a provider-row style `entityKey`. */
+  items: (EntityRecord & { entityKey?: string })[];
+  value: number;
+  meta?: string;
+}
+
+/**
+ * Runtime shape of `EntityDef.baseView` / `EntityDef.externalBaseView` as set
+ * by parseBaseFile() (src/bases-parse.ts) — `{ type, name, basePath }`.
+ * types.ts declares them as `string` (shared-type gap; see final report).
+ */
+interface BaseViewRef { type?: string; name?: string; basePath?: string }
+/** Runtime shape of `EntityDef.baseGroupBy` (also `string` in types.ts — same gap). */
+interface BaseGroupBySpec { property?: string; direction?: string }
+
+/**
+ * Supertype view of ProductivityTaskNote (src/task-notes.ts) used by the
+ * notes widget — it reads `text`/`title`, which the snapshot rows never carry
+ * (latent main.js carry-over; the fallback label always wins at runtime).
+ */
+interface ProductivityTaskRowLike {
+  file?: obsidian.TFile;
+  text?: string;
+  title?: string;
+  date?: string;
+  done?: boolean;
+}
+
+/** Per-day planner column data. */
+interface PlannerDay {
+  date: Date;
+  path: string;
+  exists: boolean;
+  file?: obsidian.TFile;
+  tasks: string[];
+}
+
 export class CadenceAppView extends obsidian.ItemView {
-  // Migrated from untyped main.js: instance fields are not yet declared.
-  [key: string]: any;
-  constructor(leaf, plugin) {
+  declare plugin: PluginHandle;
+  /** Active surface id (route). */
+  declare mode: string;
+  declare todayFile: obsidian.TFile | null;
+  declare todayParsed: DailySections | null;
+  declare plannerAnchor: Date;
+  declare detailFile: obsidian.TFile | null;
+  declare detailEntityKey: string | null;
+  declare mobileNavOpen: boolean;
+  declare _navScrollTop: number;
+  declare _renderSeq: number;
+  declare _navEl: HTMLElement | undefined;
+  declare _pinDragId: string | null;
+  /** Selected sub-tab per parent surface id. */
+  declare _secondaryTabState: Record<string, string> | undefined;
+  /** Sort state per `${mode}::${entityKey}` table. */
+  declare _tableSortState: Record<string, { key: string | null; dir: string }> | undefined;
+  /** Client Work client/project selector state. */
+  declare _clientWorkClientId: string | undefined;
+  declare _clientWorkProjectId: string | undefined;
+  /** Surface Designer state. */
+  declare _dashEditorSurfaceId: string | undefined;
+  declare _dashEditorDraft: DashConfigLike | undefined;
+  declare _dashEditorMode: string | undefined;
+  /** In-memory dashboard control state per surface id (mirrored to settings.dashboardState). */
+  declare _dashboardState: Record<string, DashboardState> | undefined;
+  /** Optional parsed-base cache cleared on metadata changes (set externally when present). */
+  declare _basesCache: Map<string, unknown> | undefined;
+  /**
+   * NOTE: never assigned on this view — `renderExport()` reads it and passes
+   * `undefined` to workbook helpers (latent bug carried over from main.js;
+   * it almost certainly should be `this.plugin.settings`).
+   */
+  declare settings: BobSettings | undefined;
+  constructor(leaf: obsidian.WorkspaceLeaf, plugin: CadencePlugin) {
     super(leaf);
     this.plugin = plugin;
     // Migrate older mode IDs from previous versions
@@ -45,20 +349,20 @@ export class CadenceAppView extends obsidian.ItemView {
     this._renderSeq = 0;
   }
 
-  _toggleMobileNav(force?) {
+  _toggleMobileNav(force?: boolean) {
     const root = this.containerEl.children[1];
     this.mobileNavOpen = (typeof force === 'boolean') ? force : !this.mobileNavOpen;
     if (root) root.toggleClass('cad-mobile-nav-open', this.mobileNavOpen);
   }
 
-  async openEntityDetail(entityKey, file) {
+  async openEntityDetail(entityKey: string, file: obsidian.TFile) {
     if (!file || !entityKey) return;
     this.detailEntityKey = entityKey;
     this.detailFile = file;
     await this.render();
   }
 
-  async openEntityDetailFromFile(file, entityKey = null) {
+  async openEntityDetailFromFile(file: obsidian.TFile, entityKey: string | null = null) {
     const key = entityKey || entityKeyFromFile(this.app, file);
     if (!key) {
       // Not a Cadence entity — fall back to opening the markdown
@@ -74,7 +378,7 @@ export class CadenceAppView extends obsidian.ItemView {
     await this.render();
   }
 
-  _migrateModeId(id) {
+  _migrateModeId(id: string) {
     if (id === 'today')   return 'planner.today';
     if (id === 'planner') return 'planner.calendar';
     if (id === 'srm.suppliers') return 'procurement.suppliers';
@@ -96,7 +400,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const showSecondary = !!this.plugin.settings.showSecondaryNav;
     const showSetup = !!this.plugin.settings.showSetupNav;
     return NAV_GROUPS
-      .map((g) => {
+      .map((g: NavGroupLike) => {
         if (!Array.isArray(g.items)) return g; // separator group — pass through as-is
         if (g.module && mods[g.module] === false) return null;
         const items = g.items.filter((it) => {
@@ -119,7 +423,7 @@ export class CadenceAppView extends obsidian.ItemView {
     return pinned.filter((surfaceId, idx, arr) => surfaceId && SURFACE_BY_ID[surfaceId] && arr.indexOf(surfaceId) === idx);
   }
 
-  async _togglePinnedNavSurface(surfaceId) {
+  async _togglePinnedNavSurface(surfaceId: string) {
     if (!surfaceId || !SURFACE_BY_ID[surfaceId]) return;
     const pinned = new Set(this.plugin.settings.pinnedSurfaces || []);
     if (pinned.has(surfaceId)) pinned.delete(surfaceId);
@@ -130,7 +434,7 @@ export class CadenceAppView extends obsidian.ItemView {
 
   // Move a pinned surface to another pinned surface's position. Operates on the
   // raw (deduped) settings list so pins for surfaces not currently shown survive.
-  _reorderPinnedSurface(draggedId, targetId) {
+  _reorderPinnedSurface(draggedId: string, targetId: string) {
     const next = reorderPinnedList(this.plugin.settings.pinnedSurfaces, draggedId, targetId);
     if (!next) return false;
     this.plugin.settings.pinnedSurfaces = next;
@@ -138,14 +442,14 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* Link a daily-note task to a project. Keyed by (dailyPath, taskText). */
-  _taskLinkKey(dailyPath, text) { return `${dailyPath}::${(text || '').trim()}`; }
+  _taskLinkKey(dailyPath: string, text: string) { return `${dailyPath}::${(text || '').trim()}`; }
 
-  _getTaskProjectLink(dailyPath, text) {
+  _getTaskProjectLink(dailyPath: string, text: string) {
     const map = (this.plugin.settings && this.plugin.settings.taskProjectLinks) || {};
     return map[this._taskLinkKey(dailyPath, text)] || null;
   }
 
-  async _setTaskProjectLink(dailyPath, text, projectPath) {
+  async _setTaskProjectLink(dailyPath: string, text: string, projectPath: string | null) {
     if (!this.plugin.settings.taskProjectLinks) this.plugin.settings.taskProjectLinks = {};
     const key = this._taskLinkKey(dailyPath, text);
     if (projectPath) {
@@ -157,28 +461,28 @@ export class CadenceAppView extends obsidian.ItemView {
     this.render();
   }
 
-  _openTaskProjectPicker(dailyPath, text, currentLink) {
+  _openTaskProjectPicker(dailyPath: string, text: string, currentLink: string | null) {
     const projectFiles = listEntityFiles(this.app, 'project');
     if (!projectFiles.length) {
       new obsidian.Notice('No projects yet. Create one in Planner → Projects first.');
       return;
     }
     const view = this;
-    const projects = projectFiles.map((f) => ({
+    const projects = projectFiles.map((f: obsidian.TFile) => ({
       file: f,
       name: projectNameFromPath(this.app, f.path),
     }));
 
-    const picker: any = new (class extends obsidian.SuggestModal<any> {
-      projs: any;
-      hasLink: any;
-      constructor(app, projs, hasLink) {
+    const picker = new (class extends obsidian.SuggestModal<ProjectPickItem> {
+      declare projs: ProjectPickItem[];
+      declare hasLink: boolean;
+      constructor(app: obsidian.App, projs: ProjectPickItem[], hasLink: boolean) {
         super(app);
         this.projs = projs;
         this.hasLink = hasLink;
         this.setPlaceholder(hasLink ? 'Pick a project (or type "unlink" to remove)' : 'Pick a project to link this task to');
       }
-      getSuggestions(query) {
+      getSuggestions(query: string) {
         const q = (query || '').toLowerCase();
         const matches = this.projs.filter((p) => p.name.toLowerCase().includes(q));
         if (this.hasLink && (q === '' || 'unlink'.includes(q))) {
@@ -186,7 +490,7 @@ export class CadenceAppView extends obsidian.ItemView {
         }
         return matches;
       }
-      renderSuggestion(item, el) {
+      renderSuggestion(item: ProjectPickItem, el: HTMLElement) {
         if (item.unlink) {
           el.setText(item.name);
           el.style.color = 'var(--text-error, #c0392b)';
@@ -194,7 +498,7 @@ export class CadenceAppView extends obsidian.ItemView {
           el.setText('📁  ' + item.name);
         }
       }
-      onChooseSuggestion(item) {
+      onChooseSuggestion(item: ProjectPickItem) {
         if (item.unlink) view._setTaskProjectLink(dailyPath, text, null);
         else view._setTaskProjectLink(dailyPath, text, item.file.path);
       }
@@ -212,7 +516,7 @@ export class CadenceAppView extends obsidian.ItemView {
   getDisplayText() { return 'BOB Workspace'; }
   getIcon()        { return 'sparkles'; }
 
-  async setMode(m) {
+  async setMode(m: string) {
     this.mode = this._migrateModeId(m);
     if (this.mode === 'client-work.overview') {
       const state = this._secondaryTabState || (this._secondaryTabState = {});
@@ -224,7 +528,7 @@ export class CadenceAppView extends obsidian.ItemView {
     await this.render();
   }
 
-  async toggleGroup(groupId) {
+  async toggleGroup(groupId: string) {
     const collapsed = this.plugin.settings.collapsedGroups || {};
     collapsed[groupId] = !collapsed[groupId];
     this.plugin.settings.collapsedGroups = collapsed;
@@ -251,7 +555,7 @@ export class CadenceAppView extends obsidian.ItemView {
       if (this._modeUsesEntityFolder(file.path)) return this.render();
     }));
 
-    const entityRefresh = (file) => {
+    const entityRefresh = (file: obsidian.TAbstractFile) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
       if (this._modeUsesEntityFolder(file && file.path)) this.render();
     };
@@ -268,7 +572,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }));
   }
 
-  _modeUsesEntityFolder(path) {
+  _modeUsesEntityFolder(path: string | null | undefined) {
     if (!path) return false;
     // Entity surfaces can now show secondary tabs backed by folders outside
     // the old Cadence/* tree, so refresh if the touched path belongs to any
@@ -478,7 +782,7 @@ export class CadenceAppView extends obsidian.ItemView {
       return;
     }
 
-    const route = {
+    const route: Record<string, () => void | Promise<void>> = {
       'home': () => this.renderHome(content),
       'planner.inbox': () => this.renderInbox(content),
       'planner.today': () => this.renderTodayPane(content),
@@ -529,7 +833,7 @@ export class CadenceAppView extends obsidian.ItemView {
     if (route[this.mode]) {
       await route[this.mode]();
     } else if (SECONDARY_TABS[this.mode]?.length) {
-      const firstTab = this._tabsForParent(this.mode)[0] || {};
+      const firstTab = this._tabsForParent(this.mode)[0] || ({} as SecondaryTabLike);
       await this.renderEntityTabs(content, this.mode, firstTab.entityKey || firstTab.route);
     } else if (active && active.entityKey && ENTITIES[active.entityKey]) {
       await this.renderEntityList(content, active.entityKey);
@@ -542,7 +846,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
   }
 
-  renderComingSoon(root, surface) {
+  renderComingSoon(root: HTMLElement, surface: Partial<NavSurfaceLike>) {
     root.addClass('cadence-soon');
     const wrap = root.createDiv({ cls: 'cad-soon-wrap' });
     wrap.createDiv({ cls: 'cad-eyebrow', text: 'COMING SOON' });
@@ -557,7 +861,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Generic page header ────────────────── */
-  _renderPageHeader(root, title, subtitle, actions?, options: any = {}) {
+  _renderPageHeader(root: HTMLElement, title: string, subtitle: string | null, actions?: PageHeaderActionsFn | null, options: PageHeaderOptions = {}) {
     const head = root.createDiv({ cls: 'cad-page-header' });
     const left = head.createDiv({ cls: 'cad-page-header-left' });
     left.createDiv({ cls: 'cad-eyebrow', text: 'BOB WORKSPACE' });
@@ -573,11 +877,11 @@ export class CadenceAppView extends obsidian.ItemView {
     return head;
   }
 
-  _configuredHeaderActionCount(surfaceId) {
-    return configuredSurfaceActions(surfaceId).filter((action) => this._isConfiguredHeaderActionRenderable(action)).length;
+  _configuredHeaderActionCount(surfaceId: string) {
+    return (configuredSurfaceActions(surfaceId) as ActionInput[]).filter((action) => this._isConfiguredHeaderActionRenderable(action)).length;
   }
 
-  _isConfiguredHeaderActionRenderable(action) {
+  _isConfiguredHeaderActionRenderable(action: ActionInput) {
     if (!action || typeof action !== 'object') return false;
     if (action.entityKey) return workspaceHasEntity(action.entityKey) && !!ENTITIES[action.entityKey]?.label;
     const actionId = String(action.action || '').trim();
@@ -585,9 +889,9 @@ export class CadenceAppView extends obsidian.ItemView {
     return actionId === 'quick-capture' || actionId === 'today-task' || !!(route && SURFACE_BY_ID[route]);
   }
 
-  _renderConfiguredHeaderActions(container, surfaceId) {
+  _renderConfiguredHeaderActions(container: HTMLElement, surfaceId: string) {
     let rendered = 0;
-    configuredSurfaceActions(surfaceId).forEach((action) => {
+    (configuredSurfaceActions(surfaceId) as ActionSpec[]).forEach((action) => {
       if (!this._isConfiguredHeaderActionRenderable(action)) return;
       if (action.entityKey) {
         const def = ENTITIES[action.entityKey];
@@ -623,7 +927,7 @@ export class CadenceAppView extends obsidian.ItemView {
     return rendered;
   }
 
-  _renderEntityViewSelect(container, entityKey) {
+  _renderEntityViewSelect(container: HTMLElement, entityKey: string) {
     const basePath = entityBasePath(this.plugin.settings, entityKey);
     if (!basePath) return;
 
@@ -651,7 +955,7 @@ export class CadenceAppView extends obsidian.ItemView {
       }
       select.empty();
       select.createEl('option', { value: '', text: 'All properties' });
-      views.forEach((viewName) => {
+      views.forEach((viewName: string) => {
         select.createEl('option', { value: viewName, text: viewName });
       });
       select.value = views.includes(currentView) ? currentView : '';
@@ -669,10 +973,10 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _openEntityBase(entityKey) {
-    const basePath = entityBasePath(this.plugin.settings, entityKey) || ENTITIES[entityKey]?.externalBaseView?.basePath;
+  async _openEntityBase(entityKey: string) {
+    const basePath = entityBasePath(this.plugin.settings, entityKey) || (ENTITIES[entityKey]?.externalBaseView as BaseViewRef | undefined)?.basePath;
     if (!basePath) return;
-    const viewName = entityBaseViewName(this.plugin.settings, entityKey) || ENTITIES[entityKey]?.baseView?.name || '';
+    const viewName = entityBaseViewName(this.plugin.settings, entityKey) || (ENTITIES[entityKey]?.baseView as BaseViewRef | undefined)?.name || '';
     const baseFile = this.app.vault.getAbstractFileByPath(basePath);
     if (!(baseFile instanceof obsidian.TFile)) {
       new obsidian.Notice(`BOB Workspace: Base not found: ${basePath}`);
@@ -683,9 +987,9 @@ export class CadenceAppView extends obsidian.ItemView {
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
   }
 
-  _renderExternalBaseView(root, entityKey) {
+  _renderExternalBaseView(root: HTMLElement, entityKey: string) {
     const def = ENTITIES[entityKey];
-    const external = def?.externalBaseView;
+    const external = def?.externalBaseView as BaseViewRef | undefined;
     if (!external) return false;
     const wrap = root.createDiv({ cls: 'cad-empty-state' });
     wrap.createDiv({ cls: 'cad-empty-state-title', text: external.name || 'External Base view' });
@@ -698,19 +1002,19 @@ export class CadenceAppView extends obsidian.ItemView {
     return true;
   }
 
-  _renderUnsupportedBaseFilters(root, def) {
+  _renderUnsupportedBaseFilters(root: HTMLElement, def: EntityDef) {
     const unsupported = def?.unsupportedBaseFilters || [];
     if (!unsupported.length) return;
     const details = root.createEl('details', { cls: 'cad-base-filter-warnings' });
     details.createEl('summary', { text: `${unsupported.length} Base filter${unsupported.length === 1 ? '' : 's'} not applied` });
     const list = details.createEl('ul');
-    unsupported.forEach((filter) => {
+    unsupported.forEach((filter: string) => {
       list.createEl('li').createEl('code', { text: filter });
     });
   }
 
-  _groupEntitiesForView(entities, def) {
-    const groupBy = def?.baseGroupBy;
+  _groupEntitiesForView(entities: EntityRecord[], def: EntityDef) {
+    const groupBy = def?.baseGroupBy as BaseGroupBySpec | undefined;
     if (!groupBy?.property) return null;
     const groups = new Map();
     entities.forEach((entity) => {
@@ -730,17 +1034,17 @@ export class CadenceAppView extends obsidian.ItemView {
     return sorted;
   }
 
-  _renderEntityTable(root, entities, entityKey, cols) {
+  _renderEntityTable(root: HTMLElement, entities: EntityRecord[], entityKey: string, cols: EntityField[]) {
     const def = ENTITIES[entityKey];
-    const selected = new Set<any>(); // selected file paths
+    const selected = new Set<string>(); // selected file paths
 
     const bulkBar = root.createDiv({ cls: 'cad-bulk-bar cad-bulk-bar-hidden' });
     const bulkCount = bulkBar.createSpan({ cls: 'cad-bulk-count' });
     const bulkDelete = bulkBar.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Delete selected' });
     bulkDelete.addEventListener('click', async () => {
       // Resolve all files before any deletion so paths can't shift mid-loop
-      const filesToDelete: any[] = [...selected]
-        .map((path) => this.app.vault.getAbstractFileByPath(path))
+      const filesToDelete = [...selected]
+        .map((path) => this.app.vault.getAbstractFileByPath(path) as obsidian.TFile)
         .filter(Boolean);
       if (!filesToDelete.length) return;
       const names = filesToDelete.map((f) => f.basename).join('\n• ');
@@ -761,8 +1065,8 @@ export class CadenceAppView extends obsidian.ItemView {
     };
 
     // filterState: fieldKey → Set of included values (missing = no filter)
-    const filterState = new Map();
-    const applyFilters = (arr) => {
+    const filterState = new Map<string, Set<string>>();
+    const applyFilters = (arr: EntityRecord[]) => {
       if (filterState.size === 0) return arr;
       return arr.filter((e) => {
         for (const [key, vals] of filterState) {
@@ -774,7 +1078,7 @@ export class CadenceAppView extends obsidian.ItemView {
       });
     };
 
-    const openFilterDropdown = (th, field, filterBtn) => {
+    const openFilterDropdown = (th: HTMLElement, field: EntityField, filterBtn: HTMLElement) => {
       document.querySelector('.cad-filter-dropdown')?.remove();
       const current = filterState.get(field.key); // Set or undefined
       const dropdown = document.createElement('div');
@@ -825,8 +1129,8 @@ export class CadenceAppView extends obsidian.ItemView {
       dropdown.style.left = rect.left + 'px';
       document.body.appendChild(dropdown);
 
-      const close = (ev) => {
-        if (!dropdown.contains(ev.target)) {
+      const close = (ev: MouseEvent) => {
+        if (!dropdown.contains(ev.target as Node)) {
           dropdown.remove();
           document.removeEventListener('click', close);
         }
@@ -843,7 +1147,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const stateKey = `${this.mode || ''}::${entityKey}`;
     const currentSort = sortState[stateKey] || { key: null, dir: 'ASC' };
 
-    const normSortVal = (val, type) => {
+    const normSortVal = (val: unknown, type?: string) => {
       if (val == null) return null;
       if (Array.isArray(val)) val = val.join(', ');
       if (type === 'currency' || type === 'number') {
@@ -857,7 +1161,7 @@ export class CadenceAppView extends obsidian.ItemView {
       return String(val).toLowerCase();
     };
 
-    const sortEntities = (arr) => {
+    const sortEntities = (arr: EntityRecord[]) => {
       if (!currentSort.key) return arr;
       const field = cols.find((c) => c.key === currentSort.key);
       if (!field) return arr;
@@ -875,10 +1179,10 @@ export class CadenceAppView extends obsidian.ItemView {
       return withIdx.map((x) => x.e);
     };
 
-    let selectAllCb = null;
-    let currentArr = [];
+    let selectAllCb: HTMLInputElement | null = null;
+    let currentArr: EntityRecord[] = [];
     const tbody = table.createEl('tbody');
-    const renderBody = (arr) => {
+    const renderBody = (arr: EntityRecord[]) => {
       currentArr = arr;
       tbody.empty();
       selected.clear();
@@ -887,7 +1191,7 @@ export class CadenceAppView extends obsidian.ItemView {
       arr.forEach((e) => {
         const tr = tbody.createEl('tr', { cls: 'cad-row' });
         tr.addEventListener('dblclick', () => {
-          tr.querySelectorAll('td').forEach((cell) => {
+          tr.querySelectorAll('td').forEach((cell: EditableCellEl) => {
             clearTimeout(cell._cadEditTimer);
             delete cell._cadEditTimer;
           });
@@ -914,7 +1218,7 @@ export class CadenceAppView extends obsidian.ItemView {
           const val = entityValue(e, f.key, def);
           const formatted = fmtValue(val, f.type);
           if (i === 0) {
-            const a: any = td.createEl('a', { cls: 'cad-row-primary', text: formatted || e.basename });
+            const a = td.createEl('a', { cls: 'cad-row-primary', text: formatted || e.basename });
             a.addEventListener('click', (ev) => {
               ev.preventDefault();
               this.openEntityDetail(entityKey, e.file);
@@ -935,7 +1239,7 @@ export class CadenceAppView extends obsidian.ItemView {
         if (selectAllCb.checked) currentArr.forEach((e) => selected.add(e.file.path));
         else selected.clear();
         tbody.querySelectorAll('tr').forEach((tr, idx) => {
-          const cb = tr.querySelector('.cad-row-cb');
+          const cb = tr.querySelector<HTMLInputElement>('.cad-row-cb');
           if (cb) cb.checked = selectAllCb.checked;
           tr.toggleClass('cad-row-selected', selectAllCb.checked);
         });
@@ -977,7 +1281,7 @@ export class CadenceAppView extends obsidian.ItemView {
     renderBody(applyFilters(sortEntities([...entities])));
   }
 
-  _makeInlineEditable(td, entity, field, def, initialFormatted) {
+  _makeInlineEditable(td: EditableCellEl, entity: EntityRecord, field: EntityField, def: EntityDef, initialFormatted: string) {
     td.addClass('cad-cell-editable');
     td.setText(initialFormatted || '');
     td._cadEditing = false;
@@ -992,9 +1296,9 @@ export class CadenceAppView extends obsidian.ItemView {
       td.setText(fmtValue(newVal, field.type) || '');
     };
 
-    const saveField = async (raw) => {
+    const saveField = async (raw: string) => {
       const fieldType = field.type || 'text';
-      let value = raw;
+      let value: string | string[] | number | null = raw;
       if (fieldType === 'tags') {
         value = (raw || '').split(',').map((t) => t.trim()).filter(Boolean);
       } else if (fieldType === 'number' || fieldType === 'currency') {
@@ -1086,18 +1390,18 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _tabsForParent(parentId) {
-    const tabs = SECONDARY_TABS[parentId] || [];
+  _tabsForParent(parentId: string) {
+    const tabs: SecondaryTabLike[] = SECONDARY_TABS[parentId] || [];
     return tabs.flatMap((tab) => {
       if (!tab.children) return [tab];
       return tab.children.map((child) => Object.assign({}, child, { label: `${tab.label} · ${child.label}` }));
     }).filter((tab) => {
-      const surface = ALL_SURFACES.find((item) => item.parent === parentId && surfaceMatchesTab(item, tab));
+      const surface = ALL_SURFACES.find((item) => item.parent === parentId && surfaceMatchesTab(item, tab)) as NavSurfaceLike | undefined;
       return surface?.placement !== 'navigation';
     });
   }
 
-  async renderEntityTabs(root, parentId, defaultEntityKey, opts: any = {}) {
+  async renderEntityTabs(root: HTMLElement, parentId: string, defaultEntityKey: string, opts: EntityListOptions = {}) {
     const tabs = this._tabsForParent(parentId);
     const state = this._secondaryTabState || (this._secondaryTabState = {});
     const current = state[parentId] || defaultEntityKey;
@@ -1122,7 +1426,7 @@ export class CadenceAppView extends obsidian.ItemView {
     return this.renderEntityList(root, activeTab?.entityKey || defaultEntityKey, opts);
   }
 
-  async _renderSecondaryRoute(root, route, opts: any = {}) {
+  async _renderSecondaryRoute(root: HTMLElement, route: string, opts: EntityListOptions = {}) {
     if (configuredDashboardDefinition(route)) return this.renderConfigDashboard(route, root, opts);
     if (route === 'client-work.dashboard') return this.renderClientWorkDashboard(root, opts);
     if (route === 'finance.gl.overview') return this.renderFinanceGLDashboard(root);
@@ -1136,8 +1440,8 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _clientWorkOptions() {
-    const seen = new Set<any>();
-    return listEntities(this.app, 'client')
+    const seen = new Set<string>();
+    return (listEntities(this.app, 'client') as EntityRecord[])
       .map((client) => {
         const id = String(entityValue(client, 'client_id', ENTITIES.client) || '').trim();
         if (!id) return null;
@@ -1154,8 +1458,8 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _clientWorkProjectOptions() {
-    const seen = new Set<any>();
-    return listEntities(this.app, 'project')
+    const seen = new Set<string>();
+    return (listEntities(this.app, 'project') as EntityRecord[])
       .map((project) => {
         const id = String(entityValue(project, 'project_id', ENTITIES.project) || project.basename || '').trim();
         if (!id) return null;
@@ -1173,7 +1477,7 @@ export class CadenceAppView extends obsidian.ItemView {
       .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }));
   }
 
-  _entityMatchesClient(entity, clientId) {
+  _entityMatchesClient(entity: EntityRecord, clientId: string) {
     if (!clientId) return true;
     const direct = entity.frontmatter?.client_id;
     const endClient = entity.frontmatter?.end_client_id;
@@ -1184,7 +1488,7 @@ export class CadenceAppView extends obsidian.ItemView {
     return values.some((value) => String(value ?? '').trim() === clientId);
   }
 
-  _entityMatchesProject(entity, projectId) {
+  _entityMatchesProject(entity: EntityRecord, projectId: string) {
     if (!projectId) return true;
     const ids = entity.frontmatter?.project_id;
     const previousProject = entity.frontmatter?.project;
@@ -1195,7 +1499,7 @@ export class CadenceAppView extends obsidian.ItemView {
     return values.some((value) => String(value ?? '').trim() === projectId);
   }
 
-  _renderClientWorkSelector(container) {
+  _renderClientWorkSelector(container: HTMLElement) {
     const wrap = container.createDiv({ cls: 'cad-client-work-filter' });
     const clientSelect = wrap.createEl('select', { cls: 'dropdown cad-client-work-client-select' });
     clientSelect.createEl('option', { value: '', text: 'All clients' });
@@ -1228,7 +1532,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-	  async renderClientWorkWorkspace(root) {
+	  async renderClientWorkWorkspace(root: HTMLElement) {
 	    if (this._clientWorkClientId && !this._clientWorkOptions().some((client) => client.id === this._clientWorkClientId)) {
 	      this._clientWorkClientId = '';
 	    }
@@ -1249,7 +1553,7 @@ export class CadenceAppView extends obsidian.ItemView {
 	    });
 	  }
 
-	  async _renderClientWorkEntityList(root, entityKey) {
+	  async _renderClientWorkEntityList(root: HTMLElement, entityKey: string) {
 	    if (this._clientWorkClientId && !this._clientWorkOptions().some((client) => client.id === this._clientWorkClientId)) {
 	      this._clientWorkClientId = '';
 	    }
@@ -1271,11 +1575,11 @@ export class CadenceAppView extends obsidian.ItemView {
 	    });
 	  }
 
-  _isOpenEntity(entity, entityKey) {
+  _isOpenEntity(entity: EntityRecord, entityKey: string) {
     return isOpenEntityRecord(entity, entityKey, ENTITIES);
   }
 
-  _dateValue(entity, entityKey, fields) {
+  _dateValue(entity: EntityRecord, entityKey: string, fields: string[]) {
     const def = ENTITIES[entityKey];
     for (const field of fields) {
       const value = entityValue(entity, field, def);
@@ -1287,11 +1591,11 @@ export class CadenceAppView extends obsidian.ItemView {
     return null;
   }
 
-  _normalizeWidgetSource(source, fallbackEntityKey = null) {
+  _normalizeWidgetSource(source: unknown, fallbackEntityKey: string | null = null) {
     return normalizeWidgetSourceConfig(source, fallbackEntityKey);
   }
 
-  _widgetSourceSpec(card, fallbackEntityKey = null) {
+  _widgetSourceSpec(card: CardLike, fallbackEntityKey: string | null = null) {
     if (!card || typeof card !== 'object') return card;
     const source = card.source && typeof card.source === 'object'
       ? Object.assign({}, card.source)
@@ -1312,15 +1616,15 @@ export class CadenceAppView extends obsidian.ItemView {
     return spec;
   }
 
-  _filterEntitiesByBaseConfig(entityKey, entities, baseConfig, warnings: any[] = []) {
+  _filterEntitiesByBaseConfig(entityKey: string, entities: EntityRecord[], baseConfig: BaseConfig | null, warnings: string[] = []) {
     return filterEntitiesByBaseConfig(this.app, entityKey, entities, baseConfig, warnings);
   }
 
-  async _resolveWidgetEntities(source, fallbackEntityKey = null) {
+  async _resolveWidgetEntities(source: unknown, fallbackEntityKey: string | null = null): Promise<ResolvedWidgetSource> {
     return resolveWidgetSource(this.app, source, fallbackEntityKey, this.plugin.settings);
   }
 
-  _dashboardDateRangePresets(card, state: any = {}) {
+  _dashboardDateRangePresets(card: CardLike, state: DashboardState = {}) {
     const today = startOfDay(new Date());
     const y = today.getFullYear();
     const m = today.getMonth();
@@ -1337,7 +1641,7 @@ export class CadenceAppView extends obsidian.ItemView {
     ];
   }
 
-  _applyDateRangeControlState(state, card, presetValue = null) {
+  _applyDateRangeControlState(state: DashboardState, card: CardLike, presetValue: string | null = null) {
     const key = String(card.key || card.name || card.field || 'dateRange').trim();
     if (!key) return;
     const field = String(card.field || 'date').trim();
@@ -1345,7 +1649,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const startKey = `${key}Start`;
     const endKey = `${key}End`;
     const presetKey = `${key}Preset`;
-    const toYmd = (value) => {
+    const toYmd = (value: string | number | Date) => {
       const d = value instanceof Date ? value : new Date(value);
       return isNaN(d.getTime()) ? '' : ymd(d);
     };
@@ -1373,7 +1677,7 @@ export class CadenceAppView extends obsidian.ItemView {
     state[filterKey] = from && to ? `${field} >= ${JSON.stringify(from)} && ${field} <= ${JSON.stringify(to)}` : 'true';
   }
 
-  _initializeDashboardControlState(surfaceId, controls: any[] = []) {
+  _initializeDashboardControlState(surfaceId: string, controls: CardLike[] = []) {
     const state = this._dashboardStateFor(surfaceId);
     controls.forEach((card) => {
       if (!card || typeof card !== 'object') return;
@@ -1392,7 +1696,7 @@ export class CadenceAppView extends obsidian.ItemView {
       state[key] = defaultValue;
       state[filterKey] = 'true';
       if (!defaultValue || !Array.isArray(card.options)) return;
-      const selected = card.options.find((opt) => {
+      const selected = card.options.find((opt: SelectorOptionLike) => {
         if (opt == null) return false;
         if (typeof opt === 'string' || typeof opt === 'number') return String(opt) === defaultValue;
         return String(opt.value ?? opt.id ?? opt.key ?? opt.label ?? '').trim() === defaultValue;
@@ -1405,10 +1709,10 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async renderConfigDashboard(surfaceId, root, opts: any = {}) {
-    const config = opts.config || resolveSurfaceConfig(surfaceId);
+  async renderConfigDashboard(surfaceId: string, root: HTMLElement, opts: DashboardRenderOptions = {}) {
+    const config = (opts.config || resolveSurfaceConfig(surfaceId)) as DashConfigLike | null;
     if (!config) {
-      const surface = SURFACE_BY_ID[surfaceId] || {};
+      const surface = SURFACE_BY_ID[surfaceId] || ({} as NavSurface);
       if (!opts.skipHeader) {
         this._renderPageHeader(root, surface.label || surfaceId || 'Dashboard', 'No dashboard configuration found');
       }
@@ -1423,15 +1727,15 @@ export class CadenceAppView extends obsidian.ItemView {
     root.toggleClass('cadence-report', config.kind === 'report' || String(surfaceId || '').startsWith('reports.'));
     root.toggleClass('cadence-planner', config.kind === 'planner' || String(surfaceId || '').startsWith('planner.'));
 
-    const dashboardWarnings = [];
-    const widgetCache = new Map();
+    const dashboardWarnings: string[] = [];
+    const widgetCache = new Map<string, Promise<ResolvedWidgetSource>>();
     const dashboardState = this._dashboardStateFor(surfaceId);
     this._initializeDashboardControlState(surfaceId, config.controls || []);
     const dashboardContext = Object.assign({
       clientId: this._clientWorkClientId || '',
       projectId: this._clientWorkProjectId || '',
     }, dashboardState);
-    const getWidgetEntities = async (source, fallbackEntityKey = null) => {
+    const getWidgetEntities = async (source: unknown, fallbackEntityKey: string | null = null) => {
       const normalized = this._normalizeWidgetSource(applyDashboardContext(source, dashboardContext), fallbackEntityKey);
       const cacheKey = JSON.stringify({
         entityKey: normalized.entityKey,
@@ -1502,7 +1806,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
 
     if (config.stats?.length) {
-      const statItems = await Promise.all(config.stats.map(async (s) => {
+      const statItems = await Promise.all(config.stats.map(async (s: CardLike) => {
         const resolved = await getWidgetEntities(s.source || s, s.entity);
         const entities = resolved.entities;
         const builtInData = resolved.metadata?.builtInData || resolved.metadata?.providerData || null;
@@ -1511,7 +1815,7 @@ export class CadenceAppView extends obsidian.ItemView {
         const field = s.field || s.valueField || s.count?.field || '';
         const hasEntityModel = !!def && !!s.entity;
         const stageField = hasEntityModel ? dealStageField(def) : '';
-        const dealValue = (e) => Number(entityValue(e, field || (hasEntityModel ? dealValueField(def) : field), def)) || 0;
+        const dealValue = (e: EntityRecord) => Number(entityValue(e, field || (hasEntityModel ? dealValueField(def) : field), def)) || 0;
         const countOpen = hasEntityModel ? entities.filter((e) => this._isOpenEntity(e, s.entity)).length : 0;
         const countWon = hasEntityModel ? entities.filter((e) => dealWonStages(def).includes(String(entityValue(e, stageField, def)))).length : 0;
         const countLost = hasEntityModel ? entities.filter((e) => dealLostStages(def).includes(String(entityValue(e, stageField, def)))).length : 0;
@@ -1524,7 +1828,7 @@ export class CadenceAppView extends obsidian.ItemView {
           value = entities.length ? entities.reduce((sum, e) => sum + dealValue(e), 0) / entities.length : 0;
         } else if (metric === 'weightedForecast') {
           const stageConfidenceRaw = def?.stageConfidence || { lead: 0.1, qualified: 0.25, proposal: 0.5, negotiation: 0.75 };
-          const stageConfidence = Object.fromEntries(Object.entries<any>(stageConfidenceRaw).map(([k, v]) => [String(k).toLowerCase(), Number(v) || 0]));
+          const stageConfidence = Object.fromEntries(Object.entries(stageConfidenceRaw).map(([k, v]) => [String(k).toLowerCase(), Number(v) || 0]));
           value = entities.reduce((sum, e) => {
             const stage = String(entityValue(e, stageField, def) || '').toLowerCase();
             return sum + dealValue(e) * (stageConfidence[stage] || 0);
@@ -1571,7 +1875,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
 
     for (const cr of config.conditionalRows || []) {
-      const resolvedConditions = await Promise.all((cr.condition?.entities || []).map((key) => getWidgetEntities(null, key)));
+      const resolvedConditions = await Promise.all((cr.condition?.entities || []).map((key: string) => getWidgetEntities(null, key)));
       const hasData = resolvedConditions.some((resolved) => resolved.entities.length > 0);
       if (!hasData) continue;
       const extra = root.createDiv({ cls: 'cad-dash-cols' });
@@ -1584,7 +1888,7 @@ export class CadenceAppView extends obsidian.ItemView {
       const details = root.createEl('details', { cls: 'cad-base-filter-warnings' });
       details.createEl('summary', { text: `${dashboardWarnings.length} dashboard warning${dashboardWarnings.length === 1 ? '' : 's'}` });
       const list = details.createEl('ul');
-      dashboardWarnings.forEach((warning) => {
+      dashboardWarnings.forEach((warning: string) => {
         list.createEl('li').createEl('code', { text: warning });
       });
     }
@@ -1592,7 +1896,7 @@ export class CadenceAppView extends obsidian.ItemView {
     if (config.legend === 'finance-statements') this._renderFinanceStatementLegend(root);
   }
 
-  async _renderConfigCard(col, card, getWidgetEntities, dashboardContext: any = {}) {
+  async _renderConfigCard(col: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities, dashboardContext: DashboardState = {}) {
     try {
       const resolvedCard = applyDashboardContext(card, dashboardContext);
       if (await this._renderWidgetByKind(col, resolvedCard, getWidgetEntities)) return;
@@ -1603,7 +1907,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
   }
 
-  _renderWidgetErrorCard(col, card, error) {
+  _renderWidgetErrorCard(col: HTMLElement, card: CardLike | null | undefined, error: unknown) {
     const title = String(card?.title || card?.kind || 'Widget').trim();
     const cardEl = col.createDiv({ cls: 'cad-dash-card cad-widget-error-card' });
     const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
@@ -1613,10 +1917,10 @@ export class CadenceAppView extends obsidian.ItemView {
     body.createDiv({ cls: 'cad-empty', text: 'This widget failed to render.' });
     const details = body.createEl('details', { cls: 'cad-widget-error-details' });
     details.createEl('summary', { text: 'Show details' });
-    details.createEl('code', { text: String(error?.message || error || 'Unknown widget error') });
+    details.createEl('code', { text: String((error as Error | null)?.message || error || 'Unknown widget error') });
   }
 
-  _renderRowProgress(parent, progress) {
+  _renderRowProgress(parent: HTMLElement, progress: ProgressLike | null | undefined) {
     if (!progress || typeof progress !== 'object') return;
     const value = Math.max(0, Math.min(100, Number(progress.value ?? progress.percent ?? progress.pct ?? 0) || 0));
     const wrap = parent.createDiv({ cls: 'cad-proj-progress-wrap cad-row-progress' });
@@ -1629,7 +1933,7 @@ export class CadenceAppView extends obsidian.ItemView {
     fill.style.width = `${value}%`;
   }
 
-  _applyCardTone(cardEl, card: any = {}) {
+  _applyCardTone(cardEl: HTMLElement, card: CardLike = {}) {
     if (!cardEl) return;
     const explicit = String(card.tone || card.accent || '').trim().toLowerCase();
     const text = String(card.title || card.label || card.kind || '').toLowerCase();
@@ -1644,22 +1948,22 @@ export class CadenceAppView extends obsidian.ItemView {
     cardEl.dataset.tone = tone;
   }
 
-  async _exportConfigDashboard(surfaceId, config, getWidgetEntities, dashboardContext) {
+  async _exportConfigDashboard(surfaceId: string, config: DashConfigLike, getWidgetEntities: GetWidgetEntities, dashboardContext: DashboardState) {
     const exportFolder = workbookExportFolder(this.plugin.settings);
     const now = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
+    const pad = (n: number) => String(n).padStart(2, '0');
     const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
     const title = String(config.title || surfaceId || 'Report').trim();
     const slug = title.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'report';
     const path = `${exportFolder}/${slug}_${stamp}.md`;
     await ensureFolderSync(this.app, exportFolder);
 
-    const lines = [];
+    const lines: string[] = [];
     lines.push(`# ${config.title || surfaceId}`);
     if (config.subtitle) lines.push(`\n${config.subtitle}`);
     lines.push(`\n- Surface: \`${surfaceId}\``);
     if (config.contextFilter) lines.push(`- Context: \`${config.contextFilter}\``);
-    const selectorBits = Object.entries<any>(dashboardContext || {})
+    const selectorBits = Object.entries(dashboardContext || {})
       .filter(([key, value]) => key.endsWith('Filter') && String(value || '').trim())
       .map(([key, value]) => `  - ${key}: \`${value}\``);
     if (selectorBits.length) {
@@ -1683,7 +1987,7 @@ export class CadenceAppView extends obsidian.ItemView {
 
     if (Array.isArray(config.stats) && config.stats.length) {
       lines.push('\n## Metrics');
-      for (const stat of config.stats) {
+      for (const stat of config.stats as CardLike[]) {
         const resolved = await getWidgetEntities(stat.source || stat, stat.entity);
         const entities = resolved.entities || [];
         const def = resolved.def || ENTITIES[stat.entity];
@@ -1693,7 +1997,7 @@ export class CadenceAppView extends obsidian.ItemView {
         const hasEntityModel = !!def && !!stat.entity;
         const stageField = hasEntityModel ? dealStageField(def) : '';
         const valueField = field || (hasEntityModel ? dealValueField(def) : '');
-        const dealValue = (e) => Number(entityValue(e, valueField, def)) || 0;
+        const dealValue = (e: EntityRecord) => Number(entityValue(e, valueField, def)) || 0;
         const numericValues = entities.map((e) => dealValue(e)).filter((value) => Number.isFinite(value));
         const countOpen = hasEntityModel ? entities.filter((e) => this._isOpenEntity(e, stat.entity)).length : 0;
         const countWon = hasEntityModel ? entities.filter((e) => dealWonStages(def).includes(String(entityValue(e, stageField, def)))).length : 0;
@@ -1712,7 +2016,7 @@ export class CadenceAppView extends obsidian.ItemView {
         else if (metric === 'empty') value = emptyCount;
         else if (metric === 'weightedForecast') {
           const stageConfidenceRaw = def?.stageConfidence || { lead: 0.1, qualified: 0.25, proposal: 0.5, negotiation: 0.75 };
-          const stageConfidence = Object.fromEntries(Object.entries<any>(stageConfidenceRaw).map(([k, v]) => [String(k).toLowerCase(), Number(v) || 0]));
+          const stageConfidence = Object.fromEntries(Object.entries(stageConfidenceRaw).map(([k, v]) => [String(k).toLowerCase(), Number(v) || 0]));
           value = entities.reduce((sum, e) => sum + dealValue(e) * (stageConfidence[String(entityValue(e, stageField, def) || '').toLowerCase()] || 0), 0);
         } else if (metric === 'winRate') {
           value = countWon + countLost === 0 ? 0 : Math.round((countWon / (countWon + countLost)) * 100);
@@ -1726,7 +2030,7 @@ export class CadenceAppView extends obsidian.ItemView {
         } else if (metric === 'ratio') {
           const numeratorSpec = stat.numerator ?? stat.ratio?.numerator ?? stat.ratio?.top ?? stat.ratio?.value;
           const denominatorSpec = stat.denominator ?? stat.ratio?.denominator ?? stat.ratio?.bottom ?? stat.ratio?.total;
-          const resolveRatioValue = (spec) => {
+          const resolveRatioValue = (spec: unknown) => {
             if (typeof spec === 'number') return spec;
             if (typeof spec === 'string' && spec.trim()) {
               return entities.reduce((sum, entity) => sum + (Number(entityValue(entity, spec.trim(), def)) || 0), 0);
@@ -1762,7 +2066,7 @@ export class CadenceAppView extends obsidian.ItemView {
             continue;
           }
           if (card.kind === 'actions') {
-            (Array.isArray(card.actions) ? card.actions : []).map((action) => this._normalizeActionSpec(action)).filter(Boolean).forEach((action) => {
+            (Array.isArray(card.actions) ? card.actions : []).map((action: ActionInput) => this._normalizeActionSpec(action)).filter(Boolean).forEach((action: ActionSpec) => {
               lines.push(`- ${action.label}${action.surface ? ` -> surface \`${action.surface}\`` : ''}${action.command ? ` -> command \`${action.command}\`` : ''}${action.entityKey ? ` -> create \`${action.entityKey}\`` : ''}`);
             });
             continue;
@@ -1781,15 +2085,15 @@ export class CadenceAppView extends obsidian.ItemView {
           }
           if (card.kind === 'base-embed') {
             const base = await this._resolveBaseWidgetTarget(card);
-            const resolved = base.entityKey ? await getWidgetEntities(this._widgetSourceSpec(card, base.entityKey), base.entityKey).catch(() => null) : null;
+            const resolved = base.entityKey ? await getWidgetEntities(this._widgetSourceSpec(card, base.entityKey), base.entityKey).catch((): null => null) : null;
             const preview = (resolved?.entities || []).slice(0, Math.max(1, Number(card.limit || 5) || 5));
             lines.push(`- Base: \`${base.basePath || '—'}\``);
             if (base.viewName) lines.push(`- View: \`${base.viewName}\``);
-            preview.forEach((entity) => {
+            preview.forEach((entity: EntityRecord) => {
               const titleFields = Array.isArray(card.titleFields) && card.titleFields.length ? card.titleFields : ['title', 'name', 'subject'];
               const metaFields = Array.isArray(card.metaFields) && card.metaFields.length ? card.metaFields : ['status', 'date', 'value'];
-              const entityTitle = titleFields.map((field) => String(entityValue(entity, field, base.entityDef) || '').trim()).find(Boolean) || entity.basename;
-              const metaBits = metaFields.map((field) => fmtValue(entityValue(entity, field, base.entityDef), base.entityDef?.fields?.find((f) => f.key === field)?.type)).filter(Boolean);
+              const entityTitle = titleFields.map((field: string) => String(entityValue(entity, field, base.entityDef) || '').trim()).find(Boolean) || entity.basename;
+              const metaBits = metaFields.map((field: string) => fmtValue(entityValue(entity, field, base.entityDef), base.entityDef?.fields?.find((f: EntityField) => f.key === field)?.type)).filter(Boolean);
               lines.push(`- ${entityTitle}${metaBits.length ? ` · ${metaBits.join(' · ')}` : ''}`);
             });
             continue;
@@ -1807,14 +2111,14 @@ export class CadenceAppView extends obsidian.ItemView {
       }
     }
 
-    const file: any = await this.app.vault.create(path, `${lines.join('\n')}\n`);
+    const file = await this.app.vault.create(path, `${lines.join('\n')}\n`);
     await this.app.workspace.openLinkText(file.path, '', false);
     return file.path;
   }
 
-  async _resolveCardRows(card, getWidgetEntities) {
+  async _resolveCardRows(card: CardLike, getWidgetEntities: GetWidgetEntities): Promise<ProviderRow[]> {
     if (card.merge) {
-      const merged = [];
+      const merged: ProviderRow[] = [];
       for (const m of card.merge) {
         merged.push(...await this._resolveSourceRows(m, getWidgetEntities));
       }
@@ -1825,7 +2129,7 @@ export class CadenceAppView extends obsidian.ItemView {
     return this._resolveSourceRows(card, getWidgetEntities);
   }
 
-  async _resolveSourceRows(def, getWidgetEntities) {
+  async _resolveSourceRows(def: CardLike, getWidgetEntities: GetWidgetEntities): Promise<ProviderRow[]> {
     const sourceSpec = this._widgetSourceSpec(def, def.entity);
     const resolved = await getWidgetEntities(sourceSpec, def.entity);
     const all = resolved.entities || [];
@@ -1846,7 +2150,7 @@ export class CadenceAppView extends obsidian.ItemView {
     return [];
   }
 
-  _resolveBuiltInRows(def, resolved) {
+  _resolveBuiltInRows(def: CardLike, resolved: ResolvedWidgetSource): ProviderRow[] {
     const builtIn = String(resolved.source?.builtIn || resolved.metadata?.builtIn || '').trim().toLowerCase();
     const builtInData = resolved.metadata?.builtInData || null;
     if (!builtInData) return [];
@@ -1887,7 +2191,7 @@ export class CadenceAppView extends obsidian.ItemView {
       return (builtInData.perDay || [])
         .slice()
         .reverse()
-        .map((item) => ({
+        .map((item: Frontmatter) => ({
           title: fmtValue(item.date, 'date'),
           meta: `done ${item.done} · open ${item.open}${item.jChars ? ` · journal ${item.jChars}` : ''}`,
           value: Number(item.done) || 0,
@@ -1900,7 +2204,7 @@ export class CadenceAppView extends obsidian.ItemView {
         }));
     }
     if (section === 'weeks' || section === 'weekly') {
-      return (builtInData.weeks || []).map((item) => ({
+      return (builtInData.weeks || []).map((item: Frontmatter) => ({
         title: item.label || fmtValue(item.start, 'date'),
         meta: `${item.done} done · ${item.open} open`,
         value: Number(item.done) || 0,
@@ -1913,7 +2217,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
     if (section === 'weekday' || section === 'day-buckets' || section === 'daybuckets') {
       const labels = resolved.source?.labels || ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-      return (builtInData.dayBuckets || []).map((item, idx) => {
+      return (builtInData.dayBuckets || []).map((item: Frontmatter, idx: number) => {
         const total = item.done + item.open;
         const pct = total === 0 ? 0 : Math.round((item.done / total) * 100);
         return {
@@ -1930,14 +2234,14 @@ export class CadenceAppView extends obsidian.ItemView {
       });
     }
     if (section === 'task-notes' || section === 'tasknotes' || section === 'notes') {
-      return (builtInData.taskNotes || []).map((task) => ({
+      return (builtInData.taskNotes || []).map((task: Frontmatter) => ({
         title: task.text || task.title || 'Task note',
         meta: `${task.date || '—'} · ${task.done ? 'done' : 'open'}`,
         file: task.file || null,
       }));
     }
     if (section === 'projects' || section === 'project') {
-      return (builtInData.projectBuckets || []).map((item) => ({
+      return (builtInData.projectBuckets || []).map((item: Frontmatter) => ({
         title: item.title || 'Project',
         meta: item.meta || '',
         value: Number(item.value) || 0,
@@ -1945,7 +2249,7 @@ export class CadenceAppView extends obsidian.ItemView {
       }));
     }
     if (section === 'contexts' || section === 'context') {
-      return (builtInData.contextBuckets || []).map((item) => ({
+      return (builtInData.contextBuckets || []).map((item: Frontmatter) => ({
         title: item.title || 'Context',
         meta: item.meta || '',
         value: Number(item.value) || 0,
@@ -1953,7 +2257,7 @@ export class CadenceAppView extends obsidian.ItemView {
       }));
     }
     if (section === 'overdue' || section === 'overdue-open') {
-      return (builtInData.overdueTasks || []).map((task) => ({
+      return (builtInData.overdueTasks || []).map((task: Frontmatter) => ({
         title: task.title || task.file?.basename || 'Task note',
         meta: [task.due ? `due ${task.due}` : '', task.scheduled ? `scheduled ${task.scheduled}` : '', task.priority ? task.priority : '']
           .filter(Boolean)
@@ -1962,7 +2266,7 @@ export class CadenceAppView extends obsidian.ItemView {
       }));
     }
     if (section === 'high-priority' || section === 'priority-open') {
-      return (builtInData.highPriorityTasks || []).map((task) => ({
+      return (builtInData.highPriorityTasks || []).map((task: Frontmatter) => ({
         title: task.title || task.file?.basename || 'Task note',
         meta: [task.priority || '', task.due ? `due ${task.due}` : '', task.scheduled ? `scheduled ${task.scheduled}` : '']
           .filter(Boolean)
@@ -1977,7 +2281,7 @@ export class CadenceAppView extends obsidian.ItemView {
     ];
   }
 
-  async _renderWidgetByKind(col, card, getWidgetEntities) {
+  async _renderWidgetByKind(col: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const kind = String(card.kind || '').trim();
     if (!kind) return false;
     if (kind === 'kanban') {
@@ -2023,7 +2327,7 @@ export class CadenceAppView extends obsidian.ItemView {
     return false;
   }
 
-  _dashboardStateFor(surfaceId) {
+  _dashboardStateFor(surfaceId: string) {
     const state = this._dashboardState || (this._dashboardState = {});
     const persisted = this.plugin.settings.dashboardState || (this.plugin.settings.dashboardState = {});
     if (!state[surfaceId]) {
@@ -2041,7 +2345,7 @@ export class CadenceAppView extends obsidian.ItemView {
     } catch (_) {}
   }
 
-  async _resolveBaseWidgetTarget(card) {
+  async _resolveBaseWidgetTarget(card: CardLike) {
     const baseDef = card.base && typeof card.base === 'object' ? card.base : {};
     const entityKey = String(card.entity || baseDef.entity || '').trim();
     const mappedBase = entityKey ? entityBasePath(this.plugin.settings, entityKey) : '';
@@ -2049,13 +2353,13 @@ export class CadenceAppView extends obsidian.ItemView {
     const viewName = String(baseDef.view || baseDef.baseView || card.view || '').trim();
     const label = String(card.title || baseDef.label || baseDef.title || 'Base').trim();
     const description = String(card.description || baseDef.description || card.subtitle || '').trim();
-    const resolvedEntity = entityKey ? await this._resolveWidgetEntities(null, entityKey).catch(() => null) : null;
+    const resolvedEntity = entityKey ? await this._resolveWidgetEntities(null, entityKey).catch((): null => null) : null;
     const entityDef = resolvedEntity?.def || ENTITIES[entityKey] || null;
-    const summary = basePath ? await readBaseSummary(this.app, this.app.vault.getAbstractFileByPath(basePath)).catch(() => null) : null;
+    const summary = basePath ? await readBaseSummary(this.app, this.app.vault.getAbstractFileByPath(basePath) as obsidian.TFile).catch((): null => null) : null;
     return { baseDef, entityKey, basePath, viewName, label, description, entityDef, summary };
   }
 
-  async _renderBaseLinkWidget(root, card, getWidgetEntities) {
+  async _renderBaseLinkWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const { entityKey, basePath, viewName, label, description, entityDef, summary } = await this._resolveBaseWidgetTarget(card);
 
     const cardEl = root.createDiv({ cls: 'cad-dash-card cad-base-link-card' });
@@ -2080,7 +2384,7 @@ export class CadenceAppView extends obsidian.ItemView {
         meta.createSpan({ cls: 'cad-dashboard-inventory-chip', text: summary.typeFilters.join(', ') });
       }
     }
-    if (entityDef?.externalBaseView?.basePath) {
+    if ((entityDef?.externalBaseView as BaseViewRef | undefined)?.basePath) {
       body.createDiv({ cls: 'setting-item-description', text: `Entity-backed Base target for ${entityDef.label} is available through the configured entity mapping.` });
     }
     const actions = body.createDiv({ cls: 'cad-de-actions' });
@@ -2091,7 +2395,7 @@ export class CadenceAppView extends obsidian.ItemView {
         return;
       }
       if (!basePath) return;
-      const file: any = this.app.vault.getAbstractFileByPath(basePath);
+      const file = this.app.vault.getAbstractFileByPath(basePath);
       if (file instanceof obsidian.TFile) {
         await this.app.workspace.openLinkText(file.path, '', false);
       } else {
@@ -2110,9 +2414,9 @@ export class CadenceAppView extends obsidian.ItemView {
     }
   }
 
-  async _renderBaseEmbedWidget(root, card, getWidgetEntities) {
+  async _renderBaseEmbedWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const { entityKey, basePath, viewName, label, description, entityDef, summary } = await this._resolveBaseWidgetTarget(card);
-    const entitySource = entityKey ? await getWidgetEntities(this._widgetSourceSpec(card, entityKey), entityKey).catch(() => null) : null;
+    const entitySource = entityKey ? await getWidgetEntities(this._widgetSourceSpec(card, entityKey), entityKey).catch((): null => null) : null;
     const entities = entitySource?.entities || [];
     const titleFields = Array.isArray(card.titleFields) && card.titleFields.length
       ? card.titleFields
@@ -2143,7 +2447,7 @@ export class CadenceAppView extends obsidian.ItemView {
       }
     }
     meta.createSpan({ cls: 'cad-dashboard-inventory-chip', text: `${preview.length}${entities.length > preview.length ? ` / ${entities.length}` : ''} rows` });
-    if (entityDef?.externalBaseView?.basePath) {
+    if ((entityDef?.externalBaseView as BaseViewRef | undefined)?.basePath) {
       meta.createSpan({ cls: 'cad-dashboard-inventory-chip', text: 'external view' });
     }
 
@@ -2155,7 +2459,7 @@ export class CadenceAppView extends obsidian.ItemView {
         return;
       }
       if (!basePath) return;
-      const file: any = this.app.vault.getAbstractFileByPath(basePath);
+      const file = this.app.vault.getAbstractFileByPath(basePath);
       if (file instanceof obsidian.TFile) {
         await this.app.workspace.openLinkText(file.path, '', false);
       } else {
@@ -2169,11 +2473,11 @@ export class CadenceAppView extends obsidian.ItemView {
     }
 
     const list = body.createDiv({ cls: 'cad-home-list cad-base-embed-list' });
-    preview.forEach((entity) => {
+    preview.forEach((entity: EntityRecord) => {
       const row = list.createDiv({ cls: 'cad-home-row cad-base-embed-row' });
-      const title = titleFields.map((field) => String(entityValue(entity, field, entityDef) || '').trim()).find(Boolean) || entity.basename;
+      const title = titleFields.map((field: string) => String(entityValue(entity, field, entityDef) || '').trim()).find(Boolean) || entity.basename;
       const metaBits = metaFields
-        .map((field) => fmtValue(entityValue(entity, field, entityDef), entityDef?.fields?.find((f) => f.key === field)?.type))
+        .map((field: string) => fmtValue(entityValue(entity, field, entityDef), entityDef?.fields?.find((f) => f.key === field)?.type))
         .filter(Boolean);
       row.createDiv({ cls: 'cad-home-row-date', text: entity.file?.basename || '' });
       const main = row.createDiv({ cls: 'cad-home-row-main' });
@@ -2188,14 +2492,14 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _normalizeBaseViewHeight(value) {
+  _normalizeBaseViewHeight(value: unknown) {
     if (value === undefined || value === null || value === '' || value === 0 || value === '0') return null;
     if (String(value).trim().toLowerCase() === 'auto') return null;
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? n : 360;
   }
 
-  async _renderBaseViewWidget(root, card, getWidgetEntities) {
+  async _renderBaseViewWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const target = await this._resolveBaseWidgetTarget(card);
     const { basePath, viewName, label } = target;
 
@@ -2204,7 +2508,7 @@ export class CadenceAppView extends obsidian.ItemView {
       return;
     }
 
-    const file: any = this.app.vault.getAbstractFileByPath(basePath);
+    const file = this.app.vault.getAbstractFileByPath(basePath);
     if (!(file instanceof obsidian.TFile)) {
       await this._renderBaseViewFallback(root, card, getWidgetEntities, `Base file not found: ${basePath}`);
       return;
@@ -2228,7 +2532,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
   }
 
-  async _mountLiveBaseView(body, file, basePath, viewName) {
+  async _mountLiveBaseView(body: HTMLElement, file: obsidian.TFile, basePath: string, viewName: string) {
     const linktext = viewName ? `${basePath}#${viewName}` : basePath;
     const md = `![[${linktext}]]`;
     if (obsidian.MarkdownRenderer?.renderMarkdown) {
@@ -2254,7 +2558,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _hasLiveBaseEmbedContent(body, md, linktext) {
+  _hasLiveBaseEmbedContent(body: HTMLElement, md: string, linktext: string) {
     const renderedText = String(body.textContent || '').trim();
     const basePathOnly = String(linktext || '').split('#')[0] || '';
     if (!body.childElementCount) return false;
@@ -2281,8 +2585,8 @@ export class CadenceAppView extends obsidian.ItemView {
     return genericText.length > 0;
   }
 
-  async _mountLiveBaseViewViaEmbedRegistry(body, file, basePath, viewName) {
-    const reg = (this.app as any).embedRegistry;
+  async _mountLiveBaseViewViaEmbedRegistry(body: HTMLElement, file: obsidian.TFile, basePath: string, viewName: string) {
+    const reg = (this.app as AppWithInternals).embedRegistry;
     const creator = reg?.embedByExtension?.base || reg?.getEmbedCreator?.(file);
     if (!creator) throw new Error('Base embed creator unavailable');
     const linktext = viewName ? `${basePath}#${viewName}` : basePath;
@@ -2302,7 +2606,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
   }
 
-  async _renderBaseViewFallback(root, card, getWidgetEntities, reason) {
+  async _renderBaseViewFallback(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities, reason: string) {
     const mode = String(card.fallback || 'preview').trim().toLowerCase();
     if (mode === 'preview') {
       await this._renderBaseEmbedWidget(root, card, getWidgetEntities);
@@ -2320,7 +2624,7 @@ export class CadenceAppView extends obsidian.ItemView {
       .createDiv({ cls: 'cad-soon-desc', text: `Base view unavailable (${reason})` });
   }
 
-  async _renderBaseViewFallbackContent(body, card, getWidgetEntities, reason) {
+  async _renderBaseViewFallbackContent(body: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities, reason: string) {
     const mode = String(card.fallback || 'preview').trim().toLowerCase();
     if (mode === 'link') {
       const target = await this._resolveBaseWidgetTarget(card);
@@ -2334,14 +2638,14 @@ export class CadenceAppView extends obsidian.ItemView {
     if (mode === 'preview' && typeof getWidgetEntities === 'function') {
       const target = await this._resolveBaseWidgetTarget(card);
       const resolved = target.entityKey
-        ? await getWidgetEntities(this._widgetSourceSpec(card, target.entityKey), target.entityKey).catch(() => null)
+        ? await getWidgetEntities(this._widgetSourceSpec(card, target.entityKey), target.entityKey).catch((): null => null)
         : null;
       const entities = Array.isArray(resolved?.entities) ? resolved.entities : [];
       const rows = entities.slice(0, Math.max(1, Number(card.limit || 5) || 5));
       body.createDiv({ cls: 'cad-soon-desc', text: reason });
       if (rows.length) {
         const list = body.createDiv({ cls: 'cad-base-embed-list cad-base-view-preview-list' });
-        rows.forEach((entity) => {
+        rows.forEach((entity: EntityRecord & Frontmatter) => {
           const row = list.createDiv({ cls: 'cad-base-embed-row' });
           row.createDiv({ cls: 'cad-home-row-title', text: entity?.title || entity?.name || entity?.file?.basename || entity?.basename || 'Untitled' });
           if (entity?.file) {
@@ -2361,7 +2665,7 @@ export class CadenceAppView extends obsidian.ItemView {
     body.createDiv({ cls: 'cad-soon-desc', text: `Base view unavailable (${reason})` });
   }
 
-  async _resolveMarkdownWidgetContent(card) {
+  async _resolveMarkdownWidgetContent(card: CardLike) {
     const source = card.source;
     const body = String(card.body || card.markdown || card.text || '').trim();
     const heading = String(card.heading || card.section || '').trim();
@@ -2372,7 +2676,7 @@ export class CadenceAppView extends obsidian.ItemView {
       : String(source?.file || source?.path || source?.note || source?.source || '').trim();
     if (!sourcePath) return { text: '', sourcePath: '' };
 
-    const file: any = this.app.vault.getAbstractFileByPath(sourcePath);
+    const file = this.app.vault.getAbstractFileByPath(sourcePath);
     if (!(file instanceof obsidian.TFile)) return { text: '', sourcePath };
     let content;
     try { content = await this.app.vault.read(file); }
@@ -2382,11 +2686,11 @@ export class CadenceAppView extends obsidian.ItemView {
     const sections = parseH2Sections(content);
     if (sections[heading] != null) return { text: sections[heading], sourcePath: file.path };
     const normalizedHeading = heading.toLowerCase();
-    const match = Object.entries<any>(sections).find(([key]) => key.trim().toLowerCase() === normalizedHeading);
+    const match = Object.entries(sections).find(([key]) => key.trim().toLowerCase() === normalizedHeading);
     return { text: match ? match[1] : content, sourcePath: file.path };
   }
 
-  async _renderMarkdownWidget(root, card) {
+  async _renderMarkdownWidget(root: HTMLElement, card: CardLike) {
     const title = String(card.title || 'Note').trim();
     const subtitle = String(card.subtitle || card.description || '').trim();
     const { text, sourcePath } = await this._resolveMarkdownWidgetContent(card);
@@ -2413,7 +2717,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
   }
 
-  _normalizeActionSpec(action) {
+  _normalizeActionSpec(action: ActionInput): ActionSpec | null {
     if (!action) return null;
     if (typeof action === 'string') return { label: action, command: action };
     if (typeof action !== 'object' || Array.isArray(action)) return null;
@@ -2428,7 +2732,7 @@ export class CadenceAppView extends obsidian.ItemView {
     return spec;
   }
 
-  async _runActionSpec(action) {
+  async _runActionSpec(action: ActionInput) {
     const spec = this._normalizeActionSpec(action);
     if (!spec) return;
     if (spec.type === 'surface' || spec.surface) {
@@ -2446,7 +2750,7 @@ export class CadenceAppView extends obsidian.ItemView {
     if (spec.type === 'command' || spec.command) {
       if (spec.command) {
         try {
-          await (this.app as any).commands.executeCommandById(spec.command);
+          await (this.app as AppWithInternals).commands.executeCommandById(spec.command);
         } catch (e) {
           new obsidian.Notice(`Failed to run command: ${e.message}`);
         }
@@ -2459,7 +2763,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
     if (spec.type === 'note' || spec.path) {
       if (!spec.path) return;
-      const file: any = this.app.vault.getAbstractFileByPath(spec.path);
+      const file = this.app.vault.getAbstractFileByPath(spec.path);
       if (file instanceof obsidian.TFile) {
         await this.app.workspace.openLinkText(file.path, '', false);
       } else {
@@ -2474,7 +2778,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
   }
 
-  async _renderActionsWidget(root, card) {
+  async _renderActionsWidget(root: HTMLElement, card: CardLike) {
     const actions = Array.isArray(card.actions)
       ? card.actions
       : Array.isArray(card.buttons)
@@ -2496,7 +2800,7 @@ export class CadenceAppView extends obsidian.ItemView {
       bar.createDiv({ cls: 'cad-empty', text: 'No actions configured.' });
       return;
     }
-    actions.map((action) => this._normalizeActionSpec(action)).filter(Boolean).forEach((action) => {
+    actions.map((action: ActionInput) => this._normalizeActionSpec(action)).filter(Boolean).forEach((action: ActionSpec) => {
       const isCreate = !!action.entityKey;
       const isPrimaryAction = action.type === 'quick-capture' || action.type === 'today-task' || isCreate || !!action.primary;
       const btn = bar.createEl('button', {
@@ -2510,13 +2814,13 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _renderProductivitySummaryWidget(root) {
+  async _renderProductivitySummaryWidget(root: HTMLElement) {
     const snap = await this._productivitySnapshot();
     const card = root.createDiv({ cls: 'cad-dash-card' });
     card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'PRODUCTIVITY SUMMARY' });
     const body = card.createDiv({ cls: 'cad-dash-card-body' });
     const grid = body.createDiv({ cls: 'cad-stat-grid' });
-    const stat = (label, value, sub, accent) => {
+    const stat = (label: string, value: string | number, sub: string, accent: string) => {
       const c = grid.createDiv({ cls: 'cad-stat-card' });
       if (accent) c.dataset.accent = accent;
       c.createDiv({ cls: 'cad-stat-label', text: label });
@@ -2530,7 +2834,7 @@ export class CadenceAppView extends obsidian.ItemView {
     stat('JOURNAL', snap.totalJournalChars.toLocaleString(), `${taskSource} activity`, 'warn');
   }
 
-  async _renderProductivityTrendWidget(root) {
+  async _renderProductivityTrendWidget(root: HTMLElement) {
     const snap = await this._productivitySnapshot();
     const card = root.createDiv({ cls: 'cad-dash-card' });
     card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'PRODUCTIVITY TREND' });
@@ -2563,7 +2867,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _renderProductivityWeekdayWidget(root) {
+  async _renderProductivityWeekdayWidget(root: HTMLElement) {
     const snap = await this._productivitySnapshot();
     const card = root.createDiv({ cls: 'cad-dash-card' });
     card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'COMPLETION BY WEEKDAY' });
@@ -2586,7 +2890,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _renderProductivityNotesWidget(root) {
+  async _renderProductivityNotesWidget(root: HTMLElement) {
     const snap = await this._productivitySnapshot();
     const card = root.createDiv({ cls: 'cad-dash-card' });
     card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'TASK NOTES' });
@@ -2596,7 +2900,7 @@ export class CadenceAppView extends obsidian.ItemView {
       return;
     }
     const list = body.createDiv({ cls: 'cad-home-list' });
-    snap.taskNotes.slice(0, 10).forEach((task) => {
+    snap.taskNotes.slice(0, 10).forEach((task: ProductivityTaskRowLike) => {
       const row = list.createDiv({ cls: 'cad-home-row' });
       row.createDiv({ cls: 'cad-home-row-title', text: task.text || task.title || 'Task note' });
       row.createDiv({ cls: 'cad-home-row-meta', text: `${task.date || '—'} · ${task.done ? 'done' : 'open'}` });
@@ -2604,7 +2908,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _renderSelectorWidget(root, card, getWidgetEntities) {
+  async _renderSelectorWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const surfaceId = this.mode;
     const state = this._dashboardStateFor(surfaceId);
     const key = String(card.key || card.name || card.field || card.entity || '').trim();
@@ -2631,7 +2935,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const row = body.createDiv({ cls: 'cad-selector-row' });
     const select = row.createEl('select', { cls: 'dropdown cad-selector-select' });
 
-    const options = [];
+    const options: SelectorOption[] = [];
     const allLabel = String(card.allLabel || 'All').trim();
     options.push({ value: '', label: allLabel, filter: 'true' });
 
@@ -2646,7 +2950,7 @@ export class CadenceAppView extends obsidian.ItemView {
       const q = Math.floor(m / 3);
       const quarterStart = startOfDay(new Date(y, q * 3, 1));
       const quarterEnd = startOfDay(new Date(y, q * 3 + 3, 0));
-      const addRange = (value, labelText, from, to) => {
+      const addRange = (value: string, labelText: string, from: Date, to: Date) => {
         const field = String(card.field || 'date').trim();
         options.push({
           value,
@@ -2660,7 +2964,7 @@ export class CadenceAppView extends obsidian.ItemView {
       addRange('last-30-days', 'Last 30 days', addDays(today, -29), today);
       addRange('this-quarter', 'This quarter', quarterStart, quarterEnd);
     } else if (Array.isArray(card.options) && card.options.length) {
-      card.options.forEach((opt) => {
+      card.options.forEach((opt: SelectorOptionLike) => {
         if (opt == null) return;
         if (typeof opt === 'string' || typeof opt === 'number') {
           const value = String(opt);
@@ -2678,11 +2982,11 @@ export class CadenceAppView extends obsidian.ItemView {
         }
       });
     } else if (card.entity && card.field) {
-      const resolved = await getWidgetEntities(this._widgetSourceSpec(card, card.entity), card.entity).catch(() => null);
+      const resolved = await getWidgetEntities(this._widgetSourceSpec(card, card.entity), card.entity).catch((): null => null);
       const entities = resolved?.entities || [];
       const def = resolved?.def || ENTITIES[card.entity];
       const fieldKey = String(card.field || '').trim();
-      const values = new Set<any>();
+      const values = new Set<string>();
       entities.forEach((entity) => {
         const raw = entityValue(entity, fieldKey, def);
         const valuesList = Array.isArray(raw) ? raw : [raw];
@@ -2718,7 +3022,7 @@ export class CadenceAppView extends obsidian.ItemView {
     hint.createSpan({ cls: 'cad-selector-current', text: select.value || allLabel });
   }
 
-  async _renderDateRangeWidget(root, card) {
+  async _renderDateRangeWidget(root: HTMLElement, card: CardLike) {
     const surfaceId = this.mode;
     const state = this._dashboardStateFor(surfaceId);
     const key = String(card.key || card.name || card.field || 'dateRange').trim();
@@ -2748,11 +3052,11 @@ export class CadenceAppView extends obsidian.ItemView {
       { value: 'custom', label: 'Custom', from: state[startKey] ? new Date(state[startKey]) : '', to: state[endKey] ? new Date(state[endKey]) : '' },
     ];
 
-    const toYmd = (value) => {
+    const toYmd = (value: string | number | Date) => {
       const d = value instanceof Date ? value : new Date(value);
       return isNaN(d.getTime()) ? '' : ymd(d);
     };
-    const updateFromPreset = (presetValue) => {
+    const updateFromPreset = (presetValue: string) => {
       const preset = presets.find((item) => item.value === presetValue) || presets[3];
       state[presetKey] = preset.value;
       state[key] = preset.value;
@@ -2819,7 +3123,7 @@ export class CadenceAppView extends obsidian.ItemView {
     hint.createSpan({ cls: 'cad-selector-current', text: state[presetKey] || current });
   }
 
-  async _renderKanbanWidget(root, card, getWidgetEntities) {
+  async _renderKanbanWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const resolved = await getWidgetEntities(this._widgetSourceSpec(card, card.entity), card.entity);
     const def = resolved.def || ENTITIES[resolved.entityKey || card.entity];
     const entities = resolved.entities || [];
@@ -2836,7 +3140,7 @@ export class CadenceAppView extends obsidian.ItemView {
       : (Array.isArray(card.metaFields) && card.metaFields.length ? card.metaFields : [groupBy, valueField, 'company'].filter(Boolean));
     const sortMode = String(card.sort || 'mtime-desc').trim().toLowerCase();
 
-    const normalizeGroup = (entry) => {
+    const normalizeGroup = (entry: KanbanGroupInput) => {
       if (entry == null) return null;
       if (typeof entry === 'object' && !Array.isArray(entry)) {
         const value = String(entry.value ?? entry.id ?? entry.key ?? entry.label ?? '').trim();
@@ -2855,7 +3159,7 @@ export class CadenceAppView extends obsidian.ItemView {
       return { value, label: value, empty: '' };
     };
 
-    let groups = [];
+    let groups: KanbanGroup[] = [];
     if (Array.isArray(card.columns) && card.columns.length) {
       groups = card.columns.map(normalizeGroup).filter(Boolean);
     } else if (Array.isArray(card.groups) && card.groups.length) {
@@ -2866,14 +3170,14 @@ export class CadenceAppView extends obsidian.ItemView {
         groups = optionField.options.map(normalizeGroup).filter(Boolean);
       } else {
         groups = [...new Set(entities.map((entity) => String(entityValue(entity, groupBy, def) || '').trim()).filter(Boolean))]
-          .sort((a: any, b: any) => a.localeCompare(b))
+          .sort((a: string, b: string) => a.localeCompare(b))
           .map((value) => ({ value, label: value, empty: '' }));
       }
     }
     if (!groups.length) groups = [{ value: '(blank)', label: '(blank)', empty: '' }];
 
-    const orderForSort = new Map(groups.map((group, idx) => [group.value, idx]));
-    const sortEntities = (items) => {
+    const orderForSort = new Map(groups.map((group, idx): [string, number] => [group.value, idx]));
+    const sortEntities = (items: EntityRecord[]) => {
       const sorted = [...items];
       if (sortMode === 'title') {
         sorted.sort((a, b) => String(entityPrimaryValue(a, def)).localeCompare(String(entityPrimaryValue(b, def))));
@@ -2895,7 +3199,7 @@ export class CadenceAppView extends obsidian.ItemView {
 
     const board = root.createDiv({ cls: 'cad-kanban-board' });
     const isMobile = !!(obsidian.Platform && obsidian.Platform.isMobile);
-    let activeDragPath = null;
+    let activeDragPath: string | null = null;
     groups.forEach((group) => {
       const items = entities.filter((e) => String(entityValue(e, groupBy, def) || '').trim() === group.value);
       const columnValue = items.reduce((sum, e) => sum + (Number(entityValue(e, valueField, def)) || 0), 0);
@@ -2918,10 +3222,10 @@ export class CadenceAppView extends obsidian.ItemView {
       }
 
       const list = col.createDiv({ cls: 'cad-kanban-col-list' });
-      const onDropEntity = async (filePath) => {
+      const onDropEntity = async (filePath: string) => {
         if (!filePath || !groupBy) return;
         try {
-          const file: any = this.app.vault.getAbstractFileByPath(filePath);
+          const file = this.app.vault.getAbstractFileByPath(filePath);
           if (!(file instanceof obsidian.TFile)) return;
           await this.app.fileManager.processFrontMatter(file, (fm) => {
             fm[groupBy] = group.value;
@@ -2931,7 +3235,7 @@ export class CadenceAppView extends obsidian.ItemView {
           new obsidian.Notice(`Failed to move: ${e.message}`);
         }
       };
-      const allowDrop = (event) => {
+      const allowDrop = (event: DragEvent) => {
         const hasPath = !!event.dataTransfer?.getData('text/cadence-entity') || !!activeDragPath;
         if (!hasPath) return false;
         event.preventDefault();
@@ -2958,14 +3262,14 @@ export class CadenceAppView extends obsidian.ItemView {
           const cardEl = list.createDiv({ cls: 'cad-kanban-card' });
           cardEl.dataset.path = entity.file.path;
           const title = titleFields
-            .map((field) => String(entityValue(entity, field, def) || '').trim())
+            .map((field: string) => String(entityValue(entity, field, def) || '').trim())
             .find(Boolean) || entityPrimaryValue(entity, def) || entity.basename;
           cardEl.createDiv({ cls: 'cad-kanban-card-title', text: title });
           const meta = cardEl.createDiv({ cls: 'cad-kanban-card-meta' });
           const value = valueField ? entityValue(entity, valueField, def) : null;
           if (value != null && value !== '') meta.createSpan({ cls: 'cad-kanban-card-value', text: fmtValue(value, 'currency') });
           const metaText = metaFields
-            .map((field) => {
+            .map((field: string) => {
               if (!field) return '';
               if (field === valueField) return '';
               const current = entityValue(entity, field, def);
@@ -3001,7 +3305,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _renderListWidget(root, card, getWidgetEntities) {
+  async _renderListWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const rows = await this._resolveCardRows(card, getWidgetEntities);
     const cardEl = root.createDiv({ cls: 'cad-dash-card cad-list-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'list' }, card));
@@ -3053,7 +3357,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _renderBarChartWidget(root, card, getWidgetEntities) {
+  async _renderBarChartWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const resolved = await getWidgetEntities(this._widgetSourceSpec(card, card.entity), card.entity);
     const builtInData = resolved.metadata?.builtInData || resolved.metadata?.providerData || null;
     const builtInName = String(resolved.source?.builtIn || '').trim().toLowerCase();
@@ -3070,7 +3374,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const valueField = String(card.valueField || card.field || (isProductivityBuiltIn ? '' : (def ? dealValueField(def) : ''))).trim();
     const limit = Math.max(1, Number(card.limit || 8) || 8);
     const labels = new Map();
-    const normalizeGroup = (entry) => {
+    const normalizeGroup = (entry: KanbanGroupInput) => {
       if (entry == null) return null;
       if (typeof entry === 'object' && !Array.isArray(entry)) {
         const value = String(entry.value ?? entry.id ?? entry.key ?? entry.label ?? '').trim();
@@ -3081,7 +3385,7 @@ export class CadenceAppView extends obsidian.ItemView {
       if (!value) return null;
       return { value, label: value };
     };
-    let groups = [];
+    let groups: { value: string; label: string }[] = [];
     if (Array.isArray(card.groups) && card.groups.length) {
       groups = card.groups.map(normalizeGroup).filter(Boolean);
     } else if (Array.isArray(card.columns) && card.columns.length) {
@@ -3092,14 +3396,14 @@ export class CadenceAppView extends obsidian.ItemView {
         groups = fieldDef.options.map(normalizeGroup).filter(Boolean);
       } else {
         groups = [...new Set(entities.map((entity) => String(entityValue(entity, groupBy, def) || '').trim()).filter(Boolean))]
-          .sort((a: any, b: any) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+          .sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
           .map((value) => ({ value, label: value }));
       }
     }
     if (!groups.length) groups = [{ value: '(blank)', label: '(blank)' }];
-    const valuesForGroup = (groupValue) => entities.filter((entity) => String(entityValue(entity, groupBy, def) || '').trim() === groupValue);
-    const numericValue = (entity) => Number(entityValue(entity, valueField, def)) || 0;
-    const computeValue = (items) => {
+    const valuesForGroup = (groupValue: string) => entities.filter((entity) => String(entityValue(entity, groupBy, def) || '').trim() === groupValue);
+    const numericValue = (entity: EntityRecord) => Number(entityValue(entity, valueField, def)) || 0;
+    const computeValue = (items: EntityRecord[]) => {
       if (metric === 'sum') return items.reduce((sum, entity) => sum + numericValue(entity), 0);
       if (metric === 'avg') return items.length ? items.reduce((sum, entity) => sum + numericValue(entity), 0) / items.length : 0;
       if (metric === 'unique' || metric === 'uniquecount') {
@@ -3112,7 +3416,7 @@ export class CadenceAppView extends obsidian.ItemView {
       ? this._resolveBuiltInRows(Object.assign({}, card, { source: Object.assign({}, resolved.source, { section: resolved.source?.section || card.section || '' }) }), resolved)
       : null;
     const chartValues = Array.isArray(builtInRows) && builtInRows.length
-      ? builtInRows.slice(0, limit).map((row) => {
+      ? builtInRows.slice(0, limit).map((row): BarChartEntry => {
         const label = String(row.title || '').trim() || '—';
         const value = dashboardProviderRowValue(row, valueField);
         return {
@@ -3122,7 +3426,7 @@ export class CadenceAppView extends obsidian.ItemView {
           meta: row.meta || '',
         };
       })
-      : groups.map((group) => {
+      : groups.map((group): BarChartEntry => {
         const items = valuesForGroup(group.value);
         return {
           group,
@@ -3143,7 +3447,7 @@ export class CadenceAppView extends obsidian.ItemView {
       body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
     }
     const chart = body.createDiv({ cls: 'cad-bar-chart cad-bar-chart-tall' });
-    chartValues.forEach((entry: any) => {
+    chartValues.forEach((entry) => {
       labels.set(entry.group.value, entry.group.label);
       const col = chart.createDiv({ cls: 'cad-bar-col' });
       const bar = col.createDiv({ cls: 'cad-bar' });
@@ -3166,7 +3470,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _dashboardStats(root, stats) {
+  _dashboardStats(root: HTMLElement, stats: CardLike[]) {
     const grid = root.createDiv({ cls: 'cad-stat-grid' });
     stats.forEach((item) => {
       const card = grid.createDiv({ cls: 'cad-stat-card' });
@@ -3181,7 +3485,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _renderWidgetCatalog(root) {
+  _renderWidgetCatalog(root: HTMLElement) {
     const section = root.createDiv({ cls: 'cad-widget-catalog' });
     section.createDiv({ cls: 'cad-section-label-lg', text: 'Widget catalog' });
     section.createEl('p', {
@@ -3214,7 +3518,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _renderDashboardInventory(root) {
+  _renderDashboardInventory(root: HTMLElement) {
     const section = root.createDiv({ cls: 'cad-dashboard-inventory' });
     section.createDiv({ cls: 'cad-section-label-lg', text: 'Built-in dashboard inventory' });
     section.createEl('p', {
@@ -3223,8 +3527,8 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     const grid = section.createDiv({ cls: 'cad-dashboard-inventory-grid' });
-    Object.entries<any>(BUILTIN_DASHBOARD_DEFAULTS).forEach(([id, config]) => {
-      const summary = summarizeDashboardBlueprint(id, config);
+    Object.entries(BUILTIN_DASHBOARD_DEFAULTS).forEach(([id, config]) => {
+      const summary = summarizeDashboardBlueprint(id, config as DashboardBlueprint);
       const card = grid.createDiv({ cls: 'cad-dashboard-inventory-card' });
       const head = card.createDiv({ cls: 'cad-dashboard-inventory-head' });
       head.createDiv({ cls: 'cad-dashboard-inventory-title', text: summary.title });
@@ -3248,7 +3552,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _recentRows(entityKey, entities, titleFields = ['title', 'name'], metaFields = ['status'], sortSpec = null, limit = 6, _entityDef = null) {
+  _recentRows(entityKey: string, entities: EntityRecord[], titleFields: string[] = ['title', 'name'], metaFields: string[] = ['status'], sortSpec: unknown = null, limit: number = 6, _entityDef: EntityDef | null = null) {
     const def = ENTITIES[entityKey];
     const sort = normalizeWidgetSortSpec(sortSpec);
     const sorted = [...entities];
@@ -3267,14 +3571,14 @@ export class CadenceAppView extends obsidian.ItemView {
       });
   }
 
-  _dueRows(entityKey, entities, dateFields, titleFields = ['title', 'name'], limit = 6) {
+  _dueRows(entityKey: string, entities: EntityRecord[], dateFields: string[], titleFields: string[] = ['title', 'name'], limit: number = 6) {
     const today = startOfDay(new Date());
     const horizon = addDays(today, 30);
     const def = ENTITIES[entityKey];
     return entities
       .map((entity) => ({ entity, date: this._dateValue(entity, entityKey, dateFields) }))
       .filter((item) => item.date && item.date.getTime() <= horizon.getTime())
-      .sort((a, b) => a.date - b.date)
+      .sort((a, b) => (a.date as unknown as number) - (b.date as unknown as number))
       .slice(0, Math.max(1, Number(limit) || 6))
       .map(({ entity, date }) => {
         const titleField = titleFields.find((field) => entityValue(entity, field, def));
@@ -3286,7 +3590,7 @@ export class CadenceAppView extends obsidian.ItemView {
       });
   }
 
-  _renderFinanceStatementLegend(root) {
+  _renderFinanceStatementLegend(root: HTMLElement) {
     const card = root.createDiv({ cls: 'cad-dash-card cad-finance-legend' });
     card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'FINANCIAL STATEMENT LEGEND' });
     const body = card.createDiv({ cls: 'cad-dash-card-body cad-finance-legend-grid' });
@@ -3305,38 +3609,38 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async renderClientWorkDashboard(root, opts: any = {}) {
+  async renderClientWorkDashboard(root: HTMLElement, opts: DashboardRenderOptions = {}) {
     return this.renderConfigDashboard('client-work.dashboard', root, opts);
   }
 
-  async renderFinanceGLDashboard(root) {
+  async renderFinanceGLDashboard(root: HTMLElement) {
     return this.renderConfigDashboard('finance.gl.overview', root);
   }
 
-  async renderFinanceSetupDashboard(root) {
+  async renderFinanceSetupDashboard(root: HTMLElement) {
     return this.renderConfigDashboard('finance.setup.overview', root);
   }
 
-  async renderProcurementDashboard(root) {
+  async renderProcurementDashboard(root: HTMLElement) {
     return this.renderConfigDashboard('procurement.overview', root);
   }
 
-  async renderTaxDashboard(root) {
+  async renderTaxDashboard(root: HTMLElement) {
     return this.renderConfigDashboard('tax.dashboard', root);
   }
 
-  async renderPartnerWorkspaceDashboard(root) {
+  async renderPartnerWorkspaceDashboard(root: HTMLElement) {
     return this.renderConfigDashboard('prm.partners.overview', root);
   }
 
-  async renderCampaignWorkspaceDashboard(root) {
+  async renderCampaignWorkspaceDashboard(root: HTMLElement) {
     return this.renderConfigDashboard('crm.campaigns.overview', root);
   }
 
-  async renderExport(root) {
+  async renderExport(root: HTMLElement) {
     this._renderPageHeader(root, 'Export', 'Export your data to an Excel workbook');
 
-    const section = (parent, title, desc) => {
+    const section = (parent: HTMLElement, title: string, desc: string) => {
       const s = parent.createDiv({ cls: 'cad-data-section' });
       s.createDiv({ cls: 'cad-data-section-title', text: title });
       if (desc) s.createDiv({ cls: 'cad-data-section-desc', text: desc });
@@ -3387,7 +3691,7 @@ export class CadenceAppView extends obsidian.ItemView {
         const openLink = exportStatus.createEl('a', { cls: 'cad-data-open-link', text: 'Open file', href: '#' });
         openLink.addEventListener('click', (evt) => {
           evt.preventDefault();
-          (this.app as any).openWithDefaultApp(path);
+          (this.app as AppWithInternals).openWithDefaultApp(path);
         });
       } catch (e) {
         exportStatus.className = 'cad-data-status cad-data-status-error';
@@ -3417,11 +3721,11 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  renderImport(root) {
+  renderImport(root: HTMLElement) {
     new CadenceImportModal(this.app, {}).open();
   }
 
-  async renderDashboardEditor(root) {
+  async renderDashboardEditor(root: HTMLElement) {
     this._renderPageHeader(root, 'Surface Designer', 'Customize dashboards, reports and widgets');
 
     const builtinIds = Object.keys(BUILTIN_DASHBOARD_DEFAULTS);
@@ -3485,7 +3789,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const editorPane  = split.createDiv({ cls: 'cad-de-editor-pane' });
     const previewPane = split.createDiv({ cls: 'cad-de-preview-pane' });
 
-    const getConfig = (id) => {
+    const getConfig = (id: string): DashConfigLike => {
       const plannerConfig = (WORKSPACE_CONFIG.planner || {})[id];
       if (plannerConfig) return normalizeDashboardConfigShape(JSON.parse(JSON.stringify(plannerConfig)));
       const ws = (WORKSPACE_CONFIG.dashboards || {})[id];
@@ -3495,7 +3799,7 @@ export class CadenceAppView extends obsidian.ItemView {
       return { title: id, layout: [] };
     };
 
-    const renderPreview = async (id) => {
+    const renderPreview = async (id: string) => {
       previewPane.empty();
       const prevDash = WORKSPACE_CONFIG.dashboards;
       const prevPlanner = WORKSPACE_CONFIG.planner;
@@ -3512,15 +3816,15 @@ export class CadenceAppView extends obsidian.ItemView {
       }
     };
 
-    let debounceTimer;
-    const triggerPreview = (id) => {
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+    const triggerPreview = (id: string) => {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => renderPreview(id), 400);
     };
 
-    const isEditable = (id) => !!(WORKSPACE_CONFIG.dashboards || {})[id] || !!(WORKSPACE_CONFIG.planner || {})[id] || customOnlyIds.includes(id);
+    const isEditable = (id: string) => !!(WORKSPACE_CONFIG.dashboards || {})[id] || !!(WORKSPACE_CONFIG.planner || {})[id] || customOnlyIds.includes(id);
 
-    const renderEditorPane = (id) => {
+    const renderEditorPane = (id: string) => {
       editorPane.empty();
       const editable = isEditable(id);
       const config = this._dashEditorDraft;
@@ -3532,8 +3836,8 @@ export class CadenceAppView extends obsidian.ItemView {
 
       const reRender = () => { renderEditorPane(id); triggerPreview(id); };
       const validationStatus = editorPane.createDiv({ cls: 'cad-de-validation-status' });
-      let validationTimer = null;
-      const setValidationStatus = (message, ok) => {
+      let validationTimer: ReturnType<typeof setTimeout> | null = null;
+      const setValidationStatus = (message: string, ok: boolean) => {
         validationStatus.setText(message);
         validationStatus.toggleClass('is-valid', !!ok);
         validationStatus.toggleClass('is-invalid', !ok);
@@ -3607,7 +3911,7 @@ export class CadenceAppView extends obsidian.ItemView {
           const resetBtn = actions.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Reset to built-in' });
           resetBtn.addEventListener('click', async () => {
             const stores = id.startsWith('planner.') ? ['planner', 'dashboards'] : ['dashboards'];
-            stores.forEach((targetStore) => {
+            stores.forEach((targetStore: 'planner' | 'dashboards') => {
               if (!WORKSPACE_CONFIG[targetStore]) return;
               delete WORKSPACE_CONFIG[targetStore][id];
               if (Object.keys(WORKSPACE_CONFIG[targetStore]).length === 0) delete WORKSPACE_CONFIG[targetStore];
@@ -3623,7 +3927,7 @@ export class CadenceAppView extends obsidian.ItemView {
       validateDraft();
     };
 
-    const renderAll = (id) => {
+    const renderAll = (id: string) => {
       this._dashEditorSurfaceId = id;
       this._dashEditorDraft = getConfig(id);
       renderEditorPane(id);
@@ -3646,10 +3950,10 @@ export class CadenceAppView extends obsidian.ItemView {
     renderAll(initialId);
   }
 
-  _renderDashboardDesigner(pane, config, editable, reRender, triggerPreview) {
+  _renderDashboardDesigner(pane: HTMLElement, config: DashConfigLike, editable: boolean, reRender: () => void, triggerPreview: () => void) {
     const entityKeys = workspaceConfiguredEntityEntries(WORKSPACE_CONFIG).map(([key]) => key);
     const defaultEntityKey = entityKeys[0] || Object.keys(ENTITIES)[0] || 'contact';
-    const summarizeCardSource = (source) => {
+    const summarizeCardSource = (source: string | Frontmatter | unknown[] | null | undefined) => {
       if (!source) return '';
       if (typeof source === 'string') return source.trim();
       if (Array.isArray(source)) return `${source.length} items`;
@@ -3713,7 +4017,7 @@ export class CadenceAppView extends obsidian.ItemView {
         reRender();
       });
     }
-    (config.stats || []).forEach((stat, idx) => {
+    (config.stats || []).forEach((stat: CardLike, idx: number) => {
       const chip = statsSection.createDiv({ cls: 'cad-de-stat-chip' });
       const lbl = chip.createEl('input', { type: 'text', cls: 'cad-de-stat-label' });
       lbl.value = stat.label || ''; lbl.placeholder = 'LABEL'; lbl.disabled = !editable;
@@ -3746,7 +4050,7 @@ export class CadenceAppView extends obsidian.ItemView {
         reRender();
       });
     }
-    (config.controls || []).forEach((control, idx) => {
+    (config.controls || []).forEach((control: CardLike, idx: number) => {
       const chip = controlsSection.createDiv({ cls: 'cad-de-stat-chip cad-de-control-chip' });
       const lbl = chip.createEl('input', { type: 'text', cls: 'cad-de-stat-label' });
       lbl.value = control.title || control.label || ''; lbl.placeholder = 'LABEL'; lbl.disabled = !editable;
@@ -3766,15 +4070,15 @@ export class CadenceAppView extends obsidian.ItemView {
 
     // Normalize layout columns to arrays
     if (!config.layout) config.layout = [];
-    config.layout = config.layout.map(row => row.map(col => Array.isArray(col) ? col : [col]));
+    config.layout = config.layout.map((row: (CardLike | CardLike[])[]) => row.map(col => Array.isArray(col) ? col : [col]));
 
     // Layout board
     const layoutSection = pane.createDiv({ cls: 'cad-de-section' });
     layoutSection.createDiv({ cls: 'cad-de-section-label', text: 'Layout' });
 
-    let activeDrag = null;
+    let activeDrag: DesignerDragPos | null = null;
 
-    config.layout.forEach((row, rowIdx) => {
+    config.layout.forEach((row: CardLike[][], rowIdx: number) => {
       const rowEl = layoutSection.createDiv({ cls: 'cad-de-layout-row' });
       const rowHead = rowEl.createDiv({ cls: 'cad-de-row-head' });
       rowHead.createDiv({ cls: 'cad-de-row-label', text: `Row ${rowIdx + 1}` });
@@ -3893,7 +4197,7 @@ export class CadenceAppView extends obsidian.ItemView {
       const crSection = pane.createDiv({ cls: 'cad-de-section' });
       crSection.createDiv({ cls: 'cad-de-section-label', text: 'Conditional rows' });
       const newCard = () => ({ title: 'New Card', entity: defaultEntityKey, source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' });
-      (config.conditionalRows || []).forEach((cr, crIdx) => {
+      (config.conditionalRows || []).forEach((cr: Frontmatter, crIdx: number) => {
         const crEl = crSection.createDiv({ cls: 'cad-de-layout-row' });
         const crRowHead = crEl.createDiv({ cls: 'cad-de-row-head' });
         crRowHead.createDiv({ cls: 'cad-de-row-label', text: 'Show when' });
@@ -3913,7 +4217,7 @@ export class CadenceAppView extends obsidian.ItemView {
           delCr.addEventListener('click', () => { config.conditionalRows.splice(crIdx, 1); reRender(); });
         }
         const crCols = crEl.createDiv({ cls: 'cad-de-row-cols' });
-        (cr.cards || []).forEach((card, cardIdx) => {
+        (cr.cards || []).forEach((card: CardLike, cardIdx: number) => {
           const col = crCols.createDiv({ cls: 'cad-de-layout-col' });
           if (editable && (cr.cards || []).length > 1) {
             const delCol = col.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger cad-de-del-col', text: '× Col' });
@@ -3960,7 +4264,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
   }
 
-  _renderCardForm(parent, card, onChange) {
+  _renderCardForm(parent: HTMLElement, card: CardLike, onChange: () => void) {
     // These four names were referenced but never defined in the original
     // monolithic main.js — the widget editor threw ReferenceError on render.
     // Defined here with the values the surrounding code clearly intends.
@@ -3972,14 +4276,14 @@ export class CadenceAppView extends obsidian.ItemView {
     let _dlId = 0;
     const entityFieldKeys = [...new Set((ENTITIES[card.entity]?.fields || []).map((field) => field.key).filter(Boolean))];
     const fieldSuggestions = entityFieldKeys.length ? entityFieldKeys : ['title', 'name', 'status', 'value', 'date'];
-    const addSuggestion = (dl, value) => {
+    const addSuggestion = (dl: HTMLDataListElement | null, value: unknown) => {
       const text = String(value || '').trim();
       if (!dl || !text) return;
       if ([...dl.querySelectorAll('option')].some((opt) => opt.value === text)) return;
       dl.createEl('option', { value: text });
     };
-    const isScalarValue = (value) => value == null || ['string', 'number', 'boolean'].includes(typeof value);
-    const formatFieldValue = (value) => {
+    const isScalarValue = (value: unknown) => value == null || ['string', 'number', 'boolean'].includes(typeof value);
+    const formatFieldValue = (value: unknown) => {
       if (Array.isArray(value)) {
         if (value.every(isScalarValue)) return value.join(', ');
         return JSON.stringify(value, null, 2);
@@ -3987,7 +4291,7 @@ export class CadenceAppView extends obsidian.ItemView {
       if (value && typeof value === 'object') return JSON.stringify(value, null, 2);
       return value == null ? '' : String(value);
     };
-    const parseFieldValue = (value, current) => {
+    const parseFieldValue = (value: unknown, current: unknown) => {
       if (Array.isArray(current)) {
         if (current.every(isScalarValue)) {
           return String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
@@ -3999,7 +4303,7 @@ export class CadenceAppView extends obsidian.ItemView {
       }
       return value;
     };
-    const addRow = (label, key, opts?, combobox = false) => {
+    const addRow = (label: string, key: string, opts?: string[], combobox = false) => {
       const r = form.createDiv({ cls: 'cad-de-form-row' });
       r.createDiv({ cls: 'cad-de-form-label', text: label });
       if (opts && !combobox) {
@@ -4049,14 +4353,14 @@ export class CadenceAppView extends obsidian.ItemView {
       }
       return null;
     };
-    const getObjectField = (key, fallback: any = {}) => {
+    const getObjectField = (key: string, fallback: Frontmatter = {}) => {
       const current = card[key];
       if (current && typeof current === 'object' && !Array.isArray(current)) return current;
       return Object.assign({}, fallback);
     };
-    const setObjectField = (key, patch) => {
+    const setObjectField = (key: string, patch: Frontmatter) => {
       const next = getObjectField(key);
-      Object.entries<any>(patch).forEach(([prop, value]) => {
+      Object.entries(patch).forEach(([prop, value]) => {
         if (value == null || value === '') delete next[prop];
         else next[prop] = value;
       });
@@ -4106,7 +4410,7 @@ export class CadenceAppView extends obsidian.ItemView {
       const raw = String(source.mode || '').trim().toLowerCase();
       return raw || (String(source.builtIn || '').trim() ? 'built-in' : 'recent');
     })();
-    const setSourceField = (patch, opts: any = {}) => {
+    const setSourceField = (patch: Frontmatter, opts: { clearSource?: boolean } = {}) => {
       const normalizedPatch = Object.assign({}, patch);
       const next = Object.assign({}, getObjectField('source', { mode: sourceModeValue || 'recent' }), normalizedPatch);
       if (String(next.mode || '').trim() !== 'built-in') delete next.builtIn;
@@ -4207,8 +4511,8 @@ export class CadenceAppView extends obsidian.ItemView {
       setSourceField({ sort: sourceSort.value });
     });
 
-    const builtInSectionOptions = (builtInName) => {
-      const builtIns = {
+    const builtInSectionOptions = (builtInName: string) => {
+      const builtIns: Record<string, { value: string; label: string }[]> = {
         home: [
           { value: 'briefing', label: 'Briefing' },
           { value: 'inbox', label: 'Inbox' },
@@ -4236,13 +4540,13 @@ export class CadenceAppView extends obsidian.ItemView {
       };
       return builtIns[builtInName] || [];
     };
-    const inferBuiltInSection = (builtInName) => {
+    const inferBuiltInSection = (builtInName: string) => {
       const builtIn = String(builtInName || '').trim().toLowerCase();
       const title = String(config.title || card.title || '').trim().toLowerCase();
       const choices = builtInSectionOptions(builtIn);
       const byLabel = choices.find((choice) => String(choice.label || '').trim().toLowerCase() === title);
       if (byLabel) return byLabel.value;
-      const aliases = {
+      const aliases: Record<string, Record<string, string>> = {
         home: {
           'top of the day': 'briefing',
           briefing: 'briefing',
@@ -4348,11 +4652,11 @@ export class CadenceAppView extends obsidian.ItemView {
         source.base?.base_view ||
         ''
       ).trim();
-      const baseConfig = await parseBaseFile(this.app, basePath, baseViewName).catch(() => null);
+      const baseConfig = await parseBaseFile(this.app, basePath, baseViewName).catch((): null => null);
       if (!baseConfig) return;
       const baseFields = Array.isArray(baseConfig.fields) ? baseConfig.fields : [];
-      const extraFields = new Set<any>();
-      const addField = (field) => {
+      const extraFields = new Set<string>();
+      const addField = (field: EntityField) => {
         const key = String(field?.key || '').trim();
         if (!key) return;
         extraFields.add(key);
@@ -4433,7 +4737,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Generic entity LIST view ───────────── */
-  async renderEntityList(root, entityKey, opts: any = {}) {
+  async renderEntityList(root: HTMLElement, entityKey: string, opts: EntityListOptions = {}) {
     root.addClass('cadence-list');
     const def = ENTITIES[entityKey];
     if (!def) { this.renderComingSoon(root, SURFACE_BY_ID[this.mode]); return; }
@@ -4484,7 +4788,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Entity DETAIL view (in-app form, autosaves to frontmatter) ── */
-  async renderEntityDetail(root, entityKey, file) {
+  async renderEntityDetail(root: HTMLElement, entityKey: string, file: obsidian.TFile) {
     // Projects get a richer PM-style detail view
     if (entityKey === 'project') return this.renderProjectDetail(root, file);
 
@@ -4493,7 +4797,7 @@ export class CadenceAppView extends obsidian.ItemView {
     if (!def || !file) { this.closeEntityDetail(); return; }
 
     // Read current entity
-    const cache = this.app.metadataCache.getFileCache(file) || {};
+    const cache = this.app.metadataCache.getFileCache(file) || {} as obsidian.CachedMetadata;
     const fm = Object.assign({}, cache.frontmatter || {});
     const primaryKey = primaryFieldKey(def);
     const titleVal = primaryKey ? entityValue({ file, frontmatter: fm, basename: file.basename }, primaryKey, def) : file.basename;
@@ -4511,7 +4815,7 @@ export class CadenceAppView extends obsidian.ItemView {
     breadcrumb.createDiv({ cls: 'cad-detail-path', text: file.path });
 
     const headRight = head.createDiv({ cls: 'cad-detail-header-right' });
-    const savedBadge = headRight.createSpan({ cls: 'cad-detail-saved', text: '' });
+    const savedBadge: SavedBadgeEl = headRight.createSpan({ cls: 'cad-detail-saved', text: '' });
     const openNote = headRight.createEl('button', { cls: 'cad-btn', text: 'Open as note' });
     openNote.addEventListener('click', () => this.app.workspace.openLinkText(file.path, '', false));
     const deleteBtn = headRight.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Delete' });
@@ -4528,16 +4832,16 @@ export class CadenceAppView extends obsidian.ItemView {
 
     // Form
     const form = root.createDiv({ cls: 'cad-detail-form' });
-    let saveTimer = null;
+    let saveTimer: ReturnType<typeof setTimeout> | null = null;
     const flashSaved = () => {
       savedBadge.setText('Saved');
       savedBadge.addClass('show');
       clearTimeout(savedBadge._t);
       savedBadge._t = setTimeout(() => savedBadge.removeClass('show'), 1400);
     };
-    const writeField = async (key, raw) => {
+    const writeField = async (key: string, raw: string) => {
       try {
-        let value = raw;
+        let value: string | string[] | number | null = raw;
         // Coerce based on field type
         const fdef = def.fields.find((f) => f.key === key);
         if (fdef) {
@@ -4562,7 +4866,7 @@ export class CadenceAppView extends obsidian.ItemView {
         new obsidian.Notice(`Save failed: ${e.message}`);
       }
     };
-    const debouncedWrite = (key, val) => {
+    const debouncedWrite = (key: string, val: string) => {
       clearTimeout(saveTimer);
       saveTimer = setTimeout(() => writeField(key, val), 350);
     };
@@ -4632,10 +4936,10 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Project DETAIL view (real PM surface) ─────── */
-  async renderProjectDetail(root, file) {
+  async renderProjectDetail(root: HTMLElement, file: obsidian.TFile) {
     root.addClass('cadence-project-detail');
     const def = ENTITIES.project;
-    const cache = this.app.metadataCache.getFileCache(file) || {};
+    const cache = this.app.metadataCache.getFileCache(file) || {} as obsidian.CachedMetadata;
     const fm = Object.assign({}, cache.frontmatter || {});
     const meta = await readProjectMeta(this.app, file);
     const primaryKey = def.fields?.find((f) => f.primary)?.key || 'name';
@@ -4655,7 +4959,7 @@ export class CadenceAppView extends obsidian.ItemView {
     breadcrumb.createDiv({ cls: 'cad-detail-path', text: file.path });
 
     const headRight = head.createDiv({ cls: 'cad-detail-header-right' });
-    const savedBadge = headRight.createSpan({ cls: 'cad-detail-saved', text: '' });
+    const savedBadge: SavedBadgeEl = headRight.createSpan({ cls: 'cad-detail-saved', text: '' });
     const flashSaved = () => {
       savedBadge.setText('Saved');
       savedBadge.addClass('show');
@@ -4679,7 +4983,7 @@ export class CadenceAppView extends obsidian.ItemView {
     /* Hero — name (already in breadcrumb), pills, meta, progress */
     const hero = root.createDiv({ cls: 'cad-pd-hero' });
     const pillRow = hero.createDiv({ cls: 'cad-pd-pills' });
-    const mkSelect = (cls, options, current, onChange) => {
+    const mkSelect = (cls: string, options: string[], current: string, onChange: (value: string) => void) => {
       const wrap = pillRow.createDiv({ cls: `cad-pd-select-wrap ${cls}` });
       const sel = wrap.createEl('select', { cls: 'cad-pd-select' });
       options.forEach((opt) => {
@@ -4699,7 +5003,7 @@ export class CadenceAppView extends obsidian.ItemView {
       (v) => this._writeProjectFrontmatter(file, { priority: v }, flashSaved));
 
     const metaRow = hero.createDiv({ cls: 'cad-pd-meta' });
-    const mkMeta = (label, key, type) => {
+    const mkMeta = (label: string, key: string, type?: string) => {
       const cell = metaRow.createDiv({ cls: 'cad-pd-meta-cell' });
       cell.createDiv({ cls: 'cad-pd-meta-label', text: label });
       const inp = cell.createEl('input', { type: type || 'text', cls: 'cad-pd-meta-input' });
@@ -4710,7 +5014,7 @@ export class CadenceAppView extends obsidian.ItemView {
       } else if (cur != null) {
         inp.value = String(cur);
       }
-      let t;
+      let t: ReturnType<typeof setTimeout> | undefined;
       const commit = () => this._writeProjectFrontmatter(file, { [key]: inp.value || null }, flashSaved);
       inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(commit, 350); });
       inp.addEventListener('blur', commit);
@@ -4720,7 +5024,7 @@ export class CadenceAppView extends obsidian.ItemView {
       { key: 'started', label: 'STARTED', type: 'date' },
       { key: 'due',     label: 'DUE',     type: 'date' },
     ];
-    (def.detailMetaFields || defaultMetaFields).forEach((mf) => mkMeta(mf.label, mf.key, mf.type));
+    ((def.detailMetaFields || defaultMetaFields) as { key: string; label: string; type?: string }[]).forEach((mf) => mkMeta(mf.label, mf.key, mf.type));
 
     const progWrap = hero.createDiv({ cls: 'cad-proj-progress-wrap cad-pd-progress' });
     progWrap.dataset.pctBand = pctBand(meta.percent);
@@ -4751,18 +5055,18 @@ export class CadenceAppView extends obsidian.ItemView {
       { key: 'Stakeholders', label: 'STAKEHOLDERS', rows: 3, placeholder: 'Who cares about this project.' },
       { key: 'Notes',        label: 'NOTES',        rows: 5, placeholder: 'Anything else.' },
     ];
-    const bodySections = def.detailSections || defaultBodySections;
+    const bodySections = (def.detailSections || defaultBodySections) as ProjectTextSectionDef[];
     bodySections.forEach((s) => this._renderProjectTextSection(right, file, meta.sections, s, flashSaved));
   }
 
-  _renderMilestoneSection(parent, file, milestones, flashSaved) {
+  _renderMilestoneSection(parent: HTMLElement, file: obsidian.TFile, milestones: MilestoneItem[], flashSaved: () => void) {
     const card = parent.createDiv({ cls: 'cad-pd-card' });
     const head = card.createDiv({ cls: 'cad-pd-card-head' });
     head.createDiv({ cls: 'cad-pd-card-title', text: `MILESTONES · ${milestones.filter((m) => m.done).length}/${milestones.length}` });
     const addBtn = head.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Add' });
 
     const list = card.createDiv({ cls: 'cad-pd-checklist' });
-    const renderRows = (items) => {
+    const renderRows = (items: MilestoneItem[]) => {
       list.empty();
       if (!items.length) {
         list.createDiv({ cls: 'cad-empty', text: 'No milestones yet — add the first one.' });
@@ -4782,7 +5086,7 @@ export class CadenceAppView extends obsidian.ItemView {
         if (m.date instanceof Date && !isNaN(m.date.getTime())) {
           dateInp.value = m.date.toISOString().slice(0, 10);
         }
-        let dt;
+        let dt: ReturnType<typeof setTimeout> | undefined;
         dateInp.addEventListener('input', () => {
           clearTimeout(dt);
           dt = setTimeout(async () => {
@@ -4793,7 +5097,7 @@ export class CadenceAppView extends obsidian.ItemView {
         const titleInp = row.createEl('input', { type: 'text', cls: 'cad-pd-mile-title' });
         titleInp.value = m.title || '';
         titleInp.placeholder = 'Milestone title';
-        let tt;
+        let tt: ReturnType<typeof setTimeout> | undefined;
         titleInp.addEventListener('input', () => {
           clearTimeout(tt);
           tt = setTimeout(async () => {
@@ -4832,7 +5136,7 @@ export class CadenceAppView extends obsidian.ItemView {
             ta.style.height = 'auto';
             ta.style.height = Math.max(60, ta.scrollHeight + 2) + 'px';
           };
-          let nt;
+          let nt: ReturnType<typeof setTimeout> | undefined;
           ta.addEventListener('input', () => {
             autosize();
             clearTimeout(nt);
@@ -4861,8 +5165,8 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _commitMilestones(file, items, flashSaved, skipRender = false) {
-    const body = stringifyMilestones(items);
+  async _commitMilestones(file: obsidian.TFile, items: MilestoneItem[], flashSaved: () => void, skipRender = false) {
+    const body = stringifyMilestones(items as Parameters<typeof stringifyMilestones>[0]);
     const content = await this.app.vault.read(file);
     const next = replaceSection(content, '## Milestones', body || '');
     await this.app.vault.modify(file, next);
@@ -4872,7 +5176,7 @@ export class CadenceAppView extends obsidian.ItemView {
     if (!skipRender) this.render();
   }
 
-  _renderTaskSection(parent, file, tasks, flashSaved) {
+  _renderTaskSection(parent: HTMLElement, file: obsidian.TFile, tasks: ProjectTaskItem[], flashSaved: () => void) {
     const card = parent.createDiv({ cls: 'cad-pd-card' });
     const head = card.createDiv({ cls: 'cad-pd-card-head' });
     const open = tasks.filter((t) => !t.done).length;
@@ -4880,7 +5184,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const addBtn = head.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Add' });
 
     const list = card.createDiv({ cls: 'cad-pd-checklist' });
-    const renderRows = (items) => {
+    const renderRows = (items: ProjectTaskItem[]) => {
       list.empty();
       if (!items.length) {
         list.createDiv({ cls: 'cad-empty', text: 'No tasks yet.' });
@@ -4899,7 +5203,7 @@ export class CadenceAppView extends obsidian.ItemView {
         const titleInp = row.createEl('input', { type: 'text', cls: 'cad-pd-task-title' });
         titleInp.value = t.title || '';
         titleInp.placeholder = 'Task description';
-        let tt;
+        let tt: ReturnType<typeof setTimeout> | undefined;
         titleInp.addEventListener('input', () => {
           clearTimeout(tt);
           tt = setTimeout(async () => {
@@ -4958,7 +5262,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _commitTasks(file, items, flashSaved, skipRender = false) {
+  async _commitTasks(file: obsidian.TFile, items: ProjectTaskItem[], flashSaved: () => void, skipRender = false) {
     const body = stringifyTasks(items);
     const content = await this.app.vault.read(file);
     const next = replaceSection(content, '## Tasks', body || '');
@@ -4967,7 +5271,7 @@ export class CadenceAppView extends obsidian.ItemView {
     if (!skipRender) this.render();
   }
 
-  _renderProjectTextSection(parent, file, sections, def, flashSaved) {
+  _renderProjectTextSection(parent: HTMLElement, file: obsidian.TFile, sections: Record<string, string>, def: ProjectTextSectionDef, flashSaved: () => void) {
     const card = parent.createDiv({ cls: 'cad-pd-card' });
     card.createDiv({ cls: 'cad-pd-card-head' }).createDiv({ cls: 'cad-pd-card-title', text: def.label });
     const ta = card.createEl('textarea', { cls: 'cad-pd-textarea' });
@@ -4975,7 +5279,7 @@ export class CadenceAppView extends obsidian.ItemView {
     ta.rows = def.rows || 4;
     const initial = (sections[def.key] || '').replace(/^\s+|\s+$/g, '');
     ta.value = initial;
-    let tmr;
+    let tmr: ReturnType<typeof setTimeout> | undefined;
     ta.addEventListener('input', () => {
       clearTimeout(tmr);
       tmr = setTimeout(async () => {
@@ -4987,10 +5291,10 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _writeProjectFrontmatter(file, patch, flashSaved) {
+  async _writeProjectFrontmatter(file: obsidian.TFile, patch: Frontmatter, flashSaved: () => void) {
     try {
       await this.app.fileManager.processFrontMatter(file, (fm) => {
-        Object.entries<any>(patch).forEach(([k, v]) => {
+        Object.entries(patch).forEach(([k, v]) => {
           if (v == null || v === '') delete fm[k];
           else fm[k] = v;
         });
@@ -5002,7 +5306,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Projects: rich card grid with milestone progress ─ */
-  async renderProjectsView(root) {
+  async renderProjectsView(root: HTMLElement) {
     root.addClass('cadence-projects');
     const def = ENTITIES.project;
     const files = listEntityFiles(this.app, 'project');
@@ -5042,7 +5346,7 @@ export class CadenceAppView extends obsidian.ItemView {
 
     // Group by status — keys derived from entity definition
     const statusOpts = def.fields?.find((f) => f.key === 'status')?.options || ['active', 'on_hold', 'backlog', 'done', 'cancelled'];
-    const groups = Object.fromEntries(statusOpts.map((s) => [s, []]));
+    const groups = Object.fromEntries(statusOpts.map((s): [string, typeof projects] => [s, []]));
     const fallbackStatus = statusOpts[0] || 'active';
     projects.forEach((p) => {
       const status = String(entityValue(p.entity, 'status', def) || fallbackStatus).toLowerCase().replace(/[-\s]+/g, '_');
@@ -5051,7 +5355,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     const grid = root.createDiv({ cls: 'cad-proj-grid' });
-    const renderCard = (p) => {
+    const renderCard = (p: typeof projects[number]) => {
       const card = grid.createDiv({ cls: 'cad-proj-card' });
       const head = card.createDiv({ cls: 'cad-proj-card-head' });
       const title = head.createEl('a', { cls: 'cad-proj-title', text: entityValue(p.entity, 'name', def) || p.entity.basename });
@@ -5089,7 +5393,7 @@ export class CadenceAppView extends obsidian.ItemView {
       }
     };
 
-    const renderSection = (label, list) => {
+    const renderSection = (label: string, list: typeof projects) => {
       if (!list.length) return;
       root.createDiv({ cls: 'cad-section-label-lg', text: label });
       list.forEach(renderCard);
@@ -5099,7 +5403,7 @@ export class CadenceAppView extends obsidian.ItemView {
     // Reset grid: render in groups
     grid.remove();
     const order = ['active', 'on_hold', 'backlog', 'done', 'cancelled'];
-    const sectionLabels = { active: 'ACTIVE', on_hold: 'ON HOLD', backlog: 'BACKLOG', done: 'DONE', cancelled: 'CANCELLED' };
+    const sectionLabels: Record<string, string> = { active: 'ACTIVE', on_hold: 'ON HOLD', backlog: 'BACKLOG', done: 'DONE', cancelled: 'CANCELLED' };
     order.forEach((key) => {
       const list = groups[key];
       if (!list.length) return;
@@ -5143,7 +5447,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Home / Command Centre ───────────────── */
-  async renderHome(root) {
+  async renderHome(root: HTMLElement) {
     root.addClass('cadence-home');
     const today = new Date();
     const dateStr = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -5152,7 +5456,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Inbox (Planner reminders + captures) ── */
-  async renderInbox(root) {
+  async renderInbox(root: HTMLElement) {
     root.addClass('cadence-inbox');
     const all = (this.plugin.settings.reminders || []).filter((r) => !r.done);
 
@@ -5167,7 +5471,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     // Bucket
-    const buckets = { now: [], today: [], week: [], later: [] };
+    const buckets: Record<string, Reminder[]> = { now: [], today: [], week: [], later: [] };
     all.forEach((r) => buckets[reminderBucket(r.when)].push(r));
 
     this._renderPageHeader(root, 'Inbox', `${all.length} ${all.length === 1 ? 'item' : 'items'} · capture once, surface at the right time`, (right, ctx) => {
@@ -5184,7 +5488,7 @@ export class CadenceAppView extends obsidian.ItemView {
       return;
     }
 
-    const sectionLabels = { now: 'NOW · OVERDUE OR DUE WITHIN 1 HOUR', today: 'TODAY', week: 'THIS WEEK', later: 'LATER · UNSCHEDULED' };
+    const sectionLabels: Record<string, string> = { now: 'NOW · OVERDUE OR DUE WITHIN 1 HOUR', today: 'TODAY', week: 'THIS WEEK', later: 'LATER · UNSCHEDULED' };
     ['now', 'today', 'week', 'later'].forEach((key) => {
       const items = buckets[key];
       if (!items.length) return;
@@ -5197,12 +5501,12 @@ export class CadenceAppView extends obsidian.ItemView {
     await this._renderProjectTasksSection(root);
   }
 
-  async _renderProjectTasksSection(root) {
+  async _renderProjectTasksSection(root: HTMLElement) {
     const projectFiles = listEntityFiles(this.app, 'project');
     if (!projectFiles.length) return;
 
     /* Read each project's Tasks section + collect open tasks */
-    const groups = [];
+    const groups: { file: obsidian.TFile; name: string | null; tasks: ProjectTaskItem[] }[] = [];
     let totalOpen = 0;
     for (const file of projectFiles) {
       let content;
@@ -5269,7 +5573,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _renderInboxRow(parent, r, bucket) {
+  _renderInboxRow(parent: HTMLElement, r: ReminderLike, bucket: string) {
     const row = parent.createDiv({ cls: 'cad-inbox-row' + (bucket === 'now' ? ' overdue' : '') });
 
     const left = row.createDiv({ cls: 'cad-inbox-row-left' });
@@ -5293,7 +5597,7 @@ export class CadenceAppView extends obsidian.ItemView {
       chip.addEventListener('click', (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        const file: any = this.app.vault.getAbstractFileByPath(r.project);
+        const file = this.app.vault.getAbstractFileByPath(r.project);
         if (file && file instanceof obsidian.TFile) this.openEntityDetailFromFile(file);
       });
     }
@@ -5315,7 +5619,7 @@ export class CadenceAppView extends obsidian.ItemView {
     main.style.cursor = 'pointer';
 
     const actions = row.createDiv({ cls: 'cad-inbox-actions' });
-    const mk = (label, title, fn) => {
+    const mk = (label: string, title: string, fn: () => void) => {
       const b = actions.createEl('button', { cls: 'cad-btn cad-btn-sm', text: label });
       b.title = title;
       b.addEventListener('click', (ev) => { ev.stopPropagation(); fn(); });
@@ -5351,7 +5655,8 @@ export class CadenceAppView extends obsidian.ItemView {
     });
     if (!text) return;
     try {
-      const file = await ensureDailyNote(this.app, this.plugin.settings);
+      // ensureDailyNote always resolves the .md daily note (TAbstractFile-typed; TFile at runtime).
+      const file = await ensureDailyNote(this.app, this.plugin.settings) as obsidian.TFile;
       const content = await this.app.vault.read(file);
       const parsed = parseSections(content, this.plugin.settings);
       const newTasks = [...parsed.tasks, `- [ ] ${text}`];
@@ -5364,7 +5669,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Pipeline kanban (deals grouped by stage) ───── */
-  async renderEntityKanban(root, entityKey, groupBy, groups) {
+  async renderEntityKanban(root: HTMLElement, entityKey: string, groupBy: string, groups: string[]) {
     root.addClass('cadence-kanban');
     const def = ENTITIES[entityKey];
     const entities = listEntities(this.app, entityKey);
@@ -5410,7 +5715,7 @@ export class CadenceAppView extends obsidian.ItemView {
       });
       list.addEventListener('dragleave', (ev) => {
         // Only clear when leaving the column entirely
-        if (!col.contains(ev.relatedTarget)) col.removeClass('drag-over');
+        if (!col.contains(ev.relatedTarget as Node)) col.removeClass('drag-over');
       });
       list.addEventListener('drop', async (ev) => {
         ev.preventDefault();
@@ -5470,7 +5775,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── CRM Dashboard ──────────────────────── */
-  async renderDashboard(root) {
+  async renderDashboard(root: HTMLElement) {
     root.addClass('cadence-dashboard');
 
     // ─── Read all the relevant data ────────────────────
@@ -5479,8 +5784,8 @@ export class CadenceAppView extends obsidian.ItemView {
     const open = allDeals.filter((e) => !dealTerminalStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
     const won  = allDeals.filter((e) => dealWonStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
     const lost = allDeals.filter((e) => dealLostStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
-    const dealValue = (e) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
-    const sumVal = (arr) => arr.reduce((s, e) => s + dealValue(e), 0);
+    const dealValue = (e: EntityRecord) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
+    const sumVal = (arr: EntityRecord[]) => arr.reduce((s, e) => s + dealValue(e), 0);
     const winRate = won.length + lost.length === 0 ? 0 : Math.round((won.length / (won.length + lost.length)) * 100);
     const avgDeal = won.length === 0 ? 0 : sumVal(won) / won.length;
 
@@ -5499,7 +5804,7 @@ export class CadenceAppView extends obsidian.ItemView {
 
     // ─── Top stats (5 cards) ───────────────────────────
     const grid = root.createDiv({ cls: 'cad-stat-grid' });
-    const stat = (label, value, sub, accent) => {
+    const stat = (label: string, value: string | number, sub: string, accent: string) => {
       const c = grid.createDiv({ cls: 'cad-stat-card' });
       if (accent) c.dataset.accent = accent;
       c.createDiv({ cls: 'cad-stat-label', text: label });
@@ -5583,7 +5888,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const baseCard = right.createDiv({ cls: 'cad-dash-card' });
     baseCard.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: `CUSTOMER BASE · ${contacts.length + companies.length + partners.length} records` });
     const baseBody = baseCard.createDiv({ cls: 'cad-dash-card-body cad-mini-stat-row' });
-    const mkMini = (label, val, accent, mode) => {
+    const mkMini = (label: string, val: string | number, accent: string, mode: string) => {
       const c = baseBody.createDiv({ cls: 'cad-mini-stat' });
       if (accent) c.dataset.accent = accent;
       c.createDiv({ cls: 'cad-mini-stat-value', text: String(val) });
@@ -5599,7 +5904,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* Reusable list card on the dashboard. */
-  _dashCardSection(parent, title, rows, emptyMsg) {
+  _dashCardSection(parent: HTMLElement, title: string, rows: ProviderRow[], emptyMsg: string) {
     const card = parent.createDiv({ cls: 'cad-dash-card' });
     card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: title });
     const body = card.createDiv({ cls: 'cad-dash-card-body' });
@@ -5626,42 +5931,42 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Reports: Productivity (over daily notes) ── */
-  async renderProductivity(root) {
+  async renderProductivity(root: HTMLElement) {
     return this.renderConfigDashboard('reports.productivity', root);
   }
 
-  async renderReportPipeline(root) {
+  async renderReportPipeline(root: HTMLElement) {
     return this.renderConfigDashboard('reports.pipeline', root);
   }
 
-  async renderReportSales(root) {
+  async renderReportSales(root: HTMLElement) {
     return this.renderConfigDashboard('reports.sales', root);
   }
 
-  async renderReportPartners(root) {
+  async renderReportPartners(root: HTMLElement) {
     return this.renderConfigDashboard('reports.partners', root);
   }
 
-  async renderReportActivity(root) {
+  async renderReportActivity(root: HTMLElement) {
     return this.renderConfigDashboard('reports.activity', root);
   }
 
   /* ── PRM Analytics ──────────────────────── */
-  async renderPRMAnalytics(root) {
+  async renderPRMAnalytics(root: HTMLElement) {
     root.addClass('cadence-report');
     const partnerDef = ENTITIES.partner;
     const dealDef = ENTITIES.deal;
     const partners = listEntities(this.app, 'partner');
     const deals = listEntities(this.app, 'deal');
-    const dealValue = (e) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
-    const sumVal = (arr) => arr.reduce((s, e) => s + dealValue(e), 0);
+    const dealValue = (e: EntityRecord) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
+    const sumVal = (arr: EntityRecord[]) => arr.reduce((s, e) => s + dealValue(e), 0);
     const partnerSourced = deals.filter((e) => entityValue(e, 'partner', dealDef));
     const partnerWon = partnerSourced.filter((e) => dealWonStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
 
     this._renderPageHeader(root, 'PRM analytics', 'Partner programme health, tier mix and revenue contribution');
 
     const grid = root.createDiv({ cls: 'cad-stat-grid' });
-    const stat = (label, value, sub, accent) => {
+    const stat = (label: string, value: string | number, sub: string, accent: string) => {
       const c = grid.createDiv({ cls: 'cad-stat-card' });
       if (accent) c.dataset.accent = accent;
       c.createDiv({ cls: 'cad-stat-label', text: label });
@@ -5700,7 +6005,7 @@ export class CadenceAppView extends obsidian.ItemView {
       const tierCard = root.createDiv({ cls: 'cad-dash-card' });
       tierCard.style.margin = '0 36px 18px 36px';
       const tierBody = tierCard.createDiv({ cls: 'cad-dash-card-body cad-mini-stat-row' });
-      const tierAccent = { 'Gold': 'warn', 'Silver': 'sky', 'Bronze': 'rose', 'Standard': 'mint', 'Untiered': 'mint' };
+      const tierAccent: Record<string, string> = { 'Gold': 'warn', 'Silver': 'sky', 'Bronze': 'rose', 'Standard': 'mint', 'Untiered': 'mint' };
       [...tierMap.entries()].sort((a, b) => b[1] - a[1]).forEach(([tier, count]) => {
         const value = tierValueMap.get(tier) || 0;
         const mini = tierBody.createDiv({ cls: 'cad-mini-stat' });
@@ -5745,7 +6050,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const funnelCard = right.createDiv({ cls: 'cad-dash-card' });
     funnelCard.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'PARTNER FUNNEL' });
     const funnelBody = funnelCard.createDiv({ cls: 'cad-dash-card-body cad-mini-stat-row' });
-    const mkF = (label, val, sub, accent) => {
+    const mkF = (label: string, val: string | number, sub: string, accent: string) => {
       const m = funnelBody.createDiv({ cls: 'cad-mini-stat' });
       m.dataset.accent = accent;
       m.createDiv({ cls: 'cad-mini-stat-value', text: String(val) });
@@ -5774,7 +6079,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Team (configurable People categories) ─ */
-  async renderTeam(root) {
+  async renderTeam(root: HTMLElement) {
     const configured = Array.isArray(this.plugin.settings.teamPersonCategories)
       ? this.plugin.settings.teamPersonCategories
       : DEFAULT_SETTINGS.teamPersonCategories;
@@ -5790,7 +6095,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Settings (opens Obsidian settings → BOB Workspace) ─ */
-  async openSettingsTab(root) {
+  async openSettingsTab(root: HTMLElement) {
     root.addClass('cadence-soon');
     const wrap = root.createDiv({ cls: 'cad-soon-wrap' });
     const ic = wrap.createDiv({ cls: 'cad-soon-icon' });
@@ -5801,8 +6106,8 @@ export class CadenceAppView extends obsidian.ItemView {
     const btn = wrap.createEl('button', { cls: 'cad-btn primary', text: 'Open BOB Workspace settings' });
     btn.style.marginTop = '12px';
     btn.addEventListener('click', () => {
-      (this.app as any).setting.open();
-      (this.app as any).setting.openTabById(this.plugin.manifest.id);
+      (this.app as AppWithInternals).setting.open();
+      (this.app as AppWithInternals).setting.openTabById(this.plugin.manifest.id);
     });
   }
 
@@ -5811,7 +6116,7 @@ export class CadenceAppView extends obsidian.ItemView {
        - matching reminders by text (and via reminder.project to the linked project)
        - matching task lines in today's daily note + the linked reminder's date note
      Match is by exact (trimmed) task text. Renaming a task breaks the link. */
-  async _propagateTaskComplete(text, done, source) {
+  async _propagateTaskComplete(text: string, done: boolean, source: TaskCompleteSource) {
     const t = String(text || '').trim();
     if (!t) return;
     source = source || {};
@@ -5827,7 +6132,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
 
     /* 2. For any matching reminder linked to a project, tick that project's task line */
-    const projectsTouched = new Set<any>();
+    const projectsTouched = new Set<string>();
     for (const r of matches) {
       if (!r.project) continue;
       if (source.kind === 'project' && source.file && source.file.path === r.project) continue;
@@ -5863,7 +6168,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
   }
 
-  async _tickProjectTaskByText(file, text, done) {
+  async _tickProjectTaskByText(file: obsidian.TFile, text: string, done: boolean) {
     let content;
     try { content = await this.app.vault.read(file); } catch (_) { return; }
     const sections = parseH2Sections(content);
@@ -5882,7 +6187,7 @@ export class CadenceAppView extends obsidian.ItemView {
     await this.app.vault.modify(file, next);
   }
 
-  async _tickDailyNoteTaskByText(file, text, done) {
+  async _tickDailyNoteTaskByText(file: obsidian.TFile, text: string, done: boolean) {
     let content;
     try { content = await this.app.vault.read(file); } catch (_) { return; }
     const parsed = parseSections(content, this.plugin.settings);
@@ -5904,7 +6209,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Cadence-styled prompt modal ─ */
-  _prompt(opts) {
+  _prompt(opts: { title?: string; placeholder?: string; defaultValue?: string; cta?: string }) {
     return new Promise((resolve) => {
       new CadencePromptModal(this.app, {
         title: opts.title || 'Enter a name',
@@ -5916,7 +6221,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _createEntityFromPrompt(entityKey) {
+  async _createEntityFromPrompt(entityKey: string) {
     const def = ENTITIES[entityKey];
     new CadenceEntityCreateModal(this.app, entityKey, {
       onSubmit: async (result) => {
@@ -5929,7 +6234,7 @@ export class CadenceAppView extends obsidian.ItemView {
           delete extras[primaryKey];
           if (Object.keys(extras).length) {
             await this.app.fileManager.processFrontMatter(file, (fm) => {
-              Object.entries<any>(extras).forEach(([k, v]) => {
+              Object.entries(extras).forEach(([k, v]) => {
                 if (v == null || v === '' || (Array.isArray(v) && v.length === 0)) return;
                 fm[k] = v;
               });
@@ -5945,9 +6250,9 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Today pane ─────────────────────────── */
-  async renderTodayPane(root) {
+  async renderTodayPane(root: HTMLElement) {
     root.addClass('cadence-today');
-    this.todayFile = await ensureDailyNote(this.app, this.plugin.settings);
+    this.todayFile = await ensureDailyNote(this.app, this.plugin.settings) as obsidian.TFile;
     const fileContent = await this.app.vault.read(this.todayFile);
     this.todayParsed = parseSections(fileContent, this.plugin.settings);
 
@@ -5999,7 +6304,7 @@ export class CadenceAppView extends obsidian.ItemView {
             chip.title = 'Open linked project';
             chip.addEventListener('click', (ev) => {
               ev.preventDefault(); ev.stopPropagation();
-              const f: any = this.app.vault.getAbstractFileByPath(linkedProject);
+              const f = this.app.vault.getAbstractFileByPath(linkedProject);
               if (f instanceof obsidian.TFile) this.openEntityDetailFromFile(f);
             });
           }
@@ -6099,7 +6404,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async toggleTodayTask(idx, checked) {
+  async toggleTodayTask(idx: number, checked: boolean) {
     const content = await this.app.vault.read(this.todayFile);
     const parsed = parseSections(content, this.plugin.settings);
     const taskLine = parsed.tasks[idx] || '';
@@ -6118,7 +6423,7 @@ export class CadenceAppView extends obsidian.ItemView {
     this.render();
   }
 
-  async appendTodayTask(text) {
+  async appendTodayTask(text: string) {
     const content = await this.app.vault.read(this.todayFile);
     const parsed = parseSections(content, this.plugin.settings);
     const newTasks = [...parsed.tasks, `- [ ] ${text}`];
@@ -6127,14 +6432,14 @@ export class CadenceAppView extends obsidian.ItemView {
     this.render();
   }
 
-  async saveTodayJournal(body) {
+  async saveTodayJournal(body: string) {
     const content = await this.app.vault.read(this.todayFile);
     const newContent = replaceSection(content, this.plugin.settings.journalHeading, body || '');
     await this.app.vault.modify(this.todayFile, newContent);
   }
 
   /* ── Planner pane ───────────────────────── */
-  async renderPlannerPane(root) {
+  async renderPlannerPane(root: HTMLElement) {
     root.addClass('cadence-planner');
     const settings = this.plugin.settings;
     const days = weekDates(this.plannerAnchor, settings.weekStartsOn);
@@ -6148,7 +6453,7 @@ export class CadenceAppView extends obsidian.ItemView {
     titleWrap.createDiv({ cls: 'cad-pl-title', text: `${startStr} – ${endStr}` });
 
     const nav = header.createDiv({ cls: 'cad-pl-nav' });
-    const mkBtn = (label, fn, cls = '') => {
+    const mkBtn = (label: string, fn: () => void, cls = '') => {
       const b = nav.createEl('button', { text: label, cls: 'cad-pl-btn ' + cls });
       b.addEventListener('click', fn);
     };
@@ -6157,7 +6462,7 @@ export class CadenceAppView extends obsidian.ItemView {
     mkBtn('▶',     () => { this.plannerAnchor = addDays(this.plannerAnchor,  7); this.render(); });
 
     let totalOpen = 0, totalDone = 0;
-    const dayData = await Promise.all(days.map(async (d) => {
+    const dayData = await Promise.all(days.map(async (d): Promise<PlannerDay> => {
       const path = dailyNotePath(settings, d);
       const file = this.app.vault.getAbstractFileByPath(path);
       if (!file || !(file instanceof obsidian.TFile)) {
@@ -6175,7 +6480,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     const stats = root.createDiv({ cls: 'cad-pl-stats' });
-    const mkStat = (label, value) => {
+    const mkStat = (label: string, value: string | number) => {
       const c = stats.createDiv({ cls: 'cad-pl-stat' });
       c.createDiv({ cls: 'cad-pl-stat-label', text: label });
       c.createDiv({ cls: 'cad-pl-stat-value', text: String(value) });
@@ -6225,7 +6530,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async togglePlannerTask(day, idx, checked) {
+  async togglePlannerTask(day: PlannerDay, idx: number, checked: boolean) {
     if (!day.file) return;
     const content = await this.app.vault.read(day.file);
     const parsed = parseSections(content, this.plugin.settings);

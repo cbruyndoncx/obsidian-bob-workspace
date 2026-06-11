@@ -6,10 +6,36 @@ import { ensureFolderSync } from '../utils';
 import { configuredFieldAliases, getXLSX, normalizedImportHeader, safeSheetName, workbookEntityKeyFromSheet, writeWorkbookToVault } from '../workbook';
 import { WORKSPACE_CONFIG, workspaceConfiguredEntityEntries } from '../workspace-config';
 import * as obsidian from 'obsidian';
+import type { App } from 'obsidian';
+import type { EntityDef, Frontmatter } from '../types';
+import type { BobEntityDef } from '../entities';
+
+/** Values importable into a single frontmatter field from a CSV/XLSX cell. */
+type ImportCellValue = string | number | string[];
+
+export interface ImportResult {
+  created: number;
+  failed: number;
+  entityKey: string;
+}
+
+interface CadenceImportModalOptions {
+  entityKey?: string;
+  onSubmit?: (result: ImportResult) => void;
+  prefillCsv?: string;
+}
+
 export class CadenceImportModal extends obsidian.Modal {
-  // Migrated from untyped main.js: instance fields are not yet declared.
-  [key: string]: any;
-  constructor(app, opts) {
+  declare entityKey: string;
+  declare onSubmit: (result: ImportResult) => void;
+  declare csvText: string;
+  declare headers: string[];
+  declare rows: string[][];
+  declare mapping: Record<string, string | null>;
+  declare fieldInfoEl: HTMLDivElement;
+  declare previewEl: HTMLDivElement;
+  declare importBtn: HTMLButtonElement;
+  constructor(app: App, opts: CadenceImportModalOptions) {
     super(app);
     this.entityKey = (opts && opts.entityKey) || 'contact';
     this.onSubmit = (opts && opts.onSubmit) || (() => {});
@@ -38,7 +64,7 @@ export class CadenceImportModal extends obsidian.Modal {
     const entityRow = contentEl.createDiv({ cls: 'cad-create-row' });
     entityRow.style.display = 'none'; // hidden — entity select is in srcRow
     entitySelect.createEl('option', { value: '', text: 'Please select entity…', attr: { disabled: '', selected: '' } });
-    const importEntityEntries = workspaceConfiguredEntityEntries(WORKSPACE_CONFIG);
+    const importEntityEntries = workspaceConfiguredEntityEntries(WORKSPACE_CONFIG) as [string, BobEntityDef][];
     if (this.entityKey && ENTITIES[this.entityKey] && !importEntityEntries.some(([key]) => key === this.entityKey)) {
       importEntityEntries.unshift([this.entityKey, ENTITIES[this.entityKey]]);
     }
@@ -176,11 +202,11 @@ export class CadenceImportModal extends obsidian.Modal {
     }
   }
 
-  async _loadXLSXFile(file, textarea) {
+  async _loadXLSXFile(file: File, textarea: HTMLTextAreaElement) {
     const XLSX = getXLSX(this.app);
     const buffer = await file.arrayBuffer();
     const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
-    const matchingSheet = wb.SheetNames.find((s) => workbookEntityKeyFromSheet(s) === this.entityKey);
+    const matchingSheet = wb.SheetNames.find((s: string) => workbookEntityKeyFromSheet(s) === this.entityKey);
     const sheetName = matchingSheet || wb.SheetNames[0];
     if (!sheetName) throw new Error('Workbook has no sheets');
     const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]);
@@ -208,16 +234,16 @@ export class CadenceImportModal extends obsidian.Modal {
     if (!def || !this.headers.length) return;
 
     const norm = normalizedImportHeader;
-    const keyByNorm = {};
+    const keyByNorm: Record<string, string> = {};
     def.fields.forEach((f) => {
       keyByNorm[norm(f.key)] = f.key;
       keyByNorm[norm(f.label)] = f.key;
     });
-    Object.entries<any>(configuredFieldAliases(def)).forEach(([header, fieldKey]) => {
+    Object.entries(configuredFieldAliases(def) as Record<string, string>).forEach(([header, fieldKey]) => {
       if (!keyByNorm[header]) keyByNorm[header] = fieldKey;
     });
     // Common synonyms
-    const synonyms = {
+    const synonyms: Record<string, string | string[]> = {
       'fullname': 'name', 'displayname': 'name', 'contact': ['contact_ref', 'contact_name', 'name'],
       'companyname': ['company_name', 'company'], 'organisation': ['company_name', 'company'], 'organization': ['company_name', 'company'],
       'phone': 'phone', 'phonenumber': 'phone', 'mobile': 'phone',
@@ -336,7 +362,7 @@ export class CadenceImportModal extends obsidian.Modal {
     // Required = explicit primary + any field with required: true
     const primary = primaryField(def);
     const requiredFields = def.fields.filter((f) => f.key === primary?.key || f.required === true);
-    const mappedKeys = new Set(Object.values<any>(this.mapping).filter(Boolean));
+    const mappedKeys = new Set(Object.values(this.mapping).filter(Boolean));
     const missing = requiredFields.filter(f => !mappedKeys.has(f.key));
     if (missing.length) {
       summary.addClass('cad-import-summary-warn');
@@ -359,7 +385,7 @@ export class CadenceImportModal extends obsidian.Modal {
     const def = ENTITIES[this.entityKey];
     const primaryKey = primaryFieldKey(def);
     if (!primaryKey) return;
-    const primaryHeader = Object.entries<any>(this.mapping).find(([_, v]) => v === primaryKey);
+    const primaryHeader = Object.entries(this.mapping).find(([_, v]) => v === primaryKey);
     if (!primaryHeader) return;
     const primaryColIdx = this.headers.indexOf(primaryHeader[0]);
 
@@ -373,19 +399,19 @@ export class CadenceImportModal extends obsidian.Modal {
       const primaryValue = String(row[primaryColIdx] || '').trim();
       if (!primaryValue) { failed++; continue; }
       try {
-        const contextValues: any = {};
-        Object.entries<any>(this.mapping).forEach(([header, key]) => {
+        const contextValues: Frontmatter = {};
+        Object.entries(this.mapping).forEach(([header, key]) => {
           if (!key) return;
           const idx = this.headers.indexOf(header);
           const val = String(row[idx] || '').trim();
           if (val) contextValues[key] = val;
         });
         const file = await createEntity(this.app, this.entityKey, primaryValue, { values: contextValues });
-        const extras: any = {};
-        Object.entries<any>(this.mapping).forEach(([header, key]) => {
+        const extras: Record<string, ImportCellValue> = {};
+        Object.entries(this.mapping).forEach(([header, key]) => {
           if (!key || key === primaryKey) return;
           const idx = this.headers.indexOf(header);
-          let val: any = String(row[idx] || '').trim();
+          let val: ImportCellValue = String(row[idx] || '').trim();
           if (!val) return;
           const fdef = def.fields.find((f) => f.key === key);
           if (fdef) {
@@ -407,7 +433,7 @@ export class CadenceImportModal extends obsidian.Modal {
         });
         if (Object.keys(extras).length) {
           await this.app.fileManager.processFrontMatter(file, (fm) => {
-            Object.entries<any>(extras).forEach(([k, v]) => {
+            Object.entries(extras).forEach(([k, v]) => {
               if (v == null || v === '') return;
               if (Array.isArray(v) && v.length === 0) return;
               fm[k] = v;

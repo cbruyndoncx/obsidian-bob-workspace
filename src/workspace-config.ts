@@ -3,29 +3,43 @@ import { ENTITIES } from './entities';
 import { cloneConfig, migrateWorkspacePlannerConfig, normalizePinnedSurfaces } from './nav';
 import { DEFAULT_SETTINGS } from './settings';
 import * as obsidian from 'obsidian';
+import type { App, Plugin } from 'obsidian';
+import type {
+  DashboardCard,
+  DashboardConfig,
+  EntityDef,
+  JsonValue,
+  NavSurface,
+  PartialSettings,
+  SecondaryTab,
+  WidgetSourceConfig,
+  WorkbookExportGroup,
+  WorkspaceBaseRef,
+  WorkspaceConfig,
+} from './types';
 export let PLUGIN_DIR = '';
 export let WORKSPACE_CONFIG_PATH = 'Cadence/workspace.json';
 export let WORKSPACE_BACKUP_PATH = 'Cadence/workspace.backup.json';
-export let WORKSPACE_CONFIG: Record<string, any> = {};
+export let WORKSPACE_CONFIG: WorkspaceConfig = {};
 
 // Modules outside this one must replace the active config via this setter —
 // ES module imports are read-only live bindings.
-export function setWorkspaceConfig(config: Record<string, any>) {
+export function setWorkspaceConfig(config: WorkspaceConfig) {
   WORKSPACE_CONFIG = config || {};
 }
 export let WORKSPACE_HAS_NAVIGATION = false;
-export let CONFIGURED_BASE_ENTITY_KEYS = new Set<any>();
-export let SCHEMA_ENTITY_KEYS = new Set<any>();
+export let CONFIGURED_BASE_ENTITY_KEYS = new Set<string>();
+export let SCHEMA_ENTITY_KEYS = new Set<string>();
 
-export function initPluginPaths(plugin) {
+export function initPluginPaths(plugin: Plugin) {
   const dir = (plugin.manifest && plugin.manifest.dir) || `.obsidian/plugins/${plugin.manifest.id}`;
   PLUGIN_DIR = dir;
   WORKSPACE_CONFIG_PATH = `${dir}/workspace.json`;
   WORKSPACE_BACKUP_PATH = `${dir}/workspace.backup.json`;
 }
 
-export function validateWorkspaceConfig(config) {
-  config = migrateWorkspacePlannerConfig(config);
+export function validateWorkspaceConfig(config: WorkspaceConfig): WorkspaceConfig {
+  config = migrateWorkspacePlannerConfig(config) as WorkspaceConfig;
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
     throw new Error('Must be a JSON object');
   }
@@ -39,13 +53,13 @@ export function validateWorkspaceConfig(config) {
   if (navigation?.groups != null && !Array.isArray(navigation.groups)) {
     throw new Error('navigation.groups must be an array');
   }
-  const surfaceIds = new Set<any>();
+  const surfaceIds = new Set<string>();
   for (const group of navigation?.groups || []) {
     if (!group || typeof group !== 'object' || !group.id) {
       throw new Error('Every navigation group needs an id');
     }
     if (!Array.isArray(group.items)) continue; // separator group — no items to validate
-    for (const surface of group.items) {
+    for (const surface of group.items as (NavSurface & { placement?: string })[]) {
       if (!surface || !surface.id || !surface.label) {
         throw new Error(`Navigation group "${group.id}" has an item without id/label`);
       }
@@ -59,9 +73,9 @@ export function validateWorkspaceConfig(config) {
   if (navigation?.secondaryTabs != null && (typeof navigation.secondaryTabs !== 'object' || Array.isArray(navigation.secondaryTabs))) {
     throw new Error('navigation.secondaryTabs must be an object keyed by parent surface id');
   }
-  for (const [parentId, tabs] of Object.entries<any>(navigation?.secondaryTabs || {})) {
+  for (const [parentId, tabs] of Object.entries(navigation?.secondaryTabs || {})) {
     if (!Array.isArray(tabs)) throw new Error(`secondaryTabs "${parentId}" must be an array`);
-    for (const tab of tabs) {
+    for (const tab of tabs as (SecondaryTab & { children?: SecondaryTab[] })[]) {
       if (!tab || !tab.label || (!tab.entityKey && !tab.route && !Array.isArray(tab.children))) {
         throw new Error(`secondaryTabs "${parentId}" has a tab without label and entityKey/route/children`);
       }
@@ -70,9 +84,9 @@ export function validateWorkspaceConfig(config) {
   if (navigation?.actions != null && (typeof navigation.actions !== 'object' || Array.isArray(navigation.actions))) {
     throw new Error('navigation.actions must be an object keyed by surface id');
   }
-  for (const [surfaceId, actions] of Object.entries<any>(navigation?.actions || {})) {
+  for (const [surfaceId, actions] of Object.entries(navigation?.actions || {})) {
     if (!Array.isArray(actions)) throw new Error(`actions "${surfaceId}" must be an array`);
-    for (const action of actions) {
+    for (const action of actions as Record<string, JsonValue>[]) {
       if (!action || typeof action !== 'object' || Array.isArray(action)) {
         throw new Error(`actions "${surfaceId}" has an invalid action`);
       }
@@ -87,27 +101,27 @@ export function validateWorkspaceConfig(config) {
   if (config.bases != null && (typeof config.bases !== 'object' || Array.isArray(config.bases))) {
     throw new Error('bases must be an object keyed by entity type');
   }
-  for (const [entityKey, base] of Object.entries<any>(config.bases || {})) {
-    if (!base || typeof base !== 'object' || Array.isArray(base) || !String(base.file || base.base || '').trim()) {
+  for (const [entityKey, base] of Object.entries(config.bases || {})) {
+    if (!base || typeof base !== 'object' || Array.isArray(base) || !String(base.file || (base as WorkspaceBaseRef & { base?: string }).base || '').trim()) {
       throw new Error(`bases "${entityKey}" needs a file path`);
     }
   }
   if (config.dashboards != null && (typeof config.dashboards !== 'object' || Array.isArray(config.dashboards))) {
     throw new Error('dashboards must be an object keyed by surface id');
   }
-  for (const [surfaceId, dashboard] of Object.entries<any>(config.dashboards || {})) {
+  for (const [surfaceId, dashboard] of Object.entries(config.dashboards || {})) {
     validateDashboardConfig(dashboard, `dashboards.${surfaceId}`);
   }
   if (config.planner != null && (typeof config.planner !== 'object' || Array.isArray(config.planner))) {
     throw new Error('planner must be an object keyed by surface id');
   }
-  for (const [surfaceId, plannerSurface] of Object.entries<any>(config.planner || {})) {
-    validateDashboardConfig(plannerSurface, `planner.${surfaceId}`);
+  for (const [surfaceId, plannerSurface] of Object.entries(config.planner || {})) {
+    validateDashboardConfig(plannerSurface as unknown as DashboardConfig, `planner.${surfaceId}`);
   }
   if (config.workbookGroups != null && !Array.isArray(config.workbookGroups)) {
     throw new Error('workbookGroups must be an array');
   }
-  const workbookGroupIds = new Set<any>();
+  const workbookGroupIds = new Set<string>();
   for (const group of config.workbookGroups || []) {
     if (!group || typeof group !== 'object' || !String(group.id || '').trim() ||
         !String(group.label || '').trim() || !Array.isArray(group.entityKeys)) {
@@ -125,8 +139,16 @@ export function validateWorkspaceConfig(config) {
   return config;
 }
 
-export function dashboardWidgetSchema(kind) {
-  const schemas = {
+export interface DashboardWidgetSchema {
+  label: string;
+  allowSourceOnly?: boolean;
+  requiresEntityOrSource?: boolean;
+  requiresBaseOrEntity?: boolean;
+  supports: string[];
+}
+
+export function dashboardWidgetSchema(kind: string): DashboardWidgetSchema | null {
+  const schemas: Record<string, DashboardWidgetSchema> = {
     metric: {
       label: 'Metric',
       allowSourceOnly: true,
@@ -198,7 +220,13 @@ export function dashboardWidgetSchema(kind) {
   return schemas[kind] || null;
 }
 
-export function validateDashboardConfig(config, path) {
+/** Conditional dashboard row as authored in workspace.json. */
+export interface DashboardConditionalRow {
+  condition?: { entities?: string[] };
+  cards?: DashboardCard[];
+}
+
+export function validateDashboardConfig(config: DashboardConfig, path: string): void {
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
     throw new Error(`${path} must be an object`);
   }
@@ -229,7 +257,7 @@ export function validateDashboardConfig(config, path) {
   }
   if (config.layout != null) {
     if (!Array.isArray(config.layout)) throw new Error(`${path}.layout must be an array`);
-    config.layout.forEach((row, rowIdx) => {
+    (config.layout as DashboardCard[][]).forEach((row, rowIdx) => {
       if (!Array.isArray(row)) throw new Error(`${path}.layout[${rowIdx}] must be an array`);
       row.forEach((col, colIdx) => {
         const cards = Array.isArray(col) ? col : [col];
@@ -239,11 +267,11 @@ export function validateDashboardConfig(config, path) {
   }
   if (config.controls != null) {
     if (!Array.isArray(config.controls)) throw new Error(`${path}.controls must be an array`);
-    config.controls.forEach((card, idx) => validateDashboardCard(card, `${path}.controls[${idx}]`));
+    (config.controls as DashboardCard[]).forEach((card, idx) => validateDashboardCard(card, `${path}.controls[${idx}]`));
   }
   if (config.conditionalRows != null) {
     if (!Array.isArray(config.conditionalRows)) throw new Error(`${path}.conditionalRows must be an array`);
-    config.conditionalRows.forEach((row, rowIdx) => {
+    (config.conditionalRows as DashboardConditionalRow[]).forEach((row, rowIdx) => {
       if (!row || typeof row !== 'object' || Array.isArray(row)) {
         throw new Error(`${path}.conditionalRows[${rowIdx}] must be an object`);
       }
@@ -263,7 +291,7 @@ export function validateDashboardConfig(config, path) {
   }
 }
 
-export function validateDashboardStat(stat, path) {
+export function validateDashboardStat(stat: DashboardCard, path: string): void {
   if (!stat || typeof stat !== 'object' || Array.isArray(stat)) {
     throw new Error(`${path} must be an object`);
   }
@@ -275,7 +303,7 @@ export function validateDashboardStat(stat, path) {
   const statBuiltIn = String(statSource?.builtIn || '').trim().toLowerCase();
   const isBuiltInStat = statMode === 'built-in' && !!statBuiltIn;
   const hasEntity = String(stat.entity || '').trim();
-  const hasField = String(stat.field || stat.valueField || stat.count?.field || '').trim();
+  const hasField = String(stat.field || stat.valueField || (stat.count as { field?: string } | undefined)?.field || '').trim();
   if (!hasEntity && !isBuiltInStat) {
     throw new Error(`${path}.entity is required`);
   }
@@ -302,7 +330,7 @@ export function validateDashboardStat(stat, path) {
   }
 }
 
-export function validateDashboardCard(card, path) {
+export function validateDashboardCard(card: DashboardCard, path: string): void {
   if (!card || typeof card !== 'object' || Array.isArray(card)) {
     throw new Error(`${path} must be an object`);
   }
@@ -320,8 +348,8 @@ export function validateDashboardCard(card, path) {
   const hasEntity = String(card.entity || '').trim();
   const hasMerge = Array.isArray(card.merge);
   const hasSource = !!card.source || !!card.base;
-  const sourceMode = String(card.source?.mode || '').trim().toLowerCase();
-  const builtInMode = sourceMode === 'built-in' || !!card.source?.builtIn;
+  const sourceMode = String((card.source as WidgetSourceConfig | undefined)?.mode || '').trim().toLowerCase();
+  const builtInMode = sourceMode === 'built-in' || !!(card.source as WidgetSourceConfig | undefined)?.builtIn;
   if (schema?.requiresBaseOrEntity && !hasEntity && !hasSource && !hasMerge) {
     throw new Error(`${path} needs a Base, source or entity`);
   }
@@ -339,13 +367,13 @@ export function validateDashboardCard(card, path) {
       throw new Error(`${path}.base must be a string or object`);
     }
     if (typeof card.base === 'object') {
-      if (card.base.file != null && !String(card.base.file).trim()) {
+      if ((card.base as WorkspaceBaseRef & { entity?: string }).file != null && !String((card.base as WorkspaceBaseRef & { entity?: string }).file).trim()) {
         throw new Error(`${path}.base.file must be a non-empty string when provided`);
       }
-      if (card.base.view != null && !String(card.base.view).trim()) {
+      if ((card.base as WorkspaceBaseRef & { entity?: string }).view != null && !String((card.base as WorkspaceBaseRef & { entity?: string }).view).trim()) {
         throw new Error(`${path}.base.view must be a non-empty string when provided`);
       }
-      if (card.base.entity != null && !String(card.base.entity).trim()) {
+      if ((card.base as WorkspaceBaseRef & { entity?: string }).entity != null && !String((card.base as WorkspaceBaseRef & { entity?: string }).entity).trim()) {
         throw new Error(`${path}.base.entity must be a non-empty string when provided`);
       }
     }
@@ -425,8 +453,8 @@ export const WORKSPACE_OWNED_SETTING_KEYS = [
   'taskProjectLinks',
 ];
 
-export function workspaceOwnedSettings(settings: any = {}) {
-  const owned = {};
+export function workspaceOwnedSettings(settings: PartialSettings = {}): PartialSettings {
+  const owned: PartialSettings = {};
   WORKSPACE_OWNED_SETTING_KEYS.forEach((key) => {
     if (!Object.prototype.hasOwnProperty.call(settings, key)) return;
     owned[key] = key === 'pinnedSurfaces'
@@ -436,8 +464,8 @@ export function workspaceOwnedSettings(settings: any = {}) {
   return owned;
 }
 
-export function applyWorkspaceOwnedSettings(settings: any = {}) {
-  const merged = Object.assign({}, settings);
+export function applyWorkspaceOwnedSettings(settings: PartialSettings = {}): PartialSettings {
+  const merged: PartialSettings = Object.assign({}, settings);
   const workspaceSettings = WORKSPACE_CONFIG.settings || {};
   WORKSPACE_OWNED_SETTING_KEYS.forEach((key) => {
     if (Object.prototype.hasOwnProperty.call(workspaceSettings, key) && workspaceSettings[key] != null) {
@@ -449,9 +477,9 @@ export function applyWorkspaceOwnedSettings(settings: any = {}) {
   return merged;
 }
 
-export function persistedWorkspaceOwnedSettings(settings: any = {}) {
+export function persistedWorkspaceOwnedSettings(settings: PartialSettings = {}): PartialSettings {
   const existing = WORKSPACE_CONFIG.settings || {};
-  const persisted = {};
+  const persisted: PartialSettings = {};
   WORKSPACE_OWNED_SETTING_KEYS.forEach((key) => {
     if (!Object.prototype.hasOwnProperty.call(settings, key)) return;
     const current = settings[key];
@@ -467,8 +495,8 @@ export function persistedWorkspaceOwnedSettings(settings: any = {}) {
   return persisted;
 }
 
-export async function saveWorkspaceConfig(app, jsonText) {
-  const parsed = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(jsonText)));
+export async function saveWorkspaceConfig(app: App, jsonText: string): Promise<WorkspaceConfig> {
+  const parsed = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(jsonText)) as WorkspaceConfig);
   const adapter = app.vault.adapter;
   if (await adapter.exists(WORKSPACE_CONFIG_PATH)) {
     await adapter.write(WORKSPACE_BACKUP_PATH, await adapter.read(WORKSPACE_CONFIG_PATH));
@@ -479,12 +507,12 @@ export async function saveWorkspaceConfig(app, jsonText) {
   return parsed;
 }
 
-export async function loadWorkspaceConfig(app) {
+export async function loadWorkspaceConfig(app: App): Promise<WorkspaceConfig> {
   WORKSPACE_CONFIG = {};
   WORKSPACE_HAS_NAVIGATION = false;
   if (!(await app.vault.adapter.exists(WORKSPACE_CONFIG_PATH))) return WORKSPACE_CONFIG;
   try {
-    WORKSPACE_CONFIG = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(await app.vault.adapter.read(WORKSPACE_CONFIG_PATH))));
+    WORKSPACE_CONFIG = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(await app.vault.adapter.read(WORKSPACE_CONFIG_PATH))) as WorkspaceConfig);
     WORKSPACE_HAS_NAVIGATION = Array.isArray(WORKSPACE_CONFIG.navigation?.groups);
   } catch (e) {
     new obsidian.Notice(`BOB Workspace: workspace.json error - ${e.message}`);
@@ -494,7 +522,7 @@ export async function loadWorkspaceConfig(app) {
 }
 
 
-export function effectiveSchemaSettings(settings: any = {}) {
+export function effectiveSchemaSettings(settings: PartialSettings = {}): PartialSettings {
   const schemaConfig = WORKSPACE_CONFIG.schemas || {};
   return Object.assign({}, settings, {
     useSchemas: schemaConfig.enabled == null ? settings.useSchemas : !!schemaConfig.enabled,
@@ -502,24 +530,24 @@ export function effectiveSchemaSettings(settings: any = {}) {
   });
 }
 
-export function addConfiguredEntityKey(keys, key) {
+export function addConfiguredEntityKey(keys: Set<string>, key: unknown): void {
   const normalized = String(key || '').trim();
   if (normalized && ENTITIES[normalized]) keys.add(normalized);
 }
 
-export function collectEntityKeysFromConfigValue(value, keys) {
+export function collectEntityKeysFromConfigValue(value: unknown, keys: Set<string>): void {
   if (Array.isArray(value)) {
     value.forEach((item) => collectEntityKeysFromConfigValue(item, keys));
     return;
   }
   if (!value || typeof value !== 'object') return;
-  addConfiguredEntityKey(keys, value.entityKey);
-  addConfiguredEntityKey(keys, value.entity);
-  Object.values<any>(value).forEach((item) => collectEntityKeysFromConfigValue(item, keys));
+  addConfiguredEntityKey(keys, (value as { entityKey?: unknown }).entityKey);
+  addConfiguredEntityKey(keys, (value as { entity?: unknown }).entity);
+  Object.values(value).forEach((item) => collectEntityKeysFromConfigValue(item, keys));
 }
 
-export function workspaceConfiguredEntityKeys(config = WORKSPACE_CONFIG, opts: any = {}) {
-  const keys = new Set<any>();
+export function workspaceConfiguredEntityKeys(config: WorkspaceConfig = WORKSPACE_CONFIG, opts: { includeFallback?: boolean } = {}): Set<string> {
+  const keys = new Set<string>();
   SCHEMA_ENTITY_KEYS.forEach((key) => addConfiguredEntityKey(keys, key));
   Object.keys(config?.bases || {}).forEach((key) => addConfiguredEntityKey(keys, key));
   (config?.workbookGroups || []).forEach((group) =>
@@ -544,58 +572,58 @@ export function workspaceConfiguredEntityKeys(config = WORKSPACE_CONFIG, opts: a
   return keys;
 }
 
-export function workspaceConfiguredEntityEntries(config = WORKSPACE_CONFIG, opts: any = {}) {
+export function workspaceConfiguredEntityEntries(config: WorkspaceConfig = WORKSPACE_CONFIG, opts: { includeFallback?: boolean } = {}): [string, EntityDef][] {
   return [...workspaceConfiguredEntityKeys(config, opts)]
-    .map((key) => [key, ENTITIES[key]])
+    .map((key) => [key, ENTITIES[key]] as [string, EntityDef])
     .filter(([, def]) => def?.label)
     .sort(([, a], [, b]) =>
       String(a.plural || a.label).localeCompare(String(b.plural || b.label))
     );
 }
 
-export function workspaceHasEntity(entityKey, config = WORKSPACE_CONFIG) {
+export function workspaceHasEntity(entityKey: string, config: WorkspaceConfig = WORKSPACE_CONFIG): boolean {
   return workspaceConfiguredEntityKeys(config).has(entityKey);
 }
 
-export function configuredSurfaceActions(surfaceId, config = WORKSPACE_CONFIG) {
+export function configuredSurfaceActions(surfaceId: string, config: WorkspaceConfig = WORKSPACE_CONFIG): Record<string, JsonValue>[] {
   const actions = config?.navigation?.actions?.[surfaceId];
-  return Array.isArray(actions) ? actions : [];
+  return Array.isArray(actions) ? actions as Record<string, JsonValue>[] : [];
 }
 
-export function configuredBaseDefinition(entityKey) {
+export function configuredBaseDefinition(entityKey: string): WorkspaceBaseRef | null {
   return WORKSPACE_CONFIG.bases?.[entityKey] || null;
 }
 
-export function configuredDashboardDefinition(surfaceId) {
+export function configuredDashboardDefinition(surfaceId: string): DashboardConfig | null {
   return WORKSPACE_CONFIG.dashboards?.[surfaceId] || null;
 }
 
-export function resolveDashboardConfig(surfaceId, dashboards = WORKSPACE_CONFIG.dashboards) {
+export function resolveDashboardConfig(surfaceId: string, dashboards: Record<string, DashboardConfig> | undefined = WORKSPACE_CONFIG.dashboards): DashboardConfig | null {
   const config = (dashboards || {})[surfaceId] || null;
   return normalizeDashboardConfigShape(config);
 }
 
-export function resolvePlannerConfig(surfaceId, planner = WORKSPACE_CONFIG.planner) {
-  const config = (planner || {})[surfaceId] || null;
+export function resolvePlannerConfig(surfaceId: string, planner: Record<string, JsonValue> | undefined = WORKSPACE_CONFIG.planner): DashboardConfig | null {
+  const config = ((planner || {})[surfaceId] || null) as unknown as DashboardConfig | null;
   return normalizeDashboardConfigShape(config);
 }
 
-export function resolveSurfaceConfig(surfaceId, config = WORKSPACE_CONFIG) {
+export function resolveSurfaceConfig(surfaceId: string, config: WorkspaceConfig = WORKSPACE_CONFIG): DashboardConfig | null {
   if (String(surfaceId || '').startsWith('planner.')) {
     return resolvePlannerConfig(surfaceId, config.planner);
   }
   return resolveDashboardConfig(surfaceId, config.dashboards);
 }
 
-export function normalizeDashboardConfigShape(value) {
+export function normalizeDashboardConfigShape<T>(value: T): T {
   if (Array.isArray(value)) {
-    return value.map((item) => normalizeDashboardConfigShape(item));
+    return value.map((item) => normalizeDashboardConfigShape(item)) as unknown as T;
   }
   if (!value || typeof value !== 'object') return value;
-  const out = {};
-  Object.entries<any>(value).forEach(([key, child]) => {
+  const out: Record<string, unknown> = {};
+  Object.entries(value).forEach(([key, child]) => {
     out[key] = normalizeDashboardConfigShape(child);
   });
-  return out;
+  return out as T;
 }
 

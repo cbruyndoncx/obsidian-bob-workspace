@@ -1,12 +1,27 @@
 import { SECONDARY_TABS } from './nav';
-export function surfaceMatchesTab(surface, tab) {
+import type { NavGroup, NavSurface, SecondaryTab } from './types';
+
+/* The shared types miss a few runtime keys navigation actually carries:
+   tabs can nest `children` tab groups and seed `icon`/`desc` for generated
+   surfaces; surfaces promoted from tabs carry a `placement` marker. Extend
+   locally until types.ts models them. */
+export interface NavTab extends SecondaryTab {
+  children?: NavTab[];
+  icon?: string;
+  desc?: string;
+}
+export interface NavSurfaceItem extends NavSurface {
+  placement?: string;
+}
+
+export function surfaceMatchesTab(surface: NavSurface | null | undefined, tab: SecondaryTab | null | undefined) {
   return !!surface && !!tab && (
     (tab.entityKey && surface.entityKey === tab.entityKey) ||
     (tab.route && surface.id === tab.route)
   );
 }
 
-export function isTabBackedSurface(surface, tabsByParent = SECONDARY_TABS) {
+export function isTabBackedSurface(surface: NavSurfaceItem | null | undefined, tabsByParent: Record<string, NavTab[]> = SECONDARY_TABS): boolean {
   if (!surface?.parent) return false;
   return (tabsByParent[surface.parent] || []).some((tab) =>
     surfaceMatchesTab(surface, tab) ||
@@ -14,14 +29,14 @@ export function isTabBackedSurface(surface, tabsByParent = SECONDARY_TABS) {
   );
 }
 
-export function makeNavigationSurfacePrimary(surface) {
+export function makeNavigationSurfacePrimary(surface: NavSurfaceItem | null | undefined): void {
   if (!surface) return;
   delete surface.navLevel;
   delete surface.parent;
   delete surface.placement;
 }
 
-export function normalizeStandaloneNavigationSurfaces(groups, tabsByParent = SECONDARY_TABS, normalizeSetup = false) {
+export function normalizeStandaloneNavigationSurfaces(groups: NavGroup[] | null | undefined, tabsByParent: Record<string, NavTab[]> = SECONDARY_TABS, normalizeSetup = false): boolean {
   let changed = false;
   (groups || []).forEach((group) => {
     (group.items || []).forEach((surface) => {
@@ -37,7 +52,7 @@ export function normalizeStandaloneNavigationSurfaces(groups, tabsByParent = SEC
   return changed;
 }
 
-export function navigationSurfaceFromTab(parentId, tab, existingSurfaces: any[] = []) {
+export function navigationSurfaceFromTab(parentId: string, tab: NavTab, existingSurfaces: NavSurface[] = []): NavSurfaceItem {
   const match = existingSurfaces.find((surface) =>
     surfaceMatchesTab(surface, tab)
   );
@@ -62,11 +77,10 @@ export function navigationSurfaceFromTab(parentId, tab, existingSurfaces: any[] 
   };
 }
 
-export function removeSurfaceFromGroups(groups, surfaceId) {
+export function removeSurfaceFromGroups(groups: NavGroup[], surfaceId: string): NavSurface | null {
   for (const group of groups) {
     const index = (group.items || []).findIndex((surface) => surface.id === surfaceId);
     if (index >= 0) return group.items.splice(index, 1)[0];
   }
   return null;
 }
-

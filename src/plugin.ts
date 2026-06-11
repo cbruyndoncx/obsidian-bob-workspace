@@ -18,10 +18,42 @@ import { exportAllEntitiesXLSX, promptImportWorkbook } from './workbook';
 import { WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, WORKSPACE_OWNED_SETTING_KEYS, applyWorkspaceOwnedSettings, initPluginPaths, loadWorkspaceConfig, persistedWorkspaceOwnedSettings, saveWorkspaceConfig, validateWorkspaceConfig } from './workspace-config';
 import { loadWorkspaceTemplates, seedWorkspaceTemplates } from './workspace-templates';
 import * as obsidian from 'obsidian';
+import type { BobSettings, PartialSettings, Reminder } from './types';
+
+/* ── Module-local types (type-only; erased by esbuild) ─────────── */
+
+/**
+ * Loose handle to the CadenceAppView leaf view. Typed locally (instead of
+ * importing the view class) because only these few members are touched and
+ * plugin.ts ↔ app-view.ts already share a runtime import edge.
+ */
+type AppViewLike = obsidian.View & {
+  mode?: string;
+  plannerAnchor?: Date;
+  setMode?: (mode: string) => Promise<void>;
+  render?: () => void;
+};
+
+/**
+ * Fields accepted when creating a reminder. Wider than the persisted shape:
+ * the reminder edit modal also sends notes/project/notified.
+ */
+interface ReminderDraft {
+  text: string;
+  when?: string | null;
+  repeat?: string;
+  notes?: string;
+  project?: string | null;
+  notified?: boolean;
+}
+
+/** Persisted reminder. types.ts Reminder misses the `notes` field quick capture stores. */
+interface StoredReminder extends Reminder {
+  notes?: string;
+}
+
 export class CadencePlugin extends obsidian.Plugin {
-  // Migrated from untyped main.js: instance fields are not yet declared.
-  [key: string]: any;
-  settings: any;
+  settings: BobSettings;
   async onload() {
     initPluginPaths(this);
     await seedWorkspaceTemplates(this.app);
@@ -38,7 +70,7 @@ export class CadencePlugin extends obsidian.Plugin {
       this.registerBasesView(PLAYBOOK_RUNNER_VIEW_TYPE, {
         name: 'Playbook Runner',
         icon: 'play-circle',
-        factory: (controller, parentEl) => new CadencePlaybookRunnerView(controller, parentEl, this.app) as any,
+        factory: (controller, parentEl) => new CadencePlaybookRunnerView(controller, parentEl, this.app) as unknown as obsidian.BasesView,
       });
     }
 
@@ -103,7 +135,7 @@ export class CadencePlugin extends obsidian.Plugin {
         let entityKey = 'contact';
         const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
         if (leaf && leaf.view) {
-          const m = String((leaf.view as any).mode || '');
+          const m = String((leaf.view as AppViewLike).mode || '');
           if (m === 'crm.contacts')  entityKey = 'contact';
           else if (m === 'crm.companies') entityKey = 'company';
           else if (m === 'crm.activities') entityKey = 'activity';
@@ -235,7 +267,7 @@ export class CadencePlugin extends obsidian.Plugin {
   }
 
   /* ── Quick capture API ── */
-  openQuickCapture(prefill?) {
+  openQuickCapture(prefill?: { text?: string; when?: string | null; repeat?: string }) {
     new CadenceCaptureModal(this.app, {
       defaultText: prefill && prefill.text ? prefill.text : '',
       defaultWhen: prefill && prefill.when ? prefill.when : null,
@@ -256,7 +288,7 @@ export class CadencePlugin extends obsidian.Plugin {
         if (!isNaN(targetDate.getTime())) noteDate = targetDate;
         let dailyNoteAppended = false;
         try {
-          const file = await ensureDailyNote(this.app, this.settings, noteDate);
+          const file = await ensureDailyNote(this.app, this.settings, noteDate) as obsidian.TFile;
           const content = await this.app.vault.read(file);
           const parsed = parseSections(content, this.settings);
           const newTasks = [...parsed.tasks, `- [ ] ${result.text}`];
@@ -276,8 +308,8 @@ export class CadencePlugin extends obsidian.Plugin {
   }
 
   /* ── Reminders CRUD ── */
-  async addReminder(partial) {
-    const r = {
+  async addReminder(partial: ReminderDraft) {
+    const r: StoredReminder = {
       id: reminderId(),
       text: partial.text,
       when: partial.when || null,
@@ -295,7 +327,7 @@ export class CadencePlugin extends obsidian.Plugin {
     return r;
   }
 
-  async updateReminder(id, patch) {
+  async updateReminder(id: string, patch: Partial<StoredReminder>): Promise<Reminder | null> {
     const i = (this.settings.reminders || []).findIndex((r) => r.id === id);
     if (i < 0) return null;
     this.settings.reminders[i] = Object.assign({}, this.settings.reminders[i], patch);
@@ -304,13 +336,13 @@ export class CadencePlugin extends obsidian.Plugin {
     return this.settings.reminders[i];
   }
 
-  async deleteReminder(id) {
+  async deleteReminder(id: string) {
     this.settings.reminders = (this.settings.reminders || []).filter((r) => r.id !== id);
     await this.saveSettings();
     this.refreshOpenViews();
   }
 
-  async snoozeReminder(id, ms) {
+  async snoozeReminder(id: string, ms: number) {
     const target = new Date(Date.now() + ms);
     return this.updateReminder(id, {
       when: target.toISOString(),
@@ -318,13 +350,13 @@ export class CadencePlugin extends obsidian.Plugin {
     });
   }
 
-  async completeReminder(id) {
+  async completeReminder(id: string) {
     return this.updateReminder(id, { done: true, notified: true });
   }
 
   refreshOpenViews() {
     this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP).forEach((leaf) => {
-      if (leaf.view && typeof (leaf.view as any).render === 'function') (leaf.view as any).render();
+      if (leaf.view && typeof (leaf.view as AppViewLike).render === 'function') (leaf.view as AppViewLike).render();
     });
   }
 
@@ -333,7 +365,7 @@ export class CadencePlugin extends obsidian.Plugin {
     if (!Array.isArray(this.settings.reminders)) return;
     const now = Date.now();
     let dirty = false;
-    const additions = [];
+    const additions: Reminder[] = [];
     for (const r of this.settings.reminders) {
       if (r.done || r.notified) continue;
       if (!r.when) continue;
@@ -361,7 +393,7 @@ export class CadencePlugin extends obsidian.Plugin {
     }
   }
 
-  _fireReminder(r) {
+  _fireReminder(r: Reminder) {
     new obsidian.Notice(`⏰  ${r.text}`, 8000);
     if (this.settings.desktopNotifications && typeof Notification !== 'undefined') {
       try {
@@ -372,14 +404,14 @@ export class CadencePlugin extends obsidian.Plugin {
     }
   }
 
-  async openApp(mode = null) {
+  async openApp(mode: string | null = null) {
     let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
     if (!leaf) {
       leaf = this.app.workspace.getLeaf('tab');
       await leaf.setViewState({ type: VIEW_TYPE_CADENCE_APP, active: true });
     }
     this.app.workspace.revealLeaf(leaf);
-    const view: any = leaf.view;
+    const view: AppViewLike = leaf.view;
     if (view && typeof view.setMode === 'function') {
       const target = mode || view.mode || 'home';
       // Reset week-view anchor to current week when (re)opening that surface
@@ -394,14 +426,14 @@ export class CadencePlugin extends obsidian.Plugin {
   }
 
   async loadSettings() {
-    const data: any = await this.loadData();
+    const data: PartialSettings | null = await this.loadData();
     this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
     this.settings.baseFiles = Object.assign({}, DEFAULT_SETTINGS.baseFiles || {}, data?.baseFiles || {});
     this.settings.baseViews = Object.assign({}, DEFAULT_SETTINGS.baseViews || {}, data?.baseViews || {});
     this.settings.modules = Object.assign({}, DEFAULT_SETTINGS.modules || {}, data?.modules || {});
     this.settings.collapsedGroups = Object.assign({}, DEFAULT_SETTINGS.collapsedGroups || {}, data?.collapsedGroups || {});
     await loadWorkspaceConfig(this.app);
-    this.settings = applyWorkspaceOwnedSettings(this.settings);
+    this.settings = applyWorkspaceOwnedSettings(this.settings) as BobSettings;
     setCurrentCurrency(this.settings.currency);
     syncEntityFolders(this.settings);
   }

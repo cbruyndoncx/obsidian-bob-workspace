@@ -1,12 +1,13 @@
 import { ENTITIES } from './entities';
 import { ymd } from './utils';
-export function parseCSV(text) {
+import type { EntityDef, EntityField } from './types';
+export function parseCSV(text: string): string[][] {
   if (!text) return [];
   // Strip BOM
   if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
 
-  const rows = [];
-  let row = [];
+  const rows: string[][] = [];
+  let row: string[] = [];
   let field = '';
   let inQuote = false;
   let i = 0;
@@ -37,12 +38,12 @@ export function parseCSV(text) {
   return rows.filter((r) => !(r.length === 1 && r[0] === ''));
 }
 
-export function csvEscape(value) {
+export function csvEscape(value: unknown): string {
   const s = value == null ? '' : String(value);
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function sampleValueForField(field, def, idx) {
+export function sampleValueForField(field: EntityField, def: EntityDef, idx: number): string {
   const type = field.type || 'text';
   if (idx === 0 || field.primary) return `Example ${def.label}`;
   if (type === 'email') return 'name@example.com';
@@ -54,9 +55,9 @@ export function sampleValueForField(field, def, idx) {
   return `Example ${field.label || field.key}`;
 }
 
-export function csvTemplateForEntity(entityKey) {
-  const def = ENTITIES[entityKey];
-  const fields = def?.fields || [];
+export function csvTemplateForEntity(entityKey: string): string {
+  const def: EntityDef = ENTITIES[entityKey];
+  const fields: EntityField[] = def?.fields || [];
   const headers = fields.map((f) => f.key);
   const example = fields.map((f, i) => sampleValueForField(f, def, i));
   return `${headers.map(csvEscape).join(',')}\n${example.map(csvEscape).join(',')}\n`;

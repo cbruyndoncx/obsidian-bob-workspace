@@ -4,7 +4,9 @@ import { NAV_GROUPS, SECONDARY_TABS, WORKBOOK_EXPORT_GROUPS, applyWorkspaceRegis
 import { bootstrapCanonicalSchemaSourcesIfMissing, regenerateSchemaOutputs } from './schema-designer';
 import { SCHEMA_FOLDER_DEFAULT, applySchemas } from './schemas';
 import { WORKSPACE_CONFIG, effectiveSchemaSettings, loadWorkspaceConfig, workspaceOwnedSettings } from './workspace-config';
-export async function reloadEntityConfiguration(app, settings: any = {}) {
+import type { App } from 'obsidian';
+import type { PartialSettings, WorkspaceBaseRef } from './types';
+export async function reloadEntityConfiguration(app: App, settings: PartialSettings = {}): Promise<void> {
   resetWorkspaceRegistries();
   await loadWorkspaceConfig(app);
   resetEntityRegistry(settings);
@@ -23,9 +25,9 @@ export async function reloadEntityConfiguration(app, settings: any = {}) {
 }
 
 
-export function workspaceConfigTemplate(settings: any = {}) {
-  const bases = {};
-  Object.entries<any>(settings.baseFiles || {}).forEach(([entityKey, file]) => {
+export function workspaceConfigTemplate(settings: PartialSettings = {}): string {
+  const bases: Record<string, WorkspaceBaseRef> = {};
+  Object.entries(settings.baseFiles || {}).forEach(([entityKey, file]) => {
     if (!file) return;
     bases[entityKey] = { file };
     if ((settings.baseViews || {})[entityKey]) bases[entityKey].view = settings.baseViews[entityKey];

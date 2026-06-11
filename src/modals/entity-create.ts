@@ -2,10 +2,27 @@ import { ENTITIES, primaryFieldKey } from '../entities';
 import { resolveEntityFieldDefault } from '../entity-files';
 import { attachRequiredValidation } from './capture';
 import * as obsidian from 'obsidian';
+import type { App } from 'obsidian';
+import type { BobEntityDef, BobEntityField } from '../entities';
+
+/** Inputs rendered by the create form (no textarea fields here). */
+type CreateFormControl = HTMLInputElement | HTMLSelectElement;
+
+export interface EntityCreateResult {
+  name: string;
+  values: Record<string, string | number | string[]>;
+}
+
+interface CadenceEntityCreateModalOptions {
+  onSubmit: (result: EntityCreateResult | null) => void;
+}
+
 export class CadenceEntityCreateModal extends obsidian.Modal {
-  // Migrated from untyped main.js: instance fields are not yet declared.
-  [key: string]: any;
-  constructor(app, entityKey, opts) {
+  declare entityKey: string;
+  declare def: BobEntityDef;
+  declare onSubmit: (result: EntityCreateResult | null) => void;
+  declare _submitted: boolean;
+  constructor(app: App, entityKey: string, opts: CadenceEntityCreateModalOptions) {
     super(app);
     this.entityKey = entityKey;
     this.def = ENTITIES[entityKey];
@@ -22,9 +39,9 @@ export class CadenceEntityCreateModal extends obsidian.Modal {
     contentEl.createEl('h3', { cls: 'cad-create-title', text: `New ${this.def.label}` });
 
     const form = contentEl.createDiv({ cls: 'cad-create-form' });
-    const inputs = [];
+    const inputs: CreateFormControl[] = [];
 
-    const requiredInputs = [];
+    const requiredInputs: CreateFormControl[] = [];
 
     const primaryKey = primaryFieldKey(this.def);
     this.def.fields.forEach((f) => {
@@ -34,7 +51,7 @@ export class CadenceEntityCreateModal extends obsidian.Modal {
       const label = row.createDiv({ cls: 'cad-create-label' });
       label.setText(f.label.toUpperCase() + (isRequired ? ' *' : ''));
 
-      let input;
+      let input: CreateFormControl;
       const fieldType = f.type || 'text';
 
       if (fieldType === 'enum') {
@@ -81,12 +98,12 @@ export class CadenceEntityCreateModal extends obsidian.Modal {
     attachRequiredValidation(submitBtn, requiredInputs);
 
     const submit = () => {
-      const values = {};
-      let primaryValue = null;
+      const values: Record<string, string | number | string[]> = {};
+      let primaryValue: string | null = null;
       inputs.forEach((el, idx) => {
         const key = el.dataset.fieldKey;
         const type = el.dataset.fieldType;
-        let raw = el.value;
+        let raw: string | number | string[] | null = el.value;
         if (key === primaryKey) primaryValue = (raw || '').trim();
         if (raw === '' || raw == null) return;
         if (type === 'tags') raw = raw.split(',').map((t) => t.trim()).filter(Boolean);
@@ -111,7 +128,7 @@ export class CadenceEntityCreateModal extends obsidian.Modal {
 
     // Submit on Enter from any text input
     inputs.forEach((el) => {
-      el.addEventListener('keydown', (e) => {
+      el.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Enter' && el.tagName === 'INPUT') { e.preventDefault(); submit(); }
         if (e.key === 'Escape') this.close();
       });
@@ -120,10 +137,10 @@ export class CadenceEntityCreateModal extends obsidian.Modal {
     setTimeout(() => { if (inputs[0]) { inputs[0].focus(); } }, 0);
   }
 
-  _placeholderFor(field, isPrimary) {
+  _placeholderFor(field: BobEntityField, isPrimary: boolean): string {
     if (!isPrimary) return '';
     const ek = this.entityKey;
-    const examples = {
+    const examples: Record<string, string> = {
       contact:      'e.g. Jane Smith',
       company:      'e.g. Acme Corp',
       partner:      'e.g. Acme Distribution',

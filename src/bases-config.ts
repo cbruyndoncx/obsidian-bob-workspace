@@ -6,27 +6,37 @@ import { DEFAULT_SETTINGS, ENTITY_FOLDERS, syncEntityFolders } from './settings'
 import { ensureFolderSync } from './utils';
 import { CONFIGURED_BASE_ENTITY_KEYS, SCHEMA_ENTITY_KEYS, WORKSPACE_CONFIG, configuredBaseDefinition } from './workspace-config';
 import * as obsidian from 'obsidian';
-export function resolveBasesFolder(settings: any = {}) {
+import type { EntityDef, EntityField, EntityRegistry, PartialSettings } from './types';
+
+/** workspace.json `bases[entityKey]` entry (legacy `base`/`baseView` keys accepted). */
+export interface ConfiguredBaseRef {
+  file?: string;
+  base?: string;
+  view?: string;
+  baseView?: string;
+}
+
+export function resolveBasesFolder(settings: PartialSettings = {}): string {
   return String(settings.basesFolder || DEFAULT_SETTINGS.basesFolder || '00-CORE/Bases').replace(/\/+$/, '');
 }
 
 // Default .base filename for an entity that has no explicit baseFiles/bases
 // mapping — derived from its label/plural so schema-defined entities still get
 // a sensible, stable file (e.g. area → Areas.base).
-export function defaultBaseFileName(def, entityKey) {
+export function defaultBaseFileName(def: EntityDef, entityKey: string): string {
   const raw = String((def && (def.plural || def.label)) || entityKey).trim();
   const safe = raw.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, '-').replace(/^-+|-+$/g, '');
   return `${safe || entityKey}.base`;
 }
 
-export function entityBasePath(settings: any = {}, entityKey) {
+export function entityBasePath(settings: PartialSettings = {}, entityKey: string): string {
   // basesFolder is authoritative for the directory. The filename comes from
   // (in order) workspace.json bases[key].file, plugin baseFiles[key], the
   // built-in default, or — for schema-defined entities with none of those — a
   // name derived from the entity. We always strip to the basename and compose
   // with basesFolder, so changing the Bases folder relocates EVERY base.
-  const base = configuredBaseDefinition(entityKey);
-  let raw = base?.file || base?.base
+  const base = configuredBaseDefinition(entityKey) as ConfiguredBaseRef | null;
+  let raw: string = base?.file || base?.base
     || (settings.baseFiles || {})[entityKey]
     || (DEFAULT_SETTINGS.baseFiles || {})[entityKey]
     || '';
@@ -40,8 +50,8 @@ export function entityBasePath(settings: any = {}, entityKey) {
 
 // Entities the generator should consider — anything with a base mapping plus
 // every schema-registered entity (so vault-defined entities get bases too).
-export function baseEntityKeys(settings: any = {}) {
-  return Array.from(new Set([
+export function baseEntityKeys(settings: PartialSettings = {}): string[] {
+  return Array.from(new Set<string>([
     ...Object.keys(WORKSPACE_CONFIG.bases || {}),
     ...Object.keys(DEFAULT_SETTINGS.baseFiles || {}),
     ...Object.keys(settings.baseFiles || {}),
@@ -49,15 +59,22 @@ export function baseEntityKeys(settings: any = {}) {
   ])).sort();
 }
 
+/** Obsidian Bases (.base) YAML document shape generated for an entity. */
+interface GeneratedBaseFile {
+  filters?: string | { and: string[] };
+  properties?: Record<string, { displayName: string }>;
+  views?: { type: string; name: string; order: string[] }[];
+}
+
 // Build an Obsidian Bases (.base) config object from an entity definition:
 // a filter that selects the entity's notes, and a table view listing its columns.
-export function baseFileFromEntityDefinition(entityKey, def) {
-  const conditions = [];
+export function baseFileFromEntityDefinition(entityKey: string, def: EntityDef): GeneratedBaseFile {
+  const conditions: string[] = [];
   const typeFilters = def.typeFilters && typeof def.typeFilters === 'object' && !Array.isArray(def.typeFilters)
     ? def.typeFilters
     : null;
   if (typeFilters) {
-    for (const [k, v] of Object.entries<any>(typeFilters)) conditions.push(`note.${k} == "${v}"`);
+    for (const [k, v] of Object.entries(typeFilters)) conditions.push(`note.${k} == "${v}"`);
   } else if (def.typeFilter) {
     conditions.push(`note.type == "${def.typeFilter}"`);
   } else {
@@ -73,8 +90,8 @@ export function baseFileFromEntityDefinition(entityKey, def) {
   // In a Base, `order` (columns) and `sort` use BARE property names, while
   // `properties` keys and `filters` use the note.<prop> form. file.name is the
   // primary field's column. (Matches the vault's hand-authored .base files.)
-  const order = [];
-  const properties = {};
+  const order: string[] = [];
+  const properties: Record<string, { displayName: string }> = {};
   for (const key of columns) {
     const field = fields.find((f) => f.key === key);
     const orderId = field?.primary ? 'file.name' : key;
@@ -85,7 +102,7 @@ export function baseFileFromEntityDefinition(entityKey, def) {
   }
   if (!order.includes('file.name')) order.unshift('file.name');
 
-  const out: any = {};
+  const out: GeneratedBaseFile = {};
   if (conditions.length === 1) out.filters = conditions[0];
   else if (conditions.length > 1) out.filters = { and: conditions };
   if (Object.keys(properties).length) out.properties = properties;
@@ -95,14 +112,21 @@ export function baseFileFromEntityDefinition(entityKey, def) {
 
 // Create a .base file for every known entity that doesn't already have one.
 // Missing-only: existing files are never overwritten.
-export async function generateMissingBases(app, settings: any = {}) {
+export async function generateMissingBases(app: obsidian.App, settings: PartialSettings = {}): Promise<{
+  folder: string;
+  count: number;
+  skipped: number;
+  failed: string[];
+  written: string[];
+  skippedPaths: string[];
+}> {
   const folder = resolveBasesFolder(settings);
   await ensureFolderSync(app, folder);
-  const written = [];
-  const skipped = [];
-  const failed = [];
+  const written: string[] = [];
+  const skipped: string[] = [];
+  const failed: string[] = [];
   for (const entityKey of baseEntityKeys(settings)) {
-    const def: any = ENTITIES[entityKey];
+    const def = ENTITIES[entityKey];
     if (!def) continue;
     const path = entityBasePath(settings, entityKey);
     if (!path) continue;
@@ -120,26 +144,26 @@ export async function generateMissingBases(app, settings: any = {}) {
   return { folder, count: written.length, skipped: skipped.length, failed, written, skippedPaths: skipped };
 }
 
-export function entityBaseViewName(settings: any = {}, entityKey) {
-  const base = configuredBaseDefinition(entityKey);
+export function entityBaseViewName(settings: PartialSettings = {}, entityKey: string): string {
+  const base = configuredBaseDefinition(entityKey) as ConfiguredBaseRef | null;
   // User selection in settings.baseViews overrides workspace.json default view.
   return (settings.baseViews || {})[entityKey] || base?.view || base?.baseView || '';
 }
 
-export function resetEntityRegistry(settings: any = {}) {
+export function resetEntityRegistry(settings: PartialSettings = {}): void {
   CONFIGURED_BASE_ENTITY_KEYS.clear();
   SCHEMA_ENTITY_KEYS.clear();
   Object.keys(ENTITIES).forEach((key) => {
     if (!BUILTIN_ENTITY_DEFAULTS[key]) delete ENTITIES[key];
   });
-  Object.entries<any>(BUILTIN_ENTITY_DEFAULTS).forEach(([key, def]) => {
+  Object.entries(BUILTIN_ENTITY_DEFAULTS).forEach(([key, def]) => {
     ENTITIES[key] = JSON.parse(JSON.stringify(def));
   });
   syncEntityFolders(settings);
 }
 
-export async function applyEntityDefinitions(app, settings: any = {}, config: any = {}, injectNavigation = true, configOwnsBase = false) {
-  for (let [key, def] of Object.entries<any>(config)) {
+export async function applyEntityDefinitions(app: obsidian.App, settings: PartialSettings = {}, config: EntityRegistry = {}, injectNavigation = true, configOwnsBase = false): Promise<void> {
+  for (let [key, def] of Object.entries(config)) {
     if (!def || typeof def !== 'object') continue;
 
     const basePath = configOwnsBase
@@ -150,10 +174,10 @@ export async function applyEntityDefinitions(app, settings: any = {}, config: an
       : ((settings.baseViews || {})[key] || def.baseView);
     if (configOwnsBase && def.base) CONFIGURED_BASE_ENTITY_KEYS.add(key);
     if (basePath) {
-      const baseConfig: any = await parseBaseFile(app, basePath, baseView);
+      const baseConfig = await parseBaseFile(app, basePath, baseView);
       if (baseConfig) {
         // Field-level merge: base provides structure, def augments with type/options/primary
-        let mergedFields = baseConfig.fields;
+        let mergedFields: EntityField[] = baseConfig.fields;
         if (mergedFields && def.fields) {
           const overrides = new Map(def.fields.map(f => [f.key, f]));
           mergedFields = mergedFields.map(f => overrides.has(f.key) ? Object.assign({}, f, overrides.get(f.key)) : f);
@@ -184,8 +208,8 @@ export async function applyEntityDefinitions(app, settings: any = {}, config: an
       ['stageField','valueField','closeByField','wonStages','lostStages',
        'detailMetaFields','detailSections','terminalStatuses','stageConfidence',
        'template',
-       'folders','dateField','titleField','fieldAliases','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters','unsupportedBaseFeatures'].forEach((k) => {
-        if (def[k] != null) ENTITIES[key][k] = def[k];
+       'folders','dateField','titleField','fieldAliases','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters','unsupportedBaseFeatures'].forEach((k: keyof EntityDef) => {
+        if (def[k] != null) ENTITIES[key][k] = def[k] as never;
       });
       ENTITY_FOLDERS[key] = folder;
 
@@ -240,9 +264,9 @@ export async function applyEntityDefinitions(app, settings: any = {}, config: an
       ['stageField','valueField','closeByField','wonStages','lostStages',
        'detailMetaFields','detailSections','terminalStatuses','stageConfidence',
        'template',
-       'folders','dateField','titleField','fieldAliases','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters','unsupportedBaseFeatures'].forEach((k) => {
+       'folders','dateField','titleField','fieldAliases','baseFilters','baseSort','baseGroupBy','baseView','externalBaseView','unsupportedBaseFilters','unsupportedBaseFeatures'].forEach((k: keyof EntityDef) => {
         if (!Object.prototype.hasOwnProperty.call(def, k)) return;
-        if (def[k] != null) ENTITIES[key][k] = def[k];
+        if (def[k] != null) ENTITIES[key][k] = def[k] as never;
         else delete ENTITIES[key][k];
       });
     }

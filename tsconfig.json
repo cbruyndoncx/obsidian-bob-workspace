@@ -14,13 +14,22 @@
     "noEmit": true,
 
     /*
-     * Gradual-typing posture: the codebase was migrated mechanically from a
-     * single untyped main.js. Strictness is intentionally off so behavior
-     * could be preserved verbatim; tighten flags module-by-module as types
-     * are added.
+     * Typing posture: the codebase is fully annotated (no implicit any;
+     * explicit `any` only at documented dynamic boundaries like frontmatter).
+     * strictNullChecks is the remaining strictness gap — the code was
+     * migrated from untyped JS and relies pervasively on null/undefined
+     * coalescing idioms; enable it module-by-module in a future pass.
      */
     "strict": false,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictBindCallApply": true,
+    /*
+     * alwaysStrict stays off: esbuild would inject "use strict" into the
+     * bundle, including inside the vendored SheetJS module — a runtime
+     * semantics change the byte-identical migration deliberately avoids.
+     */
+    "alwaysStrict": false,
     "strictNullChecks": false
   },
   "include": ["src/**/*.ts"]

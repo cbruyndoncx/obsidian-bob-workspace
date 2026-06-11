@@ -2,8 +2,32 @@ import { ENTITIES } from './entities';
 import { entityTemplate } from './entity-files';
 import { humanizeProjectName, normalizeProjectId, resolveEntityCreateFolder } from './settings';
 import { dailyNotePath, ensureFolderSync, ymd } from './utils';
-export async function createEntity(app, entityKey, rawName, context: any = {}) {
-  const def = ENTITIES[entityKey];
+import type { App, TAbstractFile, TFile } from 'obsidian';
+import type { EntityDef, Frontmatter, PartialSettings } from './types';
+
+/** Extra context for entity creation (initial values, folder hints, …). */
+export interface EntityCreateContext {
+  values?: Frontmatter;
+  [key: string]: unknown;
+}
+
+/** Shape of the community Templater plugin instance (optional integration). */
+interface TemplaterPlugin {
+  settings?: { folder_templates?: { folder: string; template: string }[] };
+  templater?: {
+    create_new_note_from_template(
+      template: TAbstractFile,
+      folder: TAbstractFile | undefined,
+      filename: string,
+      openNewNote: boolean,
+    ): Promise<TFile>;
+  };
+}
+
+type AppWithPlugins = App & { plugins?: { plugins?: Record<string, TemplaterPlugin | undefined> } };
+
+export async function createEntity(app: App, entityKey: string, rawName: string, context: EntityCreateContext = {}): Promise<TFile> {
+  const def: EntityDef = ENTITIES[entityKey];
   const createContext = Object.assign({}, context);
   let effectiveRawName = rawName;
   if (entityKey === 'project') {
@@ -34,15 +58,15 @@ export async function createEntity(app, entityKey, rawName, context: any = {}) {
 }
 
 /* ─────────── Daily-note read/write ─────────── */
-export async function ensureDailyNote(app, settings, date = new Date()) {
+export async function ensureDailyNote(app: App, settings: PartialSettings, date = new Date()): Promise<TAbstractFile> {
   const path = dailyNotePath(settings, date);
-  let file = app.vault.getAbstractFileByPath(path);
+  let file: TAbstractFile | null = app.vault.getAbstractFileByPath(path);
   if (file) return file;
   const folder = (settings.dailyNoteFolder || '').replace(/\/$/, '');
   if (folder && !app.vault.getAbstractFileByPath(folder)) {
     try { await app.vault.createFolder(folder); } catch (_) {}
   }
-  const templater = app.plugins?.plugins?.['templater-obsidian'];
+  const templater = (app as AppWithPlugins).plugins?.plugins?.['templater-obsidian'];
   const folderTemplates = templater?.settings?.folder_templates || [];
   const dailyFolder = (settings.dailyNoteFolder || '').replace(/\/$/, '');
   const match = folderTemplates.find(ft => ft.folder.replace(/\/$/, '') === dailyFolder || ft.folder === '/');
@@ -63,11 +87,11 @@ export async function ensureDailyNote(app, settings, date = new Date()) {
   return file;
 }
 
-export function parseSections(content, settings) {
+export function parseSections(content: string, settings: PartialSettings): { tasks: string[]; journal: string; raw: string } {
   const lines = content.split('\n');
-  const tasks = [];
+  const tasks: string[] = [];
   let journal = '';
-  let mode = null;
+  let mode: 'tasks' | 'journal' | null = null;
   for (const line of lines) {
     if (/^##\s/.test(line)) {
       const stripped = line.trim();
@@ -85,7 +109,7 @@ export function parseSections(content, settings) {
   return { tasks, journal: journal.replace(/\s+$/, ''), raw: content };
 }
 
-export function replaceSection(content, heading, newBody) {
+export function replaceSection(content: string, heading: string, newBody: string): string {
   const lines = content.split('\n');
   const headIdx = lines.findIndex((l) => l.trim() === heading);
   if (headIdx === -1) {

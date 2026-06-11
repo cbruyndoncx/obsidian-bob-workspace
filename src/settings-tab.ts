@@ -7,7 +7,7 @@ import { CadenceIconPickerModal, CadencePromptModal, confirmModal } from './moda
 import { NAV_GROUPS, SURFACE_BY_ID, VIEW_TYPE_CADENCE_APP, migrateWorkspacePlannerConfig } from './nav';
 import { isTabBackedSurface, makeNavigationSurfacePrimary, navigationSurfaceFromTab, normalizeStandaloneNavigationSurfaces, removeSurfaceFromGroups, surfaceMatchesTab } from './nav-helpers';
 import { reloadEntityConfiguration, workspaceConfigTemplate } from './runtime-config';
-import { applyEditableSchemaFieldDefault, applyEditableSchemaFieldType, bootstrapCanonicalSchemaSources, bootstrapCanonicalSchemaSourcesIfMissing, editableSchemaFieldDefault, editableSchemaFieldType, loadCanonicalSchemaSources, regenerateSchemaOutputs, validateSourceSchemaDefinition } from './schema-designer';
+import { applyEditableSchemaFieldDefault, applyEditableSchemaFieldType, bootstrapCanonicalSchemaSources, bootstrapCanonicalSchemaSourcesIfMissing, editableSchemaFieldDefault, editableSchemaFieldType, loadCanonicalSchemaSources, regenerateSchemaOutputs, validateSourceSchemaDefinition, type SourceSchema, type SourceSchemaField } from './schema-designer';
 import { SCHEMA_FOLDER_DEFAULT, SCHEMA_TO_ENTITY_KEY, pluralizeEntityLabel } from './schemas';
 import { DEFAULT_SETTINGS, syncEntityFolders } from './settings';
 import { CURRENCY_OPTIONS, ensureFolderSync } from './utils';
@@ -16,10 +16,161 @@ import { exportEntitiesXLSX, promptImportWorkbook, selectedWorkbookEntityKeys, w
 import { PLUGIN_DIR, WORKSPACE_BACKUP_PATH, WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, configuredBaseDefinition, effectiveSchemaSettings, saveWorkspaceConfig, validateWorkspaceConfig, workspaceConfiguredEntityEntries } from './workspace-config';
 import { applyWorkspaceTemplate, loadWorkspaceTemplates, workspaceTemplateKey } from './workspace-templates';
 import * as obsidian from 'obsidian';
-export class CadenceSettingTab extends obsidian.PluginSettingTab {
-  // Migrated from untyped main.js: instance fields are not yet declared.
+import type { CadencePlugin } from './plugin';
+import type {
+  JsonValue,
+  NavGroup,
+  NavSurface,
+  PartialSettings,
+  BobSettings,
+  SchemaField,
+  SchemaSource,
+  SecondaryTab,
+  WorkbookExportGroup,
+  WorkspaceBaseRef,
+  WorkspaceConfig,
+} from './types';
+
+/* ── Module-local types (type-only; erased by esbuild) ─────────── */
+
+/** Drag-and-drop payload exchanged between the navigation designer zones. */
+type NavDragPayload =
+  | { type: 'group'; groupIndex: number }
+  | { type: 'item'; groupIndex: number; itemIndex: number }
+  | { type: 'tab'; parentId: string; tabIndex: number }
+  | { type: 'entity'; entityKey: string };
+
+/** Nav surface as the designer mutates it (`placement` is designer-authored). */
+interface DraftNavSurface extends NavSurface {
+  placement?: string;
+}
+
+/** Nav group inside the workspace.json draft (adds module/icon over NavGroup). */
+interface DraftNavGroup {
+  id: string;
+  label: string;
+  icon?: string;
+  module?: string;
+  items: DraftNavSurface[];
+}
+
+/** Secondary tab as authored in workspace.json (adds icon/children). */
+interface DraftSecondaryTab extends SecondaryTab {
+  icon?: string;
+  children?: DraftSecondaryTab[];
+}
+
+/** Base mapping entry; legacy drafts may carry base/baseView keys. */
+interface DraftBaseRef extends WorkspaceBaseRef {
+  base?: string;
+  baseView?: string;
+}
+
+/**
+ * Unvalidated workspace.json widget/card JSON as scanned by the Review tab —
+ * user-authored JSON with ad-hoc keys, read for display only. This is a
+ * genuinely dynamic boundary (same posture as Frontmatter in types.ts).
+ */
+type ReviewCard = Record<string, any>;
+
+/**
+ * Dashboard/planner surface config shape walked by the widget review.
+ * `layout` cells are card-or-card-array JSON; kept `any[][]` (and the index
+ * signature `any`) so this stays assignable to the shared DashboardConfig —
+ * which keeps WorkspaceDraft assignable to WorkspaceConfig with no casts.
+ */
+interface ReviewSurfaceConfig {
+  stats?: ReviewCard[];
+  controls?: ReviewCard[];
+  layout?: any[][];
+  conditionalRows?: { cards?: ReviewCard[]; condition?: ReviewCard | string }[];
   [key: string]: any;
-  constructor(app, plugin) { super(app, plugin); this.plugin = plugin; this._reviewActiveTab = 'overview'; this._reviewRenderSeq = 0; }
+}
+
+/** One row of a Review-tab table; cells are formatted via reviewText(). */
+type ReviewRow = unknown[];
+
+/**
+ * The workspace.json draft held in the Settings textarea. Mirrors the shared
+ * WorkspaceConfig but with the designer-mutable shapes above (types.ts models
+ * the validated shape, not the legacy keys the designers still read/write).
+ */
+interface WorkspaceDraft {
+  schemas?: { enabled?: boolean; folder?: string };
+  bases?: Record<string, DraftBaseRef>;
+  navigation?: {
+    groups?: DraftNavGroup[];
+    secondaryTabs?: Record<string, DraftSecondaryTab[]>;
+    actions?: Record<string, JsonValue>;
+  };
+  workbookGroups?: WorkbookExportGroup[];
+  dashboards?: Record<string, ReviewSurfaceConfig>;
+  planner?: Record<string, ReviewSurfaceConfig>;
+  settings?: PartialSettings;
+  [key: string]: unknown;
+}
+
+/** `_template` metadata block carried by workspace template JSON files. */
+interface TemplateMeta {
+  id?: string;
+  name?: string;
+  label?: string;
+  description?: string;
+  [key: string]: JsonValue | undefined;
+}
+
+/** A workspace template as returned by loadWorkspaceTemplates(). */
+interface WorkspaceTemplate extends WorkspaceConfig {
+  _template?: TemplateMeta;
+  _templatePath?: string;
+}
+
+/** NAV_GROUPS registry entry (runtime nav groups carry module/icon too). */
+interface NavGroupConfig extends NavGroup {
+  module?: string;
+  icon?: string;
+}
+
+/** Canonical schema field with the designer-edited extras. */
+type DesignerSchemaField = SourceSchemaField;
+
+/** Canonical schema source with the designer-edited optional blocks. */
+type DesignerSchemaSource = SourceSchema;
+
+/** Cadence app leaf view re-rendered after settings changes. */
+type RenderableViewLike = obsidian.View & { render?: () => void };
+
+/**
+ * Detached CadenceAppView (built from its prototype, never attached to a
+ * leaf) that hosts the dashboard editor / widget catalog inside Settings.
+ */
+interface SettingsDashboardRenderer {
+  app: obsidian.App;
+  plugin: CadencePlugin;
+  settings: BobSettings;
+  mode: string;
+  detailFile: obsidian.TFile | null;
+  detailEntityKey: string | null;
+  _dashboardState: Record<string, unknown>;
+  _clientWorkClientId: string;
+  _clientWorkProjectId: string;
+  render: () => Promise<void>;
+  setMode: (mode: string) => Promise<void>;
+  openEntityDetailFromFile: (file: obsidian.TFile) => void;
+  renderDashboardEditor: (root: HTMLElement) => Promise<void>;
+  _renderWidgetCatalog: (root: HTMLElement) => void;
+  _renderDashboardInventory: (root: HTMLElement) => void;
+}
+
+export class CadenceSettingTab extends obsidian.PluginSettingTab {
+  declare plugin: CadencePlugin;
+  declare _reviewActiveTab: string;
+  declare _reviewRenderSeq: number;
+  declare _activeSettingsTab: string;
+  declare _collapsedModules: Set<string>;
+  declare _dashboardRenderer: SettingsDashboardRenderer;
+  declare _schemaDesignerSelectedPath: string;
+  constructor(app: obsidian.App, plugin: CadencePlugin) { super(app, plugin); this.plugin = plugin; this._reviewActiveTab = 'overview'; this._reviewRenderSeq = 0; }
 
   _dashboardSettingsRenderer() {
     if (!this._dashboardRenderer) {
@@ -31,8 +182,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       renderer._clientWorkClientId = '';
       renderer._clientWorkProjectId = '';
       renderer.render = async () => {};
-      renderer.setMode = async (mode) => this.plugin.openApp(mode);
-      renderer.openEntityDetailFromFile = (file) => {
+      renderer.setMode = async (mode: string) => this.plugin.openApp(mode);
+      renderer.openEntityDetailFromFile = (file: obsidian.TFile) => {
         if (!file?.path) return;
         this.plugin.app.workspace.openLinkText(file.path, '', false);
       };
@@ -63,10 +214,10 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const TAB_IDS = ['workspace', 'review', 'navigation', 'dashboards', 'widgets', 'modules', 'data-model', 'planner', 'app', 'exports', 'data'];
     const TAB_LABELS = ['Workspace', 'Review', 'Navigation', 'Dashboards', 'Widgets', 'Modules', 'Data model', 'Planner', 'App', 'Exports', 'Data'];
     if (!this._activeSettingsTab) this._activeSettingsTab = 'workspace';
-    if (!this._collapsedModules) this._collapsedModules = new Set<any>();
+    if (!this._collapsedModules) this._collapsedModules = new Set<string>();
     const tabBar = containerEl.createDiv({ cls: 'cad-settings-tabs' });
-    const tabPanels = {};
-    const tabBtns = {};
+    const tabPanels: Record<string, HTMLDivElement> = {};
+    const tabBtns: Record<string, HTMLButtonElement> = {};
     TAB_IDS.forEach((id, i) => {
       const btn = tabBar.createEl('button', { cls: 'cad-settings-tab', text: TAB_LABELS[i] });
       if (id === this._activeSettingsTab) btn.addClass('is-active');
@@ -125,7 +276,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         workspaceStatus.setText(`Read error: ${e.message}`);
       }
     })();
-    const setWorkspaceStatus = (message, ok) => {
+    const setWorkspaceStatus = (message: string, ok: boolean) => {
       workspaceStatus.setText(message);
       workspaceStatus.style.color = ok ? 'var(--text-success)' : 'var(--text-error)';
     };
@@ -192,7 +343,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       try {
         const config = validateWorkspaceConfig(JSON.parse(workspaceTa.value));
         config.bases = config.bases || {};
-        Object.entries<any>(this.plugin.settings.baseFiles || {}).forEach(([entityKey, file]) => {
+        Object.entries(this.plugin.settings.baseFiles || {}).forEach(([entityKey, file]) => {
           if (!file) return;
           config.bases[entityKey] = { file };
           if ((this.plugin.settings.baseViews || {})[entityKey]) {
@@ -222,7 +373,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const templateReloadBtn = templateRow.createEl('button', { text: 'Reload' });
     const templateApplyBtn = templateRow.createEl('button', { text: 'Apply selected', cls: 'mod-cta' });
     const templateMeta = templatePanel.createDiv({ cls: 'setting-item-description' });
-    let workspaceTemplates = [];
+    let workspaceTemplates: WorkspaceTemplate[] = [];
     const renderTemplateMeta = () => {
       const selected = workspaceTemplates.find((tpl) => workspaceTemplateKey(tpl) === templateSelect.value);
       const meta = selected?._template;
@@ -296,8 +447,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     });
     const workbookDesignerBody = workbookDesigner.createDiv({ cls: 'cad-workbook-designer-body' });
 
-    const readWorkspaceDraft = () => validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(workspaceTa.value)));
-    const reviewText = (value, fallback = '—') => {
+    const readWorkspaceDraft = () => validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(workspaceTa.value))) as WorkspaceDraft;
+    const reviewText = (value: unknown, fallback = '—') => {
       if (value == null || value === '') return fallback;
       if (Array.isArray(value)) return value.length ? value.join(', ') : fallback;
       if (value && typeof value === 'object') {
@@ -306,7 +457,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       }
       return String(value);
     };
-    const renderReviewTable = (parent, title, headers, rows, emptyText = 'Nothing to review yet') => {
+    const renderReviewTable = (parent: HTMLElement, title: string, headers: string[], rows: ReviewRow[], emptyText = 'Nothing to review yet') => {
       const section = parent.createDiv({ cls: 'cad-review-section' });
       section.createDiv({ cls: 'cad-section-label-lg', text: title });
       if (!rows.length) {
@@ -325,9 +476,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       });
       return section;
     };
-    const widgetSourceSummary = (source) => {
+    const widgetSourceSummary = (source: ReviewCard | string | null | undefined) => {
       if (!source || typeof source !== 'object' || Array.isArray(source)) return reviewText(source, '');
-      const bits = [];
+      const bits: string[] = [];
       if (source.mode) bits.push(`mode:${source.mode}`);
       if (source.builtIn) bits.push(`built-in:${source.builtIn}`);
       if (source.section) bits.push(`section:${source.section}`);
@@ -343,9 +494,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       if (source.limit != null) bits.push(`limit:${source.limit}`);
       return bits.join(' · ');
     };
-    const collectWidgetRows = (surfaceId, surfaceConfig: any = {}) => {
-      const rows = [];
-      const pushCard = (section, card, idx, extra = '') => {
+    const collectWidgetRows = (surfaceId: string, surfaceConfig: ReviewSurfaceConfig = {}) => {
+      const rows: ReviewRow[] = [];
+      const pushCard = (section: string, card: ReviewCard, idx: number, extra = '') => {
         if (!card || typeof card !== 'object') return;
         rows.push([
           card.title || card.label || '(untitled)',
@@ -377,9 +528,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       });
       return rows;
     };
-    const loadReviewSchemaSources = async (folder) => {
+    const loadReviewSchemaSources = async (folder: string) => {
       const adapter = this.plugin.app.vault.adapter;
-      const result = { folder, schemas: [], errors: [] };
+      const result: { folder: string; schemas: { path: string; schema: DesignerSchemaSource }[]; errors: string[] } = { folder, schemas: [], errors: [] };
       if (!folder || !await adapter.exists(folder)) return result;
       const listed = await adapter.list(folder);
       for (const filePath of (listed.files || []).filter((file) => /\.ya?ml$/i.test(file))) {
@@ -396,11 +547,11 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       if (!pReview) return;
       const reviewSeq = ++this._reviewRenderSeq;
       pReview.empty();
-      let config;
+      let config: WorkspaceDraft;
       try {
         config = readWorkspaceDraft();
       } catch (_) {
-        config = WORKSPACE_CONFIG;
+        config = WORKSPACE_CONFIG as WorkspaceDraft;
       }
       const activeTab = this._reviewActiveTab || 'overview';
       const reviewTabs = [
@@ -416,7 +567,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       if (!reviewTabs.some(([id]) => id === activeTab)) this._reviewActiveTab = 'overview';
       const tabBar = pReview.createDiv({ cls: 'cad-settings-tabs cad-review-tabs' });
       const panel = pReview.createDiv({ cls: 'cad-settings-tab-panel cad-review-panel' });
-      const setActiveTab = (id) => {
+      const setActiveTab = (id: string) => {
         this._reviewActiveTab = id;
         void renderWorkspaceReview();
       };
@@ -429,8 +580,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       const navigation = config.navigation || {};
       const navGroups = Array.isArray(navigation.groups) ? navigation.groups : [];
       const secondaryTabs = navigation.secondaryTabs || {};
-      const dashboardEntries = Object.entries<any>(config.dashboards || {}).sort(([a], [b]) => a.localeCompare(b));
-      const plannerEntries = Object.entries<any>(config.planner || {}).sort(([a], [b]) => a.localeCompare(b));
+      const dashboardEntries = Object.entries(config.dashboards || {}).sort(([a], [b]) => a.localeCompare(b));
+      const plannerEntries = Object.entries(config.planner || {}).sort(([a], [b]) => a.localeCompare(b));
       const baseKeys = Array.from(new Set([
         ...Object.keys(config.bases || {}),
         ...Object.keys(this.plugin.settings.baseFiles || {}),
@@ -451,10 +602,10 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       ];
 
       const configuredNavIds = new Set(navGroups.flatMap((group) => (group.items || []).map((item) => item.id)));
-      const navRows = [];
+      const navRows: ReviewRow[] = [];
       NAV_GROUPS.forEach((group, groupIndex) => {
         (group.items || []).forEach((surface, itemIndex) => {
-          const visibleReasons = [];
+          const visibleReasons: string[] = [];
           if ((this.plugin.settings.disabledSurfaces || []).includes(surface.id)) visibleReasons.push('disabled');
           if (surface.module && this.plugin.settings.modules?.[surface.module] === false) visibleReasons.push(`module:${surface.module} off`);
           if (surface.navLevel === 'secondary' && !this.plugin.settings.showSecondaryNav) visibleReasons.push('secondary hidden');
@@ -474,8 +625,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         });
       });
 
-      const secondaryRows = [];
-      Object.entries<any>(secondaryTabs).forEach(([parentId, tabs]) => {
+      const secondaryRows: ReviewRow[] = [];
+      Object.entries(secondaryTabs).forEach(([parentId, tabs]) => {
         (tabs || []).forEach((tab, idx) => {
           secondaryRows.push([
             tab.label || tab.route || tab.entityKey || `Tab ${idx + 1}`,
@@ -524,24 +675,24 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       const widgetRows = surfaceConfigs.flatMap(({ id, surfaceConfig }) => collectWidgetRows(id, surfaceConfig || {}));
 
       const allEntityKeys = new Set([
-        ...schemaSources.schemas.map(({ schema }) => SCHEMA_TO_ENTITY_KEY[schema.entity] || schema.entity),
+        ...schemaSources.schemas.map(({ schema }) => (SCHEMA_TO_ENTITY_KEY as Record<string, string>)[schema.entity] || schema.entity),
         ...baseKeys,
         ...navGroups.flatMap((group) => (group.items || []).map((surface) => surface.entityKey).filter(Boolean)),
-        ...Object.values<any>(secondaryTabs).flatMap((tabs) => (tabs || []).map((tab) => tab.entityKey).filter(Boolean)),
+        ...Object.values(secondaryTabs).flatMap((tabs) => (tabs || []).map((tab) => tab.entityKey).filter(Boolean)),
       ]);
       const allEntityRows = [...allEntityKeys]
         .sort((a, b) => String(ENTITIES[a]?.label || a).localeCompare(String(ENTITIES[b]?.label || b)))
         .map((entityKey) => {
-          const schemaSource = schemaSources.schemas.find(({ schema }) => (SCHEMA_TO_ENTITY_KEY[schema.entity] || schema.entity) === entityKey) || null;
-          const navMatches = [];
+          const schemaSource = schemaSources.schemas.find(({ schema }) => ((SCHEMA_TO_ENTITY_KEY as Record<string, string>)[schema.entity] || schema.entity) === entityKey) || null;
+          const navMatches: string[] = [];
           navGroups.forEach((group) => {
             (group.items || []).forEach((surface) => {
               if (surface.entityKey !== entityKey) return;
               navMatches.push(`${group.label || group.id || ''} / ${surface.label || surface.id || surface.entityKey}`);
             });
           });
-          const tabMatches = [];
-          Object.entries<any>(secondaryTabs).forEach(([parentId, tabs]) => {
+          const tabMatches: string[] = [];
+          Object.entries(secondaryTabs).forEach(([parentId, tabs]) => {
             const parentSurface = navGroups.flatMap((group) => group.items || []).find((surface) => surface.id === parentId);
             (tabs || []).forEach((tab) => {
               if (tab.entityKey !== entityKey) return;
@@ -631,7 +782,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         renderReviewTable(panel, 'Entities missing from the menu tree', ['Label', 'Entity', 'Schema file', 'Base file', 'View', 'Source status'], unassignedRows, 'No schema-backed or base-backed entities are currently missing from the menu tree.');
       }
     };
-    let dashboardRenderer = null;
+    let dashboardRenderer: SettingsDashboardRenderer | null = null;
     renderWorkspaceDesigners = () => {
       renderNavDesigner();
       renderWorkbookDesigner();
@@ -645,13 +796,13 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         dashboardRenderer._renderWidgetCatalog(pWidgets);
       }
     };
-    const updateWorkspaceDraft = (config, message?) => {
+    const updateWorkspaceDraft = (config: WorkspaceDraft, message?: string) => {
       workspaceTa.value = JSON.stringify(config, null, 2);
       setWorkspaceStatus(message || 'Workspace changed - click Save and apply', true);
       setWorkspaceConfig(validateWorkspaceConfig(migrateWorkspacePlannerConfig(config)));
       renderWorkspaceDesigners();
     };
-    const saveWorkspaceBase = async (entityKey, file, view) => {
+    const saveWorkspaceBase = async (entityKey: string, file: string, view: string) => {
       const config = readWorkspaceDraft();
       config.bases = config.bases || {};
       if (file) {
@@ -665,8 +816,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
       this.plugin.refreshOpenViews();
     };
-    let activeDragPayload = null;
-    const parseDragData = (event) => {
+    let activeDragPayload: NavDragPayload | null = null;
+    const parseDragData = (event: DragEvent): NavDragPayload | null => {
       if (activeDragPayload) return activeDragPayload;
       try {
         const raw = event.dataTransfer.getData('text/bob-workspace-nav') || event.dataTransfer.getData('text/plain');
@@ -675,7 +826,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         return null;
       }
     };
-    const dragPayload = (event, payload) => {
+    const dragPayload = (event: DragEvent, payload: NavDragPayload) => {
       activeDragPayload = payload;
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/bob-workspace-nav', JSON.stringify(payload));
@@ -685,7 +836,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       activeDragPayload = null;
       navDesigner.querySelectorAll('.drag-over').forEach((element) => element.removeClass('drag-over'));
     };
-    const createIconPickerButton = (parent, initialIcon, onChange, emptyText = 'Choose icon') => {
+    const createIconPickerButton = (parent: HTMLElement, initialIcon: string | undefined, onChange: (iconId: string) => void, emptyText = 'Choose icon') => {
       let currentIcon = initialIcon || '';
       const button = parent.createEl('button', {
         cls: 'cad-nav-designer-icon-button',
@@ -712,7 +863,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       render();
       return button;
     };
-    const moveGroup = (config, sourceGroupIndex, targetGroupIndex) => {
+    const moveGroup = (config: WorkspaceDraft, sourceGroupIndex: number, targetGroupIndex: number) => {
       if (sourceGroupIndex === targetGroupIndex) return false;
       const groups = config.navigation.groups;
       const moved = groups.splice(sourceGroupIndex, 1)[0];
@@ -722,11 +873,11 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       groups.splice(destination, 0, moved);
       return true;
     };
-    const mutateGroupsForDrop = (config, payload, targetGroupIndex, targetItemIndex = null) => {
+    const mutateGroupsForDrop = (config: WorkspaceDraft, payload: NavDragPayload, targetGroupIndex: number, targetItemIndex: number | null = null) => {
       const groups = config.navigation.groups;
       const target = groups[targetGroupIndex];
       if (!target) return false;
-      let surface;
+      let surface: DraftNavSurface | undefined;
       if (payload.type === 'item') {
         const sourceGroup = groups[payload.groupIndex];
         if (!sourceGroup?.items?.[payload.itemIndex]) return false;
@@ -764,16 +915,16 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       else target.items.splice(Math.max(0, targetItemIndex), 0, surface);
       return true;
     };
-    const movePayloadToTabs = (config, payload, targetParentId) => {
+    const movePayloadToTabs = (config: WorkspaceDraft, payload: NavDragPayload, targetParentId: string) => {
       const tabsByParent = config.navigation.secondaryTabs || (config.navigation.secondaryTabs = {});
       const targetTabs = tabsByParent[targetParentId] || (tabsByParent[targetParentId] = []);
-      let tab;
+      let tab: DraftSecondaryTab | undefined;
       if (payload.type === 'item') {
         const sourceGroup = config.navigation.groups[payload.groupIndex];
         const surface = sourceGroup?.items?.[payload.itemIndex];
         if (!surface || surface.id === targetParentId || !surface.entityKey) return false;
         sourceGroup.items.splice(payload.itemIndex, 1);
-        for (const [parentId, tabs] of Object.entries<any>(tabsByParent)) {
+        for (const [parentId, tabs] of Object.entries(tabsByParent)) {
           const existingIndex = tabs.findIndex((candidate) => surfaceMatchesTab(surface, candidate));
           if (existingIndex >= 0) {
             if (parentId === targetParentId) return true;
@@ -811,7 +962,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
 
     const renderNavDesigner = () => {
       navDesignerBody.empty();
-      let config;
+      let config: WorkspaceDraft;
       try {
         config = readWorkspaceDraft();
       } catch (e) {
@@ -843,7 +994,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         let id = seed;
         let suffix = 2;
         while (groups.some((group) => group.id === id)) id = `${seed}-${suffix++}`;
-        const group: any = { id, label, module: id, items: [] };
+        const group: DraftNavGroup = { id, label, module: id, items: [] };
         if (newGroupIcon) group.icon = newGroupIcon;
         groups.push(group);
         updateWorkspaceDraft(config, `${label} group added - click Save and apply`);
@@ -851,8 +1002,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       const palette = navDesignerBody.createDiv({ cls: 'cad-nav-designer-tabs' });
       palette.createDiv({ cls: 'cad-nav-designer-label', text: 'Tabs - drag a tab into navigation, or drop an item into a parent tab area' });
       const tabParents = palette.createDiv({ cls: 'cad-nav-designer-tab-parents' });
-      const tabEntityKeys = new Set<any>();
-      Object.entries<any>(config.navigation.secondaryTabs || {}).forEach(([parentId, tabs]) => {
+      const tabEntityKeys = new Set<string>();
+      Object.entries(config.navigation.secondaryTabs || {}).forEach(([parentId, tabs]) => {
         const parentSurface = allSurfaces.find((surface) => surface.id === parentId);
         const parentEl = tabParents.createDiv({ cls: 'cad-nav-designer-tab-parent' });
         const parentHead = parentEl.createDiv({ cls: 'cad-nav-designer-tab-parent-head' });
@@ -1107,7 +1258,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     };
     const renderWorkbookDesigner = () => {
       workbookDesignerBody.empty();
-      let config;
+      let config: WorkspaceDraft;
       try {
         config = readWorkspaceDraft();
       } catch (e) {
@@ -1225,12 +1376,12 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       if (this.plugin.settings.modules.finance == null) this.plugin.settings.modules.finance = true;
       if (this.plugin.settings.modules.procurement == null) this.plugin.settings.modules.procurement = true;
       if (this.plugin.settings.modules.tax == null) this.plugin.settings.modules.tax = true;
-      NAV_GROUPS.filter((group) => group.module).forEach((group) => {
+      NAV_GROUPS.filter((group: NavGroupConfig) => group.module).forEach((group: NavGroupConfig) => {
         if (this.plugin.settings.modules[group.module] == null) this.plugin.settings.modules[group.module] = true;
       });
       return this.plugin.settings.modules;
     };
-    const moduleLabels = {
+    const moduleLabels: Record<string, string> = {
       planner: 'Planner — daily planning, projects and capture.',
       crm:     'Customer Relationship Management — Contacts, Clients, My Companies, Pipeline, Activities.',
       'client-work': 'Client Work — Meetings, communications, deliverables, feedback, surveys, testimonials and decisions.',
@@ -1248,7 +1399,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const baseSummariesPromise = Promise.all(baseFiles.map((file) => readBaseSummary(this.plugin.app, file)))
       .then((items) => items.filter(Boolean).sort((a, b) => a.label.localeCompare(b.label)));
 
-    NAV_GROUPS.forEach((group) => {
+    NAV_GROUPS.forEach((group: NavGroupConfig) => {
       const items = group.items.filter((s) => !['home', 'team', 'settings'].includes(s.id));
       if (!items.length) return;
       // Skip the empty-id 'misc' group and Reports/Workflow without a module
@@ -1335,10 +1486,10 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
 
         // Folder text input (if this surface has a folderKey and isn't overridden by schema or .base)
         if (surface.folderKey && !overridden) {
-          const placeholder = eDef?.folders?.[0] || DEFAULT_SETTINGS[surface.folderKey] || '';
+          const placeholder = eDef?.folders?.[0] || (DEFAULT_SETTINGS[surface.folderKey] as string) || '';
           s.addText((t) => {
             t.setPlaceholder(placeholder)
-              .setValue(this.plugin.settings[surface.folderKey] || '')
+              .setValue((this.plugin.settings[surface.folderKey] as string) || '')
               .onChange(async (v) => {
                 const trimmed = v.trim();
                 if (trimmed) this.plugin.settings[surface.folderKey] = trimmed;
@@ -1603,7 +1754,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           await this.plugin.saveSettings();
           // Re-render any open Cadence tabs so values reformat immediately
           this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP).forEach((leaf) => {
-            if (leaf.view && typeof (leaf.view as any).render === 'function') (leaf.view as any).render();
+            if (leaf.view && typeof (leaf.view as RenderableViewLike).render === 'function') (leaf.view as RenderableViewLike).render();
           });
         });
       });
@@ -1690,7 +1841,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       banner.createSpan({ text: '. Edit the ' });
       const wsLink = banner.createEl('a', { text: 'Workspace tab', cls: 'cad-managed-banner-link' });
       wsLink.addEventListener('click', () => {
-        const wsTab: any = containerEl.querySelector('.cad-settings-tab[data-tab="workspace"]');
+        const wsTab = containerEl.querySelector<HTMLElement>('.cad-settings-tab[data-tab="workspace"]');
         if (wsTab) wsTab.click();
       });
       banner.createSpan({ text: ' to change them.' });
@@ -1772,10 +1923,10 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const schemaDelete = schemaToolbar.createEl('button', { text: 'Archive source', cls: 'mod-warning' });
     const schemaStatus = schemaDesigner.createDiv({ cls: 'cad-schema-designer-status setting-item-description' });
     const schemaForm = schemaDesigner.createDiv({ cls: 'cad-schema-designer-form' });
-    let sourceSchema = null;
+    let sourceSchema: DesignerSchemaSource | null = null;
     let sourceSchemaPath = '';
     let schemaDirty = false;
-    let schemaFiles = [];
+    let schemaFiles: string[] = [];
     const initialSchemaPath = this._schemaDesignerSelectedPath || '';
     const schemaFolder = (schemaSettings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
     (async () => {
@@ -1791,12 +1942,12 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       }
     })();
 
-    const setSchemaStatus = (text, ok = true) => {
+    const setSchemaStatus = (text: string, ok = true) => {
       schemaStatus.setText(text || '');
       schemaStatus.toggleClass('cad-status-ok', !!ok);
       schemaStatus.toggleClass('cad-status-err', !ok);
     };
-    const highlightSaveButtons = (on) => {
+    const highlightSaveButtons = (on: boolean) => {
       schemaSave.toggleClass('cad-schema-save-needed', on);
       schemaSaveGenerate.toggleClass('cad-schema-save-needed', on);
     };
@@ -1838,12 +1989,12 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       schemaDirty = true;
       setSchemaStatus('Unsaved changes', true);
     };
-    const commaList = (value) => Array.isArray(value) ? value.join(', ') : '';
-    const parseList = (value) => String(value || '').split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
-    const parsePairs = (value) => String(value || '').split(/\n/).map((line) => parseList(line)).filter((pair) => pair.length);
-    const discriminatorText = (value) => Object.entries<any>(value || {}).map(([key, item]) => `${key}: ${item}`).join('\n');
-    const parseDiscriminator = (value) => {
-      const parsed = {};
+    const commaList = (value: JsonValue[] | undefined) => Array.isArray(value) ? value.join(', ') : '';
+    const parseList = (value: string) => String(value || '').split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
+    const parsePairs = (value: string) => String(value || '').split(/\n/).map((line) => parseList(line)).filter((pair) => pair.length);
+    const discriminatorText = (value: Record<string, JsonValue> | undefined) => Object.entries(value || {}).map(([key, item]) => `${key}: ${item}`).join('\n');
+    const parseDiscriminator = (value: string) => {
+      const parsed: Record<string, string> = {};
       String(value || '').split(/\n/).forEach((line) => {
         const separator = line.indexOf(':');
         if (separator < 0) return;
@@ -1853,11 +2004,11 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       });
       return parsed;
     };
-    const fieldAliasesText = (value) => Object.entries<any>(value || {})
+    const fieldAliasesText = (value: Record<string, string[]> | undefined) => Object.entries(value || {})
       .map(([key, aliases]) => `${key}: ${(Array.isArray(aliases) ? aliases : []).join(', ')}`)
       .join('\n');
-    const parseFieldAliases = (value) => {
-      const parsed = {};
+    const parseFieldAliases = (value: string) => {
+      const parsed: Record<string, string[]> = {};
       String(value || '').split(/\n/).forEach((line) => {
         const separator = line.indexOf(':');
         if (separator < 0) return;
@@ -1867,18 +2018,18 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       });
       return parsed;
     };
-    const fieldRow = (parent, label) => {
+    const fieldRow = (parent: HTMLElement, label: string) => {
       const row = parent.createDiv({ cls: 'cad-schema-designer-row' });
       row.createDiv({ cls: 'cad-schema-designer-label', text: label });
       return row.createDiv({ cls: 'cad-schema-designer-control' });
     };
-    const textControl = (parent, label, value, onInput, multiline = false) => {
+    const textControl = (parent: HTMLElement, label: string, value: string | undefined, onInput: (value: string) => void, multiline = false) => {
       const control = fieldRow(parent, label);
       const input = multiline
         ? control.createEl('textarea', { cls: 'cad-schema-designer-input' })
         : control.createEl('input', { type: 'text', cls: 'cad-schema-designer-input' });
       input.value = value || '';
-      if (multiline) input.rows = 2;
+      if (multiline) (input as HTMLTextAreaElement).rows = 2;
       input.addEventListener('input', () => {
         onInput(input.value);
         markSchemaDirty();
@@ -1950,7 +2101,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         try {
           sourceSchema.bob = JSON.parse(value);
         } catch (_) {
-          sourceSchema.bob = value;
+          sourceSchema.bob = value as unknown as SourceSchema['bob'];
         }
       }, true);
 
@@ -2038,7 +2189,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         });
       });
     };
-    const loadSourceSchema = async (path) => {
+    const loadSourceSchema = async (path: string) => {
       if (!path) {
         sourceSchema = null;
         sourceSchemaPath = '';
@@ -2061,7 +2212,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         renderSourceSchema();
       }
     };
-    const refreshSchemaSelect = async (preferredPath) => {
+    const refreshSchemaSelect = async (preferredPath: string) => {
       try {
         const listed = await adapter.list(schemaFolder);
         schemaFiles = (listed.files || [])
@@ -2121,7 +2272,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         },
       }).open();
     });
-    const saveSchemaSource = async (regenerate) => {
+    const saveSchemaSource = async (regenerate: boolean) => {
       if (!sourceSchema || !sourceSchemaPath) return;
       try {
         validateSourceSchemaDefinition(sourceSchema);

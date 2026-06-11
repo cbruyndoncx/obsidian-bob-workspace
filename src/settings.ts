@@ -1,7 +1,30 @@
 import { ENTITIES, primaryFieldKey } from './entities';
 import { taskNoteFolders } from './task-notes';
 import * as obsidian from 'obsidian';
-export const DEFAULT_SETTINGS: Record<string, any> = {
+import type { BobSettings, EntityDef, Frontmatter, PartialSettings } from './types';
+
+/* Template/dashboard placeholder context: ad-hoc string-keyed values. */
+type PlaceholderContext = Record<string, unknown>;
+
+/* Context bag passed through entity-create flows (modal values, raw name,
+   target file path). Open-keyed: callers add ad-hoc placeholder values. */
+interface EntityCreateContext {
+  values?: Record<string, unknown>;
+  rawName?: string;
+  filePath?: string;
+  [key: string]: unknown;
+}
+
+/* Normalized record template (EntityTemplateSpec object form; body may be a
+   line array, and workspace.json templates can carry extra keys). */
+interface TemplateSpec {
+  path?: string;
+  frontmatter?: Frontmatter;
+  body?: string | string[];
+  [key: string]: unknown;
+}
+
+export const DEFAULT_SETTINGS: BobSettings = {
   dailyNoteFolder: 'daily',
   dailyNoteFormat: 'YYYY-MM-DD',
   journalHeading: '## Journal',
@@ -122,7 +145,7 @@ export let ENTITY_FOLDERS: Record<string, string> = {
   project: '30-CLIENTS',
 };
 
-export function syncEntityFolders(settings) {
+export function syncEntityFolders(settings: PartialSettings): void {
   ENTITY_FOLDERS.contact      = (settings.folderContacts      || '').trim() || '10-ME/10-PEOPLE';
   ENTITY_FOLDERS.company      = (settings.folderCompanies     || '').trim() || '20-COMPANY/00-PROFILE';
   ENTITY_FOLDERS.client       = (settings.folderClients       || '').trim() || '30-CLIENTS';
@@ -151,26 +174,26 @@ export function syncEntityFolders(settings) {
   ENTITIES.task.folders = taskNoteFolders(settings);
 }
 
-export function entityFolder(entityKey) {
+export function entityFolder(entityKey: string): string {
   // Schema/entities.json `folders` array wins (first entry = default for new files)
   if (ENTITIES[entityKey]?.folders?.[0]) return ENTITIES[entityKey].folders[0];
   return ENTITY_FOLDERS[entityKey] || ENTITIES[entityKey]?.folder || '';
 }
 
-export function normalizePathSegment(value) {
+export function normalizePathSegment(value: unknown): string {
   return String(value ?? '')
     .replace(/[\\/:*?"<>|]/g, '-')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-export function normalizedLookupKey(value) {
+export function normalizedLookupKey(value: unknown): string {
   return String(value ?? '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '');
 }
 
-export function normalizeProjectId(value) {
+export function normalizeProjectId(value: unknown): string {
   return String(value ?? '')
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -180,7 +203,7 @@ export function normalizeProjectId(value) {
     .toLowerCase();
 }
 
-export function humanizeProjectName(value) {
+export function humanizeProjectName(value: unknown): string {
   const text = String(value ?? '')
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -196,16 +219,16 @@ export function humanizeProjectName(value) {
     .join(' ');
 }
 
-export function buildEntityCreateValueMap(def, context: any = {}) {
-  const values = Object.assign({}, context.values || {});
-  const map = new Map();
-  const add = (key, value) => {
+export function buildEntityCreateValueMap(def: EntityDef, context: EntityCreateContext = {}): Map<string, unknown> {
+  const values: Record<string, unknown> = Object.assign({}, context.values || {});
+  const map = new Map<string, unknown>();
+  const add = (key: string, value: unknown) => {
     if (value == null || value === '') return;
     const normalized = normalizedLookupKey(key);
     if (normalized) map.set(normalized, value);
   };
 
-  Object.entries<any>(values).forEach(([key, value]) => add(key, value));
+  Object.entries(values).forEach(([key, value]) => add(key, value));
   if (context.rawName) {
     const primaryKey = primaryFieldKey(def);
     if (primaryKey) add(primaryKey, context.rawName);
@@ -219,25 +242,25 @@ export function buildEntityCreateValueMap(def, context: any = {}) {
   return map;
 }
 
-export function lookupCreateValue(name, valueMap) {
+export function lookupCreateValue(name: string, valueMap: Map<string, unknown>): unknown {
   const key = normalizedLookupKey(name);
   if (!key) return '';
   if (valueMap.has(key)) return valueMap.get(key);
   return '';
 }
 
-export function resolveLocationPatternFolder(pattern, def, context: any = {}) {
+export function resolveLocationPatternFolder(pattern: string, def: EntityDef, context: EntityCreateContext = {}): string {
   if (!pattern) return '';
   const valueMap = buildEntityCreateValueMap(def, context);
   const candidates = String(pattern)
     .split(/\s+or\s+/i)
     .map((part) => part.trim().replace(/^['"]|['"]$/g, ''))
     .filter(Boolean);
-  const resolvedPaths = [];
+  const resolvedPaths: { path: string; depth: number; fullyResolved: boolean }[] = [];
 
   for (const candidate of candidates) {
     const segments = candidate.split('/').map((segment) => segment.trim()).filter(Boolean);
-    const pathSegments = [];
+    const pathSegments: string[] = [];
     let blocked = false;
     let hadPlaceholder = false;
 
@@ -251,7 +274,7 @@ export function resolveLocationPatternFolder(pattern, def, context: any = {}) {
       hadPlaceholder = true;
       let segmentResolved = segment;
       let unresolved = false;
-      segmentResolved = segmentResolved.replace(/\{([^}]+)\}/g, (_, placeholder) => {
+      segmentResolved = segmentResolved.replace(/\{([^}]+)\}/g, (_: string, placeholder: string) => {
         const value = lookupCreateValue(placeholder, valueMap);
         if (value === '') {
           unresolved = true;
@@ -287,7 +310,7 @@ export function resolveLocationPatternFolder(pattern, def, context: any = {}) {
   return bestPartial?.path || '';
 }
 
-export function resolveEntityCreateFolder(entityKey, rawName, context: any = {}) {
+export function resolveEntityCreateFolder(entityKey: string, rawName: string, context: EntityCreateContext = {}): string {
   const def = ENTITIES[entityKey];
   if (!def) return entityFolder(entityKey);
   const pattern = def.locationPattern || def.location_pattern || '';
@@ -295,16 +318,18 @@ export function resolveEntityCreateFolder(entityKey, rawName, context: any = {})
   return resolved || entityFolder(entityKey);
 }
 
-export function normalizeTemplateSpec(template) {
+export function normalizeTemplateSpec(template: unknown): TemplateSpec | null {
   if (!template) return null;
   if (typeof template === 'string') return { body: template };
-  if (typeof template === 'object' && !Array.isArray(template)) return template;
+  if (typeof template === 'object' && !Array.isArray(template)) return template as TemplateSpec;
   return null;
 }
 
-export function applyTemplatePlaceholders(value, context: any = {}) {
+export function applyTemplatePlaceholders(value: string, context?: PlaceholderContext): string;
+export function applyTemplatePlaceholders<T>(value: T, context?: PlaceholderContext): T;
+export function applyTemplatePlaceholders(value: unknown, context: PlaceholderContext = {}): unknown {
   if (typeof value !== 'string') return value;
-  return value.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
+  return value.replace(/\{\{([^}]+)\}\}/g, (_: string, key: string) => {
     const lookup = String(key || '').trim();
     if (!lookup) return '';
     const candidates = [lookup, lookup.toLowerCase(), lookup.replace(/\s+/g, '_').toLowerCase()];
@@ -317,12 +342,13 @@ export function applyTemplatePlaceholders(value, context: any = {}) {
   });
 }
 
-export function applyDashboardContext(value, context: any = {}) {
+export function applyDashboardContext<T>(value: T, context?: PlaceholderContext): T;
+export function applyDashboardContext(value: unknown, context: PlaceholderContext = {}): unknown {
   if (typeof value === 'string') return applyTemplatePlaceholders(value, context);
   if (Array.isArray(value)) return value.map((item) => applyDashboardContext(item, context));
   if (value && typeof value === 'object') {
-    const out = {};
-    Object.entries<any>(value).forEach(([key, item]) => {
+    const out: Record<string, unknown> = {};
+    Object.entries(value).forEach(([key, item]) => {
       out[key] = applyDashboardContext(item, context);
     });
     return out;
@@ -330,9 +356,9 @@ export function applyDashboardContext(value, context: any = {}) {
   return value;
 }
 
-export function renderTemplateFrontmatter(frontmatter, context: any = {}) {
-  const result = {};
-  Object.entries<any>(frontmatter || {}).forEach(([key, value]) => {
+export function renderTemplateFrontmatter(frontmatter: Frontmatter | null | undefined, context: PlaceholderContext = {}): Frontmatter {
+  const result: Frontmatter = {};
+  Object.entries(frontmatter || {}).forEach(([key, value]) => {
     if (Array.isArray(value)) {
       result[key] = value.map((item) => applyTemplatePlaceholders(item, context));
       return;
@@ -346,18 +372,18 @@ export function renderTemplateFrontmatter(frontmatter, context: any = {}) {
   return result;
 }
 
-export function renderTemplateBody(body, context: any = {}) {
+export function renderTemplateBody(body: string | string[] | null | undefined, context: PlaceholderContext = {}): string {
   const lines = Array.isArray(body) ? body : String(body || '').split('\n');
   return lines.map((line) => applyTemplatePlaceholders(line, context)).join('\n');
 }
 
-export function renderTemplateDocument(template, context: any = {}, fallback = null) {
+export function renderTemplateDocument(template: unknown, context: PlaceholderContext = {}, fallback: TemplateSpec | null = null): string {
   const spec = normalizeTemplateSpec(template);
   const body = spec?.body != null ? spec.body : fallback?.body;
   const frontmatter = spec?.frontmatter != null ? spec.frontmatter : fallback?.frontmatter;
   const fm = renderTemplateFrontmatter(frontmatter || {}, context);
   const fmLines = ['---'];
-  Object.entries<any>(fm).forEach(([key, value]) => {
+  Object.entries(fm).forEach(([key, value]) => {
     fmLines.push(obsidian.stringifyYaml({ [key]: value }).trim() || `${key}:`);
   });
   fmLines.push('---', '');

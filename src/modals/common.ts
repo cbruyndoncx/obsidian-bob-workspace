@@ -1,8 +1,22 @@
 import * as obsidian from 'obsidian';
+import type { App } from 'obsidian';
+
+interface CadencePromptModalOptions {
+  title?: string;
+  placeholder?: string;
+  defaultValue?: string;
+  cta?: string;
+  onSubmit: (value: string | null) => void;
+}
+
 export class CadencePromptModal extends obsidian.Modal {
-  // Migrated from untyped main.js: instance fields are not yet declared.
-  [key: string]: any;
-  constructor(app, opts) {
+  declare title: string;
+  declare placeholder: string;
+  declare defaultValue: string;
+  declare cta: string;
+  declare onSubmit: (value: string | null) => void;
+  declare _submitted: boolean;
+  constructor(app: App, opts: CadencePromptModalOptions) {
     super(app);
     this.title = opts.title || 'Enter a name';
     this.placeholder = opts.placeholder || '';
@@ -57,10 +71,22 @@ export class CadencePromptModal extends obsidian.Modal {
 }
 
 /* ─────────── Yes/No confirmation modal ─────────── */
+interface CadenceConfirmModalOptions {
+  message?: string;
+  title?: string;
+  cta?: string;
+  danger?: boolean;
+  onResolve: (confirmed: boolean) => void;
+}
+
 export class CadenceConfirmModal extends obsidian.Modal {
-  // Migrated from untyped main.js: instance fields are not yet declared.
-  [key: string]: any;
-  constructor(app, opts) {
+  declare message: string;
+  declare heading: string;
+  declare cta: string;
+  declare danger: boolean;
+  declare onResolve: (confirmed: boolean) => void;
+  declare _answered: boolean;
+  constructor(app: App, opts: CadenceConfirmModalOptions) {
     super(app);
     this.message = opts.message || 'Are you sure?';
     this.heading = opts.title || 'Confirm';
@@ -91,17 +117,24 @@ export class CadenceConfirmModal extends obsidian.Modal {
 }
 
 // Promise-based replacement for window.confirm(); resolves true on confirm, false otherwise.
-export function confirmModal(app, message, opts: any = {}) {
-  return new Promise((resolve) => {
+export function confirmModal(app: App, message: string, opts: Partial<Omit<CadenceConfirmModalOptions, 'message' | 'onResolve'>> = {}): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
     new CadenceConfirmModal(app, { message, ...opts, onResolve: resolve }).open();
   });
 }
 
 /* ─────────── Obsidian icon picker ─────────── */
-export class CadenceIconPickerModal extends obsidian.SuggestModal<any> {
-  // Migrated from untyped main.js: instance fields are not yet declared.
-  [key: string]: any;
-  constructor(app, currentIcon, onChoose) {
+interface IconSuggestion {
+  iconId: string;
+  /** Sentinel row that clears the current icon. */
+  clear?: boolean;
+}
+
+export class CadenceIconPickerModal extends obsidian.SuggestModal<IconSuggestion> {
+  declare currentIcon: string;
+  declare onChoose: (iconId: string) => void;
+  declare iconIds: string[];
+  constructor(app: App, currentIcon: string, onChoose: (iconId: string) => void) {
     super(app);
     this.currentIcon = currentIcon || '';
     this.onChoose = onChoose;
@@ -111,9 +144,9 @@ export class CadenceIconPickerModal extends obsidian.SuggestModal<any> {
     this.setPlaceholder('Search Obsidian icons by name...');
   }
 
-  getSuggestions(query) {
+  getSuggestions(query: string): IconSuggestion[] {
     const q = String(query || '').trim().toLowerCase();
-    const matches = this.iconIds
+    const matches: IconSuggestion[] = this.iconIds
       .filter((iconId) => !q || iconId.toLowerCase().includes(q))
       .sort((a, b) => {
         const aStarts = q && a.toLowerCase().startsWith(q) ? 0 : 1;
@@ -128,7 +161,7 @@ export class CadenceIconPickerModal extends obsidian.SuggestModal<any> {
     return matches;
   }
 
-  renderSuggestion(item, el) {
+  renderSuggestion(item: IconSuggestion, el: HTMLElement) {
     el.addClass('cad-icon-picker-result');
     const preview = el.createSpan({ cls: 'cad-icon-picker-preview' });
     try { obsidian.setIcon(preview, item.clear ? 'circle-x' : item.iconId); } catch (_) {}
@@ -138,7 +171,7 @@ export class CadenceIconPickerModal extends obsidian.SuggestModal<any> {
     }
   }
 
-  onChooseSuggestion(item) {
+  onChooseSuggestion(item: IconSuggestion) {
     if (this.onChoose) this.onChoose(item.iconId || '');
   }
 }

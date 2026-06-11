@@ -1,8 +1,10 @@
 import { humanizeProjectName } from './settings';
 import { startOfDay } from './utils';
-export function reminderId() { return 'rem_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); }
+import type { App, TFile } from 'obsidian';
+import type { PartialSettings, Reminder } from './types';
+export function reminderId(): string { return 'rem_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); }
 
-export function nextRepeat(when, repeat) {
+export function nextRepeat(when: string | Date | null | undefined, repeat: string): Date | null {
   if (!when) return null;
   const d = when instanceof Date ? when : new Date(when);
   if (repeat === 'daily')  return new Date(d.getTime() + 86400000);
@@ -10,7 +12,7 @@ export function nextRepeat(when, repeat) {
   return null;
 }
 
-export function reminderBucket(when) {
+export function reminderBucket(when: string | null | undefined): string {
   if (!when) return 'later';
   const now = Date.now();
   const w = new Date(when).getTime();
@@ -24,9 +26,10 @@ export function reminderBucket(when) {
 }
 
 /* Resolve a project's display name from its file path. */
-export function projectNameFromPath(app, path) {
+export function projectNameFromPath(app: App, path: string | null | undefined): string | null {
   if (!path) return null;
-  const file = app.vault.getAbstractFileByPath(path);
+  // Reminder project links always point at markdown notes; assert past TAbstractFile.
+  const file = app.vault.getAbstractFileByPath(path) as TFile | null;
   if (!file) return humanizeProjectName(path.split('/').pop().replace(/\.md$/, ''));
   const cache = app.metadataCache.getFileCache(file);
   const fm = (cache && cache.frontmatter) || {};
@@ -34,13 +37,13 @@ export function projectNameFromPath(app, path) {
 }
 
 /* Find an existing reminder linked to a specific (project, task-text) pair. */
-export function findProjectTaskReminder(plugin, projectPath, taskText) {
+export function findProjectTaskReminder(plugin: { settings: PartialSettings }, projectPath: string | null | undefined, taskText: string | null | undefined): Reminder | null {
   if (!projectPath || !taskText) return null;
   const all = plugin.settings.reminders || [];
   return all.find((r) => !r.done && r.project === projectPath && r.text === taskText) || null;
 }
 
-export function reminderTimeStr(when) {
+export function reminderTimeStr(when: string | Date | null | undefined): string {
   if (!when) return '';
   const d = new Date(when);
   if (isNaN(d.getTime())) return '';

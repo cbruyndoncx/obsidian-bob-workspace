@@ -1,8 +1,39 @@
 import { startOfDay } from './utils';
-export function parseH2Sections(content) {
+import type { App, TFile } from 'obsidian';
+
+/**
+ * A parsed `## Milestones` line. NOTE: differs from the shared `Milestone`
+ * type in src/types.ts — here `date` is a real `Date | null` (not an ISO
+ * string) and milestones carry free-form indented `notes`.
+ */
+export interface ProjectMilestone {
+  done: boolean;
+  date: Date | null;
+  title: string;
+  notes: string;
+}
+
+/** A plain `- [ ]` task line from the Tasks H2 section (no id/date). */
+export interface ProjectTaskItem {
+  done: boolean;
+  title: string;
+}
+
+export interface ProjectMeta {
+  content: string;
+  sections: Record<string, string>;
+  milestones: ProjectMilestone[];
+  total: number;
+  done: number;
+  percent: number;
+  next: ProjectMilestone | null;
+  today: Date;
+}
+
+export function parseH2Sections(content: string): Record<string, string> {
   const lines = content.split('\n');
-  const sections = {};
-  let cur = null, buf: any[] = [];
+  const sections: Record<string, string> = {};
+  let cur: string | null = null, buf: string[] = [];
   for (const line of lines) {
     if (/^##\s/.test(line)) {
       if (cur) sections[cur] = buf.join('\n');
@@ -20,11 +51,11 @@ export function parseH2Sections(content) {
    Indented (1-tab or 1-4 spaces) non-empty lines that follow a milestone are
    treated as that milestone's free-form notes.
    Returns array of { done, date (Date|null), title, notes }. */
-export function parseMilestones(text) {
+export function parseMilestones(text: string): ProjectMilestone[] {
   if (!text) return [];
   const lines = text.split('\n');
-  const items = [];
-  let current = null;
+  const items: ProjectMilestone[] = [];
+  let current: ProjectMilestone | null = null;
   for (const line of lines) {
     if (/^\s*-\s\[(x|X| )\]\s/.test(line)) {
       if (current) items.push(current);
@@ -54,7 +85,7 @@ export function parseMilestones(text) {
 
 /* Format a milestone array back into markdown lines.
    Notes are emitted as 4-space-indented child lines under the milestone. */
-export function stringifyMilestones(items) {
+export function stringifyMilestones(items: ProjectMilestone[]): string {
   if (!items || !items.length) return '';
   return items.map((m) => {
     const box = m.done ? '- [x] ' : '- [ ] ';
@@ -72,7 +103,7 @@ export function stringifyMilestones(items) {
 }
 
 /* Plain task lines (no date prefix) — for the Tasks H2 section. */
-export function parseTasksList(text) {
+export function parseTasksList(text: string): ProjectTaskItem[] {
   if (!text) return [];
   return text.split('\n')
     .filter((l) => /^\s*-\s\[(x|X| )\]\s/.test(l))
@@ -81,14 +112,14 @@ export function parseTasksList(text) {
       title: l.replace(/^\s*-\s\[(x|X| )\]\s/, ''),
     }));
 }
-export function stringifyTasks(items) {
+export function stringifyTasks(items: ProjectTaskItem[]): string {
   if (!items || !items.length) return '';
   return items.map((t) => `${t.done ? '- [x] ' : '- [ ] '}${t.title || ''}`).join('\n');
 }
 
 /* ─── TaskNote helpers (used when taskMode !== 'checkbox') ─── */
 
-export async function readProjectMeta(app, file) {
+export async function readProjectMeta(app: App, file: TFile): Promise<ProjectMeta> {
   const content = await app.vault.read(file);
   const sections = parseH2Sections(content);
   const milestones = parseMilestones(sections['Milestones'] || '');
@@ -98,7 +129,7 @@ export async function readProjectMeta(app, file) {
   const today = startOfDay(new Date());
   const upcoming = milestones
     .filter((m) => !m.done && m.date)
-    .sort((a, b) => a.date - b.date);
+    .sort((a, b) => (a.date as unknown as number) - (b.date as unknown as number));
   const next = upcoming[0] || null;
   return { content, sections, milestones, total, done, percent, next, today };
 }

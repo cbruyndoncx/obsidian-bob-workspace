@@ -2,7 +2,24 @@ import { ENTITIES } from './entities';
 import { normalizeTemplateSpec, renderTemplateDocument } from './settings';
 import { ensureFolderSync, startOfDay, ymd } from './utils';
 import { WORKSPACE_CONFIG } from './workspace-config';
-export function taskNoteTemplate(title) {
+import type { App, CachedMetadata, TFile } from 'obsidian';
+import type { Frontmatter, PartialSettings } from './types';
+
+/** A TaskNote read for the Productivity report (frontmatter + derived fields). */
+export interface ProductivityTaskNote {
+  file: TFile;
+  fm: Frontmatter;
+  status: string;
+  done: boolean;
+  date: string;
+  priority: string;
+  due: string;
+  scheduled: string;
+  projects: string[];
+  contexts: string[];
+}
+
+export function taskNoteTemplate(title: string): string {
   const template = normalizeTemplateSpec(WORKSPACE_CONFIG?.templates?.taskNote || ENTITIES.task?.template);
   if (template) {
     return renderTemplateDocument(template, {
@@ -63,7 +80,7 @@ export function taskNoteTemplate(title) {
   ].join('\n');
 }
 
-export async function createTaskNote(app, settings, title) {
+export async function createTaskNote(app: App, settings: PartialSettings, title: string): Promise<TFile> {
   const folder = (settings.taskNotesFolder || '00-CORE/TaskNotes/Tasks').replace(/\/$/, '');
   await ensureFolderSync(app, folder);
   const safe = title.replace(/[\\/:*?"<>|]/g, '-').trim() || 'Untitled Task';
@@ -73,13 +90,13 @@ export async function createTaskNote(app, settings, title) {
   return app.vault.create(path, taskNoteTemplate(title));
 }
 
-export function listTodayTaskNotes(app, settings) {
+export function listTodayTaskNotes(app: App, settings: PartialSettings): { file: TFile; fm: Frontmatter }[] {
   const folder = (settings.taskNotesFolder || '00-CORE/TaskNotes/Tasks').replace(/\/$/, '');
   const todayStr = ymd();
   return app.vault.getMarkdownFiles()
     .filter((f) => f.path.startsWith(folder + '/'))
     .map((f) => {
-      const fm = (app.metadataCache.getFileCache(f) || {}).frontmatter || {};
+      const fm: Frontmatter = (app.metadataCache.getFileCache(f) || {} as CachedMetadata).frontmatter || {};
       return { file: f, fm };
     })
     .filter(({ fm }) => {
@@ -90,19 +107,19 @@ export function listTodayTaskNotes(app, settings) {
     });
 }
 
-export function taskNoteStatus(fm) {
+export function taskNoteStatus(fm: Frontmatter): string {
   return String(fm?.status || 'open').toLowerCase().replace(/[\s_]+/g, '-');
 }
-export function taskNoteIgnored(status) {
+export function taskNoteIgnored(status: string): boolean {
   return status === 'cancelled' || status === 'canceled';
 }
-export function taskNoteFolders(settings) {
+export function taskNoteFolders(settings: PartialSettings): string[] {
   const active = (settings.taskNotesFolder || '00-CORE/TaskNotes/Tasks').replace(/\/$/, '');
   const fallbackArchive = active.replace(/\/Tasks$/, '/Archive');
   const archive = (settings.taskNotesArchiveFolder || fallbackArchive || '00-CORE/TaskNotes/Archive').replace(/\/$/, '');
   return [...new Set([active, archive].filter(Boolean))];
 }
-export function taskNoteDateValue(file, fm, done) {
+export function taskNoteDateValue(file: TFile, fm: Frontmatter, done: boolean): string {
   const raw = done
     ? (fm.dateCompleted || fm.completedDate || fm.completed || fm.dateModified || fm.modified || fm.due || fm.scheduled || fm.dateCreated || fm.created)
     : (fm.due || fm.scheduled || fm.dateCreated || fm.created || fm.dateModified || fm.modified);
@@ -110,14 +127,14 @@ export function taskNoteDateValue(file, fm, done) {
   if (file?.stat?.mtime) return ymd(new Date(file.stat.mtime));
   return '';
 }
-export function listTaskNotesForProductivity(app, settings, start, end) {
+export function listTaskNotesForProductivity(app: App, settings: PartialSettings, start: Date | string | number, end: Date | string | number): ProductivityTaskNote[] {
   const folders = taskNoteFolders(settings);
   const startTime = startOfDay(start).getTime();
   const endTime = startOfDay(end).getTime();
   return app.vault.getMarkdownFiles()
     .filter((f) => folders.some((folder) => f.path.startsWith(folder + '/')))
     .map((file) => {
-      const fm = (app.metadataCache.getFileCache(file) || {}).frontmatter || {};
+      const fm: Frontmatter = (app.metadataCache.getFileCache(file) || {} as CachedMetadata).frontmatter || {};
       const status = taskNoteStatus(fm);
       const done = status === 'done' || status === 'completed' || status === 'archived';
       const date = taskNoteDateValue(file, fm, done);
@@ -144,7 +161,7 @@ export function listTaskNotesForProductivity(app, settings, start, end) {
     });
 }
 
-export async function toggleTaskNoteStatus(app, file, done) {
+export async function toggleTaskNoteStatus(app: App, file: TFile, done: boolean): Promise<void> {
   await app.fileManager.processFrontMatter(file, (fm) => {
     fm.status = done ? 'done' : 'open';
     fm.dateModified = new Date().toISOString().slice(0, 10);

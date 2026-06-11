@@ -3,9 +3,76 @@ import { ENTITIES } from './entities';
 import { addDays, startOfDay } from './utils';
 import { CONFIGURED_BASE_ENTITY_KEYS, WORKSPACE_CONFIG } from './workspace-config';
 import * as obsidian from 'obsidian';
-export async function parseBaseFile(app, basePath, viewName) {
+import type { ConfiguredBaseRef } from './bases-config';
+import type { BaseFilterNode, BaseSortSpec, EntityField, Frontmatter, PartialSettings } from './types';
+
+/*
+ * Raw filter node as authored in .base YAML: a condition string, an array of
+ * nodes, or an and/or/not group object keyed by operator. The shared
+ * BaseFilterNode ({ op, children }) is a normalized shape this parser never
+ * builds, so the raw YAML form is typed locally.
+ */
+export type RawBaseFilter = string | RawBaseFilter[] | { [key: string]: RawBaseFilter };
+
+interface BaseSortItemYaml { property?: string; direction?: string; }
+interface BaseGroupByYaml { property?: string; direction?: string; }
+interface BasePropertyYaml {
+  displayName?: string;
+  type?: string;
+  formula?: unknown;
+  summary?: unknown;
+  aggregate?: unknown;
+  aggregation?: unknown;
+  rollup?: unknown;
+}
+interface BaseViewYaml {
+  type?: string;
+  name?: string;
+  filters?: RawBaseFilter;
+  order?: string[];
+  sort?: BaseSortItemYaml[];
+  groupBy?: BaseGroupByYaml;
+  limit?: number;
+}
+interface BaseFileYaml {
+  filters?: RawBaseFilter;
+  views?: BaseViewYaml[];
+  properties?: Record<string, BasePropertyYaml>;
+  limit?: number;
+}
+
+export interface ParsedBaseViewRef { type: string; name: string; basePath: string; }
+export interface ParsedBaseFilters { global: RawBaseFilter | null; view: RawBaseFilter | null; }
+export interface ParsedBaseSort { property: string; direction: string; }
+export interface ParsedBaseGroupBy { property: string; direction: string; }
+export interface ParsedBaseField { key: string; label: string; }
+
+/*
+ * What parseBaseFile() actually builds. NOTE: the shared BaseConfig in
+ * types.ts models baseView/externalBaseView as strings, baseFilters as a
+ * BaseFilterNode[] and baseGroupBy as a string — none of which match these
+ * runtime shapes, so the faithful result type lives here.
+ */
+export interface ParsedBaseConfig {
+  baseView?: ParsedBaseViewRef;
+  externalBaseView?: ParsedBaseViewRef;
+  folders?: string[];
+  typeFilters?: Record<string, string>;
+  typeFilter?: string;
+  baseFilters?: ParsedBaseFilters;
+  baseSort?: ParsedBaseSort[];
+  baseGroupBy?: ParsedBaseGroupBy;
+  limit?: number;
+  unsupportedBaseFilters?: string[];
+  unsupportedBaseFeatures?: string[];
+  fields?: ParsedBaseField[];
+  columns?: string[];
+  _baseViews?: string[];
+}
+
+export async function parseBaseFile(app: obsidian.App, basePath: string, viewName?: string): Promise<ParsedBaseConfig | null> {
   if (!await app.vault.adapter.exists(basePath)) return null;
-  let yaml;
+  let yaml: BaseFileYaml;
   try {
     const raw = await app.vault.adapter.read(basePath);
     yaml = obsidian.parseYaml(raw);
@@ -15,7 +82,7 @@ export async function parseBaseFile(app, basePath, viewName) {
   }
   if (!yaml || typeof yaml !== 'object') return null;
 
-  const result: any = {};
+  const result: ParsedBaseConfig = {};
   const views = Array.isArray(yaml.views) ? yaml.views : [];
   const targetView = viewName
     ? views.find(v => v.name === viewName)
@@ -42,8 +109,8 @@ export async function parseBaseFile(app, basePath, viewName) {
     ...collectBaseFilterConditionsForDerivation(yaml.filters),
     ...collectBaseFilterConditionsForDerivation(externalBaseView ? null : targetView?.filters),
   ];
-  const noteFilters: any = {};   // key → value for note.* == "..." conditions
-  const folders = [];
+  const noteFilters: Record<string, string> = {};   // key → value for note.* == "..." conditions
+  const folders: string[] = [];
 
   for (const cond of conditions) {
     if (typeof cond !== 'string') continue;
@@ -124,17 +191,17 @@ export async function parseBaseFile(app, basePath, viewName) {
   return result;
 }
 
-export function collectBaseFilterConditions(node) {
+export function collectBaseFilterConditions(node: RawBaseFilter | null | undefined): string[] {
   if (!node) return [];
   if (typeof node === 'string') return [node];
   if (Array.isArray(node)) return node.flatMap(collectBaseFilterConditions);
   if (typeof node === 'object') {
-    return Object.values<any>(node).flatMap(collectBaseFilterConditions);
+    return Object.values(node).flatMap(collectBaseFilterConditions);
   }
   return [];
 }
 
-export function collectBaseFilterConditionsForDerivation(node) {
+export function collectBaseFilterConditionsForDerivation(node: RawBaseFilter | null | undefined): string[] {
   if (!node) return [];
   if (typeof node === 'string') return [node];
   if (Array.isArray(node)) return node.flatMap(collectBaseFilterConditionsForDerivation);
@@ -144,14 +211,14 @@ export function collectBaseFilterConditionsForDerivation(node) {
   if (Object.prototype.hasOwnProperty.call(node, 'and')) {
     return collectBaseFilterConditionsForDerivation(node.and);
   }
-  return Object.values<any>(node).flatMap(collectBaseFilterConditionsForDerivation);
+  return Object.values(node).flatMap(collectBaseFilterConditionsForDerivation);
 }
 
-export function stripOuterParens(value) {
+export function stripOuterParens(value: unknown): string {
   let s = String(value || '').trim();
   while (s.startsWith('(') && s.endsWith(')')) {
     let depth = 0;
-    let quote = null;
+    let quote: string | null = null;
     let encloses = true;
     for (let i = 0; i < s.length; i++) {
       const ch = s[i];
@@ -170,10 +237,10 @@ export function stripOuterParens(value) {
   return s;
 }
 
-export function splitBaseExpression(expr, operator) {
-  const parts = [];
+export function splitBaseExpression(expr: string, operator: string): string[] | null {
+  const parts: string[] = [];
   const op = ` ${operator} `;
-  let quote = null;
+  let quote: string | null = null;
   let depth = 0;
   let start = 0;
   for (let i = 0; i <= expr.length - op.length; i++) {
@@ -195,7 +262,7 @@ export function splitBaseExpression(expr, operator) {
   return parts.length ? parts : null;
 }
 
-export function basePropKey(raw) {
+export function basePropKey(raw: unknown): string {
   const s = String(raw || '').trim();
   if (s === 'file.path' || s === 'file.folder' || s === 'file.name' || s === 'file.basename' || s === 'file.ctime' || s === 'file.mtime' || s === 'file.tags') return s;
   const bracket = s.match(/^note\[['"](.+?)['"]\]$/);
@@ -203,7 +270,7 @@ export function basePropKey(raw) {
   return s.replace(/^note\./, '');
 }
 
-export function basePropValue(app, file, fm, rawKey) {
+export function basePropValue(app: obsidian.App, file: obsidian.TFile, fm: Frontmatter, rawKey: string) {
   const key = basePropKey(rawKey);
   if (key === 'file.path') return file.path;
   if (key === 'file.folder') return file.parent?.path || file.path.split('/').slice(0, -1).join('/');
@@ -214,7 +281,7 @@ export function basePropValue(app, file, fm, rawKey) {
   return fm[key];
 }
 
-export function hasBaseValue(value) {
+export function hasBaseValue(value: unknown): boolean {
   if (value == null) return false;
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === 'string') return value.trim() !== '';
@@ -222,7 +289,7 @@ export function hasBaseValue(value) {
   return true;
 }
 
-export function parseTodayExpression(raw) {
+export function parseTodayExpression(raw: unknown): Date | null {
   const expr = String(raw || '').trim();
   const match = expr.match(/^(?:today\(\)|now\(\))(?:\s*([+-])\s*["']?(\d+)\s*(?:d|day|days)["']?)?$/);
   if (!match) return null;
@@ -232,7 +299,7 @@ export function parseTodayExpression(raw) {
   return startOfDay(addDays(base, offset));
 }
 
-export function isSupportedBaseFilterCondition(raw) {
+export function isSupportedBaseFilterCondition(raw: unknown): boolean {
   const cond = stripOuterParens(String(raw || '').trim().replace(/^!/, ''));
   if (!cond) return true;
   const orParts = splitBaseExpression(cond, '||');
@@ -249,14 +316,14 @@ export function isSupportedBaseFilterCondition(raw) {
     || /^(?:date\()?[\w.-]+(?:\[['"].+?['"]\])?\)?\s*(==|<|<=|>|>=)\s*(?:(?:today\(\)|now\(\))(?:\s*[+-]\s*["']?\d+\s*(?:d|day|days)["']?)?|["']\d{4}-\d{2}-\d{2}["'])$/.test(cond);
 }
 
-export function collectUnsupportedBaseFilterConditions(node) {
+export function collectUnsupportedBaseFilterConditions(node: RawBaseFilter | null | undefined): string[] {
   return collectBaseFilterConditions(node).filter((cond) => !isSupportedBaseFilterCondition(cond));
 }
 
-export function collectUnsupportedBaseFeatureWarnings(properties: any = {}) {
+export function collectUnsupportedBaseFeatureWarnings(properties: Record<string, BasePropertyYaml> = {}): string[] {
   if (!properties || typeof properties !== 'object' || Array.isArray(properties)) return [];
-  const warnings = [];
-  for (const [key, prop] of Object.entries<any>(properties)) {
+  const warnings: string[] = [];
+  for (const [key, prop] of Object.entries(properties)) {
     const lowerKey = String(key || '').toLowerCase();
     const type = String(prop?.type || '').toLowerCase();
     if (lowerKey.startsWith('formula.') || lowerKey.includes('formula') || prop?.formula != null) {
@@ -270,18 +337,27 @@ export function collectUnsupportedBaseFeatureWarnings(properties: any = {}) {
   return warnings;
 }
 
-export function normBaseName(value) {
+export function normBaseName(value: unknown): string {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-export async function readBaseSummary(app, file) {
+export interface BaseSummary {
+  path: string;
+  label: string;
+  views: string[];
+  typeFilters: string[];
+  folders: string[];
+  unsupportedBaseFeatures: string[];
+}
+
+export async function readBaseSummary(app: obsidian.App, file: obsidian.TFile): Promise<BaseSummary | null> {
   try {
     const raw = await app.vault.read(file);
-    const yaml = obsidian.parseYaml(raw);
+    const yaml = obsidian.parseYaml(raw) as BaseFileYaml | null;
     if (!yaml || typeof yaml !== 'object') return null;
     const conditions = collectBaseFilterConditionsForDerivation(yaml.filters);
-    const typeFilters = [];
-    const folders = [];
+    const typeFilters: string[] = [];
+    const folders: string[] = [];
     conditions.forEach((cond) => {
       if (typeof cond !== 'string') return;
       const noteEq = cond.match(/^note(?:\.(\w+)|\[['"](.+?)['"]\])\s*==\s*["'](.+?)["']/);
@@ -306,7 +382,7 @@ export async function readBaseSummary(app, file) {
   }
 }
 
-export function baseSummaryCompatibleWithEntity(summary, entityKey) {
+export function baseSummaryCompatibleWithEntity(summary: BaseSummary | null, entityKey: string): boolean {
   const def = ENTITIES[entityKey];
   if (!summary || !def) return false;
   const expectedTypes = new Set([entityKey, def.typeFilter].filter(Boolean).map(normBaseName));
@@ -323,8 +399,29 @@ export function baseSummaryCompatibleWithEntity(summary, entityKey) {
   return entityNames.some((name) => baseName.includes(name) || name.includes(baseName));
 }
 
-export function mergeBaseConfigIntoEntity(entityKey, baseConfig) {
-  const entity = ENTITIES[entityKey];
+/*
+ * Entity-def view used when merging a parsed Base into the registry. The
+ * shared EntityDef types baseFilters/baseSort/baseGroupBy/baseView/
+ * externalBaseView with normalized shapes the runtime never builds, so this
+ * local view accepts both the shared shapes and the Parsed* runtime shapes.
+ */
+interface BaseAwareEntityDef {
+  fields?: EntityField[];
+  columns?: string[];
+  folders?: string[];
+  typeFilters?: Record<string, string>;
+  typeFilter?: string;
+  baseFilters?: BaseFilterNode[] | ParsedBaseFilters;
+  baseSort?: BaseSortSpec[] | ParsedBaseSort[];
+  baseGroupBy?: string | ParsedBaseGroupBy;
+  baseView?: string | ParsedBaseViewRef;
+  externalBaseView?: string | ParsedBaseViewRef;
+  unsupportedBaseFilters?: string[];
+  unsupportedBaseFeatures?: string[];
+}
+
+export function mergeBaseConfigIntoEntity(entityKey: string, baseConfig: ParsedBaseConfig | null): void {
+  const entity: BaseAwareEntityDef = ENTITIES[entityKey];
   if (!entity || !baseConfig) return;
   if (baseConfig.fields?.length) {
     const existingByKey = new Map((entity.fields || []).map((f) => [f.key, f]));
@@ -356,18 +453,18 @@ export function mergeBaseConfigIntoEntity(entityKey, baseConfig) {
   if (baseConfig.unsupportedBaseFeatures) entity.unsupportedBaseFeatures = baseConfig.unsupportedBaseFeatures;
 }
 
-export async function applyBaseOverrides(app, settings: any = {}) {
-  const baseFiles = settings.baseFiles || {};
-  const baseViews = settings.baseViews || {};
-  for (const [entityKey, basePath] of Object.entries<any>(baseFiles)) {
+export async function applyBaseOverrides(app: obsidian.App, settings: PartialSettings = {}): Promise<void> {
+  const baseFiles: Record<string, string> = settings.baseFiles || {};
+  const baseViews: Record<string, string> = settings.baseViews || {};
+  for (const [entityKey, basePath] of Object.entries(baseFiles)) {
     if (!basePath || !ENTITIES[entityKey] || CONFIGURED_BASE_ENTITY_KEYS.has(entityKey)) continue;
     const baseConfig = await parseBaseFile(app, basePath, baseViews[entityKey]);
     mergeBaseConfigIntoEntity(entityKey, baseConfig);
   }
 }
 
-export async function applyConfiguredBaseOverrides(app, settings: any = {}) {
-  for (const [entityKey, def] of Object.entries<any>(WORKSPACE_CONFIG.bases || {})) {
+export async function applyConfiguredBaseOverrides(app: obsidian.App, settings: PartialSettings = {}): Promise<void> {
+  for (const [entityKey, def] of Object.entries((WORKSPACE_CONFIG.bases || {}) as Record<string, ConfiguredBaseRef>)) {
     const basePath = def?.file || def?.base;
     if (!basePath || !ENTITIES[entityKey]) continue;
     CONFIGURED_BASE_ENTITY_KEYS.add(entityKey);
@@ -377,4 +474,3 @@ export async function applyConfiguredBaseOverrides(app, settings: any = {}) {
     mergeBaseConfigIntoEntity(entityKey, baseConfig);
   }
 }
-

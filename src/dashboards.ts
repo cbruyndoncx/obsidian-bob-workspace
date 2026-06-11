@@ -1,5 +1,6 @@
 import { loadBuiltinDashboardDefaults } from './nav';
-export const BUILTIN_DASHBOARD_DEFAULTS = loadBuiltinDashboardDefaults();
+import type { DashboardCard, DashboardConfig, WidgetSourceConfig } from './types';
+export const BUILTIN_DASHBOARD_DEFAULTS: Record<string, DashboardConfig> = loadBuiltinDashboardDefaults();
 
 export const INTERNAL_DASHBOARD_PROVIDERS = [
   'briefing',
@@ -32,7 +33,16 @@ export const PURE_DASHBOARD_WIDGET_TYPES = [
   'merge',
 ];
 
-export const DASHBOARD_WIDGET_CATALOG = [
+export interface DashboardWidgetCatalogEntry {
+  id: string;
+  label: string;
+  status: 'implemented' | 'partial' | 'planned' | (string & {});
+  description: string;
+  config: string[];
+  examples: string[];
+}
+
+export const DASHBOARD_WIDGET_CATALOG: DashboardWidgetCatalogEntry[] = [
   {
     id: 'metric',
     label: 'Metric stat',
@@ -147,12 +157,32 @@ export const DASHBOARD_WIDGET_CATALOG = [
   },
 ];
 
-export function dashboardWidgetKind(card) {
+/** Freeform dashboard blueprint as authored in workspace.json. */
+export interface DashboardBlueprint {
+  title?: string;
+  subtitle?: string;
+  contextFilter?: string;
+  legend?: string;
+  kind?: string;
+  stats?: DashboardCard[];
+  controls?: DashboardCard[];
+  layout?: (DashboardCard | DashboardCard[])[][];
+  conditionalRows?: Array<{ cards?: DashboardCard[] }>;
+}
+
+/** A row produced by a built-in dashboard provider (freeform values bag). */
+export interface ProviderRow {
+  value?: unknown;
+  values?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export function dashboardWidgetKind(card: DashboardCard): string {
   if (!card || typeof card !== 'object') return '';
   return String(card.kind || '').trim();
 }
 
-export function collectDashboardWidgetKinds(card, kinds = new Set<any>()) {
+export function collectDashboardWidgetKinds(card: DashboardCard, kinds = new Set<string>()): Set<string> {
   if (!card || typeof card !== 'object' || Array.isArray(card)) return kinds;
   const kind = dashboardWidgetKind(card);
   if (kind) kinds.add(kind);
@@ -163,7 +193,7 @@ export function collectDashboardWidgetKinds(card, kinds = new Set<any>()) {
   return kinds;
 }
 
-export function countDashboardCards(config: any = {}) {
+export function countDashboardCards(config: DashboardBlueprint = {}): number {
   let count = 0;
   for (const row of config.layout || []) {
     for (const col of row || []) {
@@ -174,9 +204,9 @@ export function countDashboardCards(config: any = {}) {
   return count;
 }
 
-export function summarizeDashboardBlueprint(id, config: any = {}) {
-  const widgetKinds = new Set<any>();
-  const sourceKinds = new Set<any>();
+export function summarizeDashboardBlueprint(id: string, config: DashboardBlueprint = {}) {
+  const widgetKinds = new Set<string>();
+  const sourceKinds = new Set<string>();
   const kind = String(
     config.kind || (String(id || '').startsWith('reports.') ? 'report' : String(id || '').startsWith('planner.') ? 'planner' : 'dashboard')
   ).trim().toLowerCase() || 'dashboard';
@@ -227,7 +257,7 @@ export function summarizeDashboardBlueprint(id, config: any = {}) {
   };
 }
 
-export function dashboardProviderRowValue(row, field = '') {
+export function dashboardProviderRowValue(row: ProviderRow, field = ''): number {
   if (!row || typeof row !== 'object') return 0;
   const key = String(field || '').trim();
   if (key && row.values && Object.prototype.hasOwnProperty.call(row.values, key)) {

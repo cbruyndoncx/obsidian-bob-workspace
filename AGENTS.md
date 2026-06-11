@@ -347,7 +347,7 @@ Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it
 
 ### Code style & development rules
 
-- TypeScript in `src/`, bundled by esbuild (cjs, target es2021) into the committed `main.js`. Gradual typing: `strict` is off and many migrated signatures use `any` — add real types opportunistically when touching a module; type-only changes must never alter runtime behavior. Prefer small, scoped edits in `src/`/`styles.css`.
+- TypeScript in `src/`, bundled by esbuild (cjs, target es2021) into the committed `main.js`. The codebase is fully annotated: `noImplicitAny`, `noImplicitThis`, and `strictBindCallApply` are enforced; the shared domain model lives in `src/types.ts`. Explicit `any` is reserved for documented dynamic boundaries (frontmatter values, user-authored dashboard JSON, the untyped Bases API) — do not add new ones. `strictNullChecks` is the remaining gap (enable module-by-module). Type-only changes must never alter runtime behavior. Prefer small, scoped edits in `src/`/`styles.css`.
 - Frontmatter I/O via `processFrontMatter()` only; vault body writes only for markdown sections/tasks outside frontmatter.
 - DOM: `createDiv()`, `createEl()`, `appendChild()`/`setText()`; keep BEM-style class names prefixed `cad-`/`cadence-`; verify light and dark.
 - Events: `registerEvent()` for vault/metadata; standard `addEventListener` for DOM. Use `CadenceConfirmModal`/`confirmModal()` instead of `window.confirm()`.

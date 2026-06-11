@@ -3,12 +3,53 @@ import { VIEW_TYPE_CADENCE_APP } from '../nav';
 import { projectNameFromPath, reminderTimeStr } from '../reminders';
 import { confirmModal } from './common';
 import * as obsidian from 'obsidian';
-export function attachRequiredValidation(submitBtn, requiredInputs) {
+import type { App, TFile } from 'obsidian';
+import type { CadencePlugin } from '../plugin';
+import type { Reminder } from '../types';
+
+/* Type-only declarations (erased at build time). */
+export type FormControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+export interface CaptureResult {
+  text: string;
+  when: string | null;
+  repeat: string;
+}
+
+interface CadenceCaptureModalOptions {
+  onSubmit: (result: CaptureResult | null) => void;
+  defaultText?: string;
+  defaultWhen?: string | null;
+  defaultRepeat?: string;
+}
+
+/** Reminder being edited: persisted Reminder or a not-yet-saved draft. */
+type EditableReminder = Partial<Reminder> & { notes?: string };
+
+interface CadenceReminderEditModalOptions {
+  isNew?: boolean;
+}
+
+interface ReminderPatch {
+  text: string;
+  notes: string;
+  repeat: string;
+  project: string | null;
+  when?: string | null;
+  notified?: boolean;
+}
+
+interface ProjectSuggestion {
+  file: TFile;
+  name: string;
+}
+
+export function attachRequiredValidation(submitBtn: HTMLButtonElement, requiredInputs: FormControl[]) {
   if (!submitBtn || !requiredInputs?.length) return;
   const check = () => {
     const allFilled = requiredInputs.every(inp => {
       if (!inp) return true;
-      if (inp.type === 'checkbox' || inp.type === 'radio') return inp.checked;
+      if (inp.type === 'checkbox' || inp.type === 'radio') return (inp as HTMLInputElement).checked;
       return (inp.value || '').trim().length > 0;
     });
     submitBtn.disabled = !allFilled;
@@ -24,9 +65,12 @@ export function attachRequiredValidation(submitBtn, requiredInputs) {
 
 /* ─────────── Quick-capture modal ─────────── */
 export class CadenceCaptureModal extends obsidian.Modal {
-  // Migrated from untyped main.js: instance fields are not yet declared.
-  [key: string]: any;
-  constructor(app, opts) {
+  declare onSubmit: (result: CaptureResult | null) => void;
+  declare defaultText: string;
+  declare defaultWhen: string | null;
+  declare defaultRepeat: string;
+  declare _submitted: boolean;
+  constructor(app: App, opts: CadenceCaptureModalOptions) {
     super(app);
     this.onSubmit = opts.onSubmit;
     this.defaultText = opts.defaultText || '';
@@ -84,15 +128,15 @@ export class CadenceCaptureModal extends obsidian.Modal {
     quick.style.gap = '6px';
     quick.style.marginTop = '8px';
     quick.style.flexWrap = 'wrap';
-    const setQuick = (deltaMs) => {
+    const setQuick = (deltaMs: number) => {
       const d = new Date(Date.now() + deltaMs);
       d.setSeconds(0, 0);
       dateInput.value = toLocalDatetimeValue(d);
     };
-    const mkQ = (label, deltaMs) => {
+    const mkQ = (label: string, deltaMs: number | (() => void)) => {
       const b = quick.createEl('button', { cls: 'cad-btn cad-btn-sm', text: label });
       b.type = 'button';
-      b.addEventListener('click', () => setQuick(deltaMs));
+      b.addEventListener('click', () => setQuick(deltaMs as number));
     };
     mkQ('+15m', 15 * 60 * 1000);
     mkQ('+1h',  60 * 60 * 1000);
@@ -135,7 +179,7 @@ export class CadenceCaptureModal extends obsidian.Modal {
     const submit = () => {
       const text = textInput.value.trim();
       if (!text) { textInput.focus(); return; }
-      const result = { text, when: null, repeat: 'none' };
+      const result: CaptureResult = { text, when: null, repeat: 'none' };
       if (schedCb.checked && dateInput.value) {
         const d = fromLocalDatetimeValue(dateInput.value);
         if (d && !isNaN(d.getTime())) {
@@ -162,11 +206,11 @@ export class CadenceCaptureModal extends obsidian.Modal {
 }
 
 /* Helpers for <input type="datetime-local"> ↔ Date in local TZ */
-export function toLocalDatetimeValue(d) {
-  const pad = (n) => String(n).padStart(2, '0');
+export function toLocalDatetimeValue(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-export function fromLocalDatetimeValue(s) {
+export function fromLocalDatetimeValue(s: string) {
   if (!s) return null;
   // datetime-local has no timezone — interpret as local time
   return new Date(s);
@@ -174,9 +218,11 @@ export function fromLocalDatetimeValue(s) {
 
 /* ─────────── Reminder edit modal (text/when/repeat/notes/delete) ─────────── */
 export class CadenceReminderEditModal extends obsidian.Modal {
-  // Migrated from untyped main.js: instance fields are not yet declared.
-  [key: string]: any;
-  constructor(app, plugin, reminder, opts?) {
+  declare plugin: CadencePlugin;
+  declare reminder: EditableReminder;
+  declare isNew: boolean;
+  declare _submitted: boolean;
+  constructor(app: App, plugin: CadencePlugin, reminder: EditableReminder, opts?: CadenceReminderEditModalOptions) {
     super(app);
     this.plugin = plugin;
     this.reminder = reminder;
@@ -243,7 +289,7 @@ export class CadenceReminderEditModal extends obsidian.Modal {
             this._submitted = true;
             this.close();
             const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
-            const leafView: any = leaf?.view;
+            const leafView = leaf?.view as obsidian.View & { openEntityDetailFromFile?: (file: TFile) => void };
             if (leaf && leafView && typeof leafView.openEntityDetailFromFile === 'function') {
               leafView.openEntityDetailFromFile(file);
             }
@@ -300,7 +346,7 @@ export class CadenceReminderEditModal extends obsidian.Modal {
     const submit = async () => {
       const text = textInput.value.trim();
       if (!text) { textInput.focus(); return; }
-      const fields: any = {
+      const fields: ReminderPatch = {
         text,
         notes: notesArea.value,
         repeat: repeatSel.value || 'none',
@@ -344,27 +390,27 @@ export class CadenceReminderEditModal extends obsidian.Modal {
 
   onClose() { this.contentEl.empty(); }
 
-  _openReminderProjectPicker(rerender) {
+  _openReminderProjectPicker(rerender: () => void) {
     const projectFiles = listEntityFiles(this.app, 'project');
     if (!projectFiles.length) {
       new obsidian.Notice('No projects yet. Create one in Planner → Projects first.');
       return;
     }
-    const projects = projectFiles.map((f) => ({ file: f, name: projectNameFromPath(this.app, f.path) }));
+    const projects = projectFiles.map((f: TFile) => ({ file: f, name: projectNameFromPath(this.app, f.path) }));
     const reminder = this.reminder;
-    const picker: any = new (class extends obsidian.SuggestModal<any> {
-      projs: any;
-      constructor(app, projs) {
+    const picker = new (class extends obsidian.SuggestModal<ProjectSuggestion> {
+      declare projs: ProjectSuggestion[];
+      constructor(app: App, projs: ProjectSuggestion[]) {
         super(app);
         this.projs = projs;
         this.setPlaceholder('Search projects to link this reminder to…');
       }
-      getSuggestions(query) {
+      getSuggestions(query: string) {
         const q = (query || '').toLowerCase();
         return this.projs.filter((p) => p.name.toLowerCase().includes(q));
       }
-      renderSuggestion(item, el) { el.setText('📁  ' + item.name); }
-      onChooseSuggestion(item) {
+      renderSuggestion(item: ProjectSuggestion, el: HTMLElement) { el.setText('📁  ' + item.name); }
+      onChooseSuggestion(item: ProjectSuggestion) {
         reminder.project = item.file.path;
         rerender();
       }

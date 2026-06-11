@@ -6,9 +6,54 @@ import { entityFolder } from './settings';
 import { ensureFolderSync } from './utils';
 import { WORKSPACE_CONFIG, addConfiguredEntityKey, workspaceConfiguredEntityKeys } from './workspace-config';
 import * as obsidian from 'obsidian';
-export function schemaFieldFromEntityField(field) {
+import type { App } from 'obsidian';
+import type { BobEntityDef, BobEntityField } from './entities';
+import type { JsonValue, PartialSettings, WorkspaceConfig } from './types';
+
+/** Canonical source-schema YAML shape edited by the Data model designer. */
+export interface SourceSchemaField {
+  name: string;
+  type?: string;
+  format?: string;
+  label?: string;
+  description?: string;
+  required?: boolean;
+  enum?: JsonValue[];
+  default?: JsonValue;
+  bob_type?: string;
+}
+
+export interface SourceSchema {
+  entity: string;
+  label?: string;
+  plural?: string;
+  icon?: string;
+  type_value?: string;
+  location_pattern?: string;
+  key_fields?: string[];
+  fields?: SourceSchemaField[];
+  field_aliases?: Record<string, string[]>;
+  co_required?: string[][];
+  discriminator?: Record<string, JsonValue>;
+  status_lifecycle?: string[];
+  description?: string;
+  scope?: string;
+  bob?: Record<string, JsonValue>;
+}
+
+export interface LoadedSchemaSource {
+  path: string;
+  schema: SourceSchema;
+}
+
+interface BootstrapOpts {
+  includeFallback?: boolean;
+  includeVaultEntities?: boolean;
+}
+
+export function schemaFieldFromEntityField(field: BobEntityField & { description?: string }): SourceSchemaField {
   const type = String(field?.type || 'string').toLowerCase();
-  const result: any = {
+  const result: SourceSchemaField = {
     name: field.key,
     type: type === 'number' || type === 'currency' ? 'number'
       : type === 'integer' ? 'integer'
@@ -29,8 +74,8 @@ export function schemaFieldFromEntityField(field) {
   return result;
 }
 
-export function entityLocationPattern(def, entityKey) {
-  const patterns = [];
+export function entityLocationPattern(def: BobEntityDef, entityKey: string): string {
+  const patterns: string[] = [];
   if (Array.isArray(def?.folders) && def.folders.length) patterns.push(...def.folders);
   else if (String(def?.folder || '').trim()) patterns.push(def.folder);
   if (!patterns.length && entityKey) {
@@ -40,15 +85,15 @@ export function entityLocationPattern(def, entityKey) {
   return [...new Set(patterns.map((pattern) => String(pattern || '').trim().replace(/\/$/, '')).filter(Boolean))].join(' or ');
 }
 
-export function schemaFieldArrayFromEntityFields(fields: any[] = []) {
+export function schemaFieldArrayFromEntityFields(fields: BobEntityField[] = []): SourceSchemaField[] {
   return fields
     .filter((field) => field && field.key && field.key !== 'type')
     .map((field) => schemaFieldFromEntityField(field))
     .filter((field) => field && field.name);
 }
 
-export function schemaBobBlockFromEntityDefinition(def: any = {}) {
-  const bob: any = {};
+export function schemaBobBlockFromEntityDefinition(def: BobEntityDef = {}): Record<string, JsonValue> {
+  const bob: Record<string, JsonValue> = {};
   [
     'stageField',
     'valueField',
@@ -74,16 +119,16 @@ export function schemaBobBlockFromEntityDefinition(def: any = {}) {
     'description',
     'scope',
   ].forEach((key) => {
-    if (def[key] != null) bob[key] = cloneConfig(def[key]);
+    if ((def as Record<string, JsonValue | undefined>)[key] != null) bob[key] = cloneConfig((def as Record<string, JsonValue | undefined>)[key]);
   });
   if (def.fieldAliases) bob.field_aliases = cloneConfig(def.fieldAliases);
   return bob;
 }
 
-export function schemaSourceFromEntityDefinition(entityKey, def = ENTITIES[entityKey] || {}) {
+export function schemaSourceFromEntityDefinition(entityKey: string, def: BobEntityDef = ENTITIES[entityKey] || {}): SourceSchema {
   const fields = schemaFieldArrayFromEntityFields(def.fields || []);
   const primaryField = fields.find((field) => field.required)?.name || def.titleField || fields[0]?.name || '';
-  const schema: any = {
+  const schema: SourceSchema = {
     entity: entityKey,
     label: def.label || schemaFieldLabel(entityKey),
     plural: def.plural || pluralizeEntityLabel(def.label || schemaFieldLabel(entityKey)),
@@ -101,7 +146,7 @@ export function schemaSourceFromEntityDefinition(entityKey, def = ENTITIES[entit
   return schema;
 }
 
-export function bootstrapSchemaEntityKeys(app, config = WORKSPACE_CONFIG, opts: any = {}) {
+export function bootstrapSchemaEntityKeys(app: App | null, config: WorkspaceConfig = WORKSPACE_CONFIG, opts: BootstrapOpts = {}): string[] {
   const keys = new Set(workspaceConfiguredEntityKeys(config, Object.assign({ includeFallback: false }, opts)));
   if (!keys.size) {
     Object.keys(ENTITIES).forEach((key) => addConfiguredEntityKey(keys, key));
@@ -118,12 +163,12 @@ export function bootstrapSchemaEntityKeys(app, config = WORKSPACE_CONFIG, opts: 
     .sort((a, b) => String(ENTITIES[a]?.plural || ENTITIES[a]?.label || a).localeCompare(String(ENTITIES[b]?.plural || ENTITIES[b]?.label || b)));
 }
 
-export async function bootstrapCanonicalSchemaSources(app, settings: any = {}, opts: any = {}) {
+export async function bootstrapCanonicalSchemaSources(app: App, settings: PartialSettings = {}, opts: BootstrapOpts = {}) {
   const folder = (WORKSPACE_CONFIG.schemas?.folder || settings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
   await ensureFolderSync(app, folder);
   const keys = bootstrapSchemaEntityKeys(app, WORKSPACE_CONFIG, opts);
-  const written = [];
-  const skipped = [];
+  const written: string[] = [];
+  const skipped: string[] = [];
   for (const entityKey of keys) {
     const def = ENTITIES[entityKey];
     if (!def) continue;
@@ -146,7 +191,7 @@ export async function bootstrapCanonicalSchemaSources(app, settings: any = {}, o
   };
 }
 
-export async function bootstrapCanonicalSchemaSourcesIfMissing(app, settings: any = {}, opts: any = {}) {
+export async function bootstrapCanonicalSchemaSourcesIfMissing(app: App, settings: PartialSettings = {}, opts: BootstrapOpts = {}) {
   const loaded = await loadCanonicalSchemaSources(app, settings);
   if (loaded.schemas.length) return {
     folder: loaded.folder,
@@ -161,11 +206,11 @@ export async function bootstrapCanonicalSchemaSourcesIfMissing(app, settings: an
   return Object.assign({ alreadyPresent: false }, result);
 }
 
-export function validateSourceSchemaDefinition(schema) {
+export function validateSourceSchemaDefinition(schema: SourceSchema): SourceSchema {
   if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
     throw new Error('Schema must be an object');
   }
-  ['entity', 'label', 'location_pattern'].forEach((key) => {
+  (['entity', 'label', 'location_pattern'] as const).forEach((key) => {
     if (!String(schema[key] || '').trim()) throw new Error(`Schema needs ${key}`);
   });
   const entityKey = SCHEMA_TO_ENTITY_KEY[schema.entity] || schema.entity;
@@ -175,7 +220,7 @@ export function validateSourceSchemaDefinition(schema) {
   if (!Array.isArray(schema.fields) || !schema.fields.length) {
     throw new Error('Schema needs at least one field');
   }
-  const fieldNames = new Set<any>();
+  const fieldNames = new Set<string>();
   schema.fields.forEach((field, index) => {
     const name = String(field?.name || '').trim();
     if (!name) throw new Error(`Field ${index + 1} needs a name`);
@@ -217,14 +262,14 @@ export function validateSourceSchemaDefinition(schema) {
     if (!schema.field_aliases || typeof schema.field_aliases !== 'object' || Array.isArray(schema.field_aliases)) {
       throw new Error('field_aliases must be an object keyed by field name');
     }
-    const normalizedAliases = new Map();
+    const normalizedAliases = new Map<string, string>();
     schema.fields.forEach((field) => {
       [field.name, field.label].filter(Boolean).forEach((name) => {
         const normalized = String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
         if (normalized && !normalizedAliases.has(normalized)) normalizedAliases.set(normalized, field.name);
       });
     });
-    Object.entries<any>(schema.field_aliases).forEach(([name, aliases]) => {
+    Object.entries(schema.field_aliases).forEach(([name, aliases]) => {
       if (!fieldNames.has(name)) throw new Error(`Field aliases reference undefined field "${name}"`);
       if (!Array.isArray(aliases) || aliases.some((alias) => !String(alias || '').trim())) {
         throw new Error(`Field aliases for "${name}" must be a list of non-empty names`);
@@ -245,14 +290,14 @@ export function validateSourceSchemaDefinition(schema) {
   return schema;
 }
 
-export function editableSchemaFieldType(field) {
+export function editableSchemaFieldType(field: SourceSchemaField): string {
   if (Array.isArray(field.enum)) return 'enum';
   if (field.type === 'string' && field.format === 'date') return 'date';
   if (field.type === 'string' && field.format === 'date-time') return 'datetime';
   return field.type || 'string';
 }
 
-export function applyEditableSchemaFieldType(field, value) {
+export function applyEditableSchemaFieldType(field: SourceSchemaField, value: string): void {
   delete field.format;
   if (value !== 'enum') delete field.enum;
   if (value === 'enum') {
@@ -266,12 +311,12 @@ export function applyEditableSchemaFieldType(field, value) {
   }
 }
 
-export function editableSchemaFieldDefault(field) {
+export function editableSchemaFieldDefault(field: SourceSchemaField): string {
   if (!Object.prototype.hasOwnProperty.call(field || {}, 'default')) return '';
   return Array.isArray(field.default) ? field.default.join(', ') : String(field.default);
 }
 
-export function applyEditableSchemaFieldDefault(field, value) {
+export function applyEditableSchemaFieldDefault(field: SourceSchemaField, value: string): void {
   const trimmed = String(value || '').trim();
   if (!trimmed) {
     delete field.default;
@@ -295,12 +340,12 @@ export function applyEditableSchemaFieldDefault(field, value) {
   field.default = trimmed;
 }
 
-export async function loadCanonicalSchemaSources(app, settings: any = {}) {
+export async function loadCanonicalSchemaSources(app: App, settings: PartialSettings = {}) {
   const folder = (WORKSPACE_CONFIG.schemas?.folder || settings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
   if (!await app.vault.adapter.exists(folder)) return { folder, schemas: [], errors: [] };
   const listed = await app.vault.adapter.list(folder);
-  const schemas = [];
-  const errors = [];
+  const schemas: LoadedSchemaSource[] = [];
+  const errors: string[] = [];
   for (const path of (listed.files || []).filter((file) => /\.ya?ml$/i.test(file))) {
     try {
       const schema = validateSourceSchemaDefinition(obsidian.parseYaml(await app.vault.adapter.read(path)));
@@ -312,13 +357,13 @@ export async function loadCanonicalSchemaSources(app, settings: any = {}) {
   return { folder, schemas, errors };
 }
 
-export function stableSchemaId(value) {
+export function stableSchemaId(value: unknown): string {
   let hash = 5381;
   for (const character of String(value || '')) hash = ((hash << 5) + hash) ^ character.charCodeAt(0);
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-export function metadataMenuFieldType(field) {
+export function metadataMenuFieldType(field: SourceSchemaField): string {
   if (Array.isArray(field.enum)) return 'Select';
   if (field.type === 'array') return 'Multi';
   if (field.type === 'boolean') return 'Boolean';
@@ -327,12 +372,12 @@ export function metadataMenuFieldType(field) {
   return 'Input';
 }
 
-export function sourceSchemaToJsonSchema(schema) {
+export function sourceSchemaToJsonSchema(schema: SourceSchema) {
   const schemaId = schema.type_value || schema.entity;
-  const properties: any = {};
-  const required = [];
+  const properties: Record<string, Record<string, JsonValue>> = {};
+  const required: string[] = [];
   (schema.fields || []).forEach((field) => {
-    const property: any = { type: field.type || 'string' };
+    const property: Record<string, JsonValue> = { type: field.type || 'string' };
     if (field.format) property.format = field.format;
     if (Array.isArray(field.enum) && field.enum.length) property.enum = field.enum;
     if (field.description) property.description = field.description;
@@ -342,7 +387,7 @@ export function sourceSchemaToJsonSchema(schema) {
     if (field.required) required.push(field.name);
   });
   if (schema.type_value && properties.type) properties.type = { const: schema.type_value };
-  if (schema.discriminator) Object.entries<any>(schema.discriminator).forEach(([key, value]) => {
+  if (schema.discriminator) Object.entries(schema.discriminator).forEach(([key, value]) => {
     properties[key] = Object.assign({}, properties[key] || { type: 'string' }, { const: value });
     if (!required.includes(key)) required.push(key);
   });
@@ -364,13 +409,13 @@ export function sourceSchemaToJsonSchema(schema) {
   };
 }
 
-export function sourceSchemaToFileClass(schema) {
+export function sourceSchemaToFileClass(schema: SourceSchema): string {
   const filesPaths = String(schema.location_pattern || '')
     .split(/\s+or\s+/i)
     .map((item) => String(item || '').trim().replace(/^['"]|['"]$/g, ''))
     .filter(Boolean);
   const fields = (schema.fields || []).map((field) => {
-    const config: any = {
+    const config: { name: string; type: string; id: string; path: string; options?: Array<Record<string, JsonValue>>; required?: boolean } = {
       name: field.name,
       type: metadataMenuFieldType(field),
       id: stableSchemaId(`${schema.entity}:${field.name}`),
@@ -393,7 +438,7 @@ export function sourceSchemaToFileClass(schema) {
   return `---\n${obsidian.stringifyYaml(yaml)}---\n\n# ${schema.label}\n\nGenerated from canonical schema source. Edit the source YAML in BOB Workspace settings.\n`;
 }
 
-export async function regenerateSchemaOutputs(app, settings: any = {}) {
+export async function regenerateSchemaOutputs(app: App, settings: PartialSettings = {}) {
   const loaded = await loadCanonicalSchemaSources(app, settings);
   if (loaded.errors.length) throw new Error(`Schema validation failed: ${loaded.errors.join('; ')}`);
   const root = loaded.folder.replace(/\/source$/, '');
@@ -401,8 +446,8 @@ export async function regenerateSchemaOutputs(app, settings: any = {}) {
   const jsonFolder = `${root}/json-schema`;
   await ensureFolderSync(app, fileClassFolder);
   await ensureFolderSync(app, jsonFolder);
-  const expectedFileClasses = new Set<any>();
-  const expectedJsonSchemas = new Set<any>();
+  const expectedFileClasses = new Set<string>();
+  const expectedJsonSchemas = new Set<string>();
   for (const { schema } of loaded.schemas) {
     const fileClassPath = `${fileClassFolder}/${schema.entity}.md`;
     const jsonSchemaPath = `${jsonFolder}/${schema.type_value || schema.entity}.schema.json`;
@@ -444,7 +489,7 @@ export async function regenerateSchemaOutputs(app, settings: any = {}) {
   };
 }
 
-export async function injectGeneratedSection(app, filePath, beginMarker, endMarker, content) {
+export async function injectGeneratedSection(app: App, filePath: string, beginMarker: string, endMarker: string, content: string): Promise<boolean> {
   if (!await app.vault.adapter.exists(filePath)) return false;
   const text = await app.vault.adapter.read(filePath);
   const beginIdx = text.indexOf(beginMarker);
@@ -455,7 +500,7 @@ export async function injectGeneratedSection(app, filePath, beginMarker, endMark
   return true;
 }
 
-export function schemaFieldDocType(field) {
+export function schemaFieldDocType(field: SourceSchemaField): string {
   if (Array.isArray(field.enum)) return 'enum';
   if (field.format === 'date' || field.bob_type === 'date') return 'date';
   if (field.bob_type === 'currency') return 'currency';
@@ -463,7 +508,7 @@ export function schemaFieldDocType(field) {
   return field.type || 'string';
 }
 
-export function generateEntityTypesTable(schemas) {
+export function generateEntityTypesTable(schemas: LoadedSchemaSource[]): string {
   const header = '| Entity | `type:` value | Location | Key Fields |\n|--------|--------------|----------|------------|';
   const rows = schemas.map(({ schema }) => {
     const label = schema.label || schema.entity;
@@ -475,7 +520,7 @@ export function generateEntityTypesTable(schemas) {
   return `${header}\n${rows.join('\n')}`;
 }
 
-export function generateEntityDefinitionsSection(schemas) {
+export function generateEntityDefinitionsSection(schemas: LoadedSchemaSource[]): string {
   return schemas.map(({ schema }) => {
     const label = schema.label || schema.entity;
     const typeValue = schema.type_value || '_(filename-backed)_';
