@@ -19988,6 +19988,7 @@ var WORKSPACE_OWNED_SETTING_KEYS = [
   "folderPlaybooks",
   "folderSkills",
   "projectFolders",
+  "ignoredFolders",
   "dailyNoteFolder",
   "journalHeading",
   "tasksHeading",
@@ -20936,13 +20937,22 @@ async function applyConfiguredBaseOverrides(app, settings = {}) {
 
 // src/entity-files.ts
 var obsidian5 = __toESM(require("obsidian"));
+var _scanCache = null;
+function invalidateEntityScanCache() {
+  _scanCache = null;
+}
+function scannableMarkdownFiles(app) {
+  if (!_scanCache) {
+    _scanCache = app.vault.getMarkdownFiles().filter((f) => !isTemplatePath(f.path) && !isIgnoredPath(f.path));
+  }
+  return _scanCache;
+}
 function listEntityFiles(app, entityKey) {
   const def = ENTITIES[entityKey];
   if (!def) return [];
   const hasPathFilter = Array.isArray(def.folders);
   const useDefaultPath = !def.typeFilter && !hasPathFilter;
-  return app.vault.getMarkdownFiles().filter((f) => {
-    if (isTemplatePath(f.path)) return false;
+  return scannableMarkdownFiles(app).filter((f) => {
     if (hasPathFilter) {
       if (!def.folders.some((d) => f.path.startsWith(d.replace(/\/$/, "") + "/"))) return false;
     } else if (useDefaultPath) {
@@ -22447,6 +22457,8 @@ var DEFAULT_SETTINGS = {
   folderSkills: "00-CORE/Agents/skills",
   projectFolders: [],
   // extra folders to scan; first non-empty = default for new projects
+  ignoredFolders: [],
+  // folders excluded from every entity scan (e.g. ['99-TMP']) — speeds up large vaults
   baseFiles: {
     contact: "00-CORE/Bases/People.base",
     client: "00-CORE/Bases/Clients.base",
@@ -22505,6 +22517,15 @@ var CURRENT_CURRENCY = "USD";
 function setCurrentCurrency(currency) {
   CURRENT_CURRENCY = currency || "USD";
 }
+var IGNORED_FOLDERS = [];
+function setIgnoredFolders(folders) {
+  IGNORED_FOLDERS = (Array.isArray(folders) ? folders : []).map((f) => String(f ?? "").trim().replace(/^\/+|\/+$/g, "")).filter(Boolean);
+}
+function isIgnoredPath(path) {
+  if (!IGNORED_FOLDERS.length) return false;
+  const p = String(path || "");
+  return IGNORED_FOLDERS.some((folder) => p === folder || p.startsWith(folder + "/"));
+}
 var ENTITY_FOLDERS = {
   contact: "10-ME/10-PEOPLE",
   company: "20-COMPANY/00-PROFILE",
@@ -22548,6 +22569,7 @@ function syncEntityFolders(settings) {
   ENTITY_FOLDERS.task = (settings.taskNotesFolder || "").trim() || "00-CORE/TaskNotes/Tasks";
   ENTITIES.task.folder = ENTITY_FOLDERS.task;
   ENTITIES.task.folders = taskNoteFolders(settings);
+  setIgnoredFolders(settings.ignoredFolders);
 }
 function entityFolder(entityKey) {
   if (ENTITIES[entityKey]?.folders?.[0]) return ENTITIES[entityKey].folders[0];
@@ -25138,7 +25160,7 @@ function stringifyTasks(items) {
   return items.map((t) => `${t.done ? "- [x] " : "- [ ] "}${t.title || ""}`).join("\n");
 }
 async function readProjectMeta(app, file) {
-  const content = await app.vault.read(file);
+  const content = await app.vault.cachedRead(file);
   const sections = parseH2Sections(content);
   const milestones = parseMilestones(sections["Milestones"] || "");
   const total = milestones.length;
@@ -25189,14 +25211,14 @@ async function buildProductivitySnapshot(app, settings = {}) {
     let open = 0, done = 0, jChars = 0, hasNote = false;
     if (includeCheckboxTasks && f && f instanceof obsidian15.TFile) {
       hasNote = true;
-      const c = await app.vault.read(f);
+      const c = await app.vault.cachedRead(f);
       const p = parseSections(c, settings);
       open = p.tasks.filter((l) => / \[ \] /.test(l)).length;
       done = p.tasks.filter((l) => / \[(x|X)\] /.test(l)).length;
       jChars = (p.journal || "").length;
     } else if (f && f instanceof obsidian15.TFile) {
       hasNote = true;
-      const c = await app.vault.read(f);
+      const c = await app.vault.cachedRead(f);
       const p = parseSections(c, settings);
       jChars = (p.journal || "").length;
     }
@@ -25254,7 +25276,7 @@ async function buildProductivitySnapshot(app, settings = {}) {
       const f = app.vault.getAbstractFileByPath(dailyNotePath(settings, d));
       if (includeCheckboxTasks && f && f instanceof obsidian15.TFile) {
         anyNote = true;
-        const c = await app.vault.read(f);
+        const c = await app.vault.cachedRead(f);
         const p = parseSections(c, settings);
         p.tasks.forEach((l) => {
           if (/ \[(x|X)\] /.test(l)) wd++;
@@ -25318,7 +25340,7 @@ async function buildPlannerSnapshot(app, settings = {}) {
     action: { surface: "planner.inbox" }
   }));
   const dailyFile = await ensureDailyNote(app, settings).catch(() => null);
-  const todayTasks = dailyFile instanceof obsidian15.TFile ? parseSections(await app.vault.read(dailyFile), settings) : { tasks: [] };
+  const todayTasks = dailyFile instanceof obsidian15.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
   const todayRows = (todayTasks.tasks || []).slice(0, 12).map((line) => {
     const done = / \[(x|X)\] /.test(line);
     return {
@@ -25336,7 +25358,7 @@ async function buildPlannerSnapshot(app, settings = {}) {
     let tasks = [];
     let journal = "";
     if (file instanceof obsidian15.TFile) {
-      const parsed = parseSections(await app.vault.read(file), settings);
+      const parsed = parseSections(await app.vault.cachedRead(file), settings);
       tasks = parsed.tasks || [];
       journal = parsed.journal || "";
     }
@@ -25423,7 +25445,7 @@ async function buildHomeSnapshot(app, settings = {}) {
     action: { surface: "planner.inbox" }
   }));
   const dailyFile = await ensureDailyNote(app, settings).catch(() => null);
-  const todayTasks = dailyFile instanceof obsidian15.TFile ? parseSections(await app.vault.read(dailyFile), settings) : { tasks: [] };
+  const todayTasks = dailyFile instanceof obsidian15.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
   const todayRows = (todayTasks.tasks || []).slice(0, 8).map((line) => ({
     title: String(line).replace(/^\s*-\s\[(x|X| )\]\s/, ""),
     meta: / \[(x|X)\] /.test(line) ? "done" : "open",
@@ -25519,7 +25541,7 @@ async function buildHomeSnapshot(app, settings = {}) {
     const items = [];
     try {
       if (dailyFile instanceof obsidian15.TFile) {
-        const content = await app.vault.read(dailyFile);
+        const content = await app.vault.cachedRead(dailyFile);
         const parsed = parseSections(content, settings);
         const openTasks = parsed.tasks.filter((l) => / \[ \] /.test(l)).length;
         if (openTasks > 0) {
@@ -27128,6 +27150,17 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       }
       return widgetCache.get(cacheKey);
     };
+    const prewarmLayout = (async () => {
+      const cards = [];
+      for (const row of config.layout || []) {
+        for (const colDef of row) {
+          for (const card of Array.isArray(colDef) ? colDef : [colDef]) cards.push(card);
+        }
+      }
+      await Promise.all(cards.map(
+        (card) => getWidgetEntities(this._widgetSourceSpec(card, card.entity), card.entity).catch(() => null)
+      ));
+    })();
     const titleSuffix = config.contextFilter === "client-work" ? [this._clientWorkClientId, this._clientWorkProjectId].filter(Boolean).join(" \xB7 ") : "";
     if (!opts.skipHeader) {
       this._renderPageHeader(
@@ -27219,6 +27252,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       }));
       this._dashboardStats(root, statItems);
     }
+    await prewarmLayout;
     for (const row of config.layout || []) {
       const cols = root.createDiv({ cls: "cad-dash-cols" });
       for (const colDef of row) {
@@ -33053,6 +33087,15 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         this.plugin.refreshOpenViews();
       });
     });
+    new obsidian18.Setting(appPanel).setName("Ignored folders").setDesc('Top-level vault folders to exclude from all entity scans (one per line, e.g. "99-TMP"). Speeds up large vaults by skipping folders that hold no records.').addTextArea((t) => {
+      t.inputEl.rows = 4;
+      t.setPlaceholder("99-TMP\nArchive").setValue((this.plugin.settings.ignoredFolders || []).join("\n")).onChange(async (v) => {
+        this.plugin.settings.ignoredFolders = String(v || "").split("\n").map((line) => line.trim().replace(/^\/+|\/+$/g, "")).filter(Boolean);
+        syncEntityFolders(this.plugin.settings);
+        await this.plugin.saveSettings();
+        this.plugin.refreshOpenViews();
+      });
+    });
     new obsidian18.Setting(plannerPanel).setName("Daily note folder").setDesc('Folder under which daily notes live, e.g. "daily" or "Journal/Daily".').addText((t) => t.setPlaceholder("daily").setValue(this.plugin.settings.dailyNoteFolder).onChange(async (v) => {
       this.plugin.settings.dailyNoteFolder = v;
       await this.plugin.saveSettings();
@@ -33813,6 +33856,11 @@ var CadencePlugin = class extends obsidian20.Plugin {
       VIEW_TYPE_CADENCE_APP,
       (leaf) => new CadenceAppView(leaf, this)
     );
+    const dropScanCache = () => invalidateEntityScanCache();
+    this.registerEvent(this.app.vault.on("create", dropScanCache));
+    this.registerEvent(this.app.vault.on("delete", dropScanCache));
+    this.registerEvent(this.app.vault.on("rename", dropScanCache));
+    this.registerEvent(this.app.metadataCache.on("changed", dropScanCache));
     if (typeof this.registerBasesView === "function") {
       this.registerBasesView(PLAYBOOK_RUNNER_VIEW_TYPE, {
         name: "Playbook Runner",
@@ -34069,6 +34117,7 @@ var CadencePlugin = class extends obsidian20.Plugin {
     return this.updateReminder(id, { done: true, notified: true });
   }
   refreshOpenViews() {
+    invalidateEntityScanCache();
     this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP).forEach((leaf) => {
       if (leaf.view && typeof leaf.view.render === "function") leaf.view.render();
     });

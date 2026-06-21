@@ -120,7 +120,7 @@ export function stringifyTasks(items: ProjectTaskItem[]): string {
 /* ─── TaskNote helpers (used when taskMode !== 'checkbox') ─── */
 
 export async function readProjectMeta(app: App, file: TFile): Promise<ProjectMeta> {
-  const content = await app.vault.read(file);
+  const content = await app.vault.cachedRead(file);
   const sections = parseH2Sections(content);
   const milestones = parseMilestones(sections['Milestones'] || '');
   const total = milestones.length;

@@ -71,6 +71,7 @@ export const DEFAULT_SETTINGS: BobSettings = {
   folderPlaybooks: '00-CORE/Playbooks',
   folderSkills: '00-CORE/Agents/skills',
   projectFolders: [],   // extra folders to scan; first non-empty = default for new projects
+  ignoredFolders: [],   // folders excluded from every entity scan (e.g. ['99-TMP']) — speeds up large vaults
   baseFiles: {
     contact: '00-CORE/Bases/People.base',
     client: '00-CORE/Bases/Clients.base',
@@ -128,6 +129,25 @@ export let CURRENT_CURRENCY = 'USD';
 export function setCurrentCurrency(currency: string) {
   CURRENT_CURRENCY = currency || 'USD';
 }
+
+/* Folders excluded from every entity file scan. Kept module-level so
+   listEntityFiles() (which doesn't receive settings) can consult it.
+   Normalized to trimmed, slash-stripped, non-empty paths. */
+export let IGNORED_FOLDERS: string[] = [];
+
+export function setIgnoredFolders(folders: unknown): void {
+  IGNORED_FOLDERS = (Array.isArray(folders) ? folders : [])
+    .map((f) => String(f ?? '').trim().replace(/^\/+|\/+$/g, ''))
+    .filter(Boolean);
+}
+
+/* True when a file path falls under any ignored folder (prefix match on
+   full path segments, so '99-TMP' ignores '99-TMP/...' but not '99-TMPX/...'). */
+export function isIgnoredPath(path: string): boolean {
+  if (!IGNORED_FOLDERS.length) return false;
+  const p = String(path || '');
+  return IGNORED_FOLDERS.some((folder) => p === folder || p.startsWith(folder + '/'));
+}
 export let ENTITY_FOLDERS: Record<string, string> = {
   contact: '10-ME/10-PEOPLE',
   company: '20-COMPANY/00-PROFILE',
@@ -172,6 +192,7 @@ export function syncEntityFolders(settings: PartialSettings): void {
   ENTITY_FOLDERS.task = (settings.taskNotesFolder || '').trim() || '00-CORE/TaskNotes/Tasks';
   ENTITIES.task.folder = ENTITY_FOLDERS.task;
   ENTITIES.task.folders = taskNoteFolders(settings);
+  setIgnoredFolders(settings.ignoredFolders);
 }
 
 export function entityFolder(entityKey: string): string {

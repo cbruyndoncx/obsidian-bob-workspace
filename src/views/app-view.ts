@@ -1766,6 +1766,25 @@ export class CadenceAppView extends obsidian.ItemView {
       return widgetCache.get(cacheKey);
     };
 
+    // Warm the per-render widget cache for every layout card up front, in
+    // parallel. The paint loop below renders cards sequentially (to preserve
+    // layout order); without this, each card resolves its source — including
+    // disk-reading snapshot sources on Home — only when it is reached, so the
+    // sections reveal one at a time. Kicking the resolutions off concurrently
+    // here lets the slow ones (snapshots) overlap, and the paint loop then hits
+    // already-resolved promises. Idempotent: getWidgetEntities dedupes by key.
+    const prewarmLayout = (async () => {
+      const cards: CardLike[] = [];
+      for (const row of config.layout || []) {
+        for (const colDef of row) {
+          for (const card of (Array.isArray(colDef) ? colDef : [colDef])) cards.push(card);
+        }
+      }
+      await Promise.all(cards.map((card) =>
+        getWidgetEntities(this._widgetSourceSpec(card, card.entity), card.entity).catch((): null => null)
+      ));
+    })();
+
     const titleSuffix = config.contextFilter === 'client-work'
       ? [this._clientWorkClientId, this._clientWorkProjectId].filter(Boolean).join(' · ')
       : '';
@@ -1864,6 +1883,7 @@ export class CadenceAppView extends obsidian.ItemView {
       this._dashboardStats(root, statItems);
     }
 
+    await prewarmLayout;
     for (const row of config.layout || []) {
       const cols = root.createDiv({ cls: 'cad-dash-cols' });
       for (const colDef of row) {

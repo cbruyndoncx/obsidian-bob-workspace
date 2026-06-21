@@ -1682,6 +1682,24 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       });
     });
 
+    new obsidian.Setting(appPanel)
+      .setName('Ignored folders')
+      .setDesc('Top-level vault folders to exclude from all entity scans (one per line, e.g. "99-TMP"). Speeds up large vaults by skipping folders that hold no records.')
+      .addTextArea((t) => {
+        t.inputEl.rows = 4;
+        t.setPlaceholder('99-TMP\nArchive')
+          .setValue((this.plugin.settings.ignoredFolders || []).join('\n'))
+          .onChange(async (v) => {
+            this.plugin.settings.ignoredFolders = String(v || '')
+              .split('\n')
+              .map((line) => line.trim().replace(/^\/+|\/+$/g, ''))
+              .filter(Boolean);
+            syncEntityFolders(this.plugin.settings);
+            await this.plugin.saveSettings();
+            this.plugin.refreshOpenViews();
+          });
+      });
+
     new obsidian.Setting(plannerPanel)
       .setName('Daily note folder')
       .setDesc('Folder under which daily notes live, e.g. "daily" or "Journal/Daily".')

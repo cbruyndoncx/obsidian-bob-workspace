@@ -4,6 +4,7 @@ import { generateMissingBases } from './bases-config';
 import { CadenceCaptureModal } from './modals/capture';
 import { CadenceImportModal } from './modals/import';
 import { CadenceWorkspaceSetupModal } from './modals/workspace-setup';
+import { invalidateEntityScanCache } from './entity-files';
 import { VIEW_TYPE_CADENCE_APP } from './nav';
 import { ensureDailyNote, parseSections, replaceSection } from './notes';
 import { nextRepeat, reminderId, reminderTimeStr } from './reminders';
@@ -64,6 +65,14 @@ export class CadencePlugin extends obsidian.Plugin {
       VIEW_TYPE_CADENCE_APP,
       (leaf) => new CadenceAppView(leaf, this)
     );
+
+    // Drop the shared entity scan cache whenever vault content changes, so the
+    // cache only ever lives within an unchanged window (one render pass).
+    const dropScanCache = () => invalidateEntityScanCache();
+    this.registerEvent(this.app.vault.on('create', dropScanCache));
+    this.registerEvent(this.app.vault.on('delete', dropScanCache));
+    this.registerEvent(this.app.vault.on('rename', dropScanCache));
+    this.registerEvent(this.app.metadataCache.on('changed', dropScanCache));
 
     // Register playbook runner as a Bases custom view type (used in Playbooks.base Runner tabs)
     if (typeof this.registerBasesView === 'function') {
@@ -355,6 +364,9 @@ export class CadencePlugin extends obsidian.Plugin {
   }
 
   refreshOpenViews() {
+    // Settings/config changes (ignored folders, schema reloads) can change the
+    // scannable set without a vault event, so drop the cache before re-render.
+    invalidateEntityScanCache();
     this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP).forEach((leaf) => {
       if (leaf.view && typeof (leaf.view as AppViewLike).render === 'function') (leaf.view as AppViewLike).render();
     });

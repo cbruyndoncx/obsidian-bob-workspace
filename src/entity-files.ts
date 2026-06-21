@@ -2,7 +2,7 @@ import { basePropValue, hasBaseValue, parseTodayExpression, splitBaseExpression,
 import { ENTITIES, primaryFieldKey } from './entities';
 import { cloneConfig } from './nav';
 import { pluralizeEntityLabel } from './schemas';
-import { CURRENT_CURRENCY, entityFolder, humanizeProjectName, normalizeProjectId, renderTemplateDocument } from './settings';
+import { CURRENT_CURRENCY, entityFolder, humanizeProjectName, isIgnoredPath, normalizeProjectId, renderTemplateDocument } from './settings';
 import { isTemplatePath, startOfDay, ymd } from './utils';
 import { WORKSPACE_CONFIG } from './workspace-config';
 import * as obsidian from 'obsidian';
@@ -26,6 +26,28 @@ interface ParsedBaseSortSpec {
   direction?: string;
 }
 
+/* Cached, pre-filtered markdown file list shared across one render pass.
+   Building the entity list for each widget on a dashboard would otherwise
+   re-walk the whole vault (and re-run the template/ignored checks) once per
+   widget. The cache holds the vault-wide scannable set — every file that is
+   neither a template nor under an ignored folder — and is invalidated on any
+   vault/metadata mutation and on config/settings reloads (see plugin.ts and
+   refreshOpenViews). Between those, the vault is unchanged, so it is safe for
+   all callers (dashboards, snapshots, exports). */
+let _scanCache: TFile[] | null = null;
+
+export function invalidateEntityScanCache(): void {
+  _scanCache = null;
+}
+
+export function scannableMarkdownFiles(app: App): TFile[] {
+  if (!_scanCache) {
+    _scanCache = app.vault.getMarkdownFiles()
+      .filter((f) => !isTemplatePath(f.path) && !isIgnoredPath(f.path));
+  }
+  return _scanCache;
+}
+
 export function listEntityFiles(app: App, entityKey: string): TFile[] {
   const def = ENTITIES[entityKey] as BobEntityDef & { baseFilters?: ParsedBaseFilters };
   if (!def) return [];
@@ -33,9 +55,7 @@ export function listEntityFiles(app: App, entityKey: string): TFile[] {
   const hasPathFilter = Array.isArray(def.folders);
   const useDefaultPath = !def.typeFilter && !hasPathFilter;
 
-  return app.vault.getMarkdownFiles().filter((f) => {
-    if (isTemplatePath(f.path)) return false;
-
+  return scannableMarkdownFiles(app).filter((f) => {
     // Path filter (OR within folders array; AND with type)
     if (hasPathFilter) {
       if (!def.folders.some((d) => f.path.startsWith(d.replace(/\/$/, '') + '/'))) return false;

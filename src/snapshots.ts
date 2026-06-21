@@ -57,14 +57,14 @@ export async function buildProductivitySnapshot(app: App, settings: PartialSetti
     let open = 0, done = 0, jChars = 0, hasNote = false;
     if (includeCheckboxTasks && f && f instanceof obsidian.TFile) {
       hasNote = true;
-      const c = await app.vault.read(f);
+      const c = await app.vault.cachedRead(f);
       const p = parseSections(c, settings);
       open = p.tasks.filter((l) => / \[ \] /.test(l)).length;
       done = p.tasks.filter((l) => / \[(x|X)\] /.test(l)).length;
       jChars = (p.journal || '').length;
     } else if (f && f instanceof obsidian.TFile) {
       hasNote = true;
-      const c = await app.vault.read(f);
+      const c = await app.vault.cachedRead(f);
       const p = parseSections(c, settings);
       jChars = (p.journal || '').length;
     }
@@ -120,7 +120,7 @@ export async function buildProductivitySnapshot(app: App, settings: PartialSetti
       const f = app.vault.getAbstractFileByPath(dailyNotePath(settings, d));
       if (includeCheckboxTasks && f && f instanceof obsidian.TFile) {
         anyNote = true;
-        const c = await app.vault.read(f);
+        const c = await app.vault.cachedRead(f);
         const p = parseSections(c, settings);
         p.tasks.forEach((l) => { if (/ \[(x|X)\] /.test(l)) wd++; else if (/ \[ \] /.test(l)) wo++; });
       }
@@ -191,7 +191,7 @@ export async function buildPlannerSnapshot(app: App, settings: PartialSettings =
     }));
 
   const dailyFile = await ensureDailyNote(app, settings).catch((): TAbstractFile | null => null);
-  const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.read(dailyFile), settings) : { tasks: [] as string[] };
+  const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] as string[] };
   const todayRows = (todayTasks.tasks || [])
     .slice(0, 12)
     .map((line) => {
@@ -212,7 +212,7 @@ export async function buildPlannerSnapshot(app: App, settings: PartialSettings =
     let tasks: string[] = [];
     let journal = '';
     if (file instanceof obsidian.TFile) {
-      const parsed = parseSections(await app.vault.read(file), settings);
+      const parsed = parseSections(await app.vault.cachedRead(file), settings);
       tasks = parsed.tasks || [];
       journal = parsed.journal || '';
     }
@@ -310,7 +310,7 @@ export async function buildHomeSnapshot(app: App, settings: PartialSettings = {}
     }));
 
   const dailyFile = await ensureDailyNote(app, settings).catch((): TAbstractFile | null => null);
-  const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.read(dailyFile), settings) : { tasks: [] as string[] };
+  const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] as string[] };
   const todayRows = (todayTasks.tasks || [])
     .slice(0, 8)
     .map((line) => ({
@@ -413,7 +413,7 @@ export async function buildHomeSnapshot(app: App, settings: PartialSettings = {}
     const items = [];
     try {
       if (dailyFile instanceof obsidian.TFile) {
-        const content = await app.vault.read(dailyFile);
+        const content = await app.vault.cachedRead(dailyFile);
         const parsed = parseSections(content, settings);
         const openTasks = parsed.tasks.filter((l) => / \[ \] /.test(l)).length;
         if (openTasks > 0) {

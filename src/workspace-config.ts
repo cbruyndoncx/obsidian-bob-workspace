@@ -443,6 +443,7 @@ export const WORKSPACE_OWNED_SETTING_KEYS = [
   'folderPlaybooks',
   'folderSkills',
   'projectFolders',
+  'ignoredFolders',
   'dailyNoteFolder',
   'journalHeading',
   'tasksHeading',

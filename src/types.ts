@@ -218,6 +218,8 @@ export interface BobSettings {
   folderPlaybooks: string;
   folderSkills: string;
   projectFolders: string[];
+  /** Top-level (or nested) vault folders excluded from all entity scans for performance. */
+  ignoredFolders: string[];
   baseFiles: Record<string, string>;
   baseViews: Record<string, string>;
   basesFolder: string;
