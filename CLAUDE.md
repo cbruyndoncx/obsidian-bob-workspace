@@ -150,7 +150,7 @@ Important specialized behavior:
 
 **Entities** are plain markdown files with YAML frontmatter. The `ENTITIES` constant defines fallback labels, fields, columns, folder/type matching, and specialized metadata:
 
-```javascript
+```typescript
 const ENTITIES = {
   contact: {
     folder: '10-ME/10-PEOPLE',
@@ -172,13 +172,13 @@ const ENTITIES = {
 
 **Frontmatter is always written via Obsidian's `processFrontMatter()`** — never manual string manipulation:
 
-```javascript
+```typescript
 await app.fileManager.processFrontMatter(file, (fm) => { fm.stage = 'won'; });
 ```
 
 Body markdown is edited separately only where the feature is genuinely body-based (project sections, daily-note task lists):
 
-```javascript
+```typescript
 const content = await app.vault.read(file);
 const updated = replaceSection(content, '## Brief', newText);
 await app.vault.modify(file, updated);
@@ -203,7 +203,9 @@ await app.vault.modify(file, updated);
 | `folder` (default) | Single folder prefix; applies only when neither `typeFilter` nor `folders` is set | Settings → BOB Workspace → Folders |
 | Parsed Base filters | When a selected Base/view contributes supported filters | from `.base` |
 
-Within the `folders` array the logic is OR; between different filter types the logic is AND. **Template paths are excluded:** any note under a directory segment named `template`/`templates` must not appear in entity lists, counts, dashboards, or workbook exports.
+Within the `folders` array the logic is OR; between different filter types the logic is AND. **Template paths are excluded:** any note under a directory segment named `template`/`templates` must not appear in entity lists, counts, dashboards, or workbook exports. **Ignored folders are excluded too:** the `ignoredFolders` setting (Settings → BOB Workspace → App → "Ignored folders") is a list of top-level (or nested) vault folders dropped from every entity scan — use it for uncurated trees like `99-TMP` that hold no records, to speed up large vaults. It is portable (in `WORKSPACE_OWNED_SETTING_KEYS`, so it lives in `workspace.json`) and synced module-level by `syncEntityFolders()` into `IGNORED_FOLDERS`/`isIgnoredPath()` (`src/settings.ts`) so `listEntityFiles()` can consult it without threading settings. **It only filters the plugin's own scans — Obsidian core search, graph, and quick-switcher are untouched** (use Obsidian's own *Excluded files* setting if you also want those hidden).
+
+**Scan cache (perf):** `scannableMarkdownFiles(app)` (`src/entity-files.ts`) caches the vault-wide pre-filtered file set — every markdown file that is neither a template nor under an ignored folder — so a multi-widget dashboard scans the vault **once per render** instead of once per widget. The cache is invalidated by `invalidateEntityScanCache()` on any vault `create`/`delete`/`rename` and `metadataCache` `changed` event (registered plugin-level in `src/plugin.ts`, so it stays coherent even when no view is open) and in `refreshOpenViews()` (covers settings/schema reloads). Between those events the vault is unchanged, so it is safe for all callers (dashboards, snapshots, exports).
 
 New entities created via BOB Workspace get their `type:` frontmatter from `typeFilter`/`typeFilters.type` (not the entity key); `typeFilters` entities also write extra discriminator fields. **`entityKeyFromFile(app, file)`** is the reverse lookup (matches frontmatter `type:` first, then path prefix). Do not add a `typesFilter` option without implementing it first — it is not part of current `listEntityFiles()` behavior.
 
@@ -286,6 +288,8 @@ Tab-based internal nav, dispatched in `CadenceAppView.render()` via a route map 
 
 Specialized views (Pipeline kanban, CRM Dashboard, Reports) primarily route through the dashboard/widget system. `home` and `reports.productivity` are config-driven, but some source data is still produced by runtime snapshot helpers (intentional for now; the Base-first path is to materialize that runtime state into notes/frontmatter and point widgets at `source.base`/`source.view`). Small dashboard UI choices that should survive restart (selector picks, date ranges) persist in `workspace.json.settings.dashboardState` — keep that to user intent only; recompute metrics/rows on render.
 
+**Why Home is slower than CRM, and what's been done.** Both surfaces share `renderConfigDashboard`, which paints cards **sequentially** (`await` per card, to preserve layout order). CRM widgets use `mode: 'entity'` → data from `metadataCache` (frontmatter, in-memory) so the sequential paint is imperceptible. Home's sections use `mode: 'built-in'` (`builtIn: 'home' | 'productivity' | 'planner'`, `src/widgets.ts`) → `buildHomeSnapshot`/`buildProductivitySnapshot`/`buildPlannerSnapshot` (`src/snapshots.ts`) which read full note **bodies**, so without help Home reveals section by section. Two mitigations are in place: (1) snapshot/project body reads use `app.vault.cachedRead()` (not `read()`) to serve unchanged files from memory; (2) `renderConfigDashboard` pre-resolves **all** layout widget sources in parallel (`prewarmLayout`) before the paint loop, so the slow snapshot resolutions overlap and the paint hits already-resolved promises (reuses the per-render `widgetCache`; idempotent). These reduce the gap but don't close it — Home still reads bodies where CRM reads only frontmatter; the structural fix is the Base-first migration above (#3).
+
 ### XLSX, tasks, import/export
 
 - `exportEntitiesXLSX(app, entityKeys, suffix, settings)` exports one sheet per entity type. The library loads lazily via `getXLSX(app)` → inlined `loadBundledXLSX()` (SheetJS mini). Output: `settings.workbookExportFolder` (default `BOB Workspace/Exports`). Commands: `bob-workspace-export-xlsx`, `bob-workspace-import-xlsx`.
@@ -296,7 +300,7 @@ Specialized views (Pipeline kanban, CRM Dashboard, Reports) primarily route thro
 
 ### Key Patterns
 
-```javascript
+```typescript
 // Frontmatter I/O
 await app.fileManager.processFrontMatter(file, (fm) => { fm.stage = 'Won'; });
 
@@ -389,7 +393,7 @@ For inner tabs, add an entry to `SECONDARY_TABS` mapping the parent surface ID t
 
 ### Editing project sections & milestone/task lists
 
-```javascript
+```typescript
 const content  = await app.vault.read(file);
 const sections = parseH2Sections(content);  // sections.Brief, sections.Scope, ...
 const updated  = replaceSection(content, '## Brief', newText);
