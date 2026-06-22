@@ -195,8 +195,6 @@ export interface BobSettings {
   teamPersonCategories: string[];
   desktopNotifications: boolean;
   reminders: Reminder[];
-  cadenceApiUrl: string;
-  cadenceApiToken: string;
   taskMode: 'checkbox' | 'tasknotes' | 'hybrid' | (string & {});
   taskNotesFolder: string;
   taskNotesArchiveFolder: string;

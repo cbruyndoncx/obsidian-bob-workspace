@@ -46,8 +46,6 @@ export const DEFAULT_SETTINGS: BobSettings = {
   teamPersonCategories: ['employee', 'freelancer', 'contractor'],
   desktopNotifications: false,
   reminders: [], // [{ id, text, when (ISO|null), repeat ('none'|'daily'|'weekly'), notified, done, createdAt }]
-  cadenceApiUrl: '',
-  cadenceApiToken: '',
   // Task mode
   taskMode: 'checkbox',              // 'checkbox' | 'tasknotes' | 'hybrid'
   taskNotesFolder: '00-CORE/TaskNotes/Tasks',

@@ -2,7 +2,7 @@ import { BUNDLED_WORKSPACE_TEMPLATES } from './bundled/templates';
 import { BUILTIN_SURFACE_IDS, BUILT_SURFACES } from './entities';
 import { normalizeStandaloneNavigationSurfaces } from './nav-helpers';
 import type { DashboardConfig, JsonValue, NavGroup, NavSurface, SecondaryTab, WorkbookExportGroup, WorkspaceConfig } from './types';
-export const VIEW_TYPE_CADENCE_APP = 'cadence-app';
+export const VIEW_TYPE_CADENCE_APP = 'bob-workspace-app';
 
 /* ─────────── Nav structure ─────────── */
 /* Mirrors the Cadence web-app left nav exactly. Groups can be collapsed.

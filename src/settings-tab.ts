@@ -2402,35 +2402,6 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           await promptImportWorkbook(this.plugin.app, async () => this.plugin.refreshOpenViews());
         }));
 
-    pData.createEl('h3', { text: 'Sync' });
-    pData.createEl('p', {
-      cls: 'setting-item-description',
-      text: 'Cloud sync remains a future bridge. The settings stay here so the eventual backend configuration has a stable home.',
-    });
-    const syncGroup = pData.createDiv({ cls: 'setting-group cad-settings-section cad-settings-panel-off cad-sync-disabled' });
-    const syncPanel = syncGroup.createDiv({ cls: 'setting-items' });
-    const cloudDesc = syncPanel.createEl('p', { cls: 'setting-item-description cad-sync-disabled-desc' });
-    cloudDesc.appendText('Future option to two-way sync your vault with a live BOB Workspace / Cadence backend, so contacts, deals and partners stay aligned across desktop and mobile. ');
-    cloudDesc.createEl('strong', { text: 'Not active yet.' });
-    cloudDesc.appendText(' These fields are persisted but unused until the sync feature ships in a later release.');
-    new obsidian.Setting(syncPanel)
-      .setName('Backend base URL')
-      .setDesc('Coming soon')
-      .addText((t) => {
-        t.setPlaceholder('https://your-cadence-instance')
-         .setValue(this.plugin.settings.cadenceApiUrl)
-         .onChange(async (v) => { this.plugin.settings.cadenceApiUrl = v; await this.plugin.saveSettings(); });
-        t.inputEl.disabled = true;
-      });
-    new obsidian.Setting(syncPanel)
-      .setName('API token')
-      .setDesc('Coming soon')
-      .addText((t) => {
-        t.setPlaceholder('paste JWT here when sync ships')
-         .setValue(this.plugin.settings.cadenceApiToken)
-         .onChange(async (v) => { this.plugin.settings.cadenceApiToken = v; await this.plugin.saveSettings(); });
-        t.inputEl.disabled = true;
-      });
   }
 }
 
