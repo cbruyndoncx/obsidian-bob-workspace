@@ -1861,7 +1861,8 @@ export class CadenceAppView extends obsidian.ItemView {
           value = total === 0 ? 0 : Math.round((wonValue / total) * 100);
         } else if (metric === 'uniqueCount') {
           value = new Set(entities.map((e) => String(entityValue(e, field, def) || '').trim()).filter(Boolean)).size;
-        } else if (s.count === 'open') {
+        } else if (s.count === 'open' || s.count === 'active') {
+          // "active" is an accepted alias for "open" (status not done/archived).
           value = countOpen;
         } else if (s.count && typeof s.count === 'object' && s.count.field) {
           value = entities.filter((e) => entityValue(e, s.count.field, def)).length;
@@ -1873,7 +1874,7 @@ export class CadenceAppView extends obsidian.ItemView {
           const subKey = sub.entity || s.entity;
           const subResolved = await getWidgetEntities(sub.source || sub, subKey);
           const subEnts = subResolved.entities;
-          const subCount = sub.count === 'open'
+          const subCount = (sub.count === 'open' || sub.count === 'active')
             ? subEnts.filter(e => this._isOpenEntity(e, subKey)).length
             : subEnts.length;
           sub = `${subCount} ${sub.suffix}`;

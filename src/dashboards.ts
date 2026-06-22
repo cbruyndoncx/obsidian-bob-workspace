@@ -213,7 +213,7 @@ export function summarizeDashboardBlueprint(id: string, config: DashboardBluepri
   (config.stats || []).forEach((stat) => {
     widgetKinds.add('metric');
     if (stat.metric) sourceKinds.add(`metric:${stat.metric}`);
-    if (stat.count === 'open') sourceKinds.add('count:open');
+    if (stat.count === 'open' || stat.count === 'active') sourceKinds.add('count:open');
     if (stat.count === 'all' || stat.count == null) sourceKinds.add('count:all');
   });
   (config.controls || []).forEach((card) => {

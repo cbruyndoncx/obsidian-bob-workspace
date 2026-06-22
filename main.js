@@ -19552,7 +19552,7 @@ function summarizeDashboardBlueprint(id, config = {}) {
   (config.stats || []).forEach((stat) => {
     widgetKinds.add("metric");
     if (stat.metric) sourceKinds.add(`metric:${stat.metric}`);
-    if (stat.count === "open") sourceKinds.add("count:open");
+    if (stat.count === "open" || stat.count === "active") sourceKinds.add("count:open");
     if (stat.count === "all" || stat.count == null) sourceKinds.add("count:all");
   });
   (config.controls || []).forEach((card) => {
@@ -19885,8 +19885,8 @@ function validateDashboardStat(stat, path) {
     throw new Error(`${path}.entity is required`);
   }
   if (stat.count != null) {
-    const ok = stat.count === "all" || stat.count === "open" || typeof stat.count === "object" && !Array.isArray(stat.count) && String(stat.count.field || "").trim();
-    if (!ok) throw new Error(`${path}.count must be "all", "open", or an object with field`);
+    const ok = stat.count === "all" || stat.count === "open" || stat.count === "active" || typeof stat.count === "object" && !Array.isArray(stat.count) && String(stat.count.field || "").trim();
+    if (!ok) throw new Error(`${path}.count must be "all", "open", "active", or an object with field`);
   }
   if (isBuiltInStat && !hasField && !stat.metric) {
     throw new Error(`${path}.field is required for built-in stats`);
@@ -27261,7 +27261,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
           value = total === 0 ? 0 : Math.round(wonValue / total * 100);
         } else if (metric === "uniqueCount") {
           value = new Set(entities.map((e) => String(entityValue(e, field, def) || "").trim()).filter(Boolean)).size;
-        } else if (s.count === "open") {
+        } else if (s.count === "open" || s.count === "active") {
           value = countOpen;
         } else if (s.count && typeof s.count === "object" && s.count.field) {
           value = entities.filter((e) => entityValue(e, s.count.field, def)).length;
@@ -27273,7 +27273,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
           const subKey = sub.entity || s.entity;
           const subResolved = await getWidgetEntities(sub.source || sub, subKey);
           const subEnts = subResolved.entities;
-          const subCount = sub.count === "open" ? subEnts.filter((e) => this._isOpenEntity(e, subKey)).length : subEnts.length;
+          const subCount = sub.count === "open" || sub.count === "active" ? subEnts.filter((e) => this._isOpenEntity(e, subKey)).length : subEnts.length;
           sub = `${subCount} ${sub.suffix}`;
         }
         return { label: s.label, value, sub, accent: s.accent, mode: s.mode };

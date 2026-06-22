@@ -308,8 +308,8 @@ export function validateDashboardStat(stat: DashboardCard, path: string): void {
     throw new Error(`${path}.entity is required`);
   }
   if (stat.count != null) {
-    const ok = stat.count === 'all' || stat.count === 'open' || (typeof stat.count === 'object' && !Array.isArray(stat.count) && String(stat.count.field || '').trim());
-    if (!ok) throw new Error(`${path}.count must be "all", "open", or an object with field`);
+    const ok = stat.count === 'all' || stat.count === 'open' || stat.count === 'active' || (typeof stat.count === 'object' && !Array.isArray(stat.count) && String(stat.count.field || '').trim());
+    if (!ok) throw new Error(`${path}.count must be "all", "open", "active", or an object with field`);
   }
   if (isBuiltInStat && !hasField && !stat.metric) {
     throw new Error(`${path}.field is required for built-in stats`);
