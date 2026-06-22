@@ -12395,9 +12395,15 @@ var workspace_bob_default = {
             kind: "list",
             title: "PIPELINE",
             source: {
-              mode: "built-in",
-              builtIn: "home",
-              section: "pipeline"
+              mode: "entity",
+              entityKey: "deal",
+              filters: "stage != 'won' && stage != 'lost'",
+              sort: [
+                {
+                  property: "deal_value",
+                  direction: "DESC"
+                }
+              ]
             },
             limit: 5,
             empty: "No open deals \u2014 create one above."
@@ -12408,9 +12414,8 @@ var workspace_bob_default = {
             kind: "list",
             title: "PARTNERS",
             source: {
-              mode: "built-in",
-              builtIn: "home",
-              section: "partners"
+              mode: "entity",
+              entityKey: "partner"
             },
             limit: 5,
             empty: "No partners on the books yet."
@@ -12432,9 +12437,14 @@ var workspace_bob_default = {
             kind: "list",
             title: "RECENT ACTIVITY",
             source: {
-              mode: "built-in",
-              builtIn: "home",
-              section: "activities"
+              mode: "entity",
+              entityKey: "activity",
+              sort: [
+                {
+                  property: "date",
+                  direction: "DESC"
+                }
+              ]
             },
             limit: 5,
             empty: "No activities logged yet."
@@ -15321,9 +15331,15 @@ var workspace_cadence_default = {
             kind: "list",
             title: "PIPELINE",
             source: {
-              mode: "built-in",
-              builtIn: "home",
-              section: "pipeline"
+              mode: "entity",
+              entityKey: "deal",
+              filters: "stage != 'won' && stage != 'lost'",
+              sort: [
+                {
+                  property: "deal_value",
+                  direction: "DESC"
+                }
+              ]
             },
             limit: 5,
             empty: "No open deals \u2014 create one above."
@@ -15334,9 +15350,8 @@ var workspace_cadence_default = {
             kind: "list",
             title: "PARTNERS",
             source: {
-              mode: "built-in",
-              builtIn: "home",
-              section: "partners"
+              mode: "entity",
+              entityKey: "partner"
             },
             limit: 5,
             empty: "No partners on the books yet."
@@ -15358,9 +15373,14 @@ var workspace_cadence_default = {
             kind: "list",
             title: "RECENT ACTIVITY",
             source: {
-              mode: "built-in",
-              builtIn: "home",
-              section: "activities"
+              mode: "entity",
+              entityKey: "activity",
+              sort: [
+                {
+                  property: "date",
+                  direction: "DESC"
+                }
+              ]
             },
             limit: 5,
             empty: "No activities logged yet."
@@ -17413,9 +17433,15 @@ var workspace_crm_default = {
             kind: "list",
             title: "PIPELINE",
             source: {
-              mode: "built-in",
-              builtIn: "home",
-              section: "pipeline"
+              mode: "entity",
+              entityKey: "deal",
+              filters: "stage != 'won' && stage != 'lost'",
+              sort: [
+                {
+                  property: "deal_value",
+                  direction: "DESC"
+                }
+              ]
             },
             limit: 5,
             empty: "No open deals \u2014 create one above."
@@ -17426,9 +17452,8 @@ var workspace_crm_default = {
             kind: "list",
             title: "PARTNERS",
             source: {
-              mode: "built-in",
-              builtIn: "home",
-              section: "partners"
+              mode: "entity",
+              entityKey: "partner"
             },
             limit: 5,
             empty: "No partners on the books yet."
@@ -17450,9 +17475,14 @@ var workspace_crm_default = {
             kind: "list",
             title: "RECENT ACTIVITY",
             source: {
-              mode: "built-in",
-              builtIn: "home",
-              section: "activities"
+              mode: "entity",
+              entityKey: "activity",
+              sort: [
+                {
+                  property: "date",
+                  direction: "DESC"
+                }
+              ]
             },
             limit: 5,
             empty: "No activities logged yet."
