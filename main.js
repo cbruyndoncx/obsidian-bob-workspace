@@ -20036,7 +20036,7 @@ async function applySchemas(app, settings = {}) {
       }
     }
     if (schema.bob && typeof schema.bob === "object" && !Array.isArray(schema.bob)) {
-      await applyEntityDefinitions(app, settings, { [entityKey]: schema.bob }, false);
+      await applyEntityDefinitions(app, settings, { [entityKey]: schema.bob });
     }
   }
 }
@@ -20226,12 +20226,11 @@ function resetEntityRegistry(settings = {}) {
   });
   syncEntityFolders(settings);
 }
-async function applyEntityDefinitions(app, settings = {}, config = {}, injectNavigation = true, configOwnsBase = false) {
+async function applyEntityDefinitions(app, settings = {}, config = {}) {
   for (let [key, def] of Object.entries(config)) {
     if (!def || typeof def !== "object") continue;
-    const basePath = configOwnsBase ? def.base || (settings.baseFiles || {})[key] : (settings.baseFiles || {})[key] || def.base;
-    const baseView = configOwnsBase ? def.baseView || (settings.baseViews || {})[key] : (settings.baseViews || {})[key] || def.baseView;
-    if (configOwnsBase && def.base) CONFIGURED_BASE_ENTITY_KEYS.add(key);
+    const basePath = (settings.baseFiles || {})[key] || def.base;
+    const baseView = (settings.baseViews || {})[key] || def.baseView;
     if (basePath) {
       const baseConfig = await parseBaseFile(app, basePath, baseView);
       if (baseConfig) {
@@ -20286,29 +20285,6 @@ async function applyEntityDefinitions(app, settings = {}, config = {}, injectNav
         if (def[k] != null) ENTITIES[key][k] = def[k];
       });
       ENTITY_FOLDERS[key] = folder;
-      if (injectNavigation) {
-        const surfaceId = `custom.${key}`;
-        BUILT_SURFACES.add(surfaceId);
-        let targetGroup = def.module ? NAV_GROUPS.find((g) => g.id === def.module) : null;
-        if (!targetGroup) {
-          targetGroup = NAV_GROUPS.find((g) => g.id === "custom");
-          if (!targetGroup) {
-            targetGroup = { id: "custom", label: "Custom", items: [] };
-            const miscIdx = NAV_GROUPS.findIndex((g) => g.id === "misc");
-            NAV_GROUPS.splice(miscIdx >= 0 ? miscIdx : NAV_GROUPS.length, 0, targetGroup);
-          }
-        }
-        targetGroup.items.push({
-          id: surfaceId,
-          label: def.plural || pluralizeEntityLabel(def.label),
-          icon: def.icon || "file-text",
-          module: def.module,
-          entityKey: key,
-          folderKey: def.folderKey,
-          desc: def.desc || `${def.plural || pluralizeEntityLabel(def.label)} - custom entity`
-        });
-        rebuildSurfaceLookups();
-      }
     } else {
       if (def.fields) {
         const existing = ENTITIES[key].fields || [];

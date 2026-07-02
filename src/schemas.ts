@@ -194,7 +194,7 @@ export async function applySchemas(app: obsidian.App, settings: PartialSettings 
       }
     }
     if (schema.bob && typeof schema.bob === 'object' && !Array.isArray(schema.bob)) {
-      await applyEntityDefinitions(app, settings, { [entityKey]: schema.bob }, false);
+      await applyEntityDefinitions(app, settings, { [entityKey]: schema.bob });
     }
   }
 }
