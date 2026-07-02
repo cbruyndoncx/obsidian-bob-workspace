@@ -26,7 +26,6 @@ interface TemplateSpec {
 
 export const DEFAULT_SETTINGS: BobSettings = {
   dailyNoteFolder: 'daily',
-  dailyNoteFormat: 'YYYY-MM-DD',
   journalHeading: '## Journal',
   tasksHeading: '## Today',
   weekStartsOn: 1, // 0 = Sunday, 1 = Monday

@@ -175,7 +175,6 @@ export interface Reminder {
 
 export interface BobSettings {
   dailyNoteFolder: string;
-  dailyNoteFormat: string;
   journalHeading: string;
   tasksHeading: string;
   weekStartsOn: number;

@@ -22140,7 +22140,6 @@ async function toggleTaskNoteStatus(app, file, done) {
 var obsidian6 = __toESM(require("obsidian"));
 var DEFAULT_SETTINGS = {
   dailyNoteFolder: "daily",
-  dailyNoteFormat: "YYYY-MM-DD",
   journalHeading: "## Journal",
   tasksHeading: "## Today",
   weekStartsOn: 1,
