@@ -42,7 +42,7 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 ## Dead code — safe removals
 
 ### TypeScript (~400+ lines)
-- [ ] `app-view.ts`: `renderDashboard` (≈6143, legacy CRM dashboard), `renderEntityKanban` (≈6037), `renderReportPipeline/Sales/Partners/Activity` (≈6303), four `_renderProductivity*Widget` (≈2868; removing them also kills `_productivitySnapshot`), `_filterEntitiesByBaseConfig` (≈1636). — NOT YET (largest file; separate careful pass).
+- [x] `app-view.ts`: `renderDashboard` (legacy CRM dashboard), `renderEntityKanban`, `renderReportPipeline/Sales/Partners/Activity`, the four `_renderProductivity*Widget`, `_productivitySnapshot` (dead once the widgets went), and `_filterEntitiesByBaseConfig` — ✅ DONE (2026-07-02). All 12 verified zero callers (route map + `_renderWidgetByKind` checked); ~340 lines removed; typecheck + build + tests green. Note: `renderProductivity` kept (still called by the route — that's the pointless-wrapper refactor, a separate item).
 - [x] `src/dashboards.ts:5` `INTERNAL_DASHBOARD_PROVIDERS` (never imported). ✅ DONE (2026-07-02).
 - [x] `src/workbook.ts:271` `importWorkbookEntitiesFromBuffer` (duplicate of the used path; `filename` param unused). ✅ DONE (2026-07-02).
 - [x] `src/entities.ts:792` `dealCloseByField` accessor removed ✅ DONE (2026-07-02). The `closeByField` entity **option** was KEPT — it's round-tripped through config-merge lists (`bases-config.ts`, `schema-designer.ts`) and the deal default; ripping it out would strip it from authored configs on next save. Low value, left in place.

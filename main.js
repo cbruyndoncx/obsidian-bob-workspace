@@ -21889,7 +21889,6 @@ var ENTITIES = {
   }
 };
 var BUILTIN_ENTITY_DEFAULTS = JSON.parse(JSON.stringify(ENTITIES));
-var DEAL_STAGES = ["lead", "qualified", "proposal", "negotiation", "won", "lost"];
 function dealStageField(def) {
   return def.stageField || "stage";
 }
@@ -21957,10 +21956,6 @@ function primaryField(def) {
 }
 function primaryFieldKey(def) {
   return primaryField(def)?.key || "";
-}
-function getDealStages(def) {
-  const sf = dealStageField(def);
-  return def.fields?.find((f) => f.key === sf)?.options || DEAL_STAGES;
 }
 function entityKeyFromFile(app, file) {
   if (!file) return null;
@@ -26786,9 +26781,6 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     }
     return spec;
   }
-  _filterEntitiesByBaseConfig(entityKey, entities, baseConfig, warnings = []) {
-    return filterEntitiesByBaseConfig(this.app, entityKey, entities, baseConfig, warnings);
-  }
   async _resolveWidgetEntities(source, fallbackEntityKey = null) {
     return resolveWidgetSource(this.app, source, fallbackEntityKey, this.plugin.settings);
   }
@@ -27925,93 +27917,6 @@ ${snippet}` : "- No markdown content");
       btn.addEventListener("click", async () => {
         await this._runActionSpec(action);
       });
-    });
-  }
-  async _renderProductivitySummaryWidget(root) {
-    const snap = await this._productivitySnapshot();
-    const card = root.createDiv({ cls: "cad-dash-card" });
-    card.createDiv({ cls: "cad-dash-card-head" }).createDiv({ cls: "cad-dash-card-title", text: "PRODUCTIVITY SUMMARY" });
-    const body = card.createDiv({ cls: "cad-dash-card-body" });
-    const grid = body.createDiv({ cls: "cad-stat-grid" });
-    const stat = (label, value, sub, accent) => {
-      const c = grid.createDiv({ cls: "cad-stat-card" });
-      if (accent) c.dataset.accent = accent;
-      c.createDiv({ cls: "cad-stat-label", text: label });
-      c.createDiv({ cls: "cad-stat-value", text: String(value) });
-      if (sub) c.createDiv({ cls: "cad-stat-sub", text: sub });
-    };
-    const taskSource = snap.taskMode === "tasknotes" ? "TaskNotes" : snap.taskMode === "hybrid" ? "daily notes + TaskNotes" : "daily notes";
-    stat("COMPLETION", `${snap.completion}%`, `${snap.totalDone}/${snap.totalOpen + snap.totalDone} tasks`, "emerald");
-    stat("STREAK", `${snap.streak}d`, "consecutive active days", "mint");
-    stat("ACTIVE", `${snap.activeDays}/30`, "days with a note", "sky");
-    stat("JOURNAL", snap.totalJournalChars.toLocaleString(), `${taskSource} activity`, "warn");
-  }
-  async _renderProductivityTrendWidget(root) {
-    const snap = await this._productivitySnapshot();
-    const card = root.createDiv({ cls: "cad-dash-card" });
-    card.createDiv({ cls: "cad-dash-card-head" }).createDiv({ cls: "cad-dash-card-title", text: "PRODUCTIVITY TREND" });
-    const body = card.createDiv({ cls: "cad-dash-card-body" });
-    body.createDiv({ cls: "cad-section-label-lg", text: "TASKS DONE \u2014 LAST 14 DAYS" });
-    const last14 = snap.perDay.slice(0, 14).reverse();
-    const max = Math.max(1, ...last14.map((p) => p.done));
-    const chart = body.createDiv({ cls: "cad-bar-chart" });
-    last14.forEach((p) => {
-      const col = chart.createDiv({ cls: "cad-bar-col" });
-      const bar = col.createDiv({ cls: "cad-bar" });
-      bar.style.height = `${p.done / max * 100}%`;
-      const ratio = p.done / max;
-      bar.dataset.band = p.done === 0 ? "empty" : ratio < 0.34 ? "low" : ratio < 0.67 ? "mid" : "high";
-      bar.title = `${p.date.toLocaleDateString()} \u2014 ${p.done} done, ${p.open} open`;
-      col.createDiv({ cls: "cad-bar-label", text: String(p.date.getDate()) });
-    });
-    body.createDiv({ cls: "cad-section-label-lg", text: "COMPLETION TREND \u2014 LAST 12 WEEKS" });
-    const wkChart = body.createDiv({ cls: "cad-bar-chart cad-bar-chart-tall" });
-    const maxWeek = Math.max(1, ...snap.weeks.map((w) => w.done));
-    snap.weeks.forEach((w) => {
-      const col = wkChart.createDiv({ cls: "cad-bar-col" });
-      const bar = col.createDiv({ cls: "cad-bar" });
-      bar.style.height = `${w.done / maxWeek * 100}%`;
-      const ratio = w.done / maxWeek;
-      bar.dataset.band = w.done === 0 ? "empty" : ratio < 0.34 ? "low" : ratio < 0.67 ? "mid" : "high";
-      bar.title = `Week of ${w.label} \u2014 ${w.done} done, ${w.open} open`;
-      col.createDiv({ cls: "cad-bar-label", text: w.label });
-    });
-  }
-  async _renderProductivityWeekdayWidget(root) {
-    const snap = await this._productivitySnapshot();
-    const card = root.createDiv({ cls: "cad-dash-card" });
-    card.createDiv({ cls: "cad-dash-card-head" }).createDiv({ cls: "cad-dash-card-title", text: "COMPLETION BY WEEKDAY" });
-    const body = card.createDiv({ cls: "cad-dash-card-body cad-mini-stat-row" });
-    const wsOn = snap.settings.weekStartsOn;
-    const dayLabels = wsOn === 1 ? ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] : ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-    const dayAccents = ["emerald", "mint", "sky", "warn", "rose", "mint", "sky"];
-    snap.dayBuckets.forEach((b, i) => {
-      const total = b.done + b.open;
-      const pct = total === 0 ? 0 : Math.round(b.done / total * 100);
-      const mini = body.createDiv({ cls: "cad-mini-stat" });
-      mini.dataset.accent = dayAccents[i];
-      mini.createDiv({ cls: "cad-mini-stat-value", text: total === 0 ? "\u2014" : `${pct}%` });
-      mini.createDiv({ cls: "cad-mini-stat-label", text: dayLabels[i] });
-      const sub = mini.createDiv({ cls: "cad-stat-sub" });
-      sub.style.marginTop = "4px";
-      sub.setText(total === 0 ? "no data" : `${b.done}/${total}`);
-    });
-  }
-  async _renderProductivityNotesWidget(root) {
-    const snap = await this._productivitySnapshot();
-    const card = root.createDiv({ cls: "cad-dash-card" });
-    card.createDiv({ cls: "cad-dash-card-head" }).createDiv({ cls: "cad-dash-card-title", text: "TASK NOTES" });
-    const body = card.createDiv({ cls: "cad-dash-card-body" });
-    if (!snap.taskNotes.length) {
-      body.createDiv({ cls: "cad-empty", text: "No TaskNotes in the selected range." });
-      return;
-    }
-    const list = body.createDiv({ cls: "cad-home-list" });
-    snap.taskNotes.slice(0, 10).forEach((task) => {
-      const row = list.createDiv({ cls: "cad-home-row" });
-      row.createDiv({ cls: "cad-home-row-title", text: task.text || task.title || "Task note" });
-      row.createDiv({ cls: "cad-home-row-meta", text: `${task.date || "\u2014"} \xB7 ${task.done ? "done" : "open"}` });
-      if (task.file) row.addEventListener("click", () => this.openEntityDetailFromFile(task.file));
     });
   }
   async _renderSelectorWidget(root, card, getWidgetEntities) {
@@ -30955,197 +30860,7 @@ ${snippet}` : "- No markdown content");
     }
   }
   /* ── Pipeline kanban (deals grouped by stage) ───── */
-  async renderEntityKanban(root, entityKey, groupBy, groups) {
-    root.addClass("cadence-kanban");
-    const def = ENTITIES[entityKey];
-    const entities = listEntities(this.app, entityKey);
-    const totalValue = entities.reduce((sum, e) => sum + (Number(entityValue(e, dealValueField(def), def)) || 0), 0);
-    const unsupported = def.unsupportedBaseFilters || [];
-    const unsupportedText = unsupported.length ? ` \xB7 ${unsupported.length} Base filter${unsupported.length === 1 ? "" : "s"} not applied` : "";
-    this._renderPageHeader(root, def.plural, `${entities.length} ${entities.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} \xB7 ${fmtValue(totalValue, "currency")} total${unsupportedText}`, (right, ctx) => {
-      this._renderEntityViewSelect(right, entityKey);
-      if (def.externalBaseView) {
-        const openBaseBtn = right.createEl("button", { cls: "cad-btn", text: "Open Base" });
-        openBaseBtn.addEventListener("click", () => this._openEntityBase(entityKey));
-      }
-      if (!ctx.hasConfiguredActions) {
-        const btn = right.createEl("button", { cls: "cad-btn primary", text: `+ New ${def.label}` });
-        btn.addEventListener("click", () => this._createEntityFromPrompt(entityKey));
-      }
-    });
-    if (this._renderExternalBaseView(root, entityKey)) return;
-    this._renderUnsupportedBaseFilters(root, def);
-    const board = root.createDiv({ cls: "cad-kanban-board" });
-    groups.forEach((stage) => {
-      const items = entities.filter((e) => String(entityValue(e, groupBy, def) || "") === stage);
-      const stageValue = items.reduce((s, e) => s + (Number(entityValue(e, dealValueField(def), def)) || 0), 0);
-      const col = board.createDiv({ cls: "cad-kanban-col" });
-      col.dataset.stage = stage;
-      const head = col.createDiv({ cls: "cad-kanban-col-head" });
-      head.createDiv({ cls: "cad-kanban-col-title", text: stage });
-      head.createDiv({ cls: "cad-kanban-col-meta", text: `${items.length} \xB7 ${fmtValue(stageValue, "currency")}` });
-      const list = col.createDiv({ cls: "cad-kanban-col-list" });
-      list.addEventListener("dragover", (ev) => {
-        ev.preventDefault();
-        try {
-          ev.dataTransfer.dropEffect = "move";
-        } catch (_) {
-        }
-        col.addClass("drag-over");
-      });
-      list.addEventListener("dragleave", (ev) => {
-        if (!col.contains(ev.relatedTarget)) col.removeClass("drag-over");
-      });
-      list.addEventListener("drop", async (ev) => {
-        ev.preventDefault();
-        col.removeClass("drag-over");
-        const path = ev.dataTransfer.getData("text/cadence-entity");
-        const fromStage = ev.dataTransfer.getData("text/cadence-stage");
-        if (!path || fromStage === stage) return;
-        const file = this.app.vault.getAbstractFileByPath(path);
-        if (!file || !(file instanceof obsidian17.TFile)) return;
-        try {
-          await this.app.fileManager.processFrontMatter(file, (fm) => {
-            fm[groupBy] = stage;
-          });
-          new obsidian17.Notice(`Moved to ${stage}`);
-        } catch (e) {
-          new obsidian17.Notice(`Failed to move: ${e.message}`);
-        }
-      });
-      if (!items.length) {
-        list.createDiv({ cls: "cad-empty", text: "\u2014" });
-      } else {
-        const isMobile = !!(obsidian17.Platform && obsidian17.Platform.isMobile);
-        items.forEach((e) => {
-          const card = list.createDiv({ cls: "cad-kanban-card" });
-          card.dataset.path = e.file.path;
-          card.createDiv({ cls: "cad-kanban-card-title", text: entityPrimaryValue(e, def) });
-          const meta = card.createDiv({ cls: "cad-kanban-card-meta" });
-          const v = entityValue(e, dealValueField(def), def);
-          if (v) meta.createSpan({ cls: "cad-kanban-card-value", text: fmtValue(v, "currency") });
-          const co = entityValue(e, "company", def);
-          if (co) meta.createSpan({ cls: "cad-kanban-card-company", text: " \xB7 " + co });
-          if (!isMobile) {
-            card.draggable = true;
-            card.addEventListener("dragstart", (ev) => {
-              card.addClass("dragging");
-              try {
-                ev.dataTransfer.effectAllowed = "move";
-                ev.dataTransfer.setData("text/cadence-entity", e.file.path);
-                ev.dataTransfer.setData("text/cadence-stage", stage);
-                ev.dataTransfer.setData("text/plain", `[[${e.file.basename}]]`);
-              } catch (_) {
-              }
-            });
-            card.addEventListener("dragend", () => card.removeClass("dragging"));
-          } else {
-            card.addClass("cad-kanban-card-touch");
-          }
-          card.addEventListener("click", () => this.openEntityDetail(entityKey, e.file));
-        });
-      }
-    });
-  }
   /* ── CRM Dashboard ──────────────────────── */
-  async renderDashboard(root) {
-    root.addClass("cadence-dashboard");
-    const dealDef = ENTITIES.deal;
-    const allDeals = listEntities(this.app, "deal");
-    const open = allDeals.filter((e) => !dealTerminalStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
-    const won = allDeals.filter((e) => dealWonStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
-    const lost = allDeals.filter((e) => dealLostStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
-    const dealValue = (e) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
-    const sumVal = (arr) => arr.reduce((s, e) => s + dealValue(e), 0);
-    const winRate = won.length + lost.length === 0 ? 0 : Math.round(won.length / (won.length + lost.length) * 100);
-    const avgDeal = won.length === 0 ? 0 : sumVal(won) / won.length;
-    const contacts = listEntityFiles(this.app, "contact");
-    const companies = listEntityFiles(this.app, "company");
-    const partners = listEntityFiles(this.app, "partner");
-    const activities = listEntities(this.app, "activity");
-    this._renderPageHeader(root, "CRM Dashboard", "Pipeline \xB7 momentum \xB7 recent activity", (right2, ctx) => {
-      if (!ctx.hasConfiguredActions) {
-        const newDeal = right2.createEl("button", { cls: "cad-btn primary", text: "+ New Deal" });
-        newDeal.addEventListener("click", () => this._createEntityFromPrompt("deal"));
-      }
-    });
-    const grid = root.createDiv({ cls: "cad-stat-grid" });
-    const stat = (label, value, sub, accent) => {
-      const c = grid.createDiv({ cls: "cad-stat-card" });
-      if (accent) c.dataset.accent = accent;
-      c.createDiv({ cls: "cad-stat-label", text: label });
-      c.createDiv({ cls: "cad-stat-value", text: String(value) });
-      if (sub) c.createDiv({ cls: "cad-stat-sub", text: sub });
-    };
-    stat("OPEN PIPELINE", open.length, fmtValue(sumVal(open), "currency"), "sky");
-    stat("WON", won.length, fmtValue(sumVal(won), "currency"), "emerald");
-    stat("LOST", lost.length, fmtValue(sumVal(lost), "currency"), "rose");
-    stat("WIN RATE", `${winRate}%`, `${won.length}/${won.length + lost.length} closed`, "mint");
-    stat("AVG DEAL", fmtValue(avgDeal, "currency"), `${won.length} won deals`, "warn");
-    root.createDiv({ cls: "cad-section-label-lg", text: "PIPELINE BY STAGE" });
-    const stageData = getDealStages(dealDef).map((stage) => {
-      const items = allDeals.filter((e) => String(entityValue(e, dealStageField(dealDef), dealDef)) === stage);
-      return { stage, items, value: sumVal(items) };
-    });
-    const maxStageVal = Math.max(1, ...stageData.map((s) => s.value));
-    const stageWrap = root.createDiv({ cls: "cad-stage-bars" });
-    stageData.forEach(({ stage, items, value }) => {
-      const row = stageWrap.createDiv({ cls: "cad-stage-bar-row" });
-      row.dataset.stage = stage;
-      row.createDiv({ cls: "cad-stage-bar-name", text: stage });
-      row.createDiv({ cls: "cad-stage-bar-count", text: `${items.length}` });
-      const barWrap = row.createDiv({ cls: "cad-stage-bar" });
-      const fill = barWrap.createDiv({ cls: "cad-stage-bar-fill" });
-      fill.style.width = `${value / maxStageVal * 100}%`;
-      row.createDiv({ cls: "cad-stage-bar-value", text: fmtValue(value, "currency") });
-      row.addEventListener("click", () => this.setMode("crm.pipeline"));
-    });
-    const cols = root.createDiv({ cls: "cad-dash-cols" });
-    const left = cols.createDiv({ cls: "cad-dash-col" });
-    const right = cols.createDiv({ cls: "cad-dash-col" });
-    const topHot = [...open].sort((a, b) => dealValue(b) - dealValue(a)).slice(0, 5).map((e) => ({
-      title: entityValue(e, "title", dealDef) || e.basename,
-      meta: `${entityValue(e, dealStageField(dealDef), dealDef) || "\u2014"} \xB7 ${fmtValue(dealValue(e), "currency")}`,
-      file: e.file
-    }));
-    this._dashCardSection(left, "HOT DEALS \xB7 top 5 by value", topHot, "No open deals yet \u2014 hit + New Deal above.");
-    const staleCutoff = Date.now() - 14 * 864e5;
-    const stale = open.filter((e) => e.file && e.file.stat && e.file.stat.mtime < staleCutoff).sort((a, b) => (a.file.stat.mtime || 0) - (b.file.stat.mtime || 0)).slice(0, 5).map((e) => {
-      const days = Math.round((Date.now() - e.file.stat.mtime) / 864e5);
-      return {
-        title: entityValue(e, "title", dealDef) || e.basename,
-        meta: `${entityValue(e, dealStageField(dealDef), dealDef) || "\u2014"} \xB7 ${days}d quiet \xB7 ${fmtValue(dealValue(e), "currency")}`,
-        file: e.file
-      };
-    });
-    this._dashCardSection(left, "STALE DEALS \xB7 14+ days no edits", stale, "No stale deals \u2014 momentum is good.");
-    const recentAct = [...activities].sort((a, b) => {
-      const da = new Date(activityDate(a, ENTITIES.activity) || 0).getTime();
-      const db = new Date(activityDate(b, ENTITIES.activity) || 0).getTime();
-      return db - da;
-    }).slice(0, 6).map((e) => ({
-      title: activityTitle(e, ENTITIES.activity),
-      meta: `${entityValue(e, "channel", ENTITIES.activity) || "\u2014"} \xB7 ${fmtValue(activityDate(e, ENTITIES.activity), "date")}`,
-      file: e.file
-    }));
-    this._dashCardSection(right, `RECENT ACTIVITY \xB7 ${activities.length} total`, recentAct, "No activity logged yet. Capture a call or meeting under CRM > Activities.");
-    const baseCard = right.createDiv({ cls: "cad-dash-card" });
-    baseCard.createDiv({ cls: "cad-dash-card-head" }).createDiv({ cls: "cad-dash-card-title", text: `CUSTOMER BASE \xB7 ${contacts.length + companies.length + partners.length} records` });
-    const baseBody = baseCard.createDiv({ cls: "cad-dash-card-body cad-mini-stat-row" });
-    const mkMini = (label, val, accent, mode) => {
-      const c = baseBody.createDiv({ cls: "cad-mini-stat" });
-      if (accent) c.dataset.accent = accent;
-      c.createDiv({ cls: "cad-mini-stat-value", text: String(val) });
-      c.createDiv({ cls: "cad-mini-stat-label", text: label });
-      if (mode) {
-        c.style.cursor = "pointer";
-        c.addEventListener("click", () => this.setMode(mode));
-      }
-    };
-    mkMini("CONTACTS", contacts.length, "warn", "crm.contacts");
-    mkMini("COMPANIES", companies.length, "sky", "crm.companies");
-    mkMini("PARTNERS", partners.length, "rose", "prm.partners");
-  }
   /* Reusable list card on the dashboard. */
   _dashCardSection(parent, title, rows, emptyMsg) {
     const card = parent.createDiv({ cls: "cad-dash-card" });
@@ -31168,24 +30883,9 @@ ${snippet}` : "- No markdown content");
       });
     });
   }
-  async _productivitySnapshot() {
-    return buildProductivitySnapshot(this.app, this.plugin.settings);
-  }
   /* ── Reports: Productivity (over daily notes) ── */
   async renderProductivity(root) {
     return this.renderConfigDashboard("reports.productivity", root);
-  }
-  async renderReportPipeline(root) {
-    return this.renderConfigDashboard("reports.pipeline", root);
-  }
-  async renderReportSales(root) {
-    return this.renderConfigDashboard("reports.sales", root);
-  }
-  async renderReportPartners(root) {
-    return this.renderConfigDashboard("reports.partners", root);
-  }
-  async renderReportActivity(root) {
-    return this.renderConfigDashboard("reports.activity", root);
   }
   /* ── PRM Analytics ──────────────────────── */
   async renderPRMAnalytics(root) {
