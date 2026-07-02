@@ -809,15 +809,10 @@ export class CadenceAppView extends obsidian.ItemView {
       'crm.pipeline': () => this.renderConfigDashboard('crm.pipeline', content),
       'crm.contacts': () => this.renderEntityList(content, 'contact'),
       'crm.clients': () => this.renderEntityList(content, 'client'),
-      'crm.companies': () => this.renderEntityList(content, 'company'),
       'crm.activities': () => this.renderEntityList(content, 'activity'),
       'prm.partners': () => this.renderEntityTabs(content, 'prm.partners', 'prm.partners.overview'),
-      'prm.registrations': () => this.renderEntityList(content, 'registration'),
-      'prm.commissions': () => this.renderEntityList(content, 'commission'),
       'crm.leads': () => this.renderEntityList(content, 'lead'),
       'crm.campaigns': () => this.renderEntityTabs(content, 'crm.campaigns', 'crm.campaigns.overview'),
-      'crm.sequences': () => this.renderEntityList(content, 'sequence'),
-      'prm.certifications': () => this.renderEntityList(content, 'certification'),
       'prm.analytics': () => this.renderPRMAnalytics(content),
       'reports.pipeline': () => this.renderConfigDashboard('reports.pipeline', content),
       'reports.sales': () => this.renderConfigDashboard('reports.sales', content),
@@ -835,15 +830,6 @@ export class CadenceAppView extends obsidian.ItemView {
       'finance.gl': () => this.renderEntityTabs(content, 'finance.gl', 'finance.gl.overview'),
       'finance.setup': () => this.renderEntityTabs(content, 'finance.setup', 'finance.setup.overview'),
       'client-work.overview': () => this.renderClientWorkWorkspace(content),
-      // Client Work: always render the internal table for these list pages so they don't go blank when
-      // the underlying Base view is non-table (calendar/board/etc). Users can still use "Open Base".
-      'client-work.meetings': () => this._renderClientWorkEntityList(content, 'meeting'),
-      'client-work.comms': () => this._renderClientWorkEntityList(content, 'comms-thread'),
-      'client-work.deliverables': () => this._renderClientWorkEntityList(content, 'deliverable'),
-      'client-work.feedback': () => this._renderClientWorkEntityList(content, 'feedback'),
-      'client-work.surveys': () => this._renderClientWorkEntityList(content, 'survey'),
-      'client-work.testimonials': () => this._renderClientWorkEntityList(content, 'testimonial'),
-      'client-work.decisions': () => this._renderClientWorkEntityList(content, 'decision'),
       'procurement.suppliers': () => this.renderEntityTabs(content, 'procurement.suppliers', 'procurement.overview'),
       'tax.overview': () => this.renderEntityTabs(content, 'tax.overview', 'tax.dashboard'),
     };
@@ -1566,28 +1552,6 @@ export class CadenceAppView extends obsidian.ItemView {
 	      renderHeaderControls: (right) => this._renderClientWorkSelector(right),
 	      emptyDescription: titleParts.length
 	        ? `No records matching ${titleParts.join(' / ')} in this tab.`
-	        : null,
-	    });
-	  }
-
-	  async _renderClientWorkEntityList(root: HTMLElement, entityKey: string) {
-	    if (this._clientWorkClientId && !this._clientWorkOptions().some((client) => client.id === this._clientWorkClientId)) {
-	      this._clientWorkClientId = '';
-	    }
-	    if (this._clientWorkProjectId && !this._clientWorkProjectOptions().some((project) => project.id === this._clientWorkProjectId)) {
-	      this._clientWorkProjectId = '';
-	    }
-	    const selectedClientId = this._clientWorkClientId || '';
-	    const selectedProjectId = this._clientWorkProjectId || '';
-	    const titleParts = [selectedClientId, selectedProjectId].filter(Boolean);
-	    return this.renderEntityList(root, entityKey, {
-	      filter: (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId),
-	      // Always show the internal list here so it doesn't "disappear" when the Base view is non-table.
-	      forceInternal: true,
-	      titleSuffix: titleParts.length ? ` · ${titleParts.join(' · ')}` : '',
-	      renderHeaderControls: (right) => this._renderClientWorkSelector(right),
-	      emptyDescription: titleParts.length
-	        ? `No records matching ${titleParts.join(' / ')} in this list.`
 	        : null,
 	    });
 	  }
