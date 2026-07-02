@@ -112,6 +112,13 @@ export class CadencePlugin extends obsidian.Plugin {
       callback: () => this.openApp('crm.pipeline'),
     });
     this.addCommand({
+      // Surface Designer isn't in any workspace.json nav (applyWorkspaceRegistries
+      // replaces the built-in nav), so give it a command entry point like Export/Import.
+      id: 'open-surface-designer',
+      name: 'Open BOB Workspace — Surface Designer',
+      callback: () => this.openApp('misc.dashboard-editor'),
+    });
+    this.addCommand({
       id: 'new-daily-entry',
       name: 'New today entry (creates if missing)',
       callback: async () => {

@@ -400,6 +400,10 @@ export class CadenceAppView extends obsidian.ItemView {
     if (id === 'planner') return 'planner.calendar';
     if (id === 'srm.suppliers') return 'procurement.suppliers';
     if (id === 'finance.supplier-invoices') return 'procurement.supplier-invoices';
+    // Built-in utility surfaces have route handlers but are not part of the
+    // configured workspace.json nav, so they're absent from SURFACE_BY_ID.
+    // Preserve them (opened via command palette) instead of falling back to home.
+    if (id === 'misc.dashboard-editor' || id === 'misc.export' || id === 'misc.import') return id;
     return SURFACE_BY_ID[id] ? id : (SURFACE_BY_ID.home ? 'home' : (ALL_SURFACES[0]?.id || 'home'));
   }
 

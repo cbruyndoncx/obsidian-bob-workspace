@@ -25563,6 +25563,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
     if (id === "planner") return "planner.calendar";
     if (id === "srm.suppliers") return "procurement.suppliers";
     if (id === "finance.supplier-invoices") return "procurement.supplier-invoices";
+    if (id === "misc.dashboard-editor" || id === "misc.export" || id === "misc.import") return id;
     return SURFACE_BY_ID[id] ? id : SURFACE_BY_ID.home ? "home" : ALL_SURFACES[0]?.id || "home";
   }
   /* Toggle Cadence-app dark mode. Scoped to `.cadence-app` only —
@@ -33604,6 +33605,13 @@ var CadencePlugin = class extends obsidian20.Plugin {
       id: "open-cadence-pipeline",
       name: "Open BOB Workspace \u2014 Pipeline",
       callback: () => this.openApp("crm.pipeline")
+    });
+    this.addCommand({
+      // Surface Designer isn't in any workspace.json nav (applyWorkspaceRegistries
+      // replaces the built-in nav), so give it a command entry point like Export/Import.
+      id: "open-surface-designer",
+      name: "Open BOB Workspace \u2014 Surface Designer",
+      callback: () => this.openApp("misc.dashboard-editor")
     });
     this.addCommand({
       id: "new-daily-entry",
