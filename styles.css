@@ -787,7 +787,6 @@ select.cad-cell-input { padding: 5px 8px; }
 }
 
 /* ─────────── Dashboard / report list rows ─────────── */
-.cad-dash-list { padding: 0 32px 24px 32px; display: flex; flex-direction: column; gap: 4px; }
 .cad-dash-row {
   display: flex; justify-content: space-between; align-items: center;
   padding: 10px 12px; border-radius: 7px; cursor: pointer;
@@ -870,53 +869,6 @@ select.cad-cell-input { padding: 5px 8px; }
   font-size: 13px; color: var(--text-faint); max-width: 480px; margin: 0 auto;
 }
 
-/* ─────────── Top of the Day — daily briefing (fallback) ─────────── */
-.cad-briefing {
-  margin: 20px 32px 0 32px;
-  padding: 18px 22px;
-  background: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 14px;
-}
-.cad-briefing-head { margin-bottom: 12px; }
-.cad-briefing-eyebrow {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.16em;
-  text-transform: uppercase; color: var(--interactive-accent);
-  margin-bottom: 4px;
-}
-.cad-briefing-headline {
-  font-size: 16px; font-weight: 600; color: var(--text-normal);
-  letter-spacing: -0.01em; line-height: 1.4;
-}
-.cad-briefing-list { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
-.cad-briefing-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 8px 10px; border-radius: 7px;
-  font-size: 14px; color: var(--text-normal);
-  border-left: 3px solid var(--background-modifier-border);
-  transition: background 100ms ease, transform 90ms ease;
-}
-.cad-briefing-row.clickable { cursor: pointer; }
-.cad-briefing-row.clickable:hover {
-  background: var(--background-modifier-hover); transform: translateX(2px);
-}
-.cad-briefing-icon { font-size: 16px; flex-shrink: 0; line-height: 1; }
-.cad-briefing-text { flex: 1; min-width: 0; }
-
-.cad-briefing-row.cad-tone-emerald { border-left-color: oklch(0.55 0.13 155); }
-.cad-briefing-row.cad-tone-mint    { border-left-color: oklch(0.78 0.12 155); }
-.cad-briefing-row.cad-tone-sky     { border-left-color: oklch(0.65 0.10 230); }
-.cad-briefing-row.cad-tone-warn    { border-left-color: oklch(0.72 0.14 70); }
-.cad-briefing-row.cad-tone-rose    { border-left-color: oklch(0.65 0.14 25); }
-
-.cad-briefing-empty {
-  padding: 8px 0 4px 0; font-size: 13px;
-  color: var(--text-muted); font-style: italic;
-}
-.cadence-app.cad-dark .cad-briefing { background: #1E2225; border-color: #303030; }
-.cadence-app.cad-dark .cad-briefing-headline { color: #F2F0EA; }
-.cadence-app.cad-dark .cad-briefing-row { color: #D8D5CB; }
-.cadence-app.cad-dark .cad-briefing-row.clickable:hover { background: #262626; }
 
 /* ─────────── Home / Command Centre ─────────── */
 .cadence-home .cad-home-cols {
@@ -1135,7 +1087,6 @@ select.cad-cell-input { padding: 5px 8px; }
 .cad-inbox-row-notes-icon { opacity: 0.7; margin-right: 2px; }
 
 /* Project chip — fallback */
-.cad-rem-project-chip-row { padding: 0 0 8px 0; }
 .cad-rem-project-chip {
   display: inline-flex; align-items: center;
   font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
@@ -1367,27 +1318,6 @@ select.cad-create-input {
 }
 .cad-settings-section > .setting-items > .setting-item:first-child {
   border-top: 0;
-}
-.cad-sync-disabled {
-  opacity: 0.72;
-  border: 1px dashed var(--background-modifier-border);
-  border-radius: 8px;
-  background: var(--background-secondary);
-}
-.cad-sync-disabled-desc {
-  margin: 0;
-  padding: 12px 16px 4px 16px;
-}
-.cad-sync-disabled input,
-.cad-sync-disabled button,
-.cad-sync-disabled select {
-  cursor: not-allowed;
-}
-.cad-sync-disabled .setting-item-name {
-  color: var(--text-muted);
-}
-.cad-sync-disabled .setting-item-description {
-  color: var(--text-faint);
 }
 .cad-settings-checkboxes {
   display: flex;
@@ -3049,14 +2979,9 @@ select.cad-form-input {
   .cadence-app .cad-table-wrap { padding-left: 16px; padding-right: 16px; }
   .cadence-app .cad-kanban-board { padding-left: 16px; padding-right: 16px; }
   .cadence-app .cad-pt-wrap { padding-left: 16px; padding-right: 16px; grid-template-columns: 1fr; }
-  .cadence-app .cad-dash-list { padding-left: 16px; padding-right: 16px; }
   .cadence-app .cad-bar-chart { padding-left: 16px; padding-right: 16px; }
   .cadence-app .cad-stage-bars { padding-left: 16px; padding-right: 16px; }
   .cadence-app .cad-stage-bar-row { grid-template-columns: 90px 28px 1fr 80px; gap: 8px; }
-
-  .cadence-app .cad-briefing { margin: 14px 16px 0 16px; padding: 14px 16px; }
-  .cadence-app .cad-briefing-headline { font-size: 15px; }
-  .cadence-app .cad-briefing-row { font-size: 13px; }
 
   .cadence-app .cadence-today { padding: 22px 16px; }
   .cadence-app .cadence-today .cad-day { font-size: 72px; }
@@ -3092,7 +3017,6 @@ select.cad-form-input {
 @media (max-width: 380px) {
   .cadence-app .cad-stat-grid { grid-template-columns: 1fr; }
   .cadence-app .cad-page-title { font-size: 20px; }
-  .cadence-app .cad-briefing { padding: 12px 14px; }
 }
 
 @media (hover: none) {
@@ -3115,13 +3039,6 @@ select.cad-form-input {
   }
   .cad-app-content { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
   .cad-app-nav { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
-}
-
-.cad-briefing-more {
-  margin-top: 10px; padding: 6px 10px 0 10px;
-  font-size: 11px; font-weight: 600;
-  color: var(--text-muted); text-align: center;
-  border-top: 1px dashed var(--background-modifier-border);
 }
 
 /* ─────────── Managed-by-workspace banner ─────────── */
@@ -3218,7 +3135,6 @@ select.cad-form-input {
 .cad-de-preview-pane {
   flex: 1; overflow: auto; min-width: 0; padding-left: 20px;
 }
-.cad-de-status-row { display: flex; align-items: center; gap: 8px; }
 .cad-de-badge {
   font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
   padding: 2px 10px; border-radius: 10px;
@@ -3525,9 +3441,6 @@ select.cad-form-input {
   grid-template-columns: minmax(0, 1fr) minmax(180px, 1fr);
   gap: 8px;
 }
-.cad-de-source-section-custom {
-  min-width: 0;
-}
 .cad-de-add-row-btn { margin-top: 6px; width: 100%; }
 
 @media (max-width: 1200px) {
@@ -3595,7 +3508,6 @@ select.cad-form-input {
 .cad-data-group-item { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; }
 .cad-data-group-item input[type="checkbox"] { cursor: pointer; }
 .cad-data-group-count { font-size: 11px; color: var(--text-faint); margin-left: auto; }
-.cad-data-csv-row { display: flex; gap: 10px; align-items: center; }
 .cad-import-src-row { margin-bottom: 12px; }
 .cad-data-action-row { display: flex; flex-direction: column; gap: 8px; }
 .cad-data-btn-row { display: flex; flex-direction: row; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -3603,5 +3515,3 @@ select.cad-form-input {
 .cad-data-status-ok { color: var(--color-green, #4caf50); }
 .cad-data-status-error { color: var(--color-red, #e53935); }
 .cad-data-open-link { color: var(--interactive-accent); cursor: pointer; text-decoration: underline; }
-.cad-de-cr-row { padding: 8px; background: var(--background-secondary); border-radius: 6px; border: 1px dashed var(--background-modifier-border); margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
-.cad-de-cr-card { cursor: default; }

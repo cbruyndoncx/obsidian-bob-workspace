@@ -52,12 +52,13 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 - [ ] **BLOCKED-ON-OWNER** (decide: keep for hand-authored configs, or delete): legacy route ids unreachable with shipped templates — `crm.companies`, `crm.sequences`, `prm.registrations/commissions/certifications`, seven `client-work.*` routes + `_renderClientWorkEntityList`.
 
 ### CSS (37 dead classes, ~90+ lines; dynamic construction ruled out)
-- [ ] Cadence-sync block `cad-sync-disabled*` (styles.css:1371-1390) — feature removed in 25d75c2.
-- [ ] Old Home renderer block: 15 `cad-home-*` classes (≈922-1010 + dark-mode refs at 85, 113, 248, 259, 279, 289, 2735). Keep `cad-home-list`/`cad-home-row*` (alive, base-embed list).
-- [ ] Briefing component: 11 `cad-briefing*` classes (874-919) + `cad-tone-*` compounds (906-910; tone now uses `data-tone` attributes).
-- [ ] Schema-designer leftovers: `cad-de-status-row` (3221), `cad-de-source-section-custom` (3528), `cad-de-cr-row`/`cad-de-cr-card` (3606-3607).
-- [ ] Singletons: `cad-dash-list` (790), `cad-rem-project-chip-row` (1138), `cad-nav-designer-state` (1581), `cad-data-csv-row` (3598).
-- [ ] Do **not** touch `cad-pill-*` (built dynamically) or Obsidian core classes.
+- [x] Cadence-sync block `cad-sync-disabled*` — ✅ DONE (2026-07-02).
+- [ ] Old Home renderer block: 15 `cad-home-*` classes (main block + dark-mode refs at ~85/113/248/259/279/289 and task-row share at ~2735). — DEFERRED: entangled with live classes (`.cad-task-row, .cad-home-task` share a rule; dark-mode selectors are comma-lists), needs per-selector surgery. Keep `cad-home-list`/`cad-home-row*` (alive).
+- [x] Briefing component: 11 `cad-briefing*` classes + `cad-tone-*` compounds + mobile refs + `cad-briefing-more` — ✅ DONE (2026-07-02).
+- [x] Schema-designer leftovers: `cad-de-status-row`, `cad-de-source-section-custom`, `cad-de-cr-row`, `cad-de-cr-card` — ✅ DONE (2026-07-02).
+- [x] Singletons: `cad-dash-list` (+ mobile), `cad-rem-project-chip-row`, `cad-data-csv-row` — ✅ DONE (2026-07-02). `cad-nav-designer-state` DEFERRED (comma-shared selector at ~1581, needs per-selector edit).
+- [x] Left `cad-pill-*` (built dynamically) and Obsidian core classes untouched. ✅
+- Verified: all removed classes had zero emitters in `src/`+`templates/`; KEEP classes confirmed live.
 
 ### Duplication worth collapsing
 - [ ] `_renderSecondaryRoute` (`app-view.ts:1446-1457`): seven one-line dashboard wrappers (≈3898-3924) reduce to `renderConfigDashboard(route, ...)`.
@@ -67,9 +68,9 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 
 ## Documentation drift
 
-- [ ] **CLAUDE.md + AGENTS.md "Runtime configuration order" steps 4 & 6** describe the removed `workspace.json.entities` apply/re-apply — now a hard validation error. Also stale: `dealCloseByField` listed as live, `SURFACES_BY_ENTITY_KEY` as live registry, "just the filename matters" for `baseFiles` (untrue for the runtime merge — see critical #5), "writes them back whenever a workspace file exists" (saveSettings also creates the file).
-- [ ] `docs/extending-bob-workspace.md:576-577`: `entities` config claimed still valid (it throws); "no Base → coming soon" wrong (renders generic list).
-- [ ] `docs/navigation-inventory.md` / `docs/entity-setup-audit.md`: predate config-driven nav (missing AI Workspace, Surface Designer, Export/Import; describe `entities.json` overrides). Regenerate or mark deprecated.
+- [x] **CLAUDE.md + AGENTS.md "Runtime configuration order" steps 4 & 6** — ✅ DONE (2026-07-02). Removed the two non-existent `workspace.json.entities` steps and renumbered; also updated `dealCloseByField` (removed accessor), `SURFACES_BY_ENTITY_KEY` (removed registry), the `baseFiles` "just the filename" line (added the runtime-merge caveat re critical #5), and the saveSettings write-back description (load-failed guard). Applied identically to both files; body parity preserved.
+- [x] `docs/extending-bob-workspace.md:576-577` — ✅ DONE (2026-07-02): corrected the `entities` claim (now rejected on load) and the "no Base → coming soon" claim (renders the generic list; "coming soon" only when the entityKey resolves nowhere).
+- [x] `docs/navigation-inventory.md` / `docs/entity-setup-audit.md` — ✅ DONE (2026-07-02): added a DEPRECATED/STALE banner to each pointing readers at current sources. (Regenerate-or-delete left as a follow-up.)
 
 ## Reference vault housekeeping (`/mnt/d/OBS/brncx-skills/.obsidian/plugins/bob-workspace/`)
 

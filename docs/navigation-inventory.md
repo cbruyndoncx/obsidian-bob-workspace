@@ -1,5 +1,7 @@
 # BOB Workspace Navigation Inventory
 
+> ⚠️ **DEPRECATED / STALE (2026-07-02).** Generated before navigation became config-driven. It predates the AI Workspace group, Surface Designer / Export / Import misc items, and the `workspace.json.entities` removal; nav now comes from `workspace.json` templates, not `BUILTIN_NAV_GROUPS`. Do not rely on this; verify against `main.js`, the shipped `templates/workspace-*.json`, and `src/nav.ts`. Regenerate or delete.
+
 Generated: 2026-05-23
 
 ## Summary

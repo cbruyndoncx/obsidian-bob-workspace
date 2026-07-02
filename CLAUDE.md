@@ -72,7 +72,7 @@ Some supporting documents can lag the implementation. Verify navigation and rele
   - `src/plugin.ts` — `CadencePlugin`: registers views, commands, hotkeys, settings, reminders, workbook commands
   - `src/bundled/templates.ts` — `BUNDLED_WORKSPACE_TEMPLATES` via explicit JSON imports of `templates/workspace-*.json` (a new shipped template must be added here; the template-bundle test enforces coverage)
   - `src/bundled/xlsx.ts` — `loadBundledXLSX()`: lazy `require()` of `vendor/xlsx.mini.min.js`, inlined by esbuild (no eval; compiled on first `getXLSX()` use)
-  - `src/nav.ts` — `VIEW_TYPE_CADENCE_APP`, `BUILTIN_NAV_GROUPS`, runtime registries (`NAV_GROUPS`, `ALL_SURFACES`, `SURFACE_BY_ID`, `SURFACES_BY_ENTITY_KEY`, `SECONDARY_TABS`, `WORKBOOK_EXPORT_GROUPS`), `resetWorkspaceRegistries()`, `applyWorkspaceRegistries()`
+  - `src/nav.ts` — `VIEW_TYPE_CADENCE_APP`, `BUILTIN_NAV_GROUPS`, runtime registries (`NAV_GROUPS`, `ALL_SURFACES`, `SURFACE_BY_ID`, `SECONDARY_TABS`, `WORKBOOK_EXPORT_GROUPS`), `resetWorkspaceRegistries()`, `applyWorkspaceRegistries()`
   - `src/entities.ts` — `ENTITIES`, `BUILTIN_ENTITY_DEFAULTS`, `DEAL_STAGES`, deal/activity field accessors, `BUILT_SURFACES`
   - `src/settings.ts` — `DEFAULT_SETTINGS`, `CURRENT_CURRENCY` (+`setCurrentCurrency()`), `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`, create-folder/template helpers
   - `src/workspace-config.ts` — plugin paths, `WORKSPACE_CONFIG` (+`setWorkspaceConfig()`), load/save/validate, `WORKSPACE_OWNED_SETTING_KEYS`, dashboard config validation/resolution
@@ -188,7 +188,7 @@ await app.vault.modify(file, updated);
 
 **Built-in entity keys (40+):** `contact`, `company`, `client`, `supplier`, `partner`, `registration`, `commission`, `lead`, `certification`, `activity`, `meeting`, `comms-thread`, `deliverable`, `feedback`, `survey`, `testimonial`, `decision`, `campaign`, `sequence`, `project`, `task`, `accounting-period`, `bank-account`, `bank-reconciliation`, `chart-of-accounts`, `financial-statement`, `fs-notes`, `fx-rates-table`, `inventory`, `invoice`, `journal-entry`, `purchase-order`, `purchase-requisition`, `supplier-invoice`, `trial-balance`, `vat-return`, `corporate-tax-return`, `deferred-tax`, `transfer-pricing`, `free-zone-status`, `legal-rule`, `document-retention`, `deal`
 
-**Deal entity extras:** `valueField`, `closeByField`, `wonStages`, `lostStages`. Access via `dealValueField(def)`, `dealCloseByField(def)`, `dealWonStages(def)`, `dealLostStages(def)`, `dealTerminalStages(def)`.
+**Deal entity extras:** `valueField`, `closeByField`, `wonStages`, `lostStages`. Access via `dealValueField(def)`, `dealWonStages(def)`, `dealLostStages(def)`, `dealTerminalStages(def)`. (`closeByField` is preserved in config but has no dedicated accessor.)
 
 ### Entity file resolution
 
@@ -229,7 +229,7 @@ The active workspace definition is always read from the installed plugin folder:
 
 `initPluginPaths(plugin)` derives this from `plugin.manifest.dir`; the pre-init fallback is legacy `Cadence/workspace.json` and should not be used for current installs. A repo-root `workspace.json` is not read by the running plugin.
 
-`data.json` is no longer the source for portable workspace-owned settings. `CadencePlugin.loadSettings()` reads plugin data, then loads `workspace.json`, then overlays `workspace.json.settings` for keys in `WORKSPACE_OWNED_SETTING_KEYS`. `saveSettings()` removes owned keys from plugin data and writes them back to `workspace.json` whenever a workspace file exists (a `workspace.backup.json` is written first). Personal/non-workspace settings stay in plugin data.
+`data.json` is no longer the source for portable workspace-owned settings. `CadencePlugin.loadSettings()` reads plugin data, then loads `workspace.json`, then overlays `workspace.json.settings` for keys in `WORKSPACE_OWNED_SETTING_KEYS`. `saveSettings()` removes owned keys from plugin data and writes them back to `workspace.json` whenever a workspace file exists or an owned setting is non-default (a `workspace.backup.json` is written first) — **except when the on-disk `workspace.json` failed to load** (`WORKSPACE_LOAD_FAILED`), in which case incidental saves are skipped so the unparseable file is preserved. Personal/non-workspace settings stay in plugin data.
 
 When hand-authoring `workspace.json`, prefer these top-level blocks:
 - `schemas` — schema enablement and schema source folder
@@ -249,12 +249,10 @@ Top-level `schemas` controls schema loading, top-level `bases` controls Base fil
 1. Reset runtime navigation/export registries; load the active plugin-folder `workspace.json` if present.
 2. Reset `ENTITIES` to `BUILTIN_ENTITY_DEFAULTS`; sync folders from the effective settings.
 3. Apply configured `navigation.groups`, `navigation.secondaryTabs`, and `workbookGroups` (these **replace** built-in registries when present — not deep-merged).
-4. Apply deprecated `workspace.json.entities` once before schema loading (migration), injecting navigation only when no configured navigation exists.
-5. Resolve schema settings (top-level `workspace.json.schemas` overrides settings), then `applySchemas()` if enabled. A schema can introduce a generic record type without plugin code.
-6. Apply deprecated `workspace.json.entities` again as post-schema overrides (no nav injection). New entities should not be added here for current vaults.
-7. Merge top-level `workspace.json.bases` with `applyConfiguredBaseOverrides()` (these paths win over `settings.baseFiles`).
-8. Merge remaining settings-selected `.base` behavior with `applyBaseOverrides()`; `settings.baseViews` can override the default view for either source.
-9. Rebuild surface lookups.
+4. Resolve schema settings (top-level `workspace.json.schemas` overrides settings), then `applySchemas()` if enabled. A schema can introduce a generic record type without plugin code. (A top-level `workspace.json.entities` key is **no longer applied** — `validateWorkspaceConfig` rejects it; define record types in schema YAML.)
+5. Merge top-level `workspace.json.bases` with `applyConfiguredBaseOverrides()` (these paths win over `settings.baseFiles`).
+6. Merge remaining settings-selected `.base` behavior with `applyBaseOverrides()`; `settings.baseViews` can override the default view for either source.
+7. Rebuild surface lookups.
 
 Do not assume edits to `ENTITIES` alone control a BOB vault when schemas, custom overrides, or Bases are active.
 
@@ -367,7 +365,7 @@ Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it
 3. Add a nav item to the navigation groups (workspace.json `navigation.groups`, or `BUILTIN_NAV_GROUPS` in `src/nav.ts` for built-ins) — include `entityKey`, `folderKey`, `module`.
 4. Add to the `BUILT_SURFACES` set (`src/entities.ts`).
 5. Add a route entry in `CadenceAppView.render()` (`src/views/app-view.ts`) pointing to `renderEntityList()`.
-6. Add a `baseFiles` entry in `DEFAULT_SETTINGS` — just the **filename** matters (e.g. `'People.base'`; see Bases).
+6. Add a `baseFiles` entry in `DEFAULT_SETTINGS` — the **filename** is what `entityBasePath` uses (e.g. `'People.base'`; see Bases). Caveat: the runtime Base-override merge (`applyBaseOverrides`) still parses `baseFiles`/`bases[key].file` verbatim rather than via `entityBasePath`, so a filename-only path won't resolve there until that is unified (see TODO).
 7. Add inner tabs in `SECONDARY_TABS` if it belongs under a workspace.
 8. Add to `WORKBOOK_EXPORT_GROUPS` in the appropriate group's `entityKeys`.
 9. Verify schemas, custom overrides, Bases, create/edit, and import/export.
