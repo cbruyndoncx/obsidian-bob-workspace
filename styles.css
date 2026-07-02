@@ -82,7 +82,6 @@
 
 /* Cards / surfaces */
 .cadence-app.cad-dark .cad-stat-card,
-.cadence-app.cad-dark .cad-home-card,
 .cadence-app.cad-dark .cad-pd-card,
 .cadence-app.cad-dark .cad-dash-card,
 .cadence-app.cad-dark .cad-pt-group,
@@ -110,7 +109,6 @@
 .cadence-app.cad-dark .cad-inbox-row-notes { color: #999999; }
 
 /* Card heads recess */
-.cadence-app.cad-dark .cad-home-card-head,
 .cadence-app.cad-dark .cad-pd-card-head,
 .cadence-app.cad-dark .cad-dash-card-head,
 .cadence-app.cad-dark .cad-pt-group-head,
@@ -245,7 +243,6 @@
   .workspace-leaf-content[data-type="cadence-app"] .cad-page-header,
   .workspace-leaf-content[data-type="cadence-app"] .cad-dash-card,
   .workspace-leaf-content[data-type="cadence-app"] .cad-stat-card,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-home-card,
   .workspace-leaf-content[data-type="cadence-app"] .cad-kanban-col,
   .workspace-leaf-content[data-type="cadence-app"] .cad-kanban-card,
   .workspace-leaf-content[data-type="cadence-app"] .cad-table-wrap {
@@ -256,7 +253,6 @@
   .workspace-leaf-content[data-type="cadence-app"] .cad-page-header,
   .workspace-leaf-content[data-type="cadence-app"] .cad-dash-card,
   .workspace-leaf-content[data-type="cadence-app"] .cad-stat-card,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-home-card,
   .workspace-leaf-content[data-type="cadence-app"] .cad-kanban-col,
   .workspace-leaf-content[data-type="cadence-app"] .cad-kanban-card,
   .workspace-leaf-content[data-type="cadence-app"] .cad-table-wrap {
@@ -276,7 +272,6 @@ body.theme-dark .cadence-app.cad-dark .cad-app-content,
 body.theme-dark .cadence-app.cad-dark .cad-app-topbar,
 body.theme-dark .cadence-app.cad-dark .cad-app-nav,
 body.theme-dark .cadence-app.cad-dark .cad-page-header,
-body.theme-dark .cadence-app.cad-dark .cad-home-card-head,
 body.theme-dark .cadence-app.cad-dark .cad-pd-card-head,
 body.theme-dark .cadence-app.cad-dark .cad-dash-card-head,
 body.theme-dark .cadence-app.cad-dark .cad-pt-group-head,
@@ -286,7 +281,6 @@ body.theme-dark .cadence-app.cad-dark .cad-kanban-col {
   border-color: var(--background-modifier-border);
 }
 body.theme-dark .cadence-app.cad-dark .cad-stat-card,
-body.theme-dark .cadence-app.cad-dark .cad-home-card,
 body.theme-dark .cadence-app.cad-dark .cad-pd-card,
 body.theme-dark .cadence-app.cad-dark .cad-dash-card,
 body.theme-dark .cadence-app.cad-dark .cad-pt-group,
@@ -871,58 +865,6 @@ select.cad-cell-input { padding: 5px 8px; }
 
 
 /* ─────────── Home / Command Centre ─────────── */
-.cadence-home .cad-home-cols {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-  padding: 20px 32px 32px 32px;
-}
-@media (max-width: 900px) {
-  .cadence-home .cad-home-cols { grid-template-columns: 1fr; }
-}
-.cad-home-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.cad-home-card {
-  position: relative;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 10px;
-  background: var(--background-primary);
-  overflow: hidden;
-}
-.cad-home-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--background-modifier-border);
-}
-.cad-home-card[data-tone="emerald"]::before { background: oklch(0.55 0.13 155); }
-.cad-home-card[data-tone="mint"]::before    { background: oklch(0.78 0.12 155); }
-.cad-home-card[data-tone="sky"]::before     { background: oklch(0.65 0.10 230); }
-.cad-home-card[data-tone="warn"]::before    { background: oklch(0.72 0.14 70); }
-.cad-home-card[data-tone="rose"]::before    { background: oklch(0.65 0.14 25); }
-.cad-home-card-head {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--background-modifier-border);
-  background: var(--background-secondary);
-}
-.cad-home-card-title {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--text-muted);
-  font-family: var(--font-monospace);
-}
-.cad-home-card-link {
-  font-size: 11px; color: var(--interactive-accent);
-  cursor: pointer; text-decoration: none;
-}
-.cad-home-card-link:hover { text-decoration: underline; }
-.cad-home-card-body { padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
-
-.cad-home-task {
-  display: flex; align-items: center; gap: 10px;
-  padding: 4px 0; font-size: 13px; color: var(--text-normal);
-}
-.cad-home-task.done { color: var(--text-faint); text-decoration: line-through; }
-.cad-home-task input[type="checkbox"] { margin: 0; cursor: pointer; }
-
 .cad-home-row {
   display: flex; gap: 10px; align-items: flex-start;
   padding: 8px 10px; border-radius: 6px; cursor: pointer;
@@ -946,22 +888,8 @@ select.cad-cell-input { padding: 5px 8px; }
 }
 .cad-home-row.overdue .cad-home-row-date { color: var(--text-error, #c0392b); font-weight: 700; }
 
-.cad-home-proj {
-  padding: 10px; border: 1px solid var(--background-modifier-border);
-  border-radius: 7px; cursor: pointer;
-  display: flex; flex-direction: column; gap: 6px;
-  transition: border-color 90ms ease;
-}
-.cad-home-proj:hover { border-color: var(--interactive-accent); }
-
 .cad-proj-card {
   cursor: pointer;
-}
-.cad-home-proj-head { display: flex; justify-content: space-between; align-items: baseline; }
-.cad-home-proj-title { font-size: 13px; font-weight: 500; color: var(--text-normal); }
-.cad-home-proj-pct {
-  font-size: 12px; font-weight: 700; color: var(--interactive-accent);
-  font-family: var(--font-monospace); font-variant-numeric: tabular-nums;
 }
 
 /* ─────────── Progress bar (shared) ─────────── */
@@ -1508,7 +1436,6 @@ select.cad-create-input {
   color: var(--text-faint);
   padding: 5px 0;
 }
-.cad-nav-designer-state,
 .cad-nav-designer-level {
   padding: 1px 5px;
   border-radius: 999px;
@@ -2662,21 +2589,17 @@ select.cad-form-input {
 
 /* Task → project link (fallback) */
 .cad-task-text { flex: 1; min-width: 0; }
-.cad-task-row, .cad-home-task { gap: 8px; }
-.cad-task-row .cad-task-link-btn,
-.cad-home-task .cad-task-link-btn {
+.cad-task-row { gap: 8px; }
+.cad-task-row .cad-task-link-btn {
   background: transparent; border: 0;
   padding: 2px 6px; margin-left: auto;
   cursor: pointer; color: var(--text-faint);
   font-size: 12px; line-height: 1; border-radius: 4px;
   opacity: 0; transition: opacity 100ms ease, color 100ms ease, background 100ms ease;
 }
-.cad-task-row:hover .cad-task-link-btn,
-.cad-home-task:hover .cad-task-link-btn { opacity: 1; }
-.cad-task-row .cad-task-link-btn.linked,
-.cad-home-task .cad-task-link-btn.linked { opacity: 1; color: var(--interactive-accent); }
-.cad-task-row .cad-task-link-btn:hover,
-.cad-home-task .cad-task-link-btn:hover {
+.cad-task-row:hover .cad-task-link-btn { opacity: 1; }
+.cad-task-row .cad-task-link-btn.linked { opacity: 1; color: var(--interactive-accent); }
+.cad-task-row .cad-task-link-btn:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
@@ -2949,10 +2872,9 @@ select.cad-form-input {
 
   /* Specificity bump via `.cadence-app` prefix instead of !important.
      The original rules elsewhere in this file are at (0,2,0) — e.g.
-     `.cadence-home .cad-home-cols`. Prefixing with `.cadence-app` makes
+     `.cadence-app .cad-dash-cols`. Prefixing with `.cadence-app` makes
      our mobile overrides (0,2,0) AND they come later in source order,
      so they win cleanly. */
-  .cadence-app .cad-home-cols,
   .cadence-app .cad-pd-cols,
   .cadence-app .cad-dash-cols {
     grid-template-columns: 1fr;
@@ -3026,8 +2948,7 @@ select.cad-form-input {
   .cadence-app .cad-pd-task-row .cad-btn-danger,
   .cadence-app .cad-pd-task-bell,
   .cadence-app .cad-pt-bell,
-  .cadence-app .cad-task-link-btn,
-  .cadence-app .cad-home-task .cad-task-link-btn { opacity: 1; }
+  .cadence-app .cad-task-link-btn { opacity: 1; }
 }
 
 /* iOS safe-area insets — horizontal + bottom only (Obsidian handles top) */

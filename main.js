@@ -25993,10 +25993,6 @@ var CadenceAppView = class extends obsidian17.ItemView {
       await this.renderEntityTabs(content, this.mode, firstTab.entityKey || firstTab.route);
     } else if (active && active.entityKey && ENTITIES[active.entityKey]) {
       await this.renderEntityList(content, active.entityKey);
-    } else if (this.mode && this.mode.startsWith("custom.")) {
-      const entityKey = this.mode.slice("custom.".length);
-      if (ENTITIES[entityKey]) await this.renderEntityList(content, entityKey);
-      else this.renderComingSoon(content, active);
     } else {
       this.renderComingSoon(content, active);
     }
