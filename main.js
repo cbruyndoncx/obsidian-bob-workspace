@@ -31404,6 +31404,16 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     this.plugin = plugin;
     this._reviewActiveTab = "overview";
     this._reviewRenderSeq = 0;
+    this._workspaceDraftDirty = false;
+  }
+  // The workspace designers mutate the global WORKSPACE_CONFIG live (for preview)
+  // from an unsaved draft. If the tab is closed with such edits unsaved, restore
+  // the runtime to the persisted workspace.json so it doesn't silently diverge.
+  hide() {
+    if (this._workspaceDraftDirty) {
+      this._workspaceDraftDirty = false;
+      void this.plugin.reloadWorkspaceConfiguration().then(() => this.plugin.refreshOpenViews());
+    }
   }
   _dashboardSettingsRenderer() {
     if (!this._dashboardRenderer) {
@@ -31545,6 +31555,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           }
         }
         await this.plugin.reloadWorkspaceConfiguration();
+        this._workspaceDraftDirty = false;
         this.plugin.refreshOpenViews();
         if (bootstrapFailed.length) {
           new obsidian18.Notice(`BOB Workspace: workspace.json saved and applied. Skipped schema for: ${bootstrapFailed.join("; ")}`);
@@ -32018,6 +32029,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       workspaceTa.value = JSON.stringify(config, null, 2);
       setWorkspaceStatus(message || "Workspace changed - click Save and apply", true);
       setWorkspaceConfig(validateWorkspaceConfig(migrateWorkspacePlannerConfig(config)));
+      this._workspaceDraftDirty = true;
       renderWorkspaceDesigners();
     };
     const saveWorkspaceBase = async (entityKey, file, view) => {
@@ -32032,6 +32044,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       workspaceTa.value = JSON.stringify(config, null, 2);
       await saveWorkspaceConfig(this.plugin.app, workspaceTa.value);
       await this.plugin.reloadWorkspaceConfiguration();
+      this._workspaceDraftDirty = false;
       this.plugin.refreshOpenViews();
     };
     let activeDragPayload = null;

@@ -167,10 +167,21 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
   declare _reviewActiveTab: string;
   declare _reviewRenderSeq: number;
   declare _activeSettingsTab: string;
+  declare _workspaceDraftDirty: boolean;
   declare _collapsedModules: Set<string>;
   declare _dashboardRenderer: SettingsDashboardRenderer;
   declare _schemaDesignerSelectedPath: string;
-  constructor(app: obsidian.App, plugin: CadencePlugin) { super(app, plugin); this.plugin = plugin; this._reviewActiveTab = 'overview'; this._reviewRenderSeq = 0; }
+  constructor(app: obsidian.App, plugin: CadencePlugin) { super(app, plugin); this.plugin = plugin; this._reviewActiveTab = 'overview'; this._reviewRenderSeq = 0; this._workspaceDraftDirty = false; }
+
+  // The workspace designers mutate the global WORKSPACE_CONFIG live (for preview)
+  // from an unsaved draft. If the tab is closed with such edits unsaved, restore
+  // the runtime to the persisted workspace.json so it doesn't silently diverge.
+  hide() {
+    if (this._workspaceDraftDirty) {
+      this._workspaceDraftDirty = false;
+      void this.plugin.reloadWorkspaceConfiguration().then(() => this.plugin.refreshOpenViews());
+    }
+  }
 
   _dashboardSettingsRenderer() {
     if (!this._dashboardRenderer) {
@@ -318,6 +329,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           }
         }
         await this.plugin.reloadWorkspaceConfiguration();
+        this._workspaceDraftDirty = false;
         this.plugin.refreshOpenViews();
         if (bootstrapFailed.length) {
           new obsidian.Notice(`BOB Workspace: workspace.json saved and applied. Skipped schema for: ${bootstrapFailed.join('; ')}`);
@@ -806,6 +818,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       workspaceTa.value = JSON.stringify(config, null, 2);
       setWorkspaceStatus(message || 'Workspace changed - click Save and apply', true);
       setWorkspaceConfig(validateWorkspaceConfig(migrateWorkspacePlannerConfig(config)));
+      this._workspaceDraftDirty = true;
       renderWorkspaceDesigners();
     };
     const saveWorkspaceBase = async (entityKey: string, file: string, view: string) => {
@@ -820,6 +833,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       workspaceTa.value = JSON.stringify(config, null, 2);
       await saveWorkspaceConfig(this.plugin.app, workspaceTa.value);
       await this.plugin.reloadWorkspaceConfiguration();
+      this._workspaceDraftDirty = false;
       this.plugin.refreshOpenViews();
     };
     let activeDragPayload: NavDragPayload | null = null;
