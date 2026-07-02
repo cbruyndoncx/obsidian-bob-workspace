@@ -417,7 +417,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _visibleNavGroups() {
-    const mods = this.plugin.settings.modules || { crm: true, prm: true, srm: true, finance: true, procurement: true, tax: true, planner: true };
+    const mods = this.plugin.settings.modules || { crm: true, 'client-work': true, prm: true, finance: true, procurement: true, planner: true, ai: true };
     const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
     const showSecondary = !!this.plugin.settings.showSecondaryNav;
     const showSetup = !!this.plugin.settings.showSetupNav;

@@ -22164,7 +22164,7 @@ var DEFAULT_SETTINGS = {
   cadenceAppDark: false,
   taskProjectLinks: {},
   // { "dailyPath::taskText": "Cadence/Projects/X.md" }
-  modules: { crm: false, "client-work": false, prm: false, srm: false, finance: false, procurement: false, tax: false, planner: false, ai: false },
+  modules: { crm: false, "client-work": false, prm: false, finance: false, procurement: false, planner: false, ai: false },
   disabledSurfaces: [],
   // surface IDs hidden from nav regardless of module toggle
   showSecondaryNav: false,
@@ -25582,7 +25582,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
     this.render();
   }
   _visibleNavGroups() {
-    const mods = this.plugin.settings.modules || { crm: true, prm: true, srm: true, finance: true, procurement: true, tax: true, planner: true };
+    const mods = this.plugin.settings.modules || { crm: true, "client-work": true, prm: true, finance: true, procurement: true, planner: true, ai: true };
     const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
     const showSecondary = !!this.plugin.settings.showSecondaryNav;
     const showSetup = !!this.plugin.settings.showSetupNav;
@@ -32588,12 +32588,11 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     });
     const ensureMods = () => {
       if (!this.plugin.settings.modules) {
-        this.plugin.settings.modules = { crm: true, "client-work": true, prm: true, srm: true, finance: true, procurement: true, tax: true, planner: true };
+        this.plugin.settings.modules = { crm: true, "client-work": true, prm: true, finance: true, procurement: true, planner: true, ai: true };
       }
       if (this.plugin.settings.modules["client-work"] == null) this.plugin.settings.modules["client-work"] = true;
       if (this.plugin.settings.modules.finance == null) this.plugin.settings.modules.finance = true;
       if (this.plugin.settings.modules.procurement == null) this.plugin.settings.modules.procurement = true;
-      if (this.plugin.settings.modules.tax == null) this.plugin.settings.modules.tax = true;
       NAV_GROUPS.filter((group) => group.module).forEach((group) => {
         if (this.plugin.settings.modules[group.module] == null) this.plugin.settings.modules[group.module] = true;
       });
@@ -32603,11 +32602,9 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       planner: "Planner \u2014 daily planning, projects and capture.",
       crm: "Customer Relationship Management \u2014 Contacts, Clients, My Companies, Pipeline, Activities.",
       "client-work": "Client Work \u2014 Meetings, communications, deliverables, feedback, surveys, testimonials and decisions.",
-      srm: "Supplier Relationship Management \u2014 Suppliers, contracts, spend.",
       prm: "Partner Relationship Management \u2014 Partners, Registrations, Commissions, Leads, Certifications, Analytics.",
       finance: "Finance \u2014 periods, bank, journals, invoices, purchases, trial balances and statements.",
       procurement: "Procurement \u2014 internal purchase requests and formal supplier purchase orders.",
-      tax: "Tax & Compliance \u2014 VAT, corporate tax, deferred tax, transfer pricing, legal rules and retention.",
       ai: "AI Workspace \u2014 playbooks and installed skills."
     };
     const baseFiles = this.plugin.app.vault.getFiles().filter((f) => f.extension === "base").sort((a, b) => a.path.localeCompare(b.path));

@@ -1390,12 +1390,11 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
 
     const ensureMods = () => {
       if (!this.plugin.settings.modules) {
-        this.plugin.settings.modules = { crm: true, 'client-work': true, prm: true, srm: true, finance: true, procurement: true, tax: true, planner: true };
+        this.plugin.settings.modules = { crm: true, 'client-work': true, prm: true, finance: true, procurement: true, planner: true, ai: true };
       }
       if (this.plugin.settings.modules['client-work'] == null) this.plugin.settings.modules['client-work'] = true;
       if (this.plugin.settings.modules.finance == null) this.plugin.settings.modules.finance = true;
       if (this.plugin.settings.modules.procurement == null) this.plugin.settings.modules.procurement = true;
-      if (this.plugin.settings.modules.tax == null) this.plugin.settings.modules.tax = true;
       NAV_GROUPS.filter((group: NavGroupConfig) => group.module).forEach((group: NavGroupConfig) => {
         if (this.plugin.settings.modules[group.module] == null) this.plugin.settings.modules[group.module] = true;
       });
@@ -1405,11 +1404,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       planner: 'Planner — daily planning, projects and capture.',
       crm:     'Customer Relationship Management — Contacts, Clients, My Companies, Pipeline, Activities.',
       'client-work': 'Client Work — Meetings, communications, deliverables, feedback, surveys, testimonials and decisions.',
-      srm:     'Supplier Relationship Management — Suppliers, contracts, spend.',
       prm:     'Partner Relationship Management — Partners, Registrations, Commissions, Leads, Certifications, Analytics.',
       finance: 'Finance — periods, bank, journals, invoices, purchases, trial balances and statements.',
       procurement: 'Procurement — internal purchase requests and formal supplier purchase orders.',
-      tax:     'Tax & Compliance — VAT, corporate tax, deferred tax, transfer pricing, legal rules and retention.',
       ai:      'AI Workspace — playbooks and installed skills.',
     };
 
