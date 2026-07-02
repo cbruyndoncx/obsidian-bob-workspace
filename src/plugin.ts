@@ -16,7 +16,7 @@ import { sameDay, startOfDay, ymd } from './utils';
 import { CadenceAppView } from './views/app-view';
 import { CadencePlaybookRunnerView, PLAYBOOK_RUNNER_VIEW_TYPE } from './views/playbook-runner';
 import { exportAllEntitiesXLSX, promptImportWorkbook } from './workbook';
-import { WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, WORKSPACE_OWNED_SETTING_KEYS, applyWorkspaceOwnedSettings, initPluginPaths, loadWorkspaceConfig, persistedWorkspaceOwnedSettings, saveWorkspaceConfig, validateWorkspaceConfig } from './workspace-config';
+import { WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, WORKSPACE_LOAD_FAILED, WORKSPACE_OWNED_SETTING_KEYS, applyWorkspaceOwnedSettings, initPluginPaths, loadWorkspaceConfig, persistedWorkspaceOwnedSettings, saveWorkspaceConfig, validateWorkspaceConfig } from './workspace-config';
 import { loadWorkspaceTemplates, seedWorkspaceTemplates } from './workspace-templates';
 import * as obsidian from 'obsidian';
 import type { BobSettings, PartialSettings, Reminder } from './types';
@@ -215,7 +215,7 @@ export class CadencePlugin extends obsidian.Plugin {
       id: 'reload-workspace-config',
       name: 'Reload workspace.json',
       callback: async () => {
-        await reloadEntityConfiguration(this.app, this.settings);
+        await this.reloadWorkspaceConfiguration();
         this.refreshOpenViews();
         new obsidian.Notice('BOB Workspace: workspace configuration reloaded.');
       },
@@ -458,11 +458,27 @@ export class CadencePlugin extends obsidian.Plugin {
     await this.saveData(dataToSave);
     const workspaceConfig = validateWorkspaceConfig(Object.assign({}, WORKSPACE_CONFIG, { settings: workspaceSettings }));
     setWorkspaceConfig(workspaceConfig);
-    if (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH) || Object.keys(workspaceSettings).length) {
+    // Never overwrite a workspace.json that failed to load — an incidental save
+    // (toggle, reminder tick) would replace the user's recoverable config with
+    // an empty `{ settings }` shell and clobber the backup. The settings editor's
+    // explicit "Save and apply" goes through saveWorkspaceConfig directly, which
+    // clears the guard once the file is valid again.
+    if (!WORKSPACE_LOAD_FAILED && (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH) || Object.keys(workspaceSettings).length)) {
       await saveWorkspaceConfig(this.app, JSON.stringify(workspaceConfig, null, 2));
     }
     setCurrentCurrency(this.settings.currency);
     syncEntityFolders(this.settings);
+  }
+
+  // Refresh WORKSPACE_CONFIG from disk, then re-overlay workspace-owned settings
+  // onto plugin.settings BEFORE rebuilding registries — so a manual workspace.json
+  // edit or a Settings "Save and apply" is reflected in this.settings and not
+  // reverted by the next saveSettings(). Mirrors the tail of loadSettings().
+  async reloadWorkspaceConfiguration() {
+    await loadWorkspaceConfig(this.app);
+    this.settings = applyWorkspaceOwnedSettings(this.settings) as BobSettings;
+    setCurrentCurrency(this.settings.currency);
+    await reloadEntityConfiguration(this.app, this.settings);
   }
 }
 

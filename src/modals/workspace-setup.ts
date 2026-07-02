@@ -49,9 +49,15 @@ export class CadenceWorkspaceSetupModal extends obsidian.Modal {
     applyBtn.disabled = true;
     applyBtn.addEventListener('click', async () => {
       if (!this.selected) return;
-      const meta = await applyWorkspaceTemplate(this.app, this.plugin, this.selected);
-      this.close();
-      new obsidian.Notice(`BOB Workspace: "${meta.label}" template applied.`);
+      applyBtn.disabled = true;
+      try {
+        const meta = await applyWorkspaceTemplate(this.app, this.plugin, this.selected);
+        this.close();
+        new obsidian.Notice(`BOB Workspace: "${meta.label}" template applied.`);
+      } catch (e) {
+        applyBtn.disabled = false;
+        new obsidian.Notice(`BOB Workspace: could not apply template - ${e?.message || e}`);
+      }
     });
 
     const skipBtn = footer.createEl('button', { text: 'Skip for now', cls: 'cad-setup-skip' });

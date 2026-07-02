@@ -22,6 +22,13 @@ export let WORKSPACE_CONFIG_PATH = 'Cadence/workspace.json';
 export let WORKSPACE_BACKUP_PATH = 'Cadence/workspace.backup.json';
 export let WORKSPACE_CONFIG: WorkspaceConfig = {};
 
+// True when the on-disk workspace.json exists but failed to parse/validate on
+// the last load. Incidental saveSettings() writes MUST NOT overwrite the file
+// in this state — otherwise a toggle or reminder tick would clobber the user's
+// (recoverable) config with an empty `{ settings }` shell. Reset on any
+// successful load or explicit saveWorkspaceConfig (the user's deliberate fix).
+export let WORKSPACE_LOAD_FAILED = false;
+
 // Modules outside this one must replace the active config via this setter —
 // ES module imports are read-only live bindings.
 export function setWorkspaceConfig(config: WorkspaceConfig) {
@@ -523,19 +530,27 @@ export async function saveWorkspaceConfig(app: App, jsonText: string): Promise<W
   await adapter.write(WORKSPACE_CONFIG_PATH, JSON.stringify(parsed, null, 2));
   WORKSPACE_CONFIG = parsed;
   WORKSPACE_HAS_NAVIGATION = Array.isArray(parsed.navigation?.groups);
+  // Explicit user-driven save succeeded — the on-disk file is valid again, so
+  // clear the load-failed guard and let incidental saves resume.
+  WORKSPACE_LOAD_FAILED = false;
   return parsed;
 }
 
 export async function loadWorkspaceConfig(app: App): Promise<WorkspaceConfig> {
   WORKSPACE_CONFIG = {};
   WORKSPACE_HAS_NAVIGATION = false;
+  WORKSPACE_LOAD_FAILED = false;
   if (!(await app.vault.adapter.exists(WORKSPACE_CONFIG_PATH))) return WORKSPACE_CONFIG;
   try {
     WORKSPACE_CONFIG = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(await app.vault.adapter.read(WORKSPACE_CONFIG_PATH))) as WorkspaceConfig);
     WORKSPACE_HAS_NAVIGATION = Array.isArray(WORKSPACE_CONFIG.navigation?.groups);
   } catch (e) {
-    new obsidian.Notice(`BOB Workspace: workspace.json error - ${e.message}`);
+    // Keep the on-disk file untouched: mark the load failed so saveSettings
+    // skips its incidental write (see saveSettings in plugin.ts). Sticky notice
+    // (duration 0) because this is an error the user must act on.
+    new obsidian.Notice(`BOB Workspace: workspace.json failed to load and is being left untouched - ${e.message}`, 0);
     WORKSPACE_CONFIG = {};
+    WORKSPACE_LOAD_FAILED = true;
   }
   return WORKSPACE_CONFIG;
 }

@@ -73,6 +73,21 @@ export function migrateWorkspacePlannerConfig(config: WorkspaceConfig): Workspac
     : null;
   if (dashboards) {
     let moved = false;
+    // (a) Nested container shape: `dashboards.planner` is a map of planner
+    // surface ids → configs (as the shipped templates author it). The literal
+    // key "planner" is never a routable surface, so hoist its planner.* entries
+    // to the top-level `planner` block and drop the container.
+    const nestedPlanner = dashboards.planner as unknown;
+    if (nestedPlanner && typeof nestedPlanner === 'object' && !Array.isArray(nestedPlanner)
+      && Object.keys(nestedPlanner as Record<string, unknown>).some((id) => String(id || '').startsWith('planner.'))) {
+      Object.entries(nestedPlanner as Record<string, DashboardConfig>).forEach(([surfaceId, config]) => {
+        if (!String(surfaceId || '').startsWith('planner.')) return;
+        if (planner[surfaceId] == null) planner[surfaceId] = config;
+      });
+      delete dashboards.planner;
+      moved = true;
+    }
+    // (b) Flat shape: `dashboards["planner.*"]` keys authored at the top level.
     Object.keys(dashboards).forEach((surfaceId) => {
       if (!String(surfaceId || '').startsWith('planner.')) return;
       if (planner[surfaceId] == null) planner[surfaceId] = dashboards[surfaceId];

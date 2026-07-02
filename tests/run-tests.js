@@ -5,6 +5,7 @@ require('./dashboard-state.test');
 require('./pinned-surfaces.test');
 require('./project-note.test');
 require('./template-bundle.test');
+require('./template-validate.test');
 require('./xlsx-bundle.test');
 require('./widget-source.test');
 require('./workspace-config.test');

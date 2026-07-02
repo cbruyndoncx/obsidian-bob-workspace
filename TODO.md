@@ -1,0 +1,100 @@
+# TODO — Full code review findings (2026-07-02)
+
+Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep review, config-pipeline review, reference-vault cross-check against `/mnt/d/OBS/brncx-skills`, CSS/docs/tests drift). Findings deduplicated and ranked; several verified empirically by running the real `validateWorkspaceConfig` against the shipped templates.
+
+## Worker instructions (read first)
+
+- **Read `CLAUDE.md` before starting any item.** It is the authoritative architecture/workflow reference.
+- **Workflow:** edit `src/**/*.ts` / `styles.css` / `templates/*.json` only — **never `main.js`** (generated). After changes: `npm run build`, then `npm run check` (typecheck + build-freshness + regression suite). Commit the regenerated `main.js` together with the `src/` change. Manual testing: copy `main.js`/`manifest.json`/`styles.css` to `<vault>/.obsidian/plugins/bob-workspace/` and restart Obsidian.
+- **Anchors:** line numbers below are from the 2026-07-02 review and will drift — treat the **symbol/file names** as the anchor, line numbers as hints.
+- **Doc sync rule:** any change to `CLAUDE.md` must be mirrored to `AGENTS.md` (kept identical except title/intro).
+- **Vault safety:** the "Reference vault housekeeping" section touches a live vault outside this repo. Do not delete anything under `/mnt/d/OBS/brncx-skills` without explicit owner confirmation per file.
+- **Dependencies:** fix Critical #1 before removing the briefing/old-Home dead CSS (fixing planner config changes which renderers run — re-verify deadness after). `_productivitySnapshot` becomes dead only *after* the four `_renderProductivity*Widget` methods are removed. Items marked **BLOCKED-ON-OWNER** need a product decision before work starts.
+
+## Critical bugs
+
+- [x] **1. Shipped planner dashboards are dead config.** ✅ DONE (2026-07-02) — `migrateWorkspacePlannerConfig` (`src/nav.ts`) now unwraps the nested `dashboards.planner` container into the top-level `planner` block (both save and load run the migration, so it fixes templates *and* existing vaults). Verified: bob template migrates to 4 top-level planner surfaces, no residual `dashboards.planner`. Note: `planner.today` still bypasses config via the hardcoded exception at `app-view.ts:796` — tracked separately under Medium. `workspace-bob.json`, `-cadence.json`, `-crm.json` and the real vault nest planner configs under `dashboards.planner["planner.inbox"...]`, but the code reads only top-level `planner` (`src/workspace-config.ts:630`). The migration (`src/nav.ts:65-90`) only hoists flat `dashboards["planner.*"]` keys — the literal key `"planner"` fails `startsWith('planner.')`. Planner surfaces silently fall back to the legacy hardcoded renderers (`app-view.ts:804-807`); Settings Review reports "Planner surfaces: 0". **Fix:** extend `migrateWorkspacePlannerConfig` to unwrap nested `dashboards.planner` (fixes templates and existing vaults), and/or reshape the three templates.
+  **Done when:** loading `workspace-bob.json` through the real load/migrate path yields a non-empty top-level `planner` block and no `dashboards.planner` key; planner surfaces render their configured dashboards (not the legacy renderers); Settings Review shows the planner surfaces; nested-shape case added to `tests/dashboard-config.test.js`.
+- [x] **2. "Cadence Classic" template cannot be applied.** ✅ DONE (2026-07-02) — Owner decision: **strip entities, use BOB default folders**. Removed the `entities` block from `templates/workspace-cadence.json` (all 21 were built-in keys; they now fall back to BOB default folders — the legacy `Cadence/*` layout is intentionally dropped). Also wrapped the setup-modal apply in try/catch + Notice (`src/modals/workspace-setup.ts`), so any future template-apply failure surfaces a notice instead of an unhandled rejection. Verified: all five bundled templates pass the real `validateWorkspaceConfig` (new test below). `templates/workspace-cadence.json` has a top-level `entities` key; `validateWorkspaceConfig` hard-rejects it (`src/workspace-config.ts:98`). The setup modal (`src/modals/workspace-setup.ts:50`) has no try/catch → unhandled rejection, no notice. **Fix:** strip/migrate `entities` in the template; wrap the modal apply in try/catch + Notice.
+  **Done when:** all five bundled templates pass the real `validateWorkspaceConfig`; applying "Cadence Classic" from the setup modal succeeds; any template-apply failure shows a Notice instead of an unhandled rejection (see Test gaps: real-validator regression test).
+- [x] **3. Legacy `workspace.json` is destroyed, not migrated.** ✅ DONE (2026-07-02) — added `WORKSPACE_LOAD_FAILED` guard (`src/workspace-config.ts`): set when a present-but-unparseable `workspace.json` fails to load (with a sticky error Notice), cleared on any successful load or explicit `saveWorkspaceConfig`. `saveSettings` (`src/plugin.ts`) now skips its incidental disk write while the guard is set, so a toggle/reminder tick can no longer overwrite the file or clobber the backup. The editor's "Save and apply" still goes through `saveWorkspaceConfig` directly, so the user's deliberate fix works and re-enables saves. Load-validation failure drops the whole config to `{}` (`src/workspace-config.ts:529-541`); the next `saveSettings()` (any toggle, or a reminder tick — `reminders` is workspace-owned) rewrites `workspace.json` as `{ settings }` (`src/plugin.ts:452-463`), and the following save clobbers `workspace.backup.json` too. **Fix:** on validation failure, go read-only for workspace.json instead of allowing overwrites.
+  **Done when:** with an invalid `workspace.json` on disk, toggling any setting and letting a reminder fire leaves the on-disk file and `workspace.backup.json` byte-identical; the user sees a persistent notice explaining the config failed to load.
+- [x] **4. Manual edits to `workspace.json.settings` silently reverted.** ✅ DONE (2026-07-02) — new `CadencePlugin.reloadWorkspaceConfiguration()` (`src/plugin.ts`) reloads `workspace.json` from disk, re-overlays workspace-owned settings onto `plugin.settings` (mirroring the tail of `loadSettings`), then rebuilds registries. Routed the "Reload workspace.json" command and both `workspace.json`-writing settings paths ("Save and apply" + `saveWorkspaceBase`) through it, so a manual edit or Save-and-apply is no longer reverted by the next `saveSettings`. The 8 schema-designer reloads (which don't touch owned settings) are left as-is. "Save and apply" (`src/settings-tab.ts:308-332`) and the "Reload workspace.json" command (`src/plugin.ts:214-222`) never re-run `applyWorkspaceOwnedSettings`; stale `plugin.settings` overwrite the user's edit on the next save (often within 30s via the reminder tick). **Fix:** re-run the overlay after every `saveWorkspaceConfig`/reload path.
+  **Done when:** editing an owned key (e.g. `settings.folderContacts`) in the workspace editor, clicking "Save and apply", then triggering a plain `saveSettings()` (toggle any setting) keeps the edited value in both `plugin.settings` and `workspace.json`; same via the "Reload workspace.json" command after a hand edit.
+- [ ] **5. Base-path precedence split.** `entityBasePath` (`src/bases-config.ts:32-49`) resolves basesFolder+basename, but the runtime filter/column merge (`src/bases-parse.ts:456-475`) parses `bases[key].file` / `settings.baseFiles[key]` verbatim. A filename-only `bases` entry resolves to vault root, parses null, and still registers in `CONFIGURED_BASE_ENTITY_KEYS` — blocking the `settings.baseFiles` fallback. Changing `basesFolder` relocates bases for one path but not the other. **Fix:** route `applyBaseOverrides`/`applyConfiguredBaseOverrides` through `entityBasePath`.
+  **Done when:** a filename-only `bases[key].file` (e.g. `"People.base"`) resolves against `settings.basesFolder` and its filters/columns merge into the entity; changing `basesFolder` relocates resolution for the runtime merge and Open Base identically; a null parse no longer registers the key in `CONFIGURED_BASE_ENTITY_KEYS`; covered in `tests/bases.test.js`.
+- [x] **6. Broken "Workspace tab" link in Settings.** ✅ DONE (2026-07-02) — tab buttons now get `attr: { 'data-tab': id }` at creation (`src/settings-tab.ts`), so the schemas-managed banner's `.cad-settings-tab[data-tab="workspace"]` query resolves and clicking the link switches to the Workspace tab. `src/settings-tab.ts:1868` queries `.cad-settings-tab[data-tab="workspace"]`, but tab buttons never get a `data-tab` attribute (settings-tab.ts:221-231). Silent no-op.
+  **Done when:** clicking the schemas-managed banner link switches the Settings view to the Workspace tab (set `data-tab` on the buttons at creation, or dispatch via the existing tab-switch function).
+
+## Medium — design inconsistencies
+
+- [ ] **BLOCKED-ON-OWNER** (decide: keep keys owned + debounce/skip backup, or move `reminders`/`dashboardState` back to personal data.json): `reminders`/`dashboardState` in `WORKSPACE_OWNED_SETTING_KEYS` churn `workspace.json` + `workspace.backup.json` on every reminder tick/selector change, so "Restore backup" rarely holds a useful state. `saveSettings` also *creates* `workspace.json` when any owned setting differs from default (`src/plugin.ts:461`), suppressing the first-run template picker. Reconsider ownership or debounce/skip backup for settings-only writes.
+- [ ] Template switching leaks owned settings: overlay only replaces keys the new template ships (`src/workspace-templates.ts:158-163`); stale `basesFolder`/`baseViews`/etc. persist into the new template's `workspace.json`.
+- [ ] Surface Designer (`misc.dashboard-editor`) is unreachable in every shipped template and the reference vault — configured nav replaces `BUILTIN_NAV_GROUPS`, no template includes it, no command opens it. Export/Import survive only via commands.
+- [ ] Route map overrides config: hardcoded routes in `CadenceAppView.render()` win over `workspace.json` (surface reusing id `crm.contacts` always renders entity `contact`; parents hardcode initial tabs, e.g. `renderEntityTabs(..., 'crm.campaigns.overview')`; `setMode` force-resets `client-work.overview`'s tab). `planner.today` is hardcoded to ignore dashboard config (`app-view.ts:796`).
+- [ ] Settings designers mutate live `WORKSPACE_CONFIG` from an unsaved draft (`settings-tab.ts:805-810`) — abandoning the draft leaves runtime diverged from disk.
+- [ ] Vault + bob template: stat `"mode": "client-work.meetings"` targets a nonexistent surface — click navigates Home. Use a real tab route or remove.
+- [ ] `srm`/`tax` module remnants in `DEFAULT_SETTINGS.modules` (`src/settings.ts:42`), settings UI (`settings-tab.ts:1379,1394`), `_visibleNavGroups` (`app-view.ts:415`); the three module-default lists drift from each other. Only `_migrateModeId`'s `srm.suppliers→procurement.suppliers` is legit migration code.
+- [ ] Orphaned settings: `showSecondaryNav`/`showSetupNav` read but no UI writes them; `dailyNoteFormat` defined/typed but read by nothing (`dailyNotePath` hardcodes `ymd()`).
+- [ ] `src/widgets.ts:263-267` falls back to raw sparse `WORKSPACE_CONFIG.settings` (not default-merged) when settings aren't passed — latent wrong-defaults bug.
+- [ ] Enum-filter dropdown appended to `document.body` (`app-view.ts:1143-1155`) can orphan itself + its listener on re-render/close.
+
+## Dead code — safe removals
+
+### TypeScript (~400+ lines)
+- [ ] `app-view.ts`: `renderDashboard` (≈6143, legacy CRM dashboard), `renderEntityKanban` (≈6037), `renderReportPipeline/Sales/Partners/Activity` (≈6303), four `_renderProductivity*Widget` (≈2868; removing them also kills `_productivitySnapshot`), `_filterEntitiesByBaseConfig` (≈1636).
+- [ ] `src/dashboards.ts:5` `INTERNAL_DASHBOARD_PROVIDERS` (never imported).
+- [ ] `src/workbook.ts:271` `importWorkbookEntitiesFromBuffer` (duplicate of the used path; `filename` param unused).
+- [ ] `src/entities.ts:792` `dealCloseByField` + the `closeByField` entity option (round-tripped, never read).
+- [ ] `src/nav.ts:110` `SURFACES_BY_ENTITY_KEY` (write-only registry).
+- [ ] `src/types.ts`: `ParsedTask` (339), `Milestone` (347), `WorkspaceConfig.entities` (304).
+- [ ] `src/bases-config.ts:165` `applyEntityDefinitions`: `injectNavigation` block (217-240, incl. the `custom.*` route it fed at `app-view.ts:857`) and `configOwnsBase` branches — sole caller passes `false`/default.
+- [ ] **BLOCKED-ON-OWNER** (decide: keep for hand-authored configs, or delete): legacy route ids unreachable with shipped templates — `crm.companies`, `crm.sequences`, `prm.registrations/commissions/certifications`, seven `client-work.*` routes + `_renderClientWorkEntityList`.
+
+### CSS (37 dead classes, ~90+ lines; dynamic construction ruled out)
+- [ ] Cadence-sync block `cad-sync-disabled*` (styles.css:1371-1390) — feature removed in 25d75c2.
+- [ ] Old Home renderer block: 15 `cad-home-*` classes (≈922-1010 + dark-mode refs at 85, 113, 248, 259, 279, 289, 2735). Keep `cad-home-list`/`cad-home-row*` (alive, base-embed list).
+- [ ] Briefing component: 11 `cad-briefing*` classes (874-919) + `cad-tone-*` compounds (906-910; tone now uses `data-tone` attributes).
+- [ ] Schema-designer leftovers: `cad-de-status-row` (3221), `cad-de-source-section-custom` (3528), `cad-de-cr-row`/`cad-de-cr-card` (3606-3607).
+- [ ] Singletons: `cad-dash-list` (790), `cad-rem-project-chip-row` (1138), `cad-nav-designer-state` (1581), `cad-data-csv-row` (3598).
+- [ ] Do **not** touch `cad-pill-*` (built dynamically) or Obsidian core classes.
+
+### Duplication worth collapsing
+- [ ] `_renderSecondaryRoute` (`app-view.ts:1446-1457`): seven one-line dashboard wrappers (≈3898-3924) reduce to `renderConfigDashboard(route, ...)`.
+- [ ] Client-work reset prologue duplicated verbatim in `renderClientWorkWorkspace` (1552) and `_renderClientWorkEntityList` (1573).
+- [ ] Export/Import UI duplicated between `misc.*` surfaces and the Settings Data tab.
+- [ ] `renderProductivity` (6299) pointless wrapper; `renderHome` greeting header (5815-5821) never shows in configured vaults.
+
+## Documentation drift
+
+- [ ] **CLAUDE.md + AGENTS.md "Runtime configuration order" steps 4 & 6** describe the removed `workspace.json.entities` apply/re-apply — now a hard validation error. Also stale: `dealCloseByField` listed as live, `SURFACES_BY_ENTITY_KEY` as live registry, "just the filename matters" for `baseFiles` (untrue for the runtime merge — see critical #5), "writes them back whenever a workspace file exists" (saveSettings also creates the file).
+- [ ] `docs/extending-bob-workspace.md:576-577`: `entities` config claimed still valid (it throws); "no Base → coming soon" wrong (renders generic list).
+- [ ] `docs/navigation-inventory.md` / `docs/entity-setup-audit.md`: predate config-driven nav (missing AI Workspace, Surface Designer, Export/Import; describe `entities.json` overrides). Regenerate or mark deprecated.
+
+## Reference vault housekeeping (`/mnt/d/OBS/brncx-skills/.obsidian/plugins/bob-workspace/`)
+
+> ⚠️ Live vault, outside this repo. Confirm each deletion with the owner before touching anything; prefer moving to an archive folder over deleting.
+
+- [ ] Delete leftovers: `entities.json`, `entities.backup.json` (nothing reads them), `xlsx.full.min.js` + `vendor/` (~1.9 MB; XLSX is bundled into main.js), `templates/workspace-bob|cadence|crm|minimal.json` (shadowed — bundled names win; **keep `workspace-release.json`**, live custom template), `templates/client/` (no reader), `.bak-*`/`.pre-*` backups (only `workspace.backup.json` is read).
+- [ ] `data.json`: remove orphans `cadenceApiUrl`/`cadenceApiToken` (removed feature; Settings nav desc still says "API connection" — fix in `src/nav.ts:22` too); stale `collapsedGroups` entries `srm`/`hr`/`tax` harmless.
+- [ ] `settings.baseViews`: `task` → resolves to missing `TaskNotes.base` (vault has `Tasks.base`); `periodic-note` → missing `Periodic-Note.base` (vault has `PeriodicNotes.base`). Rename files or add explicit `bases`/`baseFiles` mappings.
+- [ ] `dashboards["workspace.quick-actions"|"workspace.report-filters"|"workspace.report-note"]` unreachable (only surfaced via the unreachable Surface Designer).
+
+## Test gaps
+
+- [x] **Add a regression test applying every bundled template through the real `validateWorkspaceConfig`** ✅ DONE (2026-07-02) — new `tests/template-validate.test.js` (wired into `run-tests.js`): strips `_`-prefixed metadata like the real apply path, runs `migrateWorkspacePlannerConfig` + real `validateWorkspaceConfig` on every `templates/workspace-*.json`, and asserts the three rich templates expose a non-empty top-level `planner` block with no residual `dashboards.planner`. Catches both criticals #1 and #2.
+- [ ] `listEntityFiles`/`entityKeyFromFile`/`scannableMarkdownFiles`: typeFilters AND-combination, template-path exclusion, `ignoredFolders`, cache invalidation — zero tests.
+- [ ] `reloadEntityConfiguration` end-to-end order; `applyWorkspaceRegistries`/`resetWorkspaceRegistries`.
+- [ ] `applySchemas`, bootstrap gating, `regenerateSchemaOutputs` pruning.
+- [ ] `exportEntitiesXLSX` sheet composition + `field_aliases` CSV/XLSX import mapping.
+- [ ] `archiveTemplateAssets`/`writeTemplateAssets` template switching.
+- [ ] Minor: `run-tests.js` prints "all tests passed" before async assertions settle (failures still exit non-zero).
+
+## Suggested fix order
+
+1. Planner config shape — hoist nested `dashboards.planner` in the migration (fixes templates *and* existing vaults).
+2. Cadence template `entities` + setup-modal try/catch; preserve on-disk `workspace.json` on load-validation failure.
+3. Re-run `applyWorkspaceOwnedSettings` after every reload/save-and-apply path.
+4. Route the base-override merge through `entityBasePath`.
+5. Regression test: all bundled templates through the real validator.
+6. Mechanical cleanup: dead TS methods/exports, dead CSS blocks, doc corrections, vault housekeeping.

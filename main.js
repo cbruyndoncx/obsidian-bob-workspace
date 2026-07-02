@@ -15425,23 +15425,58 @@ var workspace_cadence_default = {
         title: "Inbox",
         subtitle: "Capture and reminders",
         stats: [
-          { label: "REMINDERS", source: { mode: "built-in", builtIn: "planner", section: "inbox" }, field: "inboxCount", accent: "sky" },
-          { label: "OVERDUE", source: { mode: "built-in", builtIn: "planner", section: "inbox" }, field: "overdueCount", accent: "rose" },
-          { label: "TODAY TASKS", source: { mode: "built-in", builtIn: "planner", section: "today" }, field: "todayCount", accent: "emerald" }
+          {
+            label: "REMINDERS",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "inbox"
+            },
+            field: "inboxCount",
+            accent: "sky"
+          },
+          {
+            label: "OVERDUE",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "inbox"
+            },
+            field: "overdueCount",
+            accent: "rose"
+          },
+          {
+            label: "TODAY TASKS",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "today"
+            },
+            field: "todayCount",
+            accent: "emerald"
+          }
         ],
         layout: [
           [
             {
               kind: "list",
               title: "REMINDERS",
-              source: { mode: "built-in", builtIn: "planner", section: "inbox" },
+              source: {
+                mode: "built-in",
+                builtIn: "planner",
+                section: "inbox"
+              },
               limit: 10,
               empty: "Inbox zero \u2014 capture something to get started."
             },
             {
               kind: "list",
               title: "TODAY TASKS",
-              source: { mode: "built-in", builtIn: "planner", section: "today" },
+              source: {
+                mode: "built-in",
+                builtIn: "planner",
+                section: "today"
+              },
               limit: 12,
               empty: "No tasks on today's note."
             }
@@ -15450,7 +15485,11 @@ var workspace_cadence_default = {
             {
               kind: "list",
               title: "OVERVIEW",
-              source: { mode: "built-in", builtIn: "planner", section: "overview" },
+              source: {
+                mode: "built-in",
+                builtIn: "planner",
+                section: "overview"
+              },
               limit: 4,
               empty: "Nothing urgent right now."
             }
@@ -15462,23 +15501,58 @@ var workspace_cadence_default = {
         title: "Today",
         subtitle: "Daily tasks and journal",
         stats: [
-          { label: "OPEN", source: { mode: "built-in", builtIn: "planner", section: "today" }, field: "todayOpenCount", accent: "sky" },
-          { label: "DONE", source: { mode: "built-in", builtIn: "planner", section: "today" }, field: "todayDoneCount", accent: "mint" },
-          { label: "OVERDUE", source: { mode: "built-in", builtIn: "planner", section: "inbox" }, field: "overdueCount", accent: "warn" }
+          {
+            label: "OPEN",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "today"
+            },
+            field: "todayOpenCount",
+            accent: "sky"
+          },
+          {
+            label: "DONE",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "today"
+            },
+            field: "todayDoneCount",
+            accent: "mint"
+          },
+          {
+            label: "OVERDUE",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "inbox"
+            },
+            field: "overdueCount",
+            accent: "warn"
+          }
         ],
         layout: [
           [
             {
               kind: "list",
               title: "TODAY TASKS",
-              source: { mode: "built-in", builtIn: "planner", section: "today" },
+              source: {
+                mode: "built-in",
+                builtIn: "planner",
+                section: "today"
+              },
               limit: 12,
               empty: "No tasks on today's note."
             },
             {
               kind: "list",
               title: "OVERVIEW",
-              source: { mode: "built-in", builtIn: "planner", section: "overview" },
+              source: {
+                mode: "built-in",
+                builtIn: "planner",
+                section: "overview"
+              },
               limit: 4,
               empty: "Planner overview is empty."
             }
@@ -15490,16 +15564,47 @@ var workspace_cadence_default = {
         title: "Calendar",
         subtitle: "Weekly task rhythm",
         stats: [
-          { label: "DAYS", source: { mode: "built-in", builtIn: "planner", section: "calendar" }, field: "calendarCount", accent: "sky" },
-          { label: "OPEN", source: { mode: "built-in", builtIn: "planner", section: "calendar" }, field: "calendarOpenCount", accent: "warn" },
-          { label: "DONE", source: { mode: "built-in", builtIn: "planner", section: "calendar" }, field: "calendarDoneCount", accent: "emerald" }
+          {
+            label: "DAYS",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "calendar"
+            },
+            field: "calendarCount",
+            accent: "sky"
+          },
+          {
+            label: "OPEN",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "calendar"
+            },
+            field: "calendarOpenCount",
+            accent: "warn"
+          },
+          {
+            label: "DONE",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "calendar"
+            },
+            field: "calendarDoneCount",
+            accent: "emerald"
+          }
         ],
         layout: [
           [
             {
               kind: "bar-chart",
               title: "DAY BREAKDOWN",
-              source: { mode: "built-in", builtIn: "planner", section: "calendar" },
+              source: {
+                mode: "built-in",
+                builtIn: "planner",
+                section: "calendar"
+              },
               valueField: "done",
               limit: 7,
               empty: "No daily note data yet."
@@ -15509,7 +15614,11 @@ var workspace_cadence_default = {
             {
               kind: "list",
               title: "WEEK OVERVIEW",
-              source: { mode: "built-in", builtIn: "planner", section: "overview" },
+              source: {
+                mode: "built-in",
+                builtIn: "planner",
+                section: "overview"
+              },
               limit: 4,
               empty: "Nothing to summarise yet."
             }
@@ -15521,23 +15630,58 @@ var workspace_cadence_default = {
         title: "Projects",
         subtitle: "Project progress and milestones",
         stats: [
-          { label: "PROJECTS", source: { mode: "built-in", builtIn: "planner", section: "projects" }, field: "projectCount", accent: "mint" },
-          { label: "ACTIVE", source: { mode: "built-in", builtIn: "planner", section: "projects" }, field: "projectCount", accent: "sky" },
-          { label: "OVERDUE", source: { mode: "built-in", builtIn: "planner", section: "inbox" }, field: "overdueCount", accent: "warn" }
+          {
+            label: "PROJECTS",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "projects"
+            },
+            field: "projectCount",
+            accent: "mint"
+          },
+          {
+            label: "ACTIVE",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "projects"
+            },
+            field: "projectCount",
+            accent: "sky"
+          },
+          {
+            label: "OVERDUE",
+            source: {
+              mode: "built-in",
+              builtIn: "planner",
+              section: "inbox"
+            },
+            field: "overdueCount",
+            accent: "warn"
+          }
         ],
         layout: [
           [
             {
               kind: "list",
               title: "PROJECTS",
-              source: { mode: "built-in", builtIn: "planner", section: "projects" },
+              source: {
+                mode: "built-in",
+                builtIn: "planner",
+                section: "projects"
+              },
               limit: 8,
               empty: "No active projects yet."
             },
             {
               kind: "list",
               title: "OVERVIEW",
-              source: { mode: "built-in", builtIn: "planner", section: "overview" },
+              source: {
+                mode: "built-in",
+                builtIn: "planner",
+                section: "overview"
+              },
               limit: 4,
               empty: "No planner overview available."
             }
@@ -16638,529 +16782,6 @@ var workspace_cadence_default = {
       ]
     }
   ],
-  entities: {
-    contact: {
-      typeFilter: null,
-      folder: "Cadence/Contacts",
-      fields: [
-        {
-          key: "name",
-          label: "Name",
-          primary: true
-        },
-        {
-          key: "email",
-          label: "Email",
-          type: "email"
-        },
-        {
-          key: "company",
-          label: "Company"
-        },
-        {
-          key: "role",
-          label: "Role"
-        },
-        {
-          key: "lastContact",
-          label: "Last contact",
-          type: "date"
-        },
-        {
-          key: "tags",
-          label: "Tags",
-          type: "tags"
-        }
-      ],
-      columns: [
-        "name",
-        "company",
-        "email",
-        "role",
-        "lastContact"
-      ]
-    },
-    company: {
-      typeFilter: null,
-      folder: "Cadence/Companies",
-      fields: [
-        {
-          key: "name",
-          label: "Name",
-          primary: true
-        },
-        {
-          key: "domain",
-          label: "Domain"
-        },
-        {
-          key: "industry",
-          label: "Industry"
-        },
-        {
-          key: "size",
-          label: "Size"
-        },
-        {
-          key: "owner",
-          label: "Owner"
-        },
-        {
-          key: "tags",
-          label: "Tags",
-          type: "tags"
-        }
-      ],
-      columns: [
-        "name",
-        "domain",
-        "industry",
-        "size",
-        "owner"
-      ]
-    },
-    client: {
-      typeFilter: null,
-      folder: "Cadence/Clients"
-    },
-    deal: {
-      typeFilter: null,
-      folder: "Cadence/Pipeline",
-      fields: [
-        {
-          key: "title",
-          label: "Title",
-          primary: true
-        },
-        {
-          key: "stage",
-          label: "Stage",
-          type: "enum",
-          options: [
-            "Lead",
-            "Qualified",
-            "Proposal",
-            "Negotiation",
-            "Won",
-            "Lost"
-          ]
-        },
-        {
-          key: "value",
-          label: "Value",
-          type: "currency"
-        },
-        {
-          key: "company",
-          label: "Company"
-        },
-        {
-          key: "contact",
-          label: "Contact"
-        },
-        {
-          key: "owner",
-          label: "Owner"
-        },
-        {
-          key: "closeBy",
-          label: "Close by",
-          type: "date"
-        }
-      ],
-      columns: [
-        "title",
-        "stage",
-        "value",
-        "company",
-        "closeBy"
-      ],
-      valueField: "value",
-      closeByField: "closeBy",
-      wonStages: [
-        "Won"
-      ],
-      lostStages: [
-        "Lost"
-      ]
-    },
-    lead: {
-      typeFilter: null,
-      folder: "Cadence/Leads",
-      fields: [
-        {
-          key: "name",
-          label: "Name",
-          primary: true
-        },
-        {
-          key: "company",
-          label: "Company"
-        },
-        {
-          key: "source",
-          label: "Source"
-        },
-        {
-          key: "status",
-          label: "Status",
-          type: "enum",
-          options: [
-            "New",
-            "Contacted",
-            "Qualified",
-            "Disqualified",
-            "Converted"
-          ]
-        },
-        {
-          key: "assigned",
-          label: "Assigned"
-        }
-      ],
-      columns: [
-        "name",
-        "company",
-        "source",
-        "status",
-        "assigned"
-      ]
-    },
-    partner: {
-      typeFilter: null,
-      folder: "Cadence/Partners",
-      fields: [
-        {
-          key: "name",
-          label: "Name",
-          primary: true
-        },
-        {
-          key: "tier",
-          label: "Tier",
-          type: "enum",
-          options: [
-            "Gold",
-            "Silver",
-            "Bronze",
-            "Standard"
-          ]
-        },
-        {
-          key: "status",
-          label: "Status",
-          type: "enum",
-          options: [
-            "Active",
-            "Onboarding",
-            "Inactive",
-            "Churned"
-          ]
-        },
-        {
-          key: "owner",
-          label: "Owner"
-        },
-        {
-          key: "region",
-          label: "Region"
-        }
-      ],
-      columns: [
-        "name",
-        "tier",
-        "status",
-        "region",
-        "owner"
-      ]
-    },
-    registration: {
-      typeFilter: null,
-      folder: "Cadence/Registrations",
-      fields: [
-        {
-          key: "title",
-          label: "Title",
-          primary: true
-        },
-        {
-          key: "partner",
-          label: "Partner"
-        },
-        {
-          key: "status",
-          label: "Status",
-          type: "enum",
-          options: [
-            "Submitted",
-            "Approved",
-            "Rejected",
-            "Expired"
-          ]
-        },
-        {
-          key: "value",
-          label: "Value",
-          type: "currency"
-        },
-        {
-          key: "expires",
-          label: "Expires",
-          type: "date"
-        }
-      ],
-      columns: [
-        "title",
-        "partner",
-        "status",
-        "value",
-        "expires"
-      ]
-    },
-    commission: {
-      typeFilter: null,
-      folder: "Cadence/Commissions",
-      fields: [
-        {
-          key: "reference",
-          label: "Ref",
-          primary: true
-        },
-        {
-          key: "partner",
-          label: "Partner"
-        },
-        {
-          key: "amount",
-          label: "Amount",
-          type: "currency"
-        },
-        {
-          key: "status",
-          label: "Status",
-          type: "enum",
-          options: [
-            "Pending",
-            "Earned",
-            "Paid",
-            "Disputed"
-          ]
-        },
-        {
-          key: "period",
-          label: "Period"
-        },
-        {
-          key: "paidOn",
-          label: "Paid on",
-          type: "date"
-        }
-      ],
-      columns: [
-        "reference",
-        "partner",
-        "amount",
-        "status",
-        "period",
-        "paidOn"
-      ]
-    },
-    certification: {
-      typeFilter: null,
-      folder: "Cadence/Certifications",
-      fields: [
-        {
-          key: "name",
-          label: "Name",
-          primary: true
-        },
-        {
-          key: "partner",
-          label: "Partner"
-        },
-        {
-          key: "level",
-          label: "Level"
-        },
-        {
-          key: "issued",
-          label: "Issued",
-          type: "date"
-        },
-        {
-          key: "expires",
-          label: "Expires",
-          type: "date"
-        }
-      ],
-      columns: [
-        "name",
-        "partner",
-        "level",
-        "issued",
-        "expires"
-      ]
-    },
-    activity: {
-      typeFilter: null,
-      folder: "Cadence/Activities",
-      fields: [
-        {
-          key: "subject",
-          label: "Subject",
-          primary: true
-        },
-        {
-          key: "type",
-          label: "Type",
-          type: "enum",
-          options: [
-            "Call",
-            "Email",
-            "Meeting",
-            "Note",
-            "Task"
-          ]
-        },
-        {
-          key: "when",
-          label: "When",
-          type: "date"
-        },
-        {
-          key: "with",
-          label: "With"
-        },
-        {
-          key: "related",
-          label: "Related"
-        }
-      ],
-      columns: [
-        "when",
-        "type",
-        "subject",
-        "with",
-        "related"
-      ]
-    },
-    sequence: {
-      typeFilter: null,
-      folder: "Cadence/Sequences",
-      fields: [
-        {
-          key: "name",
-          label: "Name",
-          primary: true
-        },
-        {
-          key: "audience",
-          label: "Audience"
-        },
-        {
-          key: "steps",
-          label: "Steps",
-          type: "number"
-        },
-        {
-          key: "active",
-          label: "Active",
-          type: "number"
-        },
-        {
-          key: "status",
-          label: "Status",
-          type: "enum",
-          options: [
-            "Draft",
-            "Active",
-            "Paused",
-            "Archived"
-          ]
-        }
-      ],
-      columns: [
-        "name",
-        "audience",
-        "steps",
-        "active",
-        "status"
-      ]
-    },
-    campaign: {
-      typeFilter: null,
-      folder: "Cadence/Campaigns"
-    },
-    project: {
-      typeFilter: null,
-      folder: "Cadence/Projects",
-      fields: [
-        {
-          key: "name",
-          label: "Name",
-          primary: true
-        },
-        {
-          key: "status",
-          label: "Status",
-          type: "enum",
-          options: [
-            "active",
-            "on_hold",
-            "backlog",
-            "done",
-            "cancelled"
-          ]
-        },
-        {
-          key: "priority",
-          label: "Priority",
-          type: "enum",
-          options: [
-            "low",
-            "medium",
-            "high"
-          ]
-        },
-        {
-          key: "owner",
-          label: "Owner"
-        },
-        {
-          key: "due",
-          label: "Due",
-          type: "date"
-        }
-      ],
-      columns: [
-        "name",
-        "status",
-        "owner",
-        "due"
-      ]
-    },
-    meeting: {
-      typeFilter: null
-    },
-    "comms-thread": {
-      typeFilter: null
-    },
-    deliverable: {
-      typeFilter: null
-    },
-    feedback: {
-      typeFilter: null
-    },
-    survey: {
-      typeFilter: null
-    },
-    testimonial: {
-      typeFilter: null
-    },
-    decision: {
-      typeFilter: null
-    }
-  },
   settings: {
     modules: {
       crm: true,
@@ -19386,6 +19007,15 @@ function migrateWorkspacePlannerConfig(config) {
   const dashboards = next.dashboards && typeof next.dashboards === "object" && !Array.isArray(next.dashboards) ? Object.assign({}, next.dashboards) : null;
   if (dashboards) {
     let moved = false;
+    const nestedPlanner = dashboards.planner;
+    if (nestedPlanner && typeof nestedPlanner === "object" && !Array.isArray(nestedPlanner) && Object.keys(nestedPlanner).some((id) => String(id || "").startsWith("planner."))) {
+      Object.entries(nestedPlanner).forEach(([surfaceId, config2]) => {
+        if (!String(surfaceId || "").startsWith("planner.")) return;
+        if (planner[surfaceId] == null) planner[surfaceId] = config2;
+      });
+      delete dashboards.planner;
+      moved = true;
+    }
     Object.keys(dashboards).forEach((surfaceId) => {
       if (!String(surfaceId || "").startsWith("planner.")) return;
       if (planner[surfaceId] == null) planner[surfaceId] = dashboards[surfaceId];
@@ -19710,6 +19340,7 @@ var PLUGIN_DIR = "";
 var WORKSPACE_CONFIG_PATH = "Cadence/workspace.json";
 var WORKSPACE_BACKUP_PATH = "Cadence/workspace.backup.json";
 var WORKSPACE_CONFIG = {};
+var WORKSPACE_LOAD_FAILED = false;
 function setWorkspaceConfig(config) {
   WORKSPACE_CONFIG = config || {};
 }
@@ -20176,18 +19807,21 @@ async function saveWorkspaceConfig(app, jsonText) {
   await adapter.write(WORKSPACE_CONFIG_PATH, JSON.stringify(parsed, null, 2));
   WORKSPACE_CONFIG = parsed;
   WORKSPACE_HAS_NAVIGATION = Array.isArray(parsed.navigation?.groups);
+  WORKSPACE_LOAD_FAILED = false;
   return parsed;
 }
 async function loadWorkspaceConfig(app) {
   WORKSPACE_CONFIG = {};
   WORKSPACE_HAS_NAVIGATION = false;
+  WORKSPACE_LOAD_FAILED = false;
   if (!await app.vault.adapter.exists(WORKSPACE_CONFIG_PATH)) return WORKSPACE_CONFIG;
   try {
     WORKSPACE_CONFIG = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(await app.vault.adapter.read(WORKSPACE_CONFIG_PATH))));
     WORKSPACE_HAS_NAVIGATION = Array.isArray(WORKSPACE_CONFIG.navigation?.groups);
   } catch (e) {
-    new obsidian.Notice(`BOB Workspace: workspace.json error - ${e.message}`);
+    new obsidian.Notice(`BOB Workspace: workspace.json failed to load and is being left untouched - ${e.message}`, 0);
     WORKSPACE_CONFIG = {};
+    WORKSPACE_LOAD_FAILED = true;
   }
   return WORKSPACE_CONFIG;
 }
@@ -25084,9 +24718,15 @@ var CadenceWorkspaceSetupModal = class extends obsidian13.Modal {
     applyBtn.disabled = true;
     applyBtn.addEventListener("click", async () => {
       if (!this.selected) return;
-      const meta = await applyWorkspaceTemplate(this.app, this.plugin, this.selected);
-      this.close();
-      new obsidian13.Notice(`BOB Workspace: "${meta.label}" template applied.`);
+      applyBtn.disabled = true;
+      try {
+        const meta = await applyWorkspaceTemplate(this.app, this.plugin, this.selected);
+        this.close();
+        new obsidian13.Notice(`BOB Workspace: "${meta.label}" template applied.`);
+      } catch (e) {
+        applyBtn.disabled = false;
+        new obsidian13.Notice(`BOB Workspace: could not apply template - ${e?.message || e}`);
+      }
     });
     const skipBtn = footer.createEl("button", { text: "Skip for now", cls: "cad-setup-skip" });
     skipBtn.addEventListener("click", async () => {
@@ -32163,7 +31803,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     const tabPanels = {};
     const tabBtns = {};
     TAB_IDS.forEach((id, i) => {
-      const btn = tabBar.createEl("button", { cls: "cad-settings-tab", text: TAB_LABELS[i] });
+      const btn = tabBar.createEl("button", { cls: "cad-settings-tab", text: TAB_LABELS[i], attr: { "data-tab": id } });
       if (id === this._activeSettingsTab) btn.addClass("is-active");
       btn.addEventListener("click", () => {
         TAB_IDS.forEach((tid) => {
@@ -32258,7 +31898,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
             await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
           }
         }
-        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        await this.plugin.reloadWorkspaceConfiguration();
         this.plugin.refreshOpenViews();
         if (bootstrapFailed.length) {
           new obsidian18.Notice(`BOB Workspace: workspace.json saved and applied. Skipped schema for: ${bootstrapFailed.join("; ")}`);
@@ -32745,7 +32385,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       }
       workspaceTa.value = JSON.stringify(config, null, 2);
       await saveWorkspaceConfig(this.plugin.app, workspaceTa.value);
-      await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+      await this.plugin.reloadWorkspaceConfiguration();
       this.plugin.refreshOpenViews();
     };
     let activeDragPayload = null;
@@ -34422,7 +34062,7 @@ var CadencePlugin = class extends obsidian20.Plugin {
       id: "reload-workspace-config",
       name: "Reload workspace.json",
       callback: async () => {
-        await reloadEntityConfiguration(this.app, this.settings);
+        await this.reloadWorkspaceConfiguration();
         this.refreshOpenViews();
         new obsidian20.Notice("BOB Workspace: workspace configuration reloaded.");
       }
@@ -34636,11 +34276,21 @@ var CadencePlugin = class extends obsidian20.Plugin {
     await this.saveData(dataToSave);
     const workspaceConfig = validateWorkspaceConfig(Object.assign({}, WORKSPACE_CONFIG, { settings: workspaceSettings }));
     setWorkspaceConfig(workspaceConfig);
-    if (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH) || Object.keys(workspaceSettings).length) {
+    if (!WORKSPACE_LOAD_FAILED && (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH) || Object.keys(workspaceSettings).length)) {
       await saveWorkspaceConfig(this.app, JSON.stringify(workspaceConfig, null, 2));
     }
     setCurrentCurrency(this.settings.currency);
     syncEntityFolders(this.settings);
+  }
+  // Refresh WORKSPACE_CONFIG from disk, then re-overlay workspace-owned settings
+  // onto plugin.settings BEFORE rebuilding registries — so a manual workspace.json
+  // edit or a Settings "Save and apply" is reflected in this.settings and not
+  // reverted by the next saveSettings(). Mirrors the tail of loadSettings().
+  async reloadWorkspaceConfiguration() {
+    await loadWorkspaceConfig(this.app);
+    this.settings = applyWorkspaceOwnedSettings(this.settings);
+    setCurrentCurrency(this.settings.currency);
+    await reloadEntityConfiguration(this.app, this.settings);
   }
 };
 

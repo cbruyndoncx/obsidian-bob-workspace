@@ -219,7 +219,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const tabPanels: Record<string, HTMLDivElement> = {};
     const tabBtns: Record<string, HTMLButtonElement> = {};
     TAB_IDS.forEach((id, i) => {
-      const btn = tabBar.createEl('button', { cls: 'cad-settings-tab', text: TAB_LABELS[i] });
+      const btn = tabBar.createEl('button', { cls: 'cad-settings-tab', text: TAB_LABELS[i], attr: { 'data-tab': id } });
       if (id === this._activeSettingsTab) btn.addClass('is-active');
       btn.addEventListener('click', () => {
         TAB_IDS.forEach((tid) => {
@@ -317,7 +317,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
           }
         }
-        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        await this.plugin.reloadWorkspaceConfiguration();
         this.plugin.refreshOpenViews();
         if (bootstrapFailed.length) {
           new obsidian.Notice(`BOB Workspace: workspace.json saved and applied. Skipped schema for: ${bootstrapFailed.join('; ')}`);
@@ -819,7 +819,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       }
       workspaceTa.value = JSON.stringify(config, null, 2);
       await saveWorkspaceConfig(this.plugin.app, workspaceTa.value);
-      await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+      await this.plugin.reloadWorkspaceConfiguration();
       this.plugin.refreshOpenViews();
     };
     let activeDragPayload: NavDragPayload | null = null;
