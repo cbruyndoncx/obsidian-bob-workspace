@@ -328,6 +328,7 @@ export class CadenceAppView extends obsidian.ItemView {
   declare _secondaryTabState: Record<string, string> | undefined;
   /** Sort state per `${mode}::${entityKey}` table. */
   declare _tableSortState: Record<string, { key: string | null; dir: string }> | undefined;
+  declare _columnFilterCleanup: (() => void) | null;
   /** Client Work client/project selector state. */
   declare _clientWorkClientId: string | undefined;
   declare _clientWorkProjectId: string | undefined;
@@ -607,7 +608,14 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
+  // Dispose any open column-filter menu (appended to document.body with a
+  // document click listener) — otherwise a re-render or view close orphans it.
+  _closeColumnFilterMenu() {
+    if (this._columnFilterCleanup) this._columnFilterCleanup();
+  }
+
   async render() {
+    this._closeColumnFilterMenu();
     const root = this.containerEl.children[1];
     const previousNav = root.querySelector ? root.querySelector('.cad-app-nav') : null;
     const previousNavScrollTop = previousNav ? previousNav.scrollTop : (this._navScrollTop || 0);
@@ -1124,15 +1132,19 @@ export class CadenceAppView extends obsidian.ItemView {
       dropdown.style.position = 'fixed';
       dropdown.style.top = rect.bottom + 'px';
       dropdown.style.left = rect.left + 'px';
+      // Only one column-filter menu at a time; also lets render()/onClose dispose it.
+      this._closeColumnFilterMenu();
       document.body.appendChild(dropdown);
 
-      const close = (ev: MouseEvent) => {
-        if (!dropdown.contains(ev.target as Node)) {
-          dropdown.remove();
-          document.removeEventListener('click', close);
-        }
+      const onDocClick = (ev: MouseEvent) => {
+        if (!dropdown.contains(ev.target as Node)) this._closeColumnFilterMenu();
       };
-      setTimeout(() => document.addEventListener('click', close), 0);
+      this._columnFilterCleanup = () => {
+        dropdown.remove();
+        document.removeEventListener('click', onDocClick);
+        this._columnFilterCleanup = null;
+      };
+      setTimeout(() => document.addEventListener('click', onDocClick), 0);
     };
 
     const tableWrap = root.createDiv({ cls: 'cad-table-wrap' });
@@ -6524,7 +6536,7 @@ export class CadenceAppView extends obsidian.ItemView {
     this.render();
   }
 
-  async onClose() { /* nothing */ }
+  async onClose() { this._closeColumnFilterMenu(); }
 }
 
 /* ─────────── Settings tab ─────────── */

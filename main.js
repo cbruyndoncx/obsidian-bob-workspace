@@ -25744,7 +25744,13 @@ var CadenceAppView = class extends obsidian17.ItemView {
       return folder && (path === folder || path.startsWith(folder + "/"));
     });
   }
+  // Dispose any open column-filter menu (appended to document.body with a
+  // document click listener) — otherwise a re-render or view close orphans it.
+  _closeColumnFilterMenu() {
+    if (this._columnFilterCleanup) this._columnFilterCleanup();
+  }
   async render() {
+    this._closeColumnFilterMenu();
     const root = this.containerEl.children[1];
     const previousNav = root.querySelector ? root.querySelector(".cad-app-nav") : null;
     const previousNavScrollTop = previousNav ? previousNav.scrollTop : this._navScrollTop || 0;
@@ -26246,14 +26252,17 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       dropdown.style.position = "fixed";
       dropdown.style.top = rect.bottom + "px";
       dropdown.style.left = rect.left + "px";
+      this._closeColumnFilterMenu();
       document.body.appendChild(dropdown);
-      const close = (ev) => {
-        if (!dropdown.contains(ev.target)) {
-          dropdown.remove();
-          document.removeEventListener("click", close);
-        }
+      const onDocClick = (ev) => {
+        if (!dropdown.contains(ev.target)) this._closeColumnFilterMenu();
       };
-      setTimeout(() => document.addEventListener("click", close), 0);
+      this._columnFilterCleanup = () => {
+        dropdown.remove();
+        document.removeEventListener("click", onDocClick);
+        this._columnFilterCleanup = null;
+      };
+      setTimeout(() => document.addEventListener("click", onDocClick), 0);
     };
     const tableWrap = root.createDiv({ cls: "cad-table-wrap" });
     const table = tableWrap.createEl("table", { cls: "cad-table" });
@@ -31375,6 +31384,7 @@ Saved to ${file.path}`, 4e3);
     this.render();
   }
   async onClose() {
+    this._closeColumnFilterMenu();
   }
 };
 
