@@ -25692,7 +25692,8 @@ var CadenceAppView = class extends obsidian17.ItemView {
     this.mode = this._migrateModeId(m);
     if (this.mode === "client-work.overview") {
       const state = this._secondaryTabState || (this._secondaryTabState = {});
-      state["client-work.overview"] = "client-work.dashboard";
+      const firstTab = this._tabsForParent("client-work.overview")[0];
+      state["client-work.overview"] = firstTab ? firstTab.entityKey || firstTab.route : "client-work.dashboard";
     }
     this.detailFile = null;
     this.detailEntityKey = null;
@@ -25958,12 +25959,6 @@ var CadenceAppView = class extends obsidian17.ItemView {
       "planner.projects": () => this.renderProjectsView(content),
       "crm.dashboard": () => this.renderConfigDashboard("crm.dashboard", content),
       "crm.pipeline": () => this.renderConfigDashboard("crm.pipeline", content),
-      "crm.contacts": () => this.renderEntityList(content, "contact"),
-      "crm.clients": () => this.renderEntityList(content, "client"),
-      "crm.activities": () => this.renderEntityList(content, "activity"),
-      "prm.partners": () => this.renderEntityTabs(content, "prm.partners", "prm.partners.overview"),
-      "crm.leads": () => this.renderEntityList(content, "lead"),
-      "crm.campaigns": () => this.renderEntityTabs(content, "crm.campaigns", "crm.campaigns.overview"),
       "prm.analytics": () => this.renderPRMAnalytics(content),
       "reports.pipeline": () => this.renderConfigDashboard("reports.pipeline", content),
       "reports.sales": () => this.renderConfigDashboard("reports.sales", content),
@@ -25975,14 +25970,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
       "misc.dashboard-editor": () => this.renderDashboardEditor(content),
       "misc.export": () => this.renderExport(content),
       "misc.import": () => this.renderImport(content),
-      "ai.playbooks": () => this.renderEntityList(content, "playbook"),
-      "ai.skills": () => this.renderEntityList(content, "skill"),
-      "finance.invoices": () => this.renderEntityTabs(content, "finance.invoices", "invoice"),
-      "finance.gl": () => this.renderEntityTabs(content, "finance.gl", "finance.gl.overview"),
-      "finance.setup": () => this.renderEntityTabs(content, "finance.setup", "finance.setup.overview"),
-      "client-work.overview": () => this.renderClientWorkWorkspace(content),
-      "procurement.suppliers": () => this.renderEntityTabs(content, "procurement.suppliers", "procurement.overview"),
-      "tax.overview": () => this.renderEntityTabs(content, "tax.overview", "tax.dashboard")
+      "client-work.overview": () => this.renderClientWorkWorkspace(content)
     };
     if (route[this.mode]) {
       await route[this.mode]();
@@ -26683,7 +26671,9 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     const selectedClientId = this._clientWorkClientId || "";
     const selectedProjectId = this._clientWorkProjectId || "";
     const titleParts = [selectedClientId, selectedProjectId].filter(Boolean);
-    return this.renderEntityTabs(root, "client-work.overview", "client-work.dashboard", {
+    const firstTab = this._tabsForParent("client-work.overview")[0];
+    const defaultTab = firstTab ? firstTab.entityKey || firstTab.route : "client-work.dashboard";
+    return this.renderEntityTabs(root, "client-work.overview", defaultTab, {
       filter: (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId),
       forceInternal: true,
       titleSuffix: titleParts.length ? ` \xB7 ${titleParts.join(" \xB7 ")}` : "",
