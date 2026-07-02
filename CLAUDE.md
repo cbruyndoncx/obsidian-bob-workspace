@@ -365,7 +365,7 @@ Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it
 3. Add a nav item to the navigation groups (workspace.json `navigation.groups`, or `BUILTIN_NAV_GROUPS` in `src/nav.ts` for built-ins) — include `entityKey`, `folderKey`, `module`.
 4. Add to the `BUILT_SURFACES` set (`src/entities.ts`).
 5. Add a route entry in `CadenceAppView.render()` (`src/views/app-view.ts`) pointing to `renderEntityList()`.
-6. Add a `baseFiles` entry in `DEFAULT_SETTINGS` — the **filename** is what `entityBasePath` uses (e.g. `'People.base'`; see Bases). Caveat: the runtime Base-override merge (`applyBaseOverrides`) still parses `baseFiles`/`bases[key].file` verbatim rather than via `entityBasePath`, so a filename-only path won't resolve there until that is unified (see TODO).
+6. Add a `baseFiles` entry in `DEFAULT_SETTINGS` — the **filename** is what matters (e.g. `'People.base'`; see Bases). Both `entityBasePath` and the runtime Base-override merge (`applyBaseOverrides`/`applyConfiguredBaseOverrides`) resolve through `entityBasePath`, so a filename-only path composes with `basesFolder` in every path.
 7. Add inner tabs in `SECONDARY_TABS` if it belongs under a workspace.
 8. Add to `WORKBOOK_EXPORT_GROUPS` in the appropriate group's `entityKeys`.
 9. Verify schemas, custom overrides, Bases, create/edit, and import/export.

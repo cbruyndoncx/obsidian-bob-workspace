@@ -20685,7 +20685,7 @@ async function applyBaseOverrides(app, settings = {}) {
   const baseViews = settings.baseViews || {};
   for (const [entityKey, basePath] of Object.entries(baseFiles)) {
     if (!basePath || !ENTITIES[entityKey] || CONFIGURED_BASE_ENTITY_KEYS.has(entityKey)) continue;
-    const baseConfig = await parseBaseFile(app, basePath, baseViews[entityKey]);
+    const baseConfig = await parseBaseFile(app, entityBasePath(settings, entityKey), baseViews[entityKey]);
     mergeBaseConfigIntoEntity(entityKey, baseConfig);
   }
 }
@@ -20693,9 +20693,10 @@ async function applyConfiguredBaseOverrides(app, settings = {}) {
   for (const [entityKey, def] of Object.entries(WORKSPACE_CONFIG.bases || {})) {
     const basePath = def?.file || def?.base;
     if (!basePath || !ENTITIES[entityKey]) continue;
-    CONFIGURED_BASE_ENTITY_KEYS.add(entityKey);
     const viewName = entityBaseViewName(settings, entityKey);
-    const baseConfig = await parseBaseFile(app, basePath, viewName);
+    const baseConfig = await parseBaseFile(app, entityBasePath(settings, entityKey), viewName);
+    if (!baseConfig) continue;
+    CONFIGURED_BASE_ENTITY_KEYS.add(entityKey);
     mergeBaseConfigIntoEntity(entityKey, baseConfig);
   }
 }

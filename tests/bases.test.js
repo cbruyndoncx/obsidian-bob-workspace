@@ -55,6 +55,11 @@ const { resolveBasesFolder, entityBasePath, baseFileFromEntityDefinition } = san
   WORKSPACE_CONFIG.bases = { contact: { file: 'Machine/Bases/People.base' } };
   assert.strictEqual(entityBasePath({ basesFolder: 'New/Bases' }, 'contact'), 'New/Bases/People.base');
   assert.strictEqual(entityBasePath(DEFAULT_SETTINGS, 'contact'), '00-CORE/Bases/People.base');
+  // critical #5: a FILENAME-ONLY workspace.json base must compose with basesFolder
+  // (the runtime Base-override merge now resolves through entityBasePath, so this
+  // no longer parses against the vault root).
+  WORKSPACE_CONFIG.bases = { contact: { file: 'People.base' } };
+  assert.strictEqual(entityBasePath({ basesFolder: '00-CORE/Bases' }, 'contact'), '00-CORE/Bases/People.base');
   WORKSPACE_CONFIG.bases = {};
 })();
 
