@@ -1318,8 +1318,7 @@
           "entity": "meeting",
           "count": "all",
           "sub": "client conversations",
-          "accent": "sky",
-          "mode": "client-work.meetings"
+          "accent": "sky"
         },
         {
           "label": "OPEN DELIVERABLES",

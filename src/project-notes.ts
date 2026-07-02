@@ -2,8 +2,7 @@ import { startOfDay } from './utils';
 import type { App, TFile } from 'obsidian';
 
 /**
- * A parsed `## Milestones` line. NOTE: differs from the shared `Milestone`
- * type in src/types.ts — here `date` is a real `Date | null` (not an ISO
+ * A parsed `## Milestones` line: `date` is a real `Date | null` (not an ISO
  * string) and milestones carry free-form indented `notes`.
  */
 export interface ProjectMilestone {

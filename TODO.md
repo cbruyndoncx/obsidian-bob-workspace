@@ -33,22 +33,22 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 - [ ] Surface Designer (`misc.dashboard-editor`) is unreachable in every shipped template and the reference vault — configured nav replaces `BUILTIN_NAV_GROUPS`, no template includes it, no command opens it. Export/Import survive only via commands.
 - [ ] Route map overrides config: hardcoded routes in `CadenceAppView.render()` win over `workspace.json` (surface reusing id `crm.contacts` always renders entity `contact`; parents hardcode initial tabs, e.g. `renderEntityTabs(..., 'crm.campaigns.overview')`; `setMode` force-resets `client-work.overview`'s tab). `planner.today` is hardcoded to ignore dashboard config (`app-view.ts:796`).
 - [ ] Settings designers mutate live `WORKSPACE_CONFIG` from an unsaved draft (`settings-tab.ts:805-810`) — abandoning the draft leaves runtime diverged from disk.
-- [ ] Vault + bob template: stat `"mode": "client-work.meetings"` targets a nonexistent surface — click navigates Home. Use a real tab route or remove.
+- [x] Vault + bob template: stat `"mode": "client-work.meetings"` targets a nonexistent surface — click navigates Home. ✅ DONE (2026-07-02) — removed the broken `mode` from the MEETINGS stat in `workspace-bob.json` and `workspace-cadence.json` (the Meetings tab has `route: null`, so no valid surface target exists; the stat is now non-clickable rather than misleading). Note: the real vault's `workspace.json` still carries this — apply the same removal there (or re-apply a fixed template).
 - [ ] `srm`/`tax` module remnants in `DEFAULT_SETTINGS.modules` (`src/settings.ts:42`), settings UI (`settings-tab.ts:1379,1394`), `_visibleNavGroups` (`app-view.ts:415`); the three module-default lists drift from each other. Only `_migrateModeId`'s `srm.suppliers→procurement.suppliers` is legit migration code.
 - [ ] Orphaned settings: `showSecondaryNav`/`showSetupNav` read but no UI writes them; `dailyNoteFormat` defined/typed but read by nothing (`dailyNotePath` hardcodes `ymd()`).
-- [ ] `src/widgets.ts:263-267` falls back to raw sparse `WORKSPACE_CONFIG.settings` (not default-merged) when settings aren't passed — latent wrong-defaults bug.
+- [ ] `src/widgets.ts:263-267` falls back to raw sparse `WORKSPACE_CONFIG.settings` (not default-merged) when settings aren't passed — latent wrong-defaults bug. ⚠️ DEFERRED (2026-07-02): `resolveWidgetSource`'s `settings: PartialSettings = {}` default makes the `|| WORKSPACE_CONFIG.settings` branch effectively dead (empty `{}` is truthy), so "fixing" it changes behavior rather than hardening a default. Needs a deliberate decision on what unpassed settings should resolve to (probably `Object.assign({}, DEFAULT_SETTINGS, WORKSPACE_CONFIG.settings)`), with snapshot-behavior checks — not a blind edit.
 - [ ] Enum-filter dropdown appended to `document.body` (`app-view.ts:1143-1155`) can orphan itself + its listener on re-render/close.
 
 ## Dead code — safe removals
 
 ### TypeScript (~400+ lines)
-- [ ] `app-view.ts`: `renderDashboard` (≈6143, legacy CRM dashboard), `renderEntityKanban` (≈6037), `renderReportPipeline/Sales/Partners/Activity` (≈6303), four `_renderProductivity*Widget` (≈2868; removing them also kills `_productivitySnapshot`), `_filterEntitiesByBaseConfig` (≈1636).
-- [ ] `src/dashboards.ts:5` `INTERNAL_DASHBOARD_PROVIDERS` (never imported).
-- [ ] `src/workbook.ts:271` `importWorkbookEntitiesFromBuffer` (duplicate of the used path; `filename` param unused).
-- [ ] `src/entities.ts:792` `dealCloseByField` + the `closeByField` entity option (round-tripped, never read).
-- [ ] `src/nav.ts:110` `SURFACES_BY_ENTITY_KEY` (write-only registry).
-- [ ] `src/types.ts`: `ParsedTask` (339), `Milestone` (347), `WorkspaceConfig.entities` (304).
-- [ ] `src/bases-config.ts:165` `applyEntityDefinitions`: `injectNavigation` block (217-240, incl. the `custom.*` route it fed at `app-view.ts:857`) and `configOwnsBase` branches — sole caller passes `false`/default.
+- [ ] `app-view.ts`: `renderDashboard` (≈6143, legacy CRM dashboard), `renderEntityKanban` (≈6037), `renderReportPipeline/Sales/Partners/Activity` (≈6303), four `_renderProductivity*Widget` (≈2868; removing them also kills `_productivitySnapshot`), `_filterEntitiesByBaseConfig` (≈1636). — NOT YET (largest file; separate careful pass).
+- [x] `src/dashboards.ts:5` `INTERNAL_DASHBOARD_PROVIDERS` (never imported). ✅ DONE (2026-07-02).
+- [x] `src/workbook.ts:271` `importWorkbookEntitiesFromBuffer` (duplicate of the used path; `filename` param unused). ✅ DONE (2026-07-02).
+- [x] `src/entities.ts:792` `dealCloseByField` accessor removed ✅ DONE (2026-07-02). The `closeByField` entity **option** was KEPT — it's round-tripped through config-merge lists (`bases-config.ts`, `schema-designer.ts`) and the deal default; ripping it out would strip it from authored configs on next save. Low value, left in place.
+- [x] `src/nav.ts` `SURFACES_BY_ENTITY_KEY` (write-only registry) — export + `rebuildSurfaceLookups` assignment removed. ✅ DONE (2026-07-02).
+- [x] `src/types.ts`: `ParsedTask` + `Milestone` removed ✅ DONE (2026-07-02) (stale comments referencing `types.Milestone` updated in `project-notes.ts`/`app-view.ts`). `WorkspaceConfig.entities` KEPT — it's still read by the validator's rejection at `workspace-config.ts:98`, so it's the anchor for that error, not dead.
+- [ ] `src/bases-config.ts:165` `applyEntityDefinitions`: `injectNavigation` block (217-240, incl. the `custom.*` route it fed at `app-view.ts:857`) and `configOwnsBase` branches — sole caller passes `false`/default. — NOT YET (touches the schema-apply path; separate pass).
 - [ ] **BLOCKED-ON-OWNER** (decide: keep for hand-authored configs, or delete): legacy route ids unreachable with shipped templates — `crm.companies`, `crm.sequences`, `prm.registrations/commissions/certifications`, seven `client-work.*` routes + `_renderClientWorkEntityList`.
 
 ### CSS (37 dead classes, ~90+ lines; dynamic construction ruled out)

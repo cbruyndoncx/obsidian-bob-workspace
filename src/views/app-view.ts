@@ -197,7 +197,7 @@ interface ProjectMetaLike {
   percent: number;
   next?: MilestoneItem | null;
 }
-/** Milestone row as parsed/serialized by project-notes.ts (richer than types.Milestone). */
+/** Milestone row as parsed/serialized by project-notes.ts. */
 interface MilestoneItem {
   done: boolean;
   date?: Date | null;

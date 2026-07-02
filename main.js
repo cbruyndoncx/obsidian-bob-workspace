@@ -13089,8 +13089,7 @@ var workspace_bob_default = {
           entity: "meeting",
           count: "all",
           sub: "client conversations",
-          accent: "sky",
-          mode: "client-work.meetings"
+          accent: "sky"
         },
         {
           label: "OPEN DELIVERABLES",
@@ -15912,8 +15911,7 @@ var workspace_cadence_default = {
           entity: "meeting",
           count: "all",
           sub: "client conversations",
-          accent: "sky",
-          mode: "client-work.meetings"
+          accent: "sky"
         },
         {
           label: "OPEN DELIVERABLES",
@@ -19045,15 +19043,11 @@ function loadBuiltinDashboardDefaults() {
 var NAV_GROUPS = cloneConfig(BUILTIN_NAV_GROUPS);
 var ALL_SURFACES = [];
 var SURFACE_BY_ID = {};
-var SURFACES_BY_ENTITY_KEY = {};
 var SECONDARY_TABS = cloneConfig(BUILTIN_SECONDARY_TABS);
 var WORKBOOK_EXPORT_GROUPS = cloneConfig(BUILTIN_WORKBOOK_EXPORT_GROUPS);
 function rebuildSurfaceLookups() {
   ALL_SURFACES = NAV_GROUPS.flatMap((group) => group.items || []);
   SURFACE_BY_ID = Object.fromEntries(ALL_SURFACES.map((surface) => [surface.id, surface]));
-  SURFACES_BY_ENTITY_KEY = Object.fromEntries(
-    ALL_SURFACES.filter((surface) => surface.entityKey).map((surface) => [surface.entityKey, surface])
-  );
 }
 rebuildSurfaceLookups();
 function resetWorkspaceRegistries() {

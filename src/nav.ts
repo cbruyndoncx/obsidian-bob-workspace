@@ -122,16 +122,12 @@ export function loadBuiltinDashboardDefaults(): Record<string, DashboardConfig> 
 export let NAV_GROUPS: NavGroup[] = cloneConfig(BUILTIN_NAV_GROUPS);
 export let ALL_SURFACES: NavSurface[] = [];
 export let SURFACE_BY_ID: Record<string, NavSurface> = {};
-export let SURFACES_BY_ENTITY_KEY: Record<string, NavSurface> = {};
 export let SECONDARY_TABS: Record<string, SecondaryTab[]> = cloneConfig(BUILTIN_SECONDARY_TABS);
 export let WORKBOOK_EXPORT_GROUPS: WorkbookExportGroup[] = cloneConfig(BUILTIN_WORKBOOK_EXPORT_GROUPS);
 
 export function rebuildSurfaceLookups(): void {
   ALL_SURFACES = NAV_GROUPS.flatMap((group) => group.items || []);
   SURFACE_BY_ID = Object.fromEntries(ALL_SURFACES.map((surface): [string, NavSurface] => [surface.id, surface]));
-  SURFACES_BY_ENTITY_KEY = Object.fromEntries(
-    ALL_SURFACES.filter((surface) => surface.entityKey).map((surface): [string, NavSurface] => [surface.entityKey, surface])
-  );
 }
 
 rebuildSurfaceLookups();

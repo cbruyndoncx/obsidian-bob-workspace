@@ -2,22 +2,6 @@ import { loadBuiltinDashboardDefaults } from './nav';
 import type { DashboardCard, DashboardConfig, WidgetSourceConfig } from './types';
 export const BUILTIN_DASHBOARD_DEFAULTS: Record<string, DashboardConfig> = loadBuiltinDashboardDefaults();
 
-export const INTERNAL_DASHBOARD_PROVIDERS = [
-  'briefing',
-  'home-inbox',
-  'home-today',
-  'home-week',
-  'home-upcoming',
-  'home-partners',
-  'home-projects',
-  'home-pipeline',
-  'home-activities',
-  'productivity-summary',
-  'productivity-trend',
-  'productivity-weekday',
-  'productivity-notes',
-];
-
 export const PURE_DASHBOARD_WIDGET_TYPES = [
   'list',
   'metric',

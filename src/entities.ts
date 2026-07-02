@@ -789,7 +789,6 @@ export const DEAL_STAGES: string[] = ['lead', 'qualified', 'proposal', 'negotiat
 /* Deal field accessors — read entity definition overrides with safe defaults */
 export function dealStageField(def: EntityDef): string    { return def.stageField    || 'stage'; }
 export function dealValueField(def: EntityDef): string    { return def.valueField    || 'deal_value'; }
-export function dealCloseByField(def: EntityDef): string  { return def.closeByField  || 'expected_close'; }
 export function dealWonStages(def: EntityDef): string[]     { return def.wonStages     || ['won']; }
 export function dealLostStages(def: EntityDef): string[]    { return def.lostStages    || ['lost']; }
 export function dealTerminalStages(def: EntityDef): string[]{ return [...dealWonStages(def), ...dealLostStages(def)]; }

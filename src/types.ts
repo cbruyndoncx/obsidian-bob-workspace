@@ -336,16 +336,3 @@ export interface SchemaSource {
 
 /* ── Misc shared shapes ───────────────────────────────────── */
 
-export interface ParsedTask {
-  id: string;
-  title: string;
-  done: boolean;
-  date?: string;
-  time?: string;
-}
-
-export interface Milestone {
-  title: string;
-  done: boolean;
-  date?: string;
-}
