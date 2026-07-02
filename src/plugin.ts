@@ -464,7 +464,9 @@ export class CadencePlugin extends obsidian.Plugin {
     // explicit "Save and apply" goes through saveWorkspaceConfig directly, which
     // clears the guard once the file is valid again.
     if (!WORKSPACE_LOAD_FAILED && (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH) || Object.keys(workspaceSettings).length)) {
-      await saveWorkspaceConfig(this.app, JSON.stringify(workspaceConfig, null, 2));
+      // Incidental settings-only write (reminder tick, selector, toggle): don't
+      // snapshot the backup — keep it pinned to the last deliberate structural edit.
+      await saveWorkspaceConfig(this.app, JSON.stringify(workspaceConfig, null, 2), false);
     }
     setCurrentCurrency(this.settings.currency);
     syncEntityFolders(this.settings);

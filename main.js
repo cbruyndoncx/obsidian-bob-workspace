@@ -19792,10 +19792,10 @@ function persistedWorkspaceOwnedSettings(settings = {}) {
   });
   return persisted;
 }
-async function saveWorkspaceConfig(app, jsonText) {
+async function saveWorkspaceConfig(app, jsonText, writeBackup = true) {
   const parsed = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(jsonText)));
   const adapter = app.vault.adapter;
-  if (await adapter.exists(WORKSPACE_CONFIG_PATH)) {
+  if (writeBackup && await adapter.exists(WORKSPACE_CONFIG_PATH)) {
     await adapter.write(WORKSPACE_BACKUP_PATH, await adapter.read(WORKSPACE_CONFIG_PATH));
   }
   await adapter.write(WORKSPACE_CONFIG_PATH, JSON.stringify(parsed, null, 2));
@@ -33948,7 +33948,7 @@ var CadencePlugin = class extends obsidian20.Plugin {
     const workspaceConfig = validateWorkspaceConfig(Object.assign({}, WORKSPACE_CONFIG, { settings: workspaceSettings }));
     setWorkspaceConfig(workspaceConfig);
     if (!WORKSPACE_LOAD_FAILED && (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH) || Object.keys(workspaceSettings).length)) {
-      await saveWorkspaceConfig(this.app, JSON.stringify(workspaceConfig, null, 2));
+      await saveWorkspaceConfig(this.app, JSON.stringify(workspaceConfig, null, 2), false);
     }
     setCurrentCurrency(this.settings.currency);
     syncEntityFolders(this.settings);

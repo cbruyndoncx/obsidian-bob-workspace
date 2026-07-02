@@ -521,10 +521,15 @@ export function persistedWorkspaceOwnedSettings(settings: PartialSettings = {}):
   return persisted;
 }
 
-export async function saveWorkspaceConfig(app: App, jsonText: string): Promise<WorkspaceConfig> {
+// `writeBackup` snapshots the current file into workspace.backup.json before
+// overwriting. Deliberate structural edits (the settings editor, template apply)
+// pass true; incidental settings-only saves (saveSettings — reminder ticks,
+// dashboard selectors, toggles) pass false, so those don't churn the backup and
+// "Restore backup" keeps the last intentional state.
+export async function saveWorkspaceConfig(app: App, jsonText: string, writeBackup = true): Promise<WorkspaceConfig> {
   const parsed = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(jsonText)) as WorkspaceConfig);
   const adapter = app.vault.adapter;
-  if (await adapter.exists(WORKSPACE_CONFIG_PATH)) {
+  if (writeBackup && await adapter.exists(WORKSPACE_CONFIG_PATH)) {
     await adapter.write(WORKSPACE_BACKUP_PATH, await adapter.read(WORKSPACE_CONFIG_PATH));
   }
   await adapter.write(WORKSPACE_CONFIG_PATH, JSON.stringify(parsed, null, 2));
