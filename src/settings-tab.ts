@@ -309,15 +309,21 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       try {
         const parsed = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(workspaceTa.value)));
         await saveWorkspaceConfig(this.plugin.app, workspaceTa.value);
+        let bootstrapFailed: string[] = [];
         if (parsed.schemas?.enabled) {
           const bootstrap = await bootstrapCanonicalSchemaSourcesIfMissing(this.plugin.app, this.plugin.settings);
+          bootstrapFailed = bootstrap.failed || [];
           if (bootstrap.count) {
             await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
           }
         }
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
-        new obsidian.Notice('BOB Workspace: workspace.json saved and applied.');
+        if (bootstrapFailed.length) {
+          new obsidian.Notice(`BOB Workspace: workspace.json saved and applied. Skipped schema for: ${bootstrapFailed.join('; ')}`);
+        } else {
+          new obsidian.Notice('BOB Workspace: workspace.json saved and applied.');
+        }
         this.display();
       } catch (e) {
         setWorkspaceStatus(`Save failed: ${e.message}`, false);

@@ -124,9 +124,9 @@ inventory we should aim to preserve or rebuild from config:
 | `reports.activity` | Metric stats + recent activity cards | Covered | This is the simplest report surface. |
 
 The rule of thumb is now clear: if a surface is not covered by metric,
-list/card-list, merge, bar-chart, kanban, markdown, actions, selector,
-date-range, or Base-backed widgets, add a widget primitive rather than a
-hardcoded dashboard.
+gauge, progress, heatmap, list/card-list, merge, bar-chart, kanban, markdown,
+actions, selector, date-range, or Base-backed widgets, add a widget primitive
+rather than a hardcoded dashboard.
 
 ## Implementation Plan
 

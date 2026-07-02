@@ -169,11 +169,21 @@ export async function bootstrapCanonicalSchemaSources(app: App, settings: Partia
   const keys = bootstrapSchemaEntityKeys(app, WORKSPACE_CONFIG, opts);
   const written: string[] = [];
   const skipped: string[] = [];
+  const failed: string[] = [];
   for (const entityKey of keys) {
     const def = ENTITIES[entityKey];
     if (!def) continue;
     const schemaPath = `${folder}/${entityKey}.yaml`;
-    const schema = validateSourceSchemaDefinition(schemaSourceFromEntityDefinition(entityKey, def));
+    // A single entity whose generated schema is incomplete (e.g. a schema/workspace
+    // derived record type with no resolvable folder -> empty location_pattern) must
+    // not abort the whole bootstrap, which would block "Save and apply" entirely.
+    let schema: SourceSchema;
+    try {
+      schema = validateSourceSchemaDefinition(schemaSourceFromEntityDefinition(entityKey, def));
+    } catch (e) {
+      failed.push(`${entityKey}: ${e instanceof Error ? e.message : String(e)}`);
+      continue;
+    }
     if (await app.vault.adapter.exists(schemaPath)) {
       skipped.push(schemaPath);
       continue;
@@ -188,6 +198,7 @@ export async function bootstrapCanonicalSchemaSources(app: App, settings: Partia
     written,
     skippedPaths: skipped,
     entityKeys: keys,
+    failed,
   };
 }
 
@@ -200,6 +211,7 @@ export async function bootstrapCanonicalSchemaSourcesIfMissing(app: App, setting
     written: [],
     skippedPaths: [],
     entityKeys: loaded.schemas.map((item) => item.schema.entity).sort(),
+    failed: [],
     alreadyPresent: true,
   };
   const result = await bootstrapCanonicalSchemaSources(app, settings, opts);

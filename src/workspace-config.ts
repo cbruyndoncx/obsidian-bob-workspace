@@ -167,6 +167,21 @@ export function dashboardWidgetSchema(kind: string): DashboardWidgetSchema | nul
       requiresEntityOrSource: true,
       supports: ['entity', 'source', 'groupBy', 'groups', 'columns', 'metric', 'field', 'limit'],
     },
+    gauge: {
+      label: 'Gauge',
+      allowSourceOnly: true,
+      supports: ['entity', 'source', 'field', 'metric', 'value', 'max', 'target', 'suffix', 'label', 'sub'],
+    },
+    progress: {
+      label: 'Progress',
+      allowSourceOnly: true,
+      supports: ['entity', 'source', 'field', 'metric', 'value', 'max', 'target', 'suffix', 'label', 'sub'],
+    },
+    heatmap: {
+      label: 'Heatmap',
+      allowSourceOnly: true,
+      supports: ['entity', 'source', 'dateField', 'field', 'metric', 'days', 'columns', 'empty'],
+    },
     kanban: {
       label: 'Kanban',
       allowSourceOnly: true,
@@ -378,8 +393,11 @@ export function validateDashboardCard(card: DashboardCard, path: string): void {
       }
     }
   }
-  if (card.columns != null && !Array.isArray(card.columns)) {
+  if (card.columns != null && kind !== 'heatmap' && !Array.isArray(card.columns)) {
     throw new Error(`${path}.columns must be an array`);
+  }
+  if (kind === 'heatmap' && card.columns != null && !(typeof card.columns === 'number' || /^\d+$/.test(String(card.columns)))) {
+    throw new Error(`${path}.columns must be a number`);
   }
   if (card.groups != null && !Array.isArray(card.groups)) {
     throw new Error(`${path}.groups must be an array`);
@@ -627,4 +645,3 @@ export function normalizeDashboardConfigShape<T>(value: T): T {
   });
   return out as T;
 }
-

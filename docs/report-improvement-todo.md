@@ -2,13 +2,13 @@
 
 Audience: junior developer working on BOB Workspace report configuration.
 
-Goal: make Reports analytical and useful without adding new widget types first. Use the existing dashboard/report widget engine and edit `templates/workspace-bob.json` plus the active installed `workspace.json` during vault testing.
+Goal: make Reports analytical and useful with the dashboard/report widget engine. Use native widgets first, then edit `templates/workspace-bob.json` plus the active installed `workspace.json` during vault testing.
 
 ## Ground Rules
 
 - Reports are configured under `dashboards["reports.*"]` with `kind: "report"`.
 - Do not create a separate `reports` config block unless the runtime is changed to support it.
-- Prefer current widgets: `metric`, `bar-chart`, `list`, `kanban`, `selector`, `date-range`, `markdown`, `base-embed`, and `base-view`.
+- Prefer current widgets: `metric`, `gauge`, `progress`, `heatmap`, `bar-chart`, `list`, `kanban`, `selector`, `date-range`, `markdown`, `base-embed`, and `base-view`.
 - Avoid duplicating operational dashboards. A report should answer performance, risk, trend, or review questions.
 - After each config change, validate JSON and run:
 
@@ -69,6 +69,9 @@ node tests/run-tests.js
 
 - [x] Keep current built-in productivity stats and trend charts.
 - [x] Add a completion-rate metric from the built-in productivity snapshot.
+- [x] Add a native `gauge` for completion score.
+- [x] Add a native `progress` widget for active days built.
+- [x] Add a native `heatmap` for content cadence.
 - [x] Add a task split by project or context if TaskNotes metadata supports it.
 - [x] Add a list of overdue or high-priority open tasks.
 - [x] Add a `markdown` block explaining the time window and completion logic.

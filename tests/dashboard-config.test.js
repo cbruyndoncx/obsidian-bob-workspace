@@ -56,14 +56,22 @@ const {
     title: 'Pipeline',
     controls: [{ kind: 'selector', key: 'groupBy' }],
     stats: [{ label: 'Open', entity: 'deal', count: 'open' }],
-    layout: [[{ kind: 'kanban', entity: 'deal' }]],
+    layout: [[
+      { kind: 'kanban', entity: 'deal' },
+      { kind: 'gauge', title: 'Score', value: 80, max: 100 },
+      { kind: 'progress', title: 'Built', value: 66, max: 100 },
+      { kind: 'heatmap', title: 'Cadence', items: [{ date: '2026-07-01', value: 1 }], columns: 7 },
+    ]],
   };
   validateDashboardConfig(config, 'dashboards.reports.pipeline');
   const summary = summarizeDashboardBlueprint('reports.pipeline', config);
   assert.strictEqual(summary.kind, 'report');
   assert.ok(summary.widgetKinds.includes('kanban'));
+  assert.ok(summary.widgetKinds.includes('gauge'));
+  assert.ok(summary.widgetKinds.includes('progress'));
+  assert.ok(summary.widgetKinds.includes('heatmap'));
   assert.ok(summary.widgetKinds.includes('selector'));
-  assert.strictEqual(countDashboardCards(config), 1);
+  assert.strictEqual(countDashboardCards(config), 4);
 })();
 
 (() => {

@@ -262,6 +262,23 @@ interface BarChartEntry {
   meta?: string;
 }
 
+/** Scalar value normalized for gauge/progress widgets. */
+interface ScalarWidgetValue {
+  value: number;
+  max: number;
+  percent: number;
+  label: string;
+  sub: string;
+  suffix: string;
+}
+
+/** One date bucket in the streak heatmap widget. */
+interface HeatmapBucket {
+  date: Date;
+  key: string;
+  value: number;
+}
+
 /**
  * Runtime shape of `EntityDef.baseView` / `EntityDef.externalBaseView` as set
  * by parseBaseFile() (src/bases-parse.ts) — `{ type, name, basePath }`.
@@ -2214,6 +2231,7 @@ export class CadenceAppView extends obsidian.ItemView {
         .reverse()
         .map((item: Frontmatter) => ({
           title: fmtValue(item.date, 'date'),
+          date: item.date,
           meta: `done ${item.done} · open ${item.open}${item.jChars ? ` · journal ${item.jChars}` : ''}`,
           value: Number(item.done) || 0,
           values: {
@@ -2303,7 +2321,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   async _renderWidgetByKind(col: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
-    const kind = String(card.kind || '').trim();
+    const kind = String(card.kind || '').trim().toLowerCase();
     if (!kind) return false;
     if (kind === 'kanban') {
       await this._renderKanbanWidget(col, card, getWidgetEntities);
@@ -2315,6 +2333,18 @@ export class CadenceAppView extends obsidian.ItemView {
     }
     if (kind === 'bar-chart' || kind === 'chart-bar') {
       await this._renderBarChartWidget(col, card, getWidgetEntities);
+      return true;
+    }
+    if (kind === 'gauge' || kind === 'score-gauge' || kind === 'dial') {
+      await this._renderGaugeWidget(col, card, getWidgetEntities);
+      return true;
+    }
+    if (kind === 'progress' || kind === 'progress-bar') {
+      await this._renderProgressWidget(col, card, getWidgetEntities);
+      return true;
+    }
+    if (kind === 'heatmap' || kind === 'streak-heatmap') {
+      await this._renderHeatmapWidget(col, card, getWidgetEntities);
       return true;
     }
     if (kind === 'base-link') {
@@ -3142,6 +3172,241 @@ export class CadenceAppView extends obsidian.ItemView {
     const hint = body.createDiv({ cls: 'cad-selector-hint' });
     hint.createSpan({ text: `${key}: ` });
     hint.createSpan({ cls: 'cad-selector-current', text: state[presetKey] || current });
+  }
+
+  _coerceFiniteNumber(value: unknown, fallback = 0) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  _normalizePercent(value: number, max = 100) {
+    const safeMax = Math.max(1, Number(max) || 100);
+    return Math.max(0, Math.min(100, Math.round((value / safeMax) * 100)));
+  }
+
+  _explicitScalarValue(card: CardLike): number | null {
+    for (const key of ['value', 'score', 'percent', 'pct', 'current']) {
+      if (card[key] === undefined || card[key] === null || card[key] === '') continue;
+      const n = Number(card[key]);
+      if (Number.isFinite(n)) return n;
+    }
+    return null;
+  }
+
+  _aggregateEntitiesForScalar(card: CardLike, resolved: ResolvedWidgetSource): number {
+    const entities = resolved.entities || [];
+    const entityKey = resolved.entityKey || card.entity || '';
+    const def = resolved.def || ENTITIES[entityKey] || null;
+    const field = String(card.field || card.valueField || '').trim();
+    const metric = String(card.metric || card.aggregate || (field ? 'avg' : 'count')).trim().toLowerCase();
+    const numericValue = (entity: EntityRecord) => Number(entityValue(entity, field, def)) || 0;
+    const values = field ? entities.map(numericValue).filter((value) => Number.isFinite(value)) : [];
+    if (metric === 'sum') return values.reduce((sum, value) => sum + value, 0);
+    if (metric === 'min') return values.length ? Math.min(...values) : 0;
+    if (metric === 'max') return values.length ? Math.max(...values) : 0;
+    if (metric === 'filled') return field ? entities.filter((entity) => hasBaseValue(entityValue(entity, field, def))).length : 0;
+    if (metric === 'empty') return field ? entities.filter((entity) => !hasBaseValue(entityValue(entity, field, def))).length : 0;
+    if (metric === 'open') return entityKey ? entities.filter((entity) => this._isOpenEntity(entity, entityKey)).length : 0;
+    if (metric === 'unique' || metric === 'uniquecount') {
+      return field ? new Set(entities.map((entity) => String(entityValue(entity, field, def) || '').trim()).filter(Boolean)).size : 0;
+    }
+    if (metric === 'ratio') {
+      const numeratorSpec = card.numerator ?? card.ratio?.numerator ?? card.ratio?.top ?? card.ratio?.value;
+      const denominatorSpec = card.denominator ?? card.ratio?.denominator ?? card.ratio?.bottom ?? card.ratio?.total;
+      const resolveRatioValue = (spec: unknown) => {
+        if (typeof spec === 'number') return spec;
+        if (typeof spec === 'string' && spec.trim()) {
+          return entities.reduce((sum, entity) => sum + (Number(entityValue(entity, spec.trim(), def)) || 0), 0);
+        }
+        return 0;
+      };
+      const numerator = resolveRatioValue(numeratorSpec);
+      const denominator = resolveRatioValue(denominatorSpec);
+      return denominator === 0 ? 0 : Math.round((numerator / denominator) * 100);
+    }
+    if (metric === 'avg') return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    return entities.length;
+  }
+
+  async _resolveScalarWidgetValue(card: CardLike, getWidgetEntities: GetWidgetEntities): Promise<ScalarWidgetValue> {
+    const max = Math.max(1, this._coerceFiniteNumber(card.max ?? card.target ?? card.total, 100));
+    let value = this._explicitScalarValue(card);
+    let resolved: ResolvedWidgetSource | null = null;
+    const field = String(card.field || card.valueField || card.metric || '').trim();
+    const sourceSpec = this._widgetSourceSpec(card, card.entity);
+    const hasSource = !!card.source || !!card.entity || !!sourceSpec?.builtIn || !!sourceSpec?.mode;
+
+    if (value == null && hasSource) {
+      resolved = await getWidgetEntities(sourceSpec, card.entity).catch((): null => null);
+      const builtInData = resolved?.metadata?.builtInData || resolved?.metadata?.providerData || null;
+      if (builtInData && field && Object.prototype.hasOwnProperty.call(builtInData, field)) {
+        value = Number(builtInData[field]) || 0;
+      } else if (resolved?.source?.mode === 'built-in' || resolved?.metadata?.builtIn) {
+        const rows = this._resolveBuiltInRows(card, resolved);
+        const metric = String(card.metric || card.aggregate || 'avg').trim().toLowerCase();
+        const values = rows.map((row) => dashboardProviderRowValue(row, field)).filter((n) => Number.isFinite(n));
+        if (metric === 'sum') value = values.reduce((sum, n) => sum + n, 0);
+        else if (metric === 'count') value = rows.length;
+        else if (metric === 'min') value = values.length ? Math.min(...values) : 0;
+        else if (metric === 'max') value = values.length ? Math.max(...values) : 0;
+        else value = values.length ? values.reduce((sum, n) => sum + n, 0) / values.length : 0;
+      } else if (resolved) {
+        value = this._aggregateEntitiesForScalar(card, resolved);
+      }
+    }
+
+    value = Number.isFinite(Number(value)) ? Number(value) : 0;
+    const percent = this._normalizePercent(value, max);
+    const suffix = String(card.suffix ?? (max === 100 ? '%' : '')).trim();
+    const label = String(card.label || card.title || '').trim();
+    const sub = String(card.sub || card.subtitle || card.description || '').trim();
+    return { value, max, percent, label, sub, suffix };
+  }
+
+  _formatScalarValue(resolved: ScalarWidgetValue, card: CardLike) {
+    if (card.format === 'currency') return fmtValue(resolved.value, 'currency');
+    if (card.format === 'number') return fmtValue(resolved.value, 'number');
+    const display = Math.round(resolved.value * 10) / 10;
+    return `${Number.isInteger(display) ? String(display) : display.toFixed(1)}${resolved.suffix}`;
+  }
+
+  async _renderGaugeWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
+    const resolved = await this._resolveScalarWidgetValue(card, getWidgetEntities);
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-gauge-card' });
+    this._applyCardTone(cardEl, Object.assign({ kind: 'gauge' }, card));
+    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
+    head.createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label || 'Gauge').trim() });
+    head.createSpan({ cls: 'cad-widget-catalog-badge', text: `${resolved.percent}%` });
+    const body = cardEl.createDiv({ cls: 'cad-dash-card-body cad-gauge-body' });
+    if (card.description || card.subtitle) {
+      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+    }
+    const gauge = body.createDiv({ cls: 'cad-gauge' });
+    gauge.dataset.pctBand = pctBand(resolved.percent);
+    gauge.style.setProperty('--cad-gauge-pct', `${resolved.percent}%`);
+    gauge.title = `${resolved.percent}% of ${resolved.max}`;
+    const center = gauge.createDiv({ cls: 'cad-gauge-center' });
+    center.createDiv({ cls: 'cad-gauge-value', text: this._formatScalarValue(resolved, card) });
+    center.createDiv({ cls: 'cad-gauge-label', text: String(card.caption || resolved.label || 'score').trim() });
+    if (resolved.sub) body.createDiv({ cls: 'cad-gauge-sub', text: resolved.sub });
+  }
+
+  async _renderProgressWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
+    const resolved = await this._resolveScalarWidgetValue(card, getWidgetEntities);
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-progress-card' });
+    this._applyCardTone(cardEl, Object.assign({ kind: 'progress' }, card));
+    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
+    head.createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label || 'Progress').trim() });
+    head.createSpan({ cls: 'cad-widget-catalog-badge', text: `${resolved.percent}%` });
+    const body = cardEl.createDiv({ cls: 'cad-dash-card-body cad-progress-body' });
+    if (card.description || card.subtitle) {
+      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+    }
+    const top = body.createDiv({ cls: 'cad-progress-widget-label' });
+    top.createSpan({ text: String(card.label || resolved.label || 'Built').trim() });
+    top.createSpan({ cls: 'cad-progress-widget-value', text: this._formatScalarValue(resolved, card) });
+    const track = body.createDiv({ cls: 'cad-progress-widget-track' });
+    track.dataset.pctBand = pctBand(resolved.percent);
+    const fill = track.createDiv({ cls: 'cad-progress-widget-fill' });
+    fill.style.width = `${resolved.percent}%`;
+    if (resolved.sub) body.createDiv({ cls: 'cad-progress-widget-sub', text: resolved.sub });
+  }
+
+  _heatmapDateFromValue(value: unknown): Date | null {
+    if (value instanceof Date && !isNaN(value.getTime())) return startOfDay(value);
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : startOfDay(d);
+    }
+    const text = String(value || '').trim();
+    if (!text) return null;
+    const d = new Date(text);
+    return isNaN(d.getTime()) ? null : startOfDay(d);
+  }
+
+  _heatmapValueFromRow(row: Frontmatter, field: string) {
+    if (field) return dashboardProviderRowValue(row, field);
+    return dashboardProviderRowValue(row, '');
+  }
+
+  async _resolveHeatmapBuckets(card: CardLike, getWidgetEntities: GetWidgetEntities): Promise<HeatmapBucket[]> {
+    const days = Math.max(7, Math.min(371, Number(card.days || 35) || 35));
+    const end = startOfDay(new Date());
+    const start = addDays(end, -(days - 1));
+    const buckets = new Map<string, HeatmapBucket>();
+    for (let idx = 0; idx < days; idx++) {
+      const date = addDays(start, idx);
+      buckets.set(ymd(date), { date, key: ymd(date), value: 0 });
+    }
+    const field = String(card.valueField || card.field || '').trim();
+    const dateField = String(card.dateField || card.date || 'date').trim();
+    const addBucket = (rawDate: unknown, rawValue: unknown = 1) => {
+      const date = this._heatmapDateFromValue(rawDate);
+      if (!date) return;
+      const key = ymd(date);
+      const bucket = buckets.get(key);
+      if (!bucket) return;
+      const value = Number(rawValue);
+      bucket.value += Number.isFinite(value) ? value : 1;
+    };
+
+    if (Array.isArray(card.items)) {
+      card.items.forEach((item: Frontmatter) => {
+        if (!item || typeof item !== 'object') return;
+        addBucket(item[dateField] ?? item.date ?? item.day ?? item.start, item.value ?? (field ? item[field] : 1));
+      });
+      return [...buckets.values()];
+    }
+
+    const sourceSpec = this._widgetSourceSpec(card, card.entity);
+    const hasSource = !!card.source || !!card.entity || !!sourceSpec?.builtIn || !!sourceSpec?.mode;
+    if (!hasSource) return [...buckets.values()];
+    const resolved = await getWidgetEntities(sourceSpec, card.entity).catch((): null => null);
+    if (!resolved) return [...buckets.values()];
+    if (resolved.source?.mode === 'built-in' || resolved.metadata?.builtIn) {
+      this._resolveBuiltInRows(card, resolved).forEach((row) => {
+        addBucket(row[dateField] ?? row.date ?? row.day ?? row.start ?? row.title, this._heatmapValueFromRow(row, field));
+      });
+      return [...buckets.values()];
+    }
+    const def = resolved.def || ENTITIES[resolved.entityKey || card.entity] || null;
+    (resolved.entities || []).forEach((entity) => {
+      const rawDate = entityValue(entity, dateField, def) || entity.file?.stat?.mtime;
+      const rawValue = field ? entityValue(entity, field, def) : 1;
+      addBucket(rawDate, rawValue);
+    });
+    return [...buckets.values()];
+  }
+
+  async _renderHeatmapWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
+    const buckets = await this._resolveHeatmapBuckets(card, getWidgetEntities);
+    const max = Math.max(1, ...buckets.map((bucket) => bucket.value));
+    const total = buckets.reduce((sum, bucket) => sum + bucket.value, 0);
+    const columns = Math.max(7, Math.min(53, Number(card.columns || Math.ceil(buckets.length / 7)) || 7));
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-heatmap-card' });
+    this._applyCardTone(cardEl, Object.assign({ kind: 'heatmap' }, card));
+    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
+    head.createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label || 'Heatmap').trim() });
+    head.createSpan({ cls: 'cad-widget-catalog-badge', text: `${Math.round(total)} total` });
+    const body = cardEl.createDiv({ cls: 'cad-dash-card-body cad-heatmap-body' });
+    if (card.description || card.subtitle) {
+      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+    }
+    if (!buckets.length) {
+      body.createDiv({ cls: 'cad-empty', text: String(card.empty || 'No heatmap buckets').trim() });
+      return;
+    }
+    const grid = body.createDiv({ cls: 'cad-heatmap-grid' });
+    grid.style.setProperty('--cad-heatmap-columns', String(columns));
+    buckets.forEach((bucket) => {
+      const cell = grid.createDiv({ cls: 'cad-heatmap-cell' });
+      const ratio = bucket.value / max;
+      cell.dataset.level = bucket.value <= 0 ? '0' : ratio < 0.25 ? '1' : ratio < 0.5 ? '2' : ratio < 0.75 ? '3' : '4';
+      cell.title = `${fmtValue(bucket.key, 'date')} — ${Math.round(bucket.value * 10) / 10}`;
+    });
+    const footer = body.createDiv({ cls: 'cad-heatmap-footer' });
+    footer.createSpan({ text: `${buckets.length} days` });
+    footer.createSpan({ text: `Peak ${Math.round(max * 10) / 10}` });
   }
 
   async _renderKanbanWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
@@ -4388,6 +4653,56 @@ export class CadenceAppView extends obsidian.ItemView {
       card[key] = next;
       onChange();
     };
+    const currentSource = () => getObjectField('source', typeof card.source === 'string' ? { source: card.source } : {});
+    const applyWidgetTypeDefaults = (kind: string) => {
+      const type = String(kind || '').trim();
+      const sourceObj = currentSource();
+      const builtInName = String(sourceObj.builtIn || '').trim().toLowerCase();
+      const setSourceDefaults = (patch: Frontmatter) => {
+        card.source = Object.assign({}, sourceObj, patch);
+      };
+      if (!card.title) {
+        if (type === 'gauge') card.title = 'SCORE';
+        else if (type === 'progress') card.title = 'PROGRESS';
+        else if (type === 'heatmap') card.title = 'CADENCE';
+      }
+      if (type === 'gauge') {
+        card.max = 100;
+        card.suffix = '%';
+        if (card.caption == null) card.caption = 'score';
+        if (builtInName === 'productivity') {
+          card.field = 'completion';
+          delete card.valueField;
+          setSourceDefaults({ mode: 'built-in', builtIn: 'productivity', section: null });
+        } else if (!card.field) {
+          card.field = 'value';
+        }
+      }
+      if (type === 'progress') {
+        if (builtInName === 'productivity') {
+          card.field = 'activeDays';
+          card.max = 30;
+          card.suffix = '/30';
+          card.label = card.label || 'Days with activity';
+          delete card.valueField;
+          setSourceDefaults({ mode: 'built-in', builtIn: 'productivity', section: null });
+        } else {
+          if (card.max == null) card.max = 100;
+          if (card.suffix == null) card.suffix = '%';
+          if (card.label == null) card.label = 'Built';
+        }
+      }
+      if (type === 'heatmap') {
+        if (!card.dateField) card.dateField = 'date';
+        if (card.days == null) card.days = 35;
+        if (card.columns == null) card.columns = 7;
+        if (builtInName === 'productivity') {
+          card.field = 'journal';
+          delete card.valueField;
+          setSourceDefaults({ mode: 'built-in', builtIn: 'productivity', section: 'per-day' });
+        }
+      }
+    };
     const sortedEntityKeys = workspaceConfiguredEntityEntries(WORKSPACE_CONFIG).map(([key]) => key);
     if (card.entity && ENTITIES[card.entity] && !sortedEntityKeys.includes(card.entity)) {
       sortedEntityKeys.unshift(card.entity);
@@ -4400,7 +4715,9 @@ export class CadenceAppView extends obsidian.ItemView {
     addRow('Section', 'section');
     addRow('Tone', 'tone', ['emerald', 'mint', 'sky', 'warn', 'rose']);
     addRow('Accent', 'accent', ['emerald', 'mint', 'sky', 'warn', 'rose']);
+    addRow('Field', 'field', fieldSuggestions, true);
     addRow('Value field', 'valueField');
+    addRow('Metric', 'metric', ['count', 'sum', 'avg', 'min', 'max', 'filled', 'empty', 'open', 'uniqueCount', 'ratio'], true);
     addRow('Group by', 'groupBy');
     addRow('Limit', 'limit');
     addRow('View', 'view');
@@ -4423,10 +4740,14 @@ export class CadenceAppView extends obsidian.ItemView {
         if (!Array.isArray(card.merge)) card.merge = [{ entity: card.entity || defaultEntityKey, source: 'recent' }];
       } else {
         card.kind = typeSelect.value;
+        delete card.merge;
+        applyWidgetTypeDefaults(typeSelect.value);
       }
       onChange();
+      form.remove();
+      this._renderCardForm(parent, card, onChange);
     });
-    const source = getObjectField('source', typeof card.source === 'string' ? { source: card.source } : {});
+    const source = currentSource();
     const sourceModeValue = (() => {
       const raw = String(source.mode || '').trim().toLowerCase();
       return raw || (String(source.builtIn || '').trim() ? 'built-in' : 'recent');
@@ -4742,6 +5063,29 @@ export class CadenceAppView extends obsidian.ItemView {
       addRow('All label', 'allLabel');
       addRow('Mode', 'mode', ['value', 'date-range']);
       addRow('Options', 'options');
+    }
+
+    if (['gauge', 'score-gauge', 'dial', 'progress', 'progress-bar'].includes(String(card.kind || '').trim().toLowerCase())) {
+      const scalarSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
+      scalarSection.createDiv({ cls: 'cad-de-section-label', text: String(card.kind || '').trim().toLowerCase() === 'progress' ? 'Progress details' : 'Gauge details' });
+      addRow('Value', 'value');
+      addRow('Field', 'field', fieldSuggestions, true);
+      addRow('Metric', 'metric', ['count', 'sum', 'avg', 'min', 'max', 'filled', 'empty', 'open', 'uniqueCount', 'ratio'], true);
+      addRow('Max / target', 'max');
+      addRow('Suffix', 'suffix');
+      addRow('Label', 'label');
+      addRow('Caption', 'caption');
+      addRow('Subtext', 'sub');
+    }
+
+    if (['heatmap', 'streak-heatmap'].includes(String(card.kind || '').trim().toLowerCase())) {
+      const heatmapSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
+      heatmapSection.createDiv({ cls: 'cad-de-section-label', text: 'Heatmap details' });
+      addRow('Date field', 'dateField', ['date', 'day', 'created', 'createdAt', 'updated', 'modified', 'start', 'scheduled', 'due'], true);
+      addRow('Value field', 'field', fieldSuggestions, true);
+      addRow('Days', 'days');
+      addRow('Columns', 'columns');
+      addRow('Items', 'items');
     }
 
     if (String(card.kind || '').trim() === 'kanban') {

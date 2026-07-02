@@ -62,8 +62,9 @@ If a dashboard route has no matching dashboard definition, there is no
 hardcoded dashboard composition to fill it.
 
 Dashboard widget coverage currently includes metrics, lists, card lists,
-bar charts, kanban, merged cards, markdown, actions, `base-link`,
-`base-embed`, selector controls, and date-range controls. Runtime-backed
+score gauges, progress bars, streak heatmaps, bar charts, kanban, merged
+cards, markdown, actions, `base-link`, `base-embed`, selector controls,
+and date-range controls. Runtime-backed
 sources such as `home` and `productivity` can feed those generic widgets, but
 they are data sources rather than separate dashboard compositions. Selector
 widgets expose both `{{key}}` and `{{key}}Filter` placeholders so downstream

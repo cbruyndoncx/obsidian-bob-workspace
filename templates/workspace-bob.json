@@ -2770,15 +2770,46 @@
       "layout": [
         [
           {
-            "kind": "bar-chart",
-            "title": "TASK FLOW — LAST 14 DAYS",
+            "kind": "gauge",
+            "title": "COMPLETION SCORE",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "productivity"
+            },
+            "field": "completion",
+            "max": 100,
+            "suffix": "%",
+            "caption": "done rate",
+            "sub": "Done tasks divided by done plus open tasks"
+          },
+          {
+            "kind": "progress",
+            "title": "ACTIVE DAYS BUILT",
+            "source": {
+              "mode": "built-in",
+              "builtIn": "productivity"
+            },
+            "field": "activeDays",
+            "max": 30,
+            "suffix": "/30",
+            "label": "Days with activity",
+            "sub": "Activity coverage in the current 30-day window"
+          }
+        ],
+        [
+          {
+            "kind": "heatmap",
+            "title": "CONTENT CADENCE",
             "source": {
               "mode": "built-in",
               "builtIn": "productivity",
               "section": "per-day"
             },
-            "field": "done",
-            "limit": 14
+            "dateField": "date",
+            "field": "journal",
+            "days": 35,
+            "columns": 7,
+            "empty": "No daily note activity yet."
           },
           {
             "kind": "bar-chart",

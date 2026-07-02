@@ -2515,6 +2515,129 @@ select.cad-form-input {
   font-family: var(--font-monospace);
 }
 
+/* ─────────── Dashboard gamification widgets ─────────── */
+.cad-gauge-body,
+.cad-progress-body,
+.cad-heatmap-body {
+  gap: 10px;
+}
+.cad-gauge-body {
+  align-items: center;
+  padding-top: 14px;
+}
+.cad-gauge {
+  --cad-gauge-pct: 0%;
+  width: min(168px, 62%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at center, var(--background-primary) 0 57%, transparent 58%),
+    conic-gradient(oklch(0.55 0.13 155) var(--cad-gauge-pct), var(--background-modifier-border) 0);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
+}
+.cad-gauge[data-pct-band="rose"] {
+  background:
+    radial-gradient(circle at center, var(--background-primary) 0 57%, transparent 58%),
+    conic-gradient(oklch(0.65 0.14 25) var(--cad-gauge-pct), var(--background-modifier-border) 0);
+}
+.cad-gauge[data-pct-band="warn"] {
+  background:
+    radial-gradient(circle at center, var(--background-primary) 0 57%, transparent 58%),
+    conic-gradient(oklch(0.72 0.14 70) var(--cad-gauge-pct), var(--background-modifier-border) 0);
+}
+.cad-gauge[data-pct-band="mint"] {
+  background:
+    radial-gradient(circle at center, var(--background-primary) 0 57%, transparent 58%),
+    conic-gradient(oklch(0.78 0.12 155) var(--cad-gauge-pct), var(--background-modifier-border) 0);
+}
+.cad-gauge-center {
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--background-primary) 92%, var(--background-secondary));
+  border: 1px solid var(--background-modifier-border);
+}
+.cad-gauge-value {
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 750;
+  color: var(--text-normal);
+  font-variant-numeric: tabular-nums;
+}
+.cad-gauge-label,
+.cad-gauge-sub,
+.cad-progress-widget-sub,
+.cad-heatmap-footer {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--font-monospace);
+}
+.cad-gauge-label {
+  margin-top: 5px;
+  text-transform: uppercase;
+}
+.cad-gauge-sub {
+  text-align: center;
+}
+.cad-progress-widget-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.cad-progress-widget-value {
+  color: var(--text-normal);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cad-progress-widget-track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--background-modifier-border);
+}
+.cad-progress-widget-fill {
+  height: 100%;
+  min-width: 2px;
+  border-radius: inherit;
+  background: oklch(0.55 0.13 155);
+  transition: width 140ms ease;
+}
+.cad-progress-widget-track[data-pct-band="rose"] .cad-progress-widget-fill { background: oklch(0.65 0.14 25); }
+.cad-progress-widget-track[data-pct-band="warn"] .cad-progress-widget-fill { background: oklch(0.72 0.14 70); }
+.cad-progress-widget-track[data-pct-band="mint"] .cad-progress-widget-fill { background: oklch(0.78 0.12 155); }
+.cad-progress-widget-track[data-pct-band="emerald"] .cad-progress-widget-fill { background: oklch(0.55 0.13 155); }
+.cad-heatmap-grid {
+  --cad-heatmap-columns: 7;
+  display: grid;
+  grid-template-columns: repeat(var(--cad-heatmap-columns), minmax(8px, 1fr));
+  gap: 4px;
+  align-items: center;
+}
+.cad-heatmap-cell {
+  aspect-ratio: 1;
+  min-width: 8px;
+  border-radius: 3px;
+  background: var(--background-modifier-border);
+}
+.cad-heatmap-cell[data-level="0"] { opacity: 0.55; }
+.cad-heatmap-cell[data-level="1"] { background: oklch(0.88 0.06 155); }
+.cad-heatmap-cell[data-level="2"] { background: oklch(0.78 0.12 155); }
+.cad-heatmap-cell[data-level="3"] { background: oklch(0.65 0.14 155); }
+.cad-heatmap-cell[data-level="4"] { background: oklch(0.50 0.13 155); }
+.cad-heatmap-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .workspace-leaf-content[data-type="cadence-today"] {
   background: var(--background-primary);
 }
