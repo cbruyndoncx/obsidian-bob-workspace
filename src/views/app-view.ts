@@ -808,7 +808,9 @@ export class CadenceAppView extends obsidian.ItemView {
       return;
     }
 
-    const configuredDashboard = this.mode === 'planner.today' ? null : resolveSurfaceConfig(this.mode);
+    // planner.today renders its configured dashboard when workspace.json defines
+    // one; otherwise it falls through to the route map's today-diary pane.
+    const configuredDashboard = resolveSurfaceConfig(this.mode);
     if (configuredDashboard) {
       await this.renderConfigDashboard(this.mode, content, { config: configuredDashboard });
       return;

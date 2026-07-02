@@ -25952,7 +25952,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
       await this.renderEntityDetail(content, this.detailEntityKey, this.detailFile);
       return;
     }
-    const configuredDashboard = this.mode === "planner.today" ? null : resolveSurfaceConfig(this.mode);
+    const configuredDashboard = resolveSurfaceConfig(this.mode);
     if (configuredDashboard) {
       await this.renderConfigDashboard(this.mode, content, { config: configuredDashboard });
       return;
