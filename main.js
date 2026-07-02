@@ -19778,6 +19778,13 @@ function applyWorkspaceOwnedSettings(settings = {}) {
   });
   return merged;
 }
+function resetWorkspaceOwnedSettings(settings = {}) {
+  const merged = Object.assign({}, settings);
+  WORKSPACE_OWNED_SETTING_KEYS.forEach((key) => {
+    merged[key] = cloneConfig(DEFAULT_SETTINGS[key]);
+  });
+  return merged;
+}
 function persistedWorkspaceOwnedSettings(settings = {}) {
   const existing = WORKSPACE_CONFIG.settings || {};
   const persisted = {};
@@ -24636,6 +24643,7 @@ async function applyWorkspaceTemplate(app, plugin, template) {
   setWorkspaceConfig(parsed);
   plugin.settings.activeWorkspaceTemplate = newKey;
   plugin.settings.setupDismissed = true;
+  if (switching) plugin.settings = resetWorkspaceOwnedSettings(plugin.settings);
   plugin.settings = applyWorkspaceOwnedSettings(plugin.settings);
   await plugin.saveSettings();
   const assetResult = await writeTemplateAssets(app, _assets, plugin.settings);

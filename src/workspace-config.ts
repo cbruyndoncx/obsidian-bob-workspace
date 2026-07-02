@@ -503,6 +503,19 @@ export function applyWorkspaceOwnedSettings(settings: PartialSettings = {}): Par
   return merged;
 }
 
+// Reset every workspace-owned setting to its DEFAULT_SETTINGS value. Used on a
+// template switch so the new template starts from a clean slate instead of
+// inheriting the previous template's unlisted owned settings. Safe because the
+// outgoing template's full settings are archived in its workspace-<stamp>.json
+// (see archiveTemplateAssets) before this runs.
+export function resetWorkspaceOwnedSettings(settings: PartialSettings = {}): PartialSettings {
+  const merged: PartialSettings = Object.assign({}, settings);
+  WORKSPACE_OWNED_SETTING_KEYS.forEach((key) => {
+    merged[key] = cloneConfig(DEFAULT_SETTINGS[key]);
+  });
+  return merged;
+}
+
 export function persistedWorkspaceOwnedSettings(settings: PartialSettings = {}): PartialSettings {
   const existing = WORKSPACE_CONFIG.settings || {};
   const persisted: PartialSettings = {};

@@ -6,7 +6,7 @@ import { reloadEntityConfiguration } from './runtime-config';
 import { bootstrapCanonicalSchemaSourcesIfMissing, regenerateSchemaOutputs } from './schema-designer';
 import { SCHEMA_FOLDER_DEFAULT } from './schemas';
 import { ensureFolderSync, ymd } from './utils';
-import { PLUGIN_DIR, WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, applyWorkspaceOwnedSettings, saveWorkspaceConfig, validateWorkspaceConfig } from './workspace-config';
+import { PLUGIN_DIR, WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, applyWorkspaceOwnedSettings, resetWorkspaceOwnedSettings, saveWorkspaceConfig, validateWorkspaceConfig } from './workspace-config';
 import * as obsidian from 'obsidian';
 import type { App } from 'obsidian';
 import type { CadencePlugin } from './plugin';
@@ -159,6 +159,10 @@ export async function applyWorkspaceTemplate(app: App, plugin: CadencePlugin, te
   setWorkspaceConfig(parsed);
   plugin.settings.activeWorkspaceTemplate = newKey;
   plugin.settings.setupDismissed = true;
+  // Clean starting point when switching templates: reset workspace-owned settings
+  // to defaults first, so unlisted owned settings from the previous template don't
+  // leak in. The outgoing settings were archived above (workspace-<stamp>.json).
+  if (switching) plugin.settings = resetWorkspaceOwnedSettings(plugin.settings) as BobSettings;
   plugin.settings = applyWorkspaceOwnedSettings(plugin.settings) as BobSettings;
   await plugin.saveSettings();
   // Seed the template's own schemas/bases first so its entities exist before
