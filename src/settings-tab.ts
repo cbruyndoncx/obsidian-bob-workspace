@@ -171,7 +171,44 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
   declare _collapsedModules: Set<string>;
   declare _dashboardRenderer: SettingsDashboardRenderer;
   declare _schemaDesignerSelectedPath: string;
+  declare _openHelpPanels: Set<string> | undefined;
   constructor(app: obsidian.App, plugin: CadencePlugin) { super(app, plugin); this.plugin = plugin; this._reviewActiveTab = 'overview'; this._reviewRenderSeq = 0; this._workspaceDraftDirty = false; }
+
+  // Reusable toggleable colored help panel (shares .cad-help-* styles with the
+  // Surface Designer). `key` persists open/closed for this session.
+  _helpPanel(parent: HTMLElement, key: string, title: string, build: (body: HTMLElement) => void) {
+    if (!this._openHelpPanels) this._openHelpPanels = new Set<string>();
+    const open = this._openHelpPanels.has(key);
+    const block = parent.createDiv({ cls: 'cad-help-block' });
+    const toggle = block.createEl('button', { cls: 'cad-help-toggle' + (open ? ' is-open' : ''), attr: { type: 'button' } });
+    const icon = toggle.createSpan({ cls: 'cad-help-toggle-icon' });
+    try { obsidian.setIcon(icon, 'help-circle'); } catch (_) { icon.setText('?'); }
+    toggle.createSpan({ cls: 'cad-help-toggle-label', text: title });
+    const chevron = toggle.createSpan({ cls: 'cad-help-toggle-chevron', text: open ? '▾' : '▸' });
+    const panel = block.createDiv({ cls: 'cad-help-panel' });
+    if (!open) panel.style.display = 'none';
+    build(panel);
+    toggle.addEventListener('click', () => {
+      const nowOpen = panel.style.display === 'none';
+      panel.style.display = nowOpen ? '' : 'none';
+      toggle.toggleClass('is-open', nowOpen);
+      chevron.setText(nowOpen ? '▾' : '▸');
+      if (nowOpen) this._openHelpPanels.add(key); else this._openHelpPanels.delete(key);
+    });
+  }
+
+  _helpBlock(body: HTMLElement, heading: string, lines: (string | [string, string])[]) {
+    body.createDiv({ cls: 'cad-help-heading', text: heading });
+    lines.forEach((line) => {
+      const row = body.createDiv({ cls: 'cad-help-line' });
+      if (Array.isArray(line)) {
+        row.createSpan({ cls: 'cad-help-term', text: line[0] });
+        row.createSpan({ cls: 'cad-help-desc', text: line[1] });
+      } else {
+        row.createSpan({ cls: 'cad-help-desc', text: line });
+      }
+    });
+  }
 
   // The workspace designers mutate the global WORKSPACE_CONFIG live (for preview)
   // from an unsaved draft. If the tab is closed with such edits unsaved, restore
@@ -257,6 +294,20 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const pData = tabPanels['data'];
 
     /* ─── Workspace configuration (workspace.json) ─── */
+    this._helpPanel(pWs, 'workspace-overview', 'How the Workspace definition works', (body) => {
+      this._helpBlock(body, 'What this is', [
+        'workspace.json is the single file that composes your whole workspace: navigation, dashboards, Base mappings, schemas and portable settings.',
+        'It lives next to the plugin data and is the source of truth — the other Settings tabs are friendlier editors for parts of it.',
+      ]);
+      this._helpBlock(body, 'Editing safely', [
+        ['Format', 'tidies the JSON.'],
+        ['Save and apply', 'validates, writes the file, and reloads the workspace.'],
+        ['Restore backup', 'loads the last saved backup into the editor.'],
+      ]);
+      this._helpBlock(body, 'Tip', [
+        'Prefer the Navigation, Modules and Surface Designer tabs for day-to-day changes; use this raw editor for bulk edits or blocks with no dedicated UI.',
+      ]);
+    });
     pWs.createEl('h3', { text: 'Workspace definition' });
     const workspaceDesc = pWs.createEl('p', { cls: 'setting-item-description' });
     workspaceDesc.appendText('Define schema loading, Base/view associations and templates in ');
@@ -446,6 +497,21 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       }
     });
     setTimeout(() => refreshWorkspaceTemplateSelector(), 0);
+
+    this._helpPanel(pNav, 'navigation-overview', 'How Navigation works', (body) => {
+      this._helpBlock(body, 'The idea', [
+        'This designer defines your left-hand navigation: which groups and items appear, and in what order.',
+      ]);
+      this._helpBlock(body, 'Two levels', [
+        ['Primary', 'top-level items shown directly in the left rail.'],
+        ['Secondary tab', 'sub-tabs shown inside a parent surface, not in the left rail.'],
+      ]);
+      this._helpBlock(body, 'Editing', [
+        'Drag items to reorder or move them between groups.',
+        'Each item points at an entity (record type) or a dashboard route.',
+        'Changes apply to workspace.json — click Save and apply when done.',
+      ]);
+    });
 
     const navDesigner = pNav.createDiv({ cls: 'cad-nav-designer' });
     const navDesignerHead = navDesigner.createDiv({ cls: 'cad-nav-designer-head' });
@@ -1415,6 +1481,22 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       .sort((a, b) => a.path.localeCompare(b.path));
     const baseSummariesPromise = Promise.all(baseFiles.map((file) => readBaseSummary(this.plugin.app, file)))
       .then((items) => items.filter(Boolean).sort((a, b) => a.label.localeCompare(b.label)));
+
+    this._helpPanel(pMod, 'modules-overview', 'How Modules work', (body) => {
+      this._helpBlock(body, 'What this tab does', [
+        'Each card is a module (CRM, Planner, Finance…). Toggle it on/off to show or hide its whole section in the left navigation.',
+      ]);
+      this._helpBlock(body, 'The rows inside a card', [
+        ['Primary surface', 'a top-level nav item (e.g. Contacts). Toggle hides just that item.'],
+        ['Secondary tab', 'an indented sub-tab shown inside a parent surface (e.g. Meetings under Client Work).'],
+        ['Folder', 'where this record type’s notes live.'],
+        ['Base', 'an optional .base file giving the list its columns/filters/view.'],
+      ]);
+      this._helpBlock(body, 'Dashboards', [
+        ['built-in / ✎ custom chip', 'whether a surface uses the shipped dashboard or your own.'],
+        ['Edit dashboard button', 'opens the Surface Designer for that surface (Customize / Reset there).'],
+      ]);
+    });
 
     NAV_GROUPS.forEach((group: NavGroupConfig) => {
       const items = group.items.filter((s) => !['home', 'team', 'settings'].includes(s.id));
