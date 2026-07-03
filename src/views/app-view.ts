@@ -19,7 +19,7 @@ import { createTaskNote, listTodayTaskNotes, toggleTaskNoteStatus } from '../tas
 import { addDays, dailyNotePath, dateInfo, ensureFolderSync, greeting, pctBand, sameDay, startOfDay, startOfWeek, weekDates, ymd } from '../utils';
 import { filterEntitiesByBaseConfig, normalizeWidgetSortSpec, normalizeWidgetSourceConfig, resolveWidgetSource } from '../widgets';
 import { exportEntitiesXLSX, selectedWorkbookEntityKeys, workbookExportFolder, workbookExportGroups } from '../workbook';
-import { WORKSPACE_CONFIG, WORKSPACE_HAS_NAVIGATION, configuredDashboardDefinition, configuredSurfaceActions, normalizeDashboardConfigShape, resolveSurfaceConfig, saveWorkspaceConfig, validateDashboardConfig, workspaceConfiguredEntityEntries, workspaceConfiguredEntityKeys, workspaceHasEntity } from '../workspace-config';
+import { WORKSPACE_CONFIG, WORKSPACE_HAS_NAVIGATION, configuredDashboardDefinition, configuredSurfaceActions, dashboardWidgetSchema, normalizeDashboardConfigShape, resolveSurfaceConfig, saveWorkspaceConfig, validateDashboardConfig, workspaceConfiguredEntityEntries, workspaceConfiguredEntityKeys, workspaceHasEntity } from '../workspace-config';
 import * as obsidian from 'obsidian';
 import type { CadencePlugin } from '../plugin';
 import type {
@@ -4741,23 +4741,35 @@ export class CadenceAppView extends obsidian.ItemView {
     if (card.entity && ENTITIES[card.entity] && !sortedEntityKeys.includes(card.entity)) {
       sortedEntityKeys.unshift(card.entity);
     }
+    // Show only the fields relevant to this widget kind — the schema declares
+    // them in `supports`. An unknown kind shows everything (safe fallback).
+    const widgetKind = String(card.kind || (Array.isArray(card.merge) ? 'merge' : 'list')).trim() || 'list';
+    const cardSchema = dashboardWidgetSchema(widgetKind);
+    const supportedFields = new Set(cardSchema?.supports || []);
+    const fieldOn = (...keys: string[]) => !cardSchema || keys.some((k) => supportedFields.has(k));
+    const usesSource = fieldOn('source', 'entity', 'base');
+
     addRow('Title', 'title');
-    addRow('Entity', 'entity', sortedEntityKeys, true);
-    const titleFieldList = addRow('Title fields', 'titleFields', fieldSuggestions, true);
-    const metaFieldList = addRow('Meta fields', 'metaFields', fieldSuggestions, true);
-    addRow('Empty text', 'empty');
-    addRow('Section', 'section');
-    addRow('Tone', 'tone', ['emerald', 'mint', 'sky', 'warn', 'rose']);
-    addRow('Accent', 'accent', ['emerald', 'mint', 'sky', 'warn', 'rose']);
-    addRow('Field', 'field', fieldSuggestions, true);
-    addRow('Value field', 'valueField');
-    addRow('Metric', 'metric', ['count', 'sum', 'avg', 'min', 'max', 'filled', 'empty', 'open', 'uniqueCount', 'ratio'], true);
-    addRow('Group by', 'groupBy');
-    addRow('Limit', 'limit');
-    addRow('View', 'view');
+    if (fieldOn('entity')) addRow('Entity', 'entity', sortedEntityKeys, true);
+    let titleFieldList: HTMLDataListElement | null = null;
+    let metaFieldList: HTMLDataListElement | null = null;
+    if (fieldOn('titleFields')) titleFieldList = addRow('Title fields', 'titleFields', fieldSuggestions, true) || null;
+    if (fieldOn('metaFields')) metaFieldList = addRow('Meta fields', 'metaFields', fieldSuggestions, true) || null;
+    if (fieldOn('placeholder')) addRow('Placeholder', 'placeholder');
+    if (fieldOn('eyebrow')) addRow('Eyebrow', 'eyebrow');
+    if (fieldOn('empty')) addRow('Empty text', 'empty');
+    if (fieldOn('section', 'heading')) addRow('Section', 'section');
+    if (fieldOn('tone')) addRow('Tone', 'tone', ['emerald', 'mint', 'sky', 'warn', 'rose']);
+    if (fieldOn('accent')) addRow('Accent', 'accent', ['emerald', 'mint', 'sky', 'warn', 'rose']);
+    if (fieldOn('field')) addRow('Field', 'field', fieldSuggestions, true);
+    if (fieldOn('valueField')) addRow('Value field', 'valueField');
+    if (fieldOn('metric')) addRow('Metric', 'metric', ['count', 'sum', 'avg', 'min', 'max', 'filled', 'empty', 'open', 'uniqueCount', 'ratio'], true);
+    if (fieldOn('groupBy')) addRow('Group by', 'groupBy');
+    if (fieldOn('limit')) addRow('Limit', 'limit');
+    if (fieldOn('view', 'base')) addRow('View', 'view');
     // Base picker — point this widget's source at an existing .base file (with the
     // View row above selecting the view). Empty falls back to the entity source.
-    (() => {
+    if (fieldOn('base', 'source')) (() => {
       const r = form.createDiv({ cls: 'cad-de-form-row' });
       r.createDiv({ cls: 'cad-de-form-label', text: 'Base' });
       const sel = r.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
@@ -4779,8 +4791,8 @@ export class CadenceAppView extends obsidian.ItemView {
         onChange();
       });
     })();
-    addRow('Height', 'height');
-    addRow('Fallback', 'fallback', ['preview', 'link', 'error']);
+    if (fieldOn('height')) addRow('Height', 'height');
+    if (fieldOn('fallback')) addRow('Fallback', 'fallback', ['preview', 'link', 'error']);
 
     const typeRow = form.createDiv({ cls: 'cad-de-form-row' });
     typeRow.createDiv({ cls: 'cad-de-form-label', text: 'Widget type' });
@@ -4819,6 +4831,9 @@ export class CadenceAppView extends obsidian.ItemView {
       onChange();
     };
     const sourceSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
+    // Sourceless widgets (quick-add, date-hero, note-section) don't read data —
+    // hide the whole Source details block so their editor stays simple.
+    if (!usesSource) sourceSection.style.display = 'none';
     sourceSection.createDiv({ cls: 'cad-de-section-label', text: 'Source details' });
     const sourceModeRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
     sourceModeRow.createDiv({ cls: 'cad-de-form-label', text: 'Mode' });
