@@ -238,6 +238,27 @@ export function dashboardWidgetSchema(kind: string): DashboardWidgetSchema | nul
       allowSourceOnly: true,
       supports: ['merge', 'title', 'empty'],
     },
+    'task-list': {
+      label: 'Task list (interactive)',
+      allowSourceOnly: true,
+      requiresEntityOrSource: true,
+      supports: ['entity', 'source', 'base', 'view', 'limit', 'empty', 'title'],
+    },
+    'quick-add': {
+      label: 'Quick-add input',
+      allowSourceOnly: true,
+      supports: ['title', 'placeholder'],
+    },
+    'date-hero': {
+      label: 'Date hero',
+      allowSourceOnly: true,
+      supports: ['eyebrow', 'title'],
+    },
+    'note-section': {
+      label: 'Note section editor',
+      allowSourceOnly: true,
+      supports: ['title', 'section', 'heading'],
+    },
   };
   return schemas[kind] || null;
 }

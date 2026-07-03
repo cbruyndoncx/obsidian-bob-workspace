@@ -12568,7 +12568,12 @@ var workspace_bob_default = {
         layout: [
           [
             {
-              kind: "list",
+              kind: "date-hero"
+            }
+          ],
+          [
+            {
+              kind: "task-list",
               title: "TODAY TASKS",
               source: {
                 mode: "built-in",
@@ -12579,15 +12584,15 @@ var workspace_bob_default = {
               empty: "No tasks on today's note."
             },
             {
-              kind: "list",
-              title: "OVERVIEW",
-              source: {
-                mode: "built-in",
-                builtIn: "planner",
-                section: "overview"
-              },
-              limit: 4,
-              empty: "Planner overview is empty."
+              kind: "quick-add",
+              title: "ADD TASK",
+              placeholder: "Add a task and press Enter\u2026"
+            }
+          ],
+          [
+            {
+              kind: "note-section",
+              title: "TODAY\u2019S ENTRY"
             }
           ]
         ]
@@ -15534,7 +15539,12 @@ var workspace_cadence_default = {
         layout: [
           [
             {
-              kind: "list",
+              kind: "date-hero"
+            }
+          ],
+          [
+            {
+              kind: "task-list",
               title: "TODAY TASKS",
               source: {
                 mode: "built-in",
@@ -15545,15 +15555,15 @@ var workspace_cadence_default = {
               empty: "No tasks on today's note."
             },
             {
-              kind: "list",
-              title: "OVERVIEW",
-              source: {
-                mode: "built-in",
-                builtIn: "planner",
-                section: "overview"
-              },
-              limit: 4,
-              empty: "Planner overview is empty."
+              kind: "quick-add",
+              title: "ADD TASK",
+              placeholder: "Add a task and press Enter\u2026"
+            }
+          ],
+          [
+            {
+              kind: "note-section",
+              title: "TODAY\u2019S ENTRY"
             }
           ]
         ]
@@ -17256,7 +17266,12 @@ var workspace_crm_default = {
         layout: [
           [
             {
-              kind: "list",
+              kind: "date-hero"
+            }
+          ],
+          [
+            {
+              kind: "task-list",
               title: "TODAY TASKS",
               source: {
                 mode: "built-in",
@@ -17267,15 +17282,15 @@ var workspace_crm_default = {
               empty: "No tasks on today's note."
             },
             {
-              kind: "list",
-              title: "OVERVIEW",
-              source: {
-                mode: "built-in",
-                builtIn: "planner",
-                section: "overview"
-              },
-              limit: 4,
-              empty: "Planner overview is empty."
+              kind: "quick-add",
+              title: "ADD TASK",
+              placeholder: "Add a task and press Enter\u2026"
+            }
+          ],
+          [
+            {
+              kind: "note-section",
+              title: "TODAY\u2019S ENTRY"
             }
           ]
         ]
@@ -19569,6 +19584,27 @@ function dashboardWidgetSchema(kind) {
       label: "Merge",
       allowSourceOnly: true,
       supports: ["merge", "title", "empty"]
+    },
+    "task-list": {
+      label: "Task list (interactive)",
+      allowSourceOnly: true,
+      requiresEntityOrSource: true,
+      supports: ["entity", "source", "base", "view", "limit", "empty", "title"]
+    },
+    "quick-add": {
+      label: "Quick-add input",
+      allowSourceOnly: true,
+      supports: ["title", "placeholder"]
+    },
+    "date-hero": {
+      label: "Date hero",
+      allowSourceOnly: true,
+      supports: ["eyebrow", "title"]
+    },
+    "note-section": {
+      label: "Note section editor",
+      allowSourceOnly: true,
+      supports: ["title", "section", "heading"]
     }
   };
   return schemas[kind] || null;
@@ -25139,14 +25175,18 @@ async function buildPlannerSnapshot(app, settings = {}) {
   }));
   const dailyFile = await ensureDailyNote(app, settings).catch(() => null);
   const todayTasks = dailyFile instanceof obsidian15.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
-  const todayRows = (todayTasks.tasks || []).slice(0, 12).map((line) => {
+  const todayRows = (todayTasks.tasks || []).slice(0, 12).map((line, taskIndex) => {
     const done = / \[(x|X)\] /.test(line);
     return {
       title: String(line).replace(/^\s*-\s\[(x|X| )\]\s/, ""),
       meta: done ? "done" : "open",
       value: done ? 1 : 0,
       values: { done: done ? 1 : 0, open: done ? 0 : 1, total: 1 },
-      action: { surface: "planner.today" }
+      action: { surface: "planner.today" },
+      // Index in today's daily-note tasks section — lets the interactive
+      // task-list widget toggle the checkbox back to the note.
+      taskIndex,
+      done
     };
   });
   const weekDays = weekDates(today, settings.weekStartsOn || 1);
@@ -28575,6 +28615,7 @@ ${snippet}` : "- No markdown content");
     rows.slice(0, Math.max(1, Number(card.limit || 12) || 12)).forEach((row) => {
       const file = row.file || null;
       const fm = file ? this.app.metadataCache.getFileCache(file)?.frontmatter || {} : {};
+      const dailyIdx = typeof row.taskIndex === "number" ? row.taskIndex : null;
       const done = file ? String(fm.status || "").trim().toLowerCase() === "done" : !!row.done;
       const item = list.createDiv({ cls: "cad-task-row cad-dash-task-row" + (done ? " done" : "") });
       const cb = item.createEl("input", { type: "checkbox" });
@@ -28582,6 +28623,11 @@ ${snippet}` : "- No markdown content");
       if (file) {
         cb.addEventListener("change", async () => {
           await toggleTaskNoteStatus(this.app, file, cb.checked);
+          this.render();
+        });
+      } else if (dailyIdx != null) {
+        cb.addEventListener("change", async () => {
+          await this._toggleDailyTaskByIndex(dailyIdx, cb.checked);
           this.render();
         });
       } else {
@@ -28601,6 +28647,20 @@ ${snippet}` : "- No markdown content");
         });
       }
     });
+  }
+  // Toggle a checkbox task in today's daily note by its index in the tasks
+  // section (used by the interactive task-list widget on built-in 'today' rows).
+  async _toggleDailyTaskByIndex(idx, checked) {
+    const file = await ensureDailyNote(this.app, this.plugin.settings);
+    const content = await this.app.vault.read(file);
+    const parsed = parseSections(content, this.plugin.settings);
+    const taskText = String(parsed.tasks[idx] || "").replace(/^\s*-\s\[(x|X| )\]\s/, "").trim();
+    const newTasks = parsed.tasks.map((line, i) => {
+      if (i !== idx) return line;
+      return checked ? line.replace(/^\s*-\s\[\s\]\s/, "- [x] ") : line.replace(/^\s*-\s\[(x|X)\]\s/, "- [ ] ");
+    });
+    await this.app.vault.modify(file, replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join("\n")));
+    if (taskText) await this._propagateTaskComplete(taskText, checked, { kind: "daily", file, date: /* @__PURE__ */ new Date() });
   }
   // Append a checkbox task to today's daily note (creating it if missing).
   async _appendDailyTask(text) {

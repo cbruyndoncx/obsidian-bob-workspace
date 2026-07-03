@@ -194,7 +194,7 @@ export async function buildPlannerSnapshot(app: App, settings: PartialSettings =
   const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] as string[] };
   const todayRows = (todayTasks.tasks || [])
     .slice(0, 12)
-    .map((line) => {
+    .map((line, taskIndex) => {
       const done = / \[(x|X)\] /.test(line);
       return {
         title: String(line).replace(/^\s*-\s\[(x|X| )\]\s/, ''),
@@ -202,6 +202,10 @@ export async function buildPlannerSnapshot(app: App, settings: PartialSettings =
         value: done ? 1 : 0,
         values: { done: done ? 1 : 0, open: done ? 0 : 1, total: 1 },
         action: { surface: 'planner.today' },
+        // Index in today's daily-note tasks section — lets the interactive
+        // task-list widget toggle the checkbox back to the note.
+        taskIndex,
+        done,
       };
     });
 
