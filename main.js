@@ -29678,6 +29678,29 @@ ${snippet}` : "- No markdown content");
     addRow("Group by", "groupBy");
     addRow("Limit", "limit");
     addRow("View", "view");
+    (() => {
+      const r = form.createDiv({ cls: "cad-de-form-row" });
+      r.createDiv({ cls: "cad-de-form-label", text: "Base" });
+      const sel = r.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
+      sel.createEl("option", { value: "", text: "\u2014 none (use entity) \u2014" });
+      const src = card.source && typeof card.source === "object" && !Array.isArray(card.source) ? card.source : {};
+      const srcBase = src.base;
+      const currentBaseFile = typeof srcBase === "string" ? srcBase : srcBase && typeof srcBase === "object" ? String(srcBase.file || srcBase.base || srcBase.path || "") : "";
+      this.app.vault.getFiles().filter((f) => f.extension === "base").map((f) => f.path).sort().forEach((p) => {
+        const o = sel.createEl("option", { value: p, text: p });
+        if (p === currentBaseFile) o.selected = true;
+      });
+      sel.addEventListener("change", () => {
+        if (sel.value) {
+          const view = String(card.view || "").trim();
+          card.source = Object.assign({}, view ? { view } : {}, { base: view ? { file: sel.value, view } : { file: sel.value } });
+        } else if (card.source && typeof card.source === "object" && !Array.isArray(card.source)) {
+          delete card.source.base;
+          if (!Object.keys(card.source).length) delete card.source;
+        }
+        onChange();
+      });
+    })();
     addRow("Height", "height");
     addRow("Fallback", "fallback", ["preview", "link", "error"]);
     const typeRow = form.createDiv({ cls: "cad-de-form-row" });

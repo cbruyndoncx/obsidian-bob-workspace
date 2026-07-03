@@ -4649,6 +4649,30 @@ export class CadenceAppView extends obsidian.ItemView {
     addRow('Group by', 'groupBy');
     addRow('Limit', 'limit');
     addRow('View', 'view');
+    // Base picker — point this widget's source at an existing .base file (with the
+    // View row above selecting the view). Empty falls back to the entity source.
+    (() => {
+      const r = form.createDiv({ cls: 'cad-de-form-row' });
+      r.createDiv({ cls: 'cad-de-form-label', text: 'Base' });
+      const sel = r.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+      sel.createEl('option', { value: '', text: '— none (use entity) —' });
+      const src = (card.source && typeof card.source === 'object' && !Array.isArray(card.source)) ? card.source as Frontmatter : {};
+      const srcBase = src.base;
+      const currentBaseFile = typeof srcBase === 'string' ? srcBase
+        : (srcBase && typeof srcBase === 'object' ? String(srcBase.file || srcBase.base || srcBase.path || '') : '');
+      this.app.vault.getFiles().filter((f) => f.extension === 'base').map((f) => f.path).sort()
+        .forEach((p) => { const o = sel.createEl('option', { value: p, text: p }); if (p === currentBaseFile) o.selected = true; });
+      sel.addEventListener('change', () => {
+        if (sel.value) {
+          const view = String((card.view as string) || '').trim();
+          card.source = Object.assign({}, view ? { view } : {}, { base: view ? { file: sel.value, view } : { file: sel.value } });
+        } else if (card.source && typeof card.source === 'object' && !Array.isArray(card.source)) {
+          delete (card.source as Frontmatter).base;
+          if (!Object.keys(card.source as Frontmatter).length) delete card.source;
+        }
+        onChange();
+      });
+    })();
     addRow('Height', 'height');
     addRow('Fallback', 'fallback', ['preview', 'link', 'error']);
 
