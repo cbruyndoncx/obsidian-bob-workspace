@@ -2301,6 +2301,18 @@ export class CadenceAppView extends obsidian.ItemView {
       await this._renderTaskListWidget(col, card, getWidgetEntities);
       return true;
     }
+    if (kind === 'quick-add' || kind === 'quickadd') {
+      this._renderQuickAddWidget(col, card);
+      return true;
+    }
+    if (kind === 'date-hero' || kind === 'date') {
+      this._renderDateHeroWidget(col, card);
+      return true;
+    }
+    if (kind === 'note-section' || kind === 'journal') {
+      await this._renderNoteSectionWidget(col, card);
+      return true;
+    }
     if (kind === 'bar-chart' || kind === 'chart-bar') {
       await this._renderBarChartWidget(col, card, getWidgetEntities);
       return true;
@@ -3563,6 +3575,77 @@ export class CadenceAppView extends obsidian.ItemView {
           this.openEntityDetailFromFile(file);
         });
       }
+    });
+  }
+
+  // Append a checkbox task to today's daily note (creating it if missing).
+  async _appendDailyTask(text: string) {
+    const file = await ensureDailyNote(this.app, this.plugin.settings) as obsidian.TFile;
+    const content = await this.app.vault.read(file);
+    const parsed = parseSections(content, this.plugin.settings);
+    const newTasks = [...parsed.tasks, `- [ ] ${text}`];
+    await this.app.vault.modify(file, replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n')));
+  }
+
+  // Quick-add input: type + Enter appends a task to today's daily note.
+  _renderQuickAddWidget(root: HTMLElement, card: CardLike) {
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-quick-add-card' });
+    if (card.title || card.label) {
+      cardEl.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label).trim() });
+    }
+    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    const input = body.createEl('input', { type: 'text', cls: 'cad-quick-add-input', attr: { placeholder: String(card.placeholder || 'Add a task and press Enter…') } });
+    input.addEventListener('keydown', async (e) => {
+      if (e.key !== 'Enter') return;
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      await this._appendDailyTask(text);
+      this.render();
+    });
+  }
+
+  // Read-only date hero (weekday / day / month / year).
+  _renderDateHeroWidget(root: HTMLElement, card: CardLike) {
+    const info = dateInfo(new Date());
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-date-hero-card' });
+    cardEl.createDiv({ cls: 'cad-eyebrow', text: String(card.eyebrow || info.weekday).toUpperCase() });
+    const hero = cardEl.createDiv({ cls: 'cad-date-hero' });
+    hero.createDiv({ cls: 'cad-date-day', text: String(info.day) });
+    const col = hero.createDiv();
+    col.createDiv({ cls: 'cad-month', text: info.month });
+    col.createDiv({ cls: 'cad-year', text: String(info.year) });
+  }
+
+  // Editable note-body section (e.g. the daily-note Journal), saved on blur.
+  async _renderNoteSectionWidget(root: HTMLElement, card: CardLike) {
+    const heading = String(card.section || card.heading || '').trim() || this.plugin.settings.journalHeading || '## Journal';
+    const headingFull = heading.startsWith('#') ? heading : `## ${heading}`;
+    const readSection = (content: string): string => {
+      const lines = content.split('\n');
+      const idx = lines.findIndex((l) => l.trim() === headingFull.trim());
+      if (idx < 0) return '';
+      const out: string[] = [];
+      for (let i = idx + 1; i < lines.length; i++) {
+        if (/^#{1,6}\s/.test(lines[i])) break;
+        out.push(lines[i]);
+      }
+      return out.join('\n').replace(/\s+$/, '');
+    };
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-note-section-card' });
+    cardEl.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: String(card.title || 'Today’s entry').trim() });
+    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    const path = dailyNotePath(this.plugin.settings);
+    const existing = this.app.vault.getAbstractFileByPath(path) as obsidian.TFile | null;
+    let current = '';
+    if (existing) current = readSection(await this.app.vault.read(existing));
+    const ta = body.createEl('textarea', { cls: 'cad-journal cad-note-section-textarea' });
+    ta.value = current;
+    ta.spellcheck = false;
+    ta.addEventListener('blur', async () => {
+      const file = await ensureDailyNote(this.app, this.plugin.settings) as obsidian.TFile;
+      const content = await this.app.vault.read(file);
+      await this.app.vault.modify(file, replaceSection(content, headingFull, ta.value || ''));
     });
   }
 

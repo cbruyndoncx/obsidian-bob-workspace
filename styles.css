@@ -2099,6 +2099,43 @@ select.cad-form-input {
   padding: 18px 12px; font-size: 13px; color: var(--text-faint); text-align: center;
 }
 
+/* Quick-add input widget */
+.cad-quick-add-card .cad-quick-add-input {
+  width: 100%; box-sizing: border-box;
+  padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary); color: var(--text-normal);
+  font-size: 14px;
+}
+.cad-quick-add-card .cad-quick-add-input:focus {
+  outline: none; border-color: var(--interactive-accent);
+}
+
+/* Date-hero widget (dashboard-scoped copy of the diary hero) */
+.cad-date-hero-card .cad-eyebrow {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 8px;
+}
+.cad-date-hero-card .cad-date-hero { display: flex; align-items: baseline; gap: 12px; }
+.cad-date-hero-card .cad-date-day {
+  font-size: 64px; line-height: 0.9; font-weight: 700;
+  letter-spacing: -0.045em; color: var(--text-normal); font-variant-numeric: tabular-nums;
+}
+.cad-date-hero-card .cad-month { font-size: 16px; font-weight: 600; color: var(--text-normal); }
+.cad-date-hero-card .cad-year { font-size: 13px; color: var(--text-muted); }
+
+/* Note-section editor widget (editable body section, e.g. Journal) */
+.cad-note-section-card .cad-note-section-textarea {
+  width: 100%; box-sizing: border-box; min-height: 120px; resize: vertical;
+  padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary); color: var(--text-normal);
+  font-size: 14px; line-height: 1.5; font-family: inherit;
+}
+.cad-note-section-card .cad-note-section-textarea:focus {
+  outline: none; border-color: var(--interactive-accent);
+}
+
 /* Interactive task-list widget (checkbox rows inside a dashboard card) */
 .cad-task-list-widget .cad-dash-task-row {
   display: flex; align-items: flex-start; gap: 8px; padding: 5px 2px;
