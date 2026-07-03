@@ -32641,25 +32641,25 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         }));
       }
       const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
-      items.forEach((surface) => {
+      const renderSurfaceRow = (surface, showVisibility = true) => {
         const eDef = surface.entityKey ? ENTITIES[surface.entityKey] : null;
         const overridden = eDef && (eDef.typeFilter || Array.isArray(eDef.folders));
         const level = surface.navLevel || "primary";
         const levelLabel = level === "secondary" ? "Secondary tab" : level === "setup" ? "Setup" : "Primary";
         const desc = [];
-        desc.push(levelLabel);
+        if (level !== "primary") desc.push(levelLabel);
         if (surface.parent) desc.push(`parent: ${SURFACE_BY_ID[surface.parent]?.label || surface.parent}`);
         if (overridden) {
           if (eDef.typeFilter) desc.push(`type: "${eDef.typeFilter}"`);
           if (Array.isArray(eDef.folders)) desc.push(`folders: [${eDef.folders.join(", ")}]`);
-        } else {
+        } else if (surface.id) {
           desc.push(surface.id);
         }
         const managedBase = !!configuredBaseDefinition(surface.entityKey);
         if (managedBase) desc.push("Base from workspace.json");
-        const s = new obsidian18.Setting(panel).setName(`${surface.label} (${levelLabel})`).setDesc(desc.join(" \xB7 "));
+        const s = new obsidian18.Setting(panel).setName(level !== "primary" ? `${surface.label} (${levelLabel})` : surface.label).setDesc(desc.join(" \xB7 "));
         if (moduleDisabled) s.settingEl.classList.add("cad-setting-disabled");
-        s.addToggle((t) => {
+        if (showVisibility) s.addToggle((t) => {
           t.setValue(!disabled.has(surface.id)).onChange(async (v) => {
             const arr = this.plugin.settings.disabledSurfaces || [];
             if (!v) {
@@ -32732,6 +32732,19 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
             });
           });
         }
+      };
+      items.forEach((surface) => renderSurfaceRow(surface, true));
+      items.forEach((parent) => {
+        (SECONDARY_TABS[parent.id] || []).forEach((tab) => {
+          if (!tab.entityKey || !ENTITIES[tab.entityKey]) return;
+          renderSurfaceRow({
+            id: `${parent.id}.${tab.entityKey}`,
+            label: tab.label || tab.entityKey,
+            entityKey: tab.entityKey,
+            navLevel: "secondary",
+            parent: parent.id
+          }, false);
+        });
       });
       if (group.id === "planner") {
         const projectFoldersEl = panel.createDiv({ cls: "cad-project-folders" });

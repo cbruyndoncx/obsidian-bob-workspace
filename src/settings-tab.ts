@@ -4,7 +4,7 @@ import { baseSummaryCompatibleWithEntity, readBaseSummary } from './bases-parse'
 import { summarizeDashboardBlueprint } from './dashboards';
 import { ENTITIES } from './entities';
 import { CadenceIconPickerModal, CadencePromptModal, confirmModal } from './modals/common';
-import { NAV_GROUPS, SURFACE_BY_ID, VIEW_TYPE_CADENCE_APP, migrateWorkspacePlannerConfig } from './nav';
+import { NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_CADENCE_APP, migrateWorkspacePlannerConfig } from './nav';
 import { isTabBackedSurface, makeNavigationSurfacePrimary, navigationSurfaceFromTab, normalizeStandaloneNavigationSurfaces, removeSurfaceFromGroups, surfaceMatchesTab } from './nav-helpers';
 import { reloadEntityConfiguration, workspaceConfigTemplate } from './runtime-config';
 import { applyEditableSchemaFieldDefault, applyEditableSchemaFieldType, bootstrapCanonicalSchemaSources, bootstrapCanonicalSchemaSourcesIfMissing, editableSchemaFieldDefault, editableSchemaFieldType, loadCanonicalSchemaSources, regenerateSchemaOutputs, validateSourceSchemaDefinition, type SourceSchema, type SourceSchemaField } from './schema-designer';
@@ -1464,31 +1464,34 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
 
       // One row per surface: visibility toggle + folder text input + base file dropdown
       const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
-      items.forEach((surface) => {
+      const renderSurfaceRow = (surface: DraftNavSurface, showVisibility = true) => {
         const eDef = surface.entityKey ? ENTITIES[surface.entityKey] : null;
         const overridden = eDef && (eDef.typeFilter || Array.isArray(eDef.folders));
         const level = surface.navLevel || 'primary';
         const levelLabel = level === 'secondary' ? 'Secondary tab'
           : level === 'setup' ? 'Setup'
           : 'Primary';
+        // Only surface a level chip when it's not the default 'primary' — otherwise
+        // every row just said "(Primary)", which reads as noise.
         const desc = [];
-        desc.push(levelLabel);
+        if (level !== 'primary') desc.push(levelLabel);
         if (surface.parent) desc.push(`parent: ${SURFACE_BY_ID[surface.parent]?.label || surface.parent}`);
         if (overridden) {
           if (eDef.typeFilter)            desc.push(`type: "${eDef.typeFilter}"`);
           if (Array.isArray(eDef.folders))desc.push(`folders: [${eDef.folders.join(', ')}]`);
-        } else {
+        } else if (surface.id) {
           desc.push(surface.id);
         }
         const managedBase = !!configuredBaseDefinition(surface.entityKey);
         if (managedBase) desc.push('Base from workspace.json');
         const s = new obsidian.Setting(panel)
-          .setName(`${surface.label} (${levelLabel})`)
+          .setName(level !== 'primary' ? `${surface.label} (${levelLabel})` : surface.label)
           .setDesc(desc.join(' · '));
         if (moduleDisabled) s.settingEl.classList.add('cad-setting-disabled');
 
-        // Visibility toggle
-        s.addToggle((t) => {
+        // Visibility toggle — primary surfaces only; secondary tabs have no
+        // per-tab disable mechanism (they show whenever their parent is active).
+        if (showVisibility) s.addToggle((t) => {
           t.setValue(!disabled.has(surface.id))
             .onChange(async (v) => {
               const arr = this.plugin.settings.disabledSurfaces || [];
@@ -1568,6 +1571,23 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             });
           });
         }
+      };
+      items.forEach((surface) => renderSurfaceRow(surface, true));
+
+      // Secondary tabs live in navigation.secondaryTabs, not in group.items, so
+      // list each primary tab-parent's entity-backed tabs here too (Base/folder
+      // config, same controls as primary surfaces). Route-only tabs are skipped.
+      items.forEach((parent) => {
+        (SECONDARY_TABS[parent.id] || []).forEach((tab: DraftSecondaryTab) => {
+          if (!tab.entityKey || !ENTITIES[tab.entityKey]) return;
+          renderSurfaceRow({
+            id: `${parent.id}.${tab.entityKey}`,
+            label: tab.label || tab.entityKey,
+            entityKey: tab.entityKey,
+            navLevel: 'secondary',
+            parent: parent.id,
+          } as DraftNavSurface, false);
+        });
       });
 
       // Special case: Projects gets a multi-folder editor below its row
