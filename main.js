@@ -29746,7 +29746,6 @@ ${snippet}` : "- No markdown content");
           card[key] = parseFieldValue(inp.value, card[key]);
           onChange();
         });
-        if (help) r.createDiv({ cls: "cad-de-form-help", text: help });
         return dl;
       } else {
         const current = card[key];
@@ -29779,7 +29778,6 @@ ${snippet}` : "- No markdown content");
           });
         }
       }
-      if (help) r.createDiv({ cls: "cad-de-form-help", text: help });
       return null;
     };
     const getObjectField = (key, fallback = {}) => {
@@ -29865,8 +29863,8 @@ ${snippet}` : "- No markdown content");
       kanban: "A board of cards grouped into columns."
     };
     const basicsSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
-    basicsSection.createDiv({ cls: "cad-de-section-label", text: `Settings \u2014 ${cardSchema?.label || widgetKind}` });
-    if (WIDGET_INTRO[widgetKind]) basicsSection.createDiv({ cls: "cad-de-section-help", text: WIDGET_INTRO[widgetKind] });
+    const basicsLabel = basicsSection.createDiv({ cls: "cad-de-section-label", text: `Settings \u2014 ${cardSchema?.label || widgetKind}` });
+    if (WIDGET_INTRO[widgetKind]) basicsLabel.setAttribute("title", WIDGET_INTRO[widgetKind]);
     addRow("Title", "title");
     if (fieldOn("entity")) addRow("Entity", "entity", sortedEntityKeys, true);
     let titleFieldList = null;
@@ -29948,8 +29946,7 @@ ${snippet}` : "- No markdown content");
     };
     const sourceSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
     if (!usesSource) sourceSection.style.display = "none";
-    sourceSection.createDiv({ cls: "cad-de-section-label", text: "Where does the data come from?" });
-    sourceSection.createDiv({ cls: "cad-de-section-help", text: "Pick a Mode: \u201Cbuilt-in\u201D uses a prepared planner/home section; \u201Crecent\u201D/\u201Cdue\u201D list records of the Entity above; \u201Cbase\u201D reads an existing .base file. Most Today widgets use built-in \u2192 planner." });
+    sourceSection.createDiv({ cls: "cad-de-section-label", text: "Where does the data come from?" }).setAttribute("title", "Pick a Mode: \u201Cbuilt-in\u201D uses a prepared planner/home section; \u201Crecent\u201D/\u201Cdue\u201D list records of the Entity above; \u201Cbase\u201D reads an existing .base file. Most Today widgets use built-in \u2192 planner.");
     const sourceModeRow = sourceSection.createDiv({ cls: "cad-de-form-row" });
     sourceModeRow.createDiv({ cls: "cad-de-form-label", text: "Mode" });
     const sourceMode = sourceModeRow.createEl("select", { cls: "cad-de-field cad-de-field-sm" });

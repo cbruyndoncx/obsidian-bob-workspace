@@ -4660,7 +4660,6 @@ export class CadenceAppView extends obsidian.ItemView {
           card[key] = parseFieldValue(inp.value, card[key]);
           onChange();
         });
-        if (help) r.createDiv({ cls: 'cad-de-form-help', text: help });
         return dl;
       } else {
         const current = card[key];
@@ -4692,7 +4691,6 @@ export class CadenceAppView extends obsidian.ItemView {
           });
         }
       }
-      if (help) r.createDiv({ cls: 'cad-de-form-help', text: help });
       return null;
     };
     const getObjectField = (key: string, fallback: Frontmatter = {}) => {
@@ -4781,8 +4779,8 @@ export class CadenceAppView extends obsidian.ItemView {
       kanban: 'A board of cards grouped into columns.',
     };
     const basicsSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
-    basicsSection.createDiv({ cls: 'cad-de-section-label', text: `Settings — ${cardSchema?.label || widgetKind}` });
-    if (WIDGET_INTRO[widgetKind]) basicsSection.createDiv({ cls: 'cad-de-section-help', text: WIDGET_INTRO[widgetKind] });
+    const basicsLabel = basicsSection.createDiv({ cls: 'cad-de-section-label', text: `Settings — ${cardSchema?.label || widgetKind}` });
+    if (WIDGET_INTRO[widgetKind]) basicsLabel.setAttribute('title', WIDGET_INTRO[widgetKind]);
     addRow('Title', 'title');
     if (fieldOn('entity')) addRow('Entity', 'entity', sortedEntityKeys, true);
     let titleFieldList: HTMLDataListElement | null = null;
@@ -4868,8 +4866,8 @@ export class CadenceAppView extends obsidian.ItemView {
     // Sourceless widgets (quick-add, date-hero, note-section) don't read data —
     // hide the whole Source details block so their editor stays simple.
     if (!usesSource) sourceSection.style.display = 'none';
-    sourceSection.createDiv({ cls: 'cad-de-section-label', text: 'Where does the data come from?' });
-    sourceSection.createDiv({ cls: 'cad-de-section-help', text: 'Pick a Mode: “built-in” uses a prepared planner/home section; “recent”/“due” list records of the Entity above; “base” reads an existing .base file. Most Today widgets use built-in → planner.' });
+    sourceSection.createDiv({ cls: 'cad-de-section-label', text: 'Where does the data come from?' })
+      .setAttribute('title', 'Pick a Mode: “built-in” uses a prepared planner/home section; “recent”/“due” list records of the Entity above; “base” reads an existing .base file. Most Today widgets use built-in → planner.');
     const sourceModeRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
     sourceModeRow.createDiv({ cls: 'cad-de-form-label', text: 'Mode' });
     const sourceMode = sourceModeRow.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });

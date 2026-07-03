@@ -3416,22 +3416,15 @@ select.cad-form-input {
   align-items: center;
   gap: 4px 8px;
 }
-/* Inline field hint: spans both grid columns, sits under the input. */
-.cad-de-form-help {
-  grid-column: 1 / -1;
-  font-size: 11px;
-  color: var(--text-faint);
-  line-height: 1.35;
-  margin: 0 0 2px;
+/* Field and section labels carry their explanation on hover; hint that with a
+   help cursor + faint dotted underline so it's discoverable without cluttering
+   the form with permanent help text. */
+.cad-de-form-label[title],
+.cad-de-section-label[title] {
+  cursor: help;
+  text-decoration: underline dotted var(--background-modifier-border);
+  text-underline-offset: 3px;
 }
-/* Plain-language intro under a section label. */
-.cad-de-section-help {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  line-height: 1.4;
-  margin: 2px 0 8px;
-}
-.cad-de-form-label[title] { cursor: help; }
 .cad-de-form-label {
   font-size: 10px;
   font-weight: 600;
