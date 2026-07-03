@@ -29705,9 +29705,27 @@ ${snippet}` : "- No markdown content");
       }
       return value;
     };
+    const FIELD_HELP = {
+      title: "Heading shown at the top of this widget.",
+      entity: "Which record type to read (e.g. task, contact). The widget lists these.",
+      titleFields: "Frontmatter fields to use as each row\u2019s title (first non-empty wins).",
+      metaFields: "Frontmatter fields shown as the small grey subtitle on each row.",
+      placeholder: "Grey hint text shown inside the empty input.",
+      eyebrow: "Small label above the date (defaults to the weekday).",
+      empty: "Message shown when there are no rows to display.",
+      section: "Heading in today\u2019s daily note to bind to (e.g. ## Journal).",
+      limit: "Maximum number of rows to show.",
+      view: "Which view inside the selected Base to use (leave blank for its default).",
+      base: "Read rows from an existing .base file instead of the entity. Optional.",
+      field: "Frontmatter field this widget reads its number/value from.",
+      metric: "How to aggregate the field across records (count, sum, average\u2026).",
+      accent: "Colour accent for this widget."
+    };
     const addRow = (label, key, opts, combobox = false) => {
       const r = form.createDiv({ cls: "cad-de-form-row" });
-      r.createDiv({ cls: "cad-de-form-label", text: label });
+      const labelEl = r.createDiv({ cls: "cad-de-form-label", text: label });
+      const help = FIELD_HELP[key];
+      if (help) labelEl.setAttribute("title", help);
       if (opts && !combobox) {
         const sel = r.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
         opts.forEach((v) => {
@@ -29728,6 +29746,7 @@ ${snippet}` : "- No markdown content");
           card[key] = parseFieldValue(inp.value, card[key]);
           onChange();
         });
+        if (help) r.createDiv({ cls: "cad-de-form-help", text: help });
         return dl;
       } else {
         const current = card[key];
@@ -29760,6 +29779,7 @@ ${snippet}` : "- No markdown content");
           });
         }
       }
+      if (help) r.createDiv({ cls: "cad-de-form-help", text: help });
       return null;
     };
     const getObjectField = (key, fallback = {}) => {
@@ -29835,6 +29855,18 @@ ${snippet}` : "- No markdown content");
     const supportedFields = new Set(cardSchema?.supports || []);
     const fieldOn = (...keys) => !cardSchema || keys.some((k) => supportedFields.has(k));
     const usesSource = fieldOn("source", "entity", "base");
+    const WIDGET_INTRO = {
+      "date-hero": "Shows today\u2019s date. No data source needed.",
+      "quick-add": "A text box that adds a task to today\u2019s note when you press Enter. No data source needed.",
+      "note-section": "An editable text area bound to a heading in today\u2019s daily note (e.g. the journal).",
+      "task-list": "A checklist of tasks. Choose where the tasks come from under \u201CWhere do the tasks come from?\u201D below.",
+      list: "A read-only list of records. Choose the source below.",
+      metric: "A single number (a count or total) from a record type.",
+      kanban: "A board of cards grouped into columns."
+    };
+    const basicsSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
+    basicsSection.createDiv({ cls: "cad-de-section-label", text: `Settings \u2014 ${cardSchema?.label || widgetKind}` });
+    if (WIDGET_INTRO[widgetKind]) basicsSection.createDiv({ cls: "cad-de-section-help", text: WIDGET_INTRO[widgetKind] });
     addRow("Title", "title");
     if (fieldOn("entity")) addRow("Entity", "entity", sortedEntityKeys, true);
     let titleFieldList = null;
@@ -29916,7 +29948,8 @@ ${snippet}` : "- No markdown content");
     };
     const sourceSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
     if (!usesSource) sourceSection.style.display = "none";
-    sourceSection.createDiv({ cls: "cad-de-section-label", text: "Source details" });
+    sourceSection.createDiv({ cls: "cad-de-section-label", text: "Where does the data come from?" });
+    sourceSection.createDiv({ cls: "cad-de-section-help", text: "Pick a Mode: \u201Cbuilt-in\u201D uses a prepared planner/home section; \u201Crecent\u201D/\u201Cdue\u201D list records of the Entity above; \u201Cbase\u201D reads an existing .base file. Most Today widgets use built-in \u2192 planner." });
     const sourceModeRow = sourceSection.createDiv({ cls: "cad-de-form-row" });
     sourceModeRow.createDiv({ cls: "cad-de-form-label", text: "Mode" });
     const sourceMode = sourceModeRow.createEl("select", { cls: "cad-de-field cad-de-field-sm" });

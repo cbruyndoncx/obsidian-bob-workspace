@@ -4623,9 +4623,29 @@ export class CadenceAppView extends obsidian.ItemView {
       }
       return value;
     };
+    // Plain-language help per config key — shown as a hint under the field and
+    // as a hover title, so the editor is self-explanatory.
+    const FIELD_HELP: Record<string, string> = {
+      title: 'Heading shown at the top of this widget.',
+      entity: 'Which record type to read (e.g. task, contact). The widget lists these.',
+      titleFields: 'Frontmatter fields to use as each row’s title (first non-empty wins).',
+      metaFields: 'Frontmatter fields shown as the small grey subtitle on each row.',
+      placeholder: 'Grey hint text shown inside the empty input.',
+      eyebrow: 'Small label above the date (defaults to the weekday).',
+      empty: 'Message shown when there are no rows to display.',
+      section: 'Heading in today’s daily note to bind to (e.g. ## Journal).',
+      limit: 'Maximum number of rows to show.',
+      view: 'Which view inside the selected Base to use (leave blank for its default).',
+      base: 'Read rows from an existing .base file instead of the entity. Optional.',
+      field: 'Frontmatter field this widget reads its number/value from.',
+      metric: 'How to aggregate the field across records (count, sum, average…).',
+      accent: 'Colour accent for this widget.',
+    };
     const addRow = (label: string, key: string, opts?: string[], combobox = false) => {
       const r = form.createDiv({ cls: 'cad-de-form-row' });
-      r.createDiv({ cls: 'cad-de-form-label', text: label });
+      const labelEl = r.createDiv({ cls: 'cad-de-form-label', text: label });
+      const help = FIELD_HELP[key];
+      if (help) labelEl.setAttribute('title', help);
       if (opts && !combobox) {
         const sel = r.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
         opts.forEach(v => { const o = sel.createEl('option', { value: v, text: v }); if (v === card[key]) o.selected = true; });
@@ -4640,6 +4660,7 @@ export class CadenceAppView extends obsidian.ItemView {
           card[key] = parseFieldValue(inp.value, card[key]);
           onChange();
         });
+        if (help) r.createDiv({ cls: 'cad-de-form-help', text: help });
         return dl;
       } else {
         const current = card[key];
@@ -4671,6 +4692,7 @@ export class CadenceAppView extends obsidian.ItemView {
           });
         }
       }
+      if (help) r.createDiv({ cls: 'cad-de-form-help', text: help });
       return null;
     };
     const getObjectField = (key: string, fallback: Frontmatter = {}) => {
@@ -4749,6 +4771,18 @@ export class CadenceAppView extends obsidian.ItemView {
     const fieldOn = (...keys: string[]) => !cardSchema || keys.some((k) => supportedFields.has(k));
     const usesSource = fieldOn('source', 'entity', 'base');
 
+    const WIDGET_INTRO: Record<string, string> = {
+      'date-hero': 'Shows today’s date. No data source needed.',
+      'quick-add': 'A text box that adds a task to today’s note when you press Enter. No data source needed.',
+      'note-section': 'An editable text area bound to a heading in today’s daily note (e.g. the journal).',
+      'task-list': 'A checklist of tasks. Choose where the tasks come from under “Where do the tasks come from?” below.',
+      list: 'A read-only list of records. Choose the source below.',
+      metric: 'A single number (a count or total) from a record type.',
+      kanban: 'A board of cards grouped into columns.',
+    };
+    const basicsSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
+    basicsSection.createDiv({ cls: 'cad-de-section-label', text: `Settings — ${cardSchema?.label || widgetKind}` });
+    if (WIDGET_INTRO[widgetKind]) basicsSection.createDiv({ cls: 'cad-de-section-help', text: WIDGET_INTRO[widgetKind] });
     addRow('Title', 'title');
     if (fieldOn('entity')) addRow('Entity', 'entity', sortedEntityKeys, true);
     let titleFieldList: HTMLDataListElement | null = null;
@@ -4834,7 +4868,8 @@ export class CadenceAppView extends obsidian.ItemView {
     // Sourceless widgets (quick-add, date-hero, note-section) don't read data —
     // hide the whole Source details block so their editor stays simple.
     if (!usesSource) sourceSection.style.display = 'none';
-    sourceSection.createDiv({ cls: 'cad-de-section-label', text: 'Source details' });
+    sourceSection.createDiv({ cls: 'cad-de-section-label', text: 'Where does the data come from?' });
+    sourceSection.createDiv({ cls: 'cad-de-section-help', text: 'Pick a Mode: “built-in” uses a prepared planner/home section; “recent”/“due” list records of the Entity above; “base” reads an existing .base file. Most Today widgets use built-in → planner.' });
     const sourceModeRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
     sourceModeRow.createDiv({ cls: 'cad-de-form-label', text: 'Mode' });
     const sourceMode = sourceModeRow.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
