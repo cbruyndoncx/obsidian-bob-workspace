@@ -329,6 +329,7 @@ export class CadenceAppView extends obsidian.ItemView {
   /** Sort state per `${mode}::${entityKey}` table. */
   declare _tableSortState: Record<string, { key: string | null; dir: string }> | undefined;
   declare _columnFilterCleanup: (() => void) | null;
+  declare _openHelpPanels: Set<string> | undefined;
   /** Client Work client/project selector state. */
   declare _clientWorkClientId: string | undefined;
   declare _clientWorkProjectId: string | undefined;
@@ -4040,6 +4041,44 @@ export class CadenceAppView extends obsidian.ItemView {
     new CadenceImportModal(this.app, {}).open();
   }
 
+  // Reusable, toggleable colored help panel. `key` persists open/closed state
+  // for this session; `build` populates the panel body (headings, paragraphs,
+  // lists). Returns nothing — appends a "Help" toggle + collapsible panel.
+  _helpPanel(parent: HTMLElement, key: string, title: string, build: (body: HTMLElement) => void) {
+    if (!this._openHelpPanels) this._openHelpPanels = new Set<string>();
+    const open = this._openHelpPanels.has(key);
+    const block = parent.createDiv({ cls: 'cad-help-block' });
+    const toggle = block.createEl('button', { cls: 'cad-help-toggle' + (open ? ' is-open' : ''), attr: { type: 'button' } });
+    const icon = toggle.createSpan({ cls: 'cad-help-toggle-icon' });
+    try { obsidian.setIcon(icon, 'help-circle'); } catch (_) { icon.setText('?'); }
+    toggle.createSpan({ cls: 'cad-help-toggle-label', text: title });
+    const chevron = toggle.createSpan({ cls: 'cad-help-toggle-chevron', text: open ? '▾' : '▸' });
+    const panel = block.createDiv({ cls: 'cad-help-panel' });
+    if (!open) panel.style.display = 'none';
+    build(panel);
+    toggle.addEventListener('click', () => {
+      const nowOpen = panel.style.display === 'none';
+      panel.style.display = nowOpen ? '' : 'none';
+      toggle.toggleClass('is-open', nowOpen);
+      chevron.setText(nowOpen ? '▾' : '▸');
+      if (nowOpen) this._openHelpPanels.add(key); else this._openHelpPanels.delete(key);
+    });
+  }
+
+  // Small helper: render a heading + paragraph/list items into a help panel body.
+  _helpBlock(body: HTMLElement, heading: string, lines: (string | [string, string])[]) {
+    body.createDiv({ cls: 'cad-help-heading', text: heading });
+    lines.forEach((line) => {
+      const row = body.createDiv({ cls: 'cad-help-line' });
+      if (Array.isArray(line)) {
+        row.createSpan({ cls: 'cad-help-term', text: line[0] });
+        row.createSpan({ cls: 'cad-help-desc', text: line[1] });
+      } else {
+        row.createSpan({ cls: 'cad-help-desc', text: line });
+      }
+    });
+  }
+
   async renderDashboardEditor(root: HTMLElement) {
     // Deep-link target from the Modules settings "Edit dashboard" action.
     if (this.plugin.pendingDesignerSurface) {
@@ -4047,6 +4086,26 @@ export class CadenceAppView extends obsidian.ItemView {
       this.plugin.pendingDesignerSurface = null;
     }
     this._renderPageHeader(root, 'Surface Designer', 'Customize dashboards, reports and widgets');
+
+    this._helpPanel(root, 'designer-overview', 'How the Surface Designer works', (body) => {
+      this._helpBlock(body, 'The basics', [
+        'A surface (like Home or Today) is a dashboard made of widgets arranged in rows and columns.',
+        'Pick a surface from the Dashboard dropdown, edit it on the left, and see a live preview on the right.',
+      ]);
+      this._helpBlock(body, 'Built-in vs custom', [
+        ['Built-in', 'the layout shipped with the workspace. Read-only until you Customize it.'],
+        ['Customize', 'copies the built-in layout into your workspace.json as editable widgets.'],
+        ['Reset to built-in', 'discards your changes and goes back to the shipped layout.'],
+      ]);
+      this._helpBlock(body, 'Editing widgets', [
+        'Each box in the Layout is a widget. Click Edit on a widget to change its type and settings.',
+        'Hover any field label (dotted underline) for a short explanation.',
+        'Drag widgets between columns; use + Col / + Add row to change the grid.',
+      ]);
+      this._helpBlock(body, 'Saving', [
+        'Click Save to write your changes to workspace.json. Switch to JSON mode to edit the raw config.',
+      ]);
+    });
 
     const builtinIds = Object.keys(BUILTIN_DASHBOARD_DEFAULTS);
     const builtinPlannerIds = Object.keys(WORKSPACE_CONFIG.planner || {});
@@ -4778,6 +4837,24 @@ export class CadenceAppView extends obsidian.ItemView {
       metric: 'A single number (a count or total) from a record type.',
       kanban: 'A board of cards grouped into columns.',
     };
+    // Comprehensive per-widget help panel (toggleable, one row of [term, desc]).
+    const WIDGET_GUIDE: Record<string, { what: string; use: string; fields: [string, string][] }> = {
+      'date-hero': { what: 'Shows today’s weekday, day, month and year.', use: 'A header for the Today screen. Needs no data.', fields: [['Eyebrow', 'small label above the date (defaults to the weekday)']] },
+      'quick-add': { what: 'A text box that appends a task to today’s daily note when you press Enter.', use: 'Fast capture on the Today screen.', fields: [['Placeholder', 'grey hint text inside the box']] },
+      'note-section': { what: 'An editable text area bound to a heading in today’s daily note; saves when you click away.', use: 'A journal / notes area on the Today screen.', fields: [['Section', 'which heading to bind to, e.g. ## Journal']] },
+      'task-list': { what: 'A checklist of tasks with checkboxes you can tick. Ticking writes the change back.', use: 'Today’s tasks, or any filtered task list.', fields: [['Entity', 'read task records (e.g. task)'], ['Base', 'or read from a .base file + View'], ['Mode = built-in → planner', 'use the prepared “today” list'], ['Limit', 'max rows shown']] },
+      list: { what: 'A read-only list of records.', use: 'Recent or due items from a record type.', fields: [['Entity', 'which record type'], ['Mode', 'recent / due / base'], ['Title/Meta fields', 'what to show per row']] },
+      metric: { what: 'A single big number.', use: 'A count or total (e.g. open deals).', fields: [['Field', 'which value to read'], ['Metric', 'count / sum / average…']] },
+    };
+    const guide = WIDGET_GUIDE[widgetKind];
+    if (guide) {
+      this._helpPanel(form, `widget-${widgetKind}`, `About the “${cardSchema?.label || widgetKind}” widget`, (body) => {
+        this._helpBlock(body, 'What it does', [guide.what]);
+        this._helpBlock(body, 'When to use it', [guide.use]);
+        if (guide.fields.length) this._helpBlock(body, 'Key settings', guide.fields);
+      });
+    }
+
     const basicsSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
     const basicsLabel = basicsSection.createDiv({ cls: 'cad-de-section-label', text: `Settings — ${cardSchema?.label || widgetKind}` });
     if (WIDGET_INTRO[widgetKind]) basicsLabel.setAttribute('title', WIDGET_INTRO[widgetKind]);

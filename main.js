@@ -29066,12 +29066,72 @@ ${snippet}` : "- No markdown content");
   renderImport(root) {
     new CadenceImportModal(this.app, {}).open();
   }
+  // Reusable, toggleable colored help panel. `key` persists open/closed state
+  // for this session; `build` populates the panel body (headings, paragraphs,
+  // lists). Returns nothing — appends a "Help" toggle + collapsible panel.
+  _helpPanel(parent, key, title, build) {
+    if (!this._openHelpPanels) this._openHelpPanels = /* @__PURE__ */ new Set();
+    const open = this._openHelpPanels.has(key);
+    const block = parent.createDiv({ cls: "cad-help-block" });
+    const toggle = block.createEl("button", { cls: "cad-help-toggle" + (open ? " is-open" : ""), attr: { type: "button" } });
+    const icon = toggle.createSpan({ cls: "cad-help-toggle-icon" });
+    try {
+      obsidian17.setIcon(icon, "help-circle");
+    } catch (_) {
+      icon.setText("?");
+    }
+    toggle.createSpan({ cls: "cad-help-toggle-label", text: title });
+    const chevron = toggle.createSpan({ cls: "cad-help-toggle-chevron", text: open ? "\u25BE" : "\u25B8" });
+    const panel = block.createDiv({ cls: "cad-help-panel" });
+    if (!open) panel.style.display = "none";
+    build(panel);
+    toggle.addEventListener("click", () => {
+      const nowOpen = panel.style.display === "none";
+      panel.style.display = nowOpen ? "" : "none";
+      toggle.toggleClass("is-open", nowOpen);
+      chevron.setText(nowOpen ? "\u25BE" : "\u25B8");
+      if (nowOpen) this._openHelpPanels.add(key);
+      else this._openHelpPanels.delete(key);
+    });
+  }
+  // Small helper: render a heading + paragraph/list items into a help panel body.
+  _helpBlock(body, heading, lines) {
+    body.createDiv({ cls: "cad-help-heading", text: heading });
+    lines.forEach((line) => {
+      const row = body.createDiv({ cls: "cad-help-line" });
+      if (Array.isArray(line)) {
+        row.createSpan({ cls: "cad-help-term", text: line[0] });
+        row.createSpan({ cls: "cad-help-desc", text: line[1] });
+      } else {
+        row.createSpan({ cls: "cad-help-desc", text: line });
+      }
+    });
+  }
   async renderDashboardEditor(root) {
     if (this.plugin.pendingDesignerSurface) {
       this._dashEditorSurfaceId = this.plugin.pendingDesignerSurface;
       this.plugin.pendingDesignerSurface = null;
     }
     this._renderPageHeader(root, "Surface Designer", "Customize dashboards, reports and widgets");
+    this._helpPanel(root, "designer-overview", "How the Surface Designer works", (body) => {
+      this._helpBlock(body, "The basics", [
+        "A surface (like Home or Today) is a dashboard made of widgets arranged in rows and columns.",
+        "Pick a surface from the Dashboard dropdown, edit it on the left, and see a live preview on the right."
+      ]);
+      this._helpBlock(body, "Built-in vs custom", [
+        ["Built-in", "the layout shipped with the workspace. Read-only until you Customize it."],
+        ["Customize", "copies the built-in layout into your workspace.json as editable widgets."],
+        ["Reset to built-in", "discards your changes and goes back to the shipped layout."]
+      ]);
+      this._helpBlock(body, "Editing widgets", [
+        "Each box in the Layout is a widget. Click Edit on a widget to change its type and settings.",
+        "Hover any field label (dotted underline) for a short explanation.",
+        "Drag widgets between columns; use + Col / + Add row to change the grid."
+      ]);
+      this._helpBlock(body, "Saving", [
+        "Click Save to write your changes to workspace.json. Switch to JSON mode to edit the raw config."
+      ]);
+    });
     const builtinIds = Object.keys(BUILTIN_DASHBOARD_DEFAULTS);
     const builtinPlannerIds = Object.keys(WORKSPACE_CONFIG.planner || {});
     const workspaceDashIds = Object.keys(WORKSPACE_CONFIG.dashboards || {});
@@ -29862,6 +29922,22 @@ ${snippet}` : "- No markdown content");
       metric: "A single number (a count or total) from a record type.",
       kanban: "A board of cards grouped into columns."
     };
+    const WIDGET_GUIDE = {
+      "date-hero": { what: "Shows today\u2019s weekday, day, month and year.", use: "A header for the Today screen. Needs no data.", fields: [["Eyebrow", "small label above the date (defaults to the weekday)"]] },
+      "quick-add": { what: "A text box that appends a task to today\u2019s daily note when you press Enter.", use: "Fast capture on the Today screen.", fields: [["Placeholder", "grey hint text inside the box"]] },
+      "note-section": { what: "An editable text area bound to a heading in today\u2019s daily note; saves when you click away.", use: "A journal / notes area on the Today screen.", fields: [["Section", "which heading to bind to, e.g. ## Journal"]] },
+      "task-list": { what: "A checklist of tasks with checkboxes you can tick. Ticking writes the change back.", use: "Today\u2019s tasks, or any filtered task list.", fields: [["Entity", "read task records (e.g. task)"], ["Base", "or read from a .base file + View"], ["Mode = built-in \u2192 planner", "use the prepared \u201Ctoday\u201D list"], ["Limit", "max rows shown"]] },
+      list: { what: "A read-only list of records.", use: "Recent or due items from a record type.", fields: [["Entity", "which record type"], ["Mode", "recent / due / base"], ["Title/Meta fields", "what to show per row"]] },
+      metric: { what: "A single big number.", use: "A count or total (e.g. open deals).", fields: [["Field", "which value to read"], ["Metric", "count / sum / average\u2026"]] }
+    };
+    const guide = WIDGET_GUIDE[widgetKind];
+    if (guide) {
+      this._helpPanel(form, `widget-${widgetKind}`, `About the \u201C${cardSchema?.label || widgetKind}\u201D widget`, (body) => {
+        this._helpBlock(body, "What it does", [guide.what]);
+        this._helpBlock(body, "When to use it", [guide.use]);
+        if (guide.fields.length) this._helpBlock(body, "Key settings", guide.fields);
+      });
+    }
     const basicsSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
     const basicsLabel = basicsSection.createDiv({ cls: "cad-de-section-label", text: `Settings \u2014 ${cardSchema?.label || widgetKind}` });
     if (WIDGET_INTRO[widgetKind]) basicsLabel.setAttribute("title", WIDGET_INTRO[widgetKind]);
