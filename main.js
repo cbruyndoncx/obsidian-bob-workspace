@@ -19032,9 +19032,13 @@ function migrateWorkspacePlannerConfig(config) {
 function loadBuiltinDashboardDefaults() {
   const defaults = {};
   ["workspace-bob.json", "workspace-cadence.json", "workspace-crm.json"].forEach((fileName) => {
-    const parsed = BUNDLED_WORKSPACE_TEMPLATES[fileName];
-    if (!parsed) return;
+    const raw = BUNDLED_WORKSPACE_TEMPLATES[fileName];
+    if (!raw) return;
+    const parsed = migrateWorkspacePlannerConfig(cloneConfig(raw));
     Object.entries(parsed.dashboards || {}).forEach(([surfaceId, config]) => {
+      defaults[surfaceId] = cloneConfig(config);
+    });
+    Object.entries(parsed.planner || {}).forEach(([surfaceId, config]) => {
       defaults[surfaceId] = cloneConfig(config);
     });
   });

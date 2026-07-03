@@ -110,9 +110,18 @@ export function loadBuiltinDashboardDefaults(): Record<string, DashboardConfig> 
   // and the templates/ folder isn't delivered by the store installer.
   const defaults: Record<string, DashboardConfig> = {};
   ['workspace-bob.json', 'workspace-cadence.json', 'workspace-crm.json'].forEach((fileName) => {
-    const parsed = BUNDLED_WORKSPACE_TEMPLATES[fileName];
-    if (!parsed) return;
+    const raw = BUNDLED_WORKSPACE_TEMPLATES[fileName];
+    if (!raw) return;
+    // Templates author planner surfaces nested under dashboards.planner; unwrap
+    // that (as the runtime load does) so planner.today/inbox/... are real default
+    // keys instead of being lost under a single bogus 'planner' entry. Without
+    // this, "built-in dashboard" detection and the designer's Customize/Reset
+    // never see the planner defaults.
+    const parsed = migrateWorkspacePlannerConfig(cloneConfig(raw) as WorkspaceConfig);
     Object.entries(parsed.dashboards || {} as Record<string, DashboardConfig>).forEach(([surfaceId, config]) => {
+      defaults[surfaceId] = cloneConfig(config);
+    });
+    Object.entries((parsed.planner || {}) as Record<string, DashboardConfig>).forEach(([surfaceId, config]) => {
       defaults[surfaceId] = cloneConfig(config);
     });
   });
