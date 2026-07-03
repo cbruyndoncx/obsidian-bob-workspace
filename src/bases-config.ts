@@ -29,11 +29,15 @@ export function defaultBaseFileName(def: EntityDef, entityKey: string): string {
 }
 
 export function entityBasePath(settings: PartialSettings = {}, entityKey: string): string {
-  // basesFolder is authoritative for the directory. The filename comes from
-  // (in order) workspace.json bases[key].file, plugin baseFiles[key], the
-  // built-in default, or — for schema-defined entities with none of those — a
-  // name derived from the entity. We always strip to the basename and compose
-  // with basesFolder, so changing the Bases folder relocates EVERY base.
+  // The base reference comes from (in order) workspace.json bases[key].file,
+  // plugin baseFiles[key], the built-in default, or — for schema-defined
+  // entities with none of those — a name derived from the entity.
+  //   • A value that includes a directory ('20-COMPANY/skills.base') is an
+  //     explicit vault location and is honored VERBATIM, so a base can live
+  //     anywhere in the vault, not only under basesFolder. This is what the base
+  //     picker stores (it lists every .base in the vault by full path).
+  //   • A bare filename ('People.base') composes with basesFolder and therefore
+  //     relocates when the Bases folder changes.
   const base = configuredBaseDefinition(entityKey) as ConfiguredBaseRef | null;
   let raw: string = base?.file || base?.base
     || (settings.baseFiles || {})[entityKey]
@@ -42,9 +46,10 @@ export function entityBasePath(settings: PartialSettings = {}, entityKey: string
   if (!raw && typeof ENTITIES !== 'undefined' && ENTITIES[entityKey]) {
     raw = defaultBaseFileName(ENTITIES[entityKey], entityKey);
   }
-  const name = String(raw).split('/').pop();
-  if (!name) return '';
-  return `${resolveBasesFolder(settings)}/${name}`;
+  raw = String(raw || '').trim();
+  if (!raw) return '';
+  if (raw.includes('/')) return raw;
+  return `${resolveBasesFolder(settings)}/${raw}`;
 }
 
 // Entities the generator should consider — anything with a base mapping plus

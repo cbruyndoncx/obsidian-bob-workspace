@@ -20148,9 +20148,10 @@ function entityBasePath(settings = {}, entityKey) {
   if (!raw && typeof ENTITIES !== "undefined" && ENTITIES[entityKey]) {
     raw = defaultBaseFileName(ENTITIES[entityKey], entityKey);
   }
-  const name = String(raw).split("/").pop();
-  if (!name) return "";
-  return `${resolveBasesFolder(settings)}/${name}`;
+  raw = String(raw || "").trim();
+  if (!raw) return "";
+  if (raw.includes("/")) return raw;
+  return `${resolveBasesFolder(settings)}/${raw}`;
 }
 function baseEntityKeys(settings = {}) {
   return Array.from(/* @__PURE__ */ new Set([
