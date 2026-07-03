@@ -1,7 +1,7 @@
 import { setWorkspaceConfig } from './workspace-config';
 import { entityBasePath, entityBaseViewName, generateMissingBases } from './bases-config';
 import { baseSummaryCompatibleWithEntity, readBaseSummary } from './bases-parse';
-import { summarizeDashboardBlueprint } from './dashboards';
+import { BUILTIN_DASHBOARD_DEFAULTS, summarizeDashboardBlueprint } from './dashboards';
 import { ENTITIES } from './entities';
 import { CadenceIconPickerModal, CadencePromptModal, confirmModal } from './modals/common';
 import { NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_CADENCE_APP, migrateWorkspacePlannerConfig } from './nav';
@@ -1491,10 +1491,27 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         }
         const managedBase = !!configuredBaseDefinition(surface.entityKey);
         if (managedBase) desc.push('Base from workspace.json');
+        // Dashboard state: is this surface a configurable dashboard, and is it a
+        // custom (workspace.json) config or the bundled built-in default?
+        const hasCustomDash = !!((WORKSPACE_CONFIG.dashboards || {})[surface.id] || (WORKSPACE_CONFIG.planner || {})[surface.id]);
+        const hasBuiltinDash = !!BUILTIN_DASHBOARD_DEFAULTS[surface.id];
+        if (hasCustomDash) desc.push('✎ custom dashboard');
+        else if (hasBuiltinDash) desc.push('built-in dashboard');
         const s = new obsidian.Setting(panel)
           .setName(level !== 'primary' ? `${surface.label} (${levelLabel})` : surface.label)
           .setDesc(desc.join(' · '));
         if (moduleDisabled) s.settingEl.classList.add('cad-setting-disabled');
+        // Deep-link to the Surface Designer for dashboard-bearing surfaces, where
+        // Customize (decompose the built-in into widgets) / Reset to built-in live.
+        if (hasCustomDash || hasBuiltinDash) {
+          s.addExtraButton((b) => b
+            .setIcon('layout-panel-left')
+            .setTooltip(hasCustomDash ? 'Edit custom dashboard in Surface Designer' : 'Customize this dashboard in Surface Designer')
+            .onClick(() => {
+              this.plugin.pendingDesignerSurface = surface.id;
+              this.plugin.openApp('misc.dashboard-editor');
+            }));
+        }
         // Indent non-primary rows so the tab hierarchy under a parent reads visually.
         if (level !== 'primary') s.settingEl.classList.add('cad-setting-nested');
 

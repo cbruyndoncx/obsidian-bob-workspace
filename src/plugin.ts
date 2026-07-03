@@ -55,6 +55,9 @@ interface StoredReminder extends Reminder {
 
 export class CadencePlugin extends obsidian.Plugin {
   settings: BobSettings;
+  // Set by the Modules settings "Edit dashboard" action to deep-link the Surface
+  // Designer to a specific surface; consumed (once) by renderDashboardEditor.
+  pendingDesignerSurface: string | null = null;
   async onload() {
     initPluginPaths(this);
     await seedWorkspaceTemplates(this.app);

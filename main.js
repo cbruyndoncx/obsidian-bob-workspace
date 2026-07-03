@@ -28835,6 +28835,10 @@ ${snippet}` : "- No markdown content");
     new CadenceImportModal(this.app, {}).open();
   }
   async renderDashboardEditor(root) {
+    if (this.plugin.pendingDesignerSurface) {
+      this._dashEditorSurfaceId = this.plugin.pendingDesignerSurface;
+      this.plugin.pendingDesignerSurface = null;
+    }
     this._renderPageHeader(root, "Surface Designer", "Customize dashboards, reports and widgets");
     const builtinIds = Object.keys(BUILTIN_DASHBOARD_DEFAULTS);
     const builtinPlannerIds = Object.keys(WORKSPACE_CONFIG.planner || {});
@@ -32665,8 +32669,18 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         }
         const managedBase = !!configuredBaseDefinition(surface.entityKey);
         if (managedBase) desc.push("Base from workspace.json");
+        const hasCustomDash = !!((WORKSPACE_CONFIG.dashboards || {})[surface.id] || (WORKSPACE_CONFIG.planner || {})[surface.id]);
+        const hasBuiltinDash = !!BUILTIN_DASHBOARD_DEFAULTS[surface.id];
+        if (hasCustomDash) desc.push("\u270E custom dashboard");
+        else if (hasBuiltinDash) desc.push("built-in dashboard");
         const s = new obsidian18.Setting(panel).setName(level !== "primary" ? `${surface.label} (${levelLabel})` : surface.label).setDesc(desc.join(" \xB7 "));
         if (moduleDisabled) s.settingEl.classList.add("cad-setting-disabled");
+        if (hasCustomDash || hasBuiltinDash) {
+          s.addExtraButton((b) => b.setIcon("layout-panel-left").setTooltip(hasCustomDash ? "Edit custom dashboard in Surface Designer" : "Customize this dashboard in Surface Designer").onClick(() => {
+            this.plugin.pendingDesignerSurface = surface.id;
+            this.plugin.openApp("misc.dashboard-editor");
+          }));
+        }
         if (level !== "primary") s.settingEl.classList.add("cad-setting-nested");
         if (showVisibility) s.addToggle((t) => {
           t.setValue(!disabled.has(surface.id)).onChange(async (v) => {
@@ -33595,6 +33609,12 @@ ${cmd}`, 5e3);
 // src/plugin.ts
 var obsidian20 = __toESM(require("obsidian"));
 var CadencePlugin = class extends obsidian20.Plugin {
+  constructor() {
+    super(...arguments);
+    // Set by the Modules settings "Edit dashboard" action to deep-link the Surface
+    // Designer to a specific surface; consumed (once) by renderDashboardEditor.
+    this.pendingDesignerSurface = null;
+  }
   async onload() {
     initPluginPaths(this);
     await seedWorkspaceTemplates(this.app);

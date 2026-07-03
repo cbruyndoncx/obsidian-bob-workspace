@@ -3884,6 +3884,11 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   async renderDashboardEditor(root: HTMLElement) {
+    // Deep-link target from the Modules settings "Edit dashboard" action.
+    if (this.plugin.pendingDesignerSurface) {
+      this._dashEditorSurfaceId = this.plugin.pendingDesignerSurface;
+      this.plugin.pendingDesignerSurface = null;
+    }
     this._renderPageHeader(root, 'Surface Designer', 'Customize dashboards, reports and widgets');
 
     const builtinIds = Object.keys(BUILTIN_DASHBOARD_DEFAULTS);
