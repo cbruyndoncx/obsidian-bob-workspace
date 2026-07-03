@@ -4,6 +4,7 @@ export const BUILTIN_DASHBOARD_DEFAULTS: Record<string, DashboardConfig> = loadB
 
 export const PURE_DASHBOARD_WIDGET_TYPES = [
   'list',
+  'task-list',
   'metric',
   'gauge',
   'progress',
@@ -53,6 +54,14 @@ export const DASHBOARD_WIDGET_CATALOG: DashboardWidgetCatalogEntry[] = [
     description: 'Compact row list for entity results, similar to a lightweight report section.',
     config: ['title', 'entity', 'source', 'titleFields', 'metaFields', 'limit', 'empty'],
     examples: ['workspace.entity-list', 'report sections'],
+  },
+  {
+    id: 'task-list',
+    label: 'Task list (interactive)',
+    status: 'implemented',
+    description: 'Checklist of tasks with toggleable checkboxes. TaskNote-record rows (entity/base sources) write their status back; source can be a built-in daily section, a task entity, or a Base + view.',
+    config: ['title', 'entity', 'source', 'limit', 'empty'],
+    examples: ['planner.today TODAY TASKS', 'Tasks.base + view'],
   },
   {
     id: 'bar-chart',

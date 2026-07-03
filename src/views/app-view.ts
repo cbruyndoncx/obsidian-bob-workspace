@@ -2297,6 +2297,10 @@ export class CadenceAppView extends obsidian.ItemView {
       await this._renderListWidget(col, card, getWidgetEntities);
       return true;
     }
+    if (kind === 'task-list' || kind === 'tasklist' || kind === 'checklist') {
+      await this._renderTaskListWidget(col, card, getWidgetEntities);
+      return true;
+    }
     if (kind === 'bar-chart' || kind === 'chart-bar') {
       await this._renderBarChartWidget(col, card, getWidgetEntities);
       return true;
@@ -3510,6 +3514,53 @@ export class CadenceAppView extends obsidian.ItemView {
           if (row.url) {
             window.open(row.url, '_blank', 'noopener,noreferrer');
           }
+        });
+      }
+    });
+  }
+
+  // Interactive task list: like _renderListWidget but rows carry a checkbox that
+  // writes back. TaskNote-record rows (entity/base sources) toggle frontmatter
+  // status via toggleTaskNoteStatus; built-in daily-note rows (no file) are shown
+  // read-only for now (write-back for those is Phase 2).
+  async _renderTaskListWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
+    const rows = await this._resolveCardRows(card, getWidgetEntities);
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-list-card cad-task-list-card' });
+    this._applyCardTone(cardEl, Object.assign({ kind: 'task-list' }, card));
+    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
+    head.createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label || 'Tasks').trim() });
+    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    if (card.description || card.subtitle) {
+      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+    }
+    if (!rows.length) {
+      body.createDiv({ cls: 'cad-empty', text: String(card.empty || 'No tasks').trim() });
+      return;
+    }
+    const list = body.createDiv({ cls: 'cad-home-list cad-task-list-widget' });
+    rows.slice(0, Math.max(1, Number(card.limit || 12) || 12)).forEach((row) => {
+      const file = row.file || null;
+      const fm = file ? (this.app.metadataCache.getFileCache(file)?.frontmatter || {}) : {};
+      const done = file ? String(fm.status || '').trim().toLowerCase() === 'done' : !!row.done;
+      const item = list.createDiv({ cls: 'cad-task-row cad-dash-task-row' + (done ? ' done' : '') });
+      const cb = item.createEl('input', { type: 'checkbox' });
+      cb.checked = done;
+      if (file) {
+        cb.addEventListener('change', async () => {
+          await toggleTaskNoteStatus(this.app, file, cb.checked);
+          this.render();
+        });
+      } else {
+        cb.disabled = true;
+      }
+      const main = item.createDiv({ cls: 'cad-task-text cad-home-row-main' });
+      main.createDiv({ cls: 'cad-home-row-title', text: row.title || 'Untitled' });
+      if (row.meta) main.createDiv({ cls: 'cad-home-row-meta', text: row.meta });
+      if (file) {
+        main.classList.add('clickable');
+        main.addEventListener('click', () => {
+          if (row.entityKey) { this.openEntityDetail(row.entityKey, file); return; }
+          this.openEntityDetailFromFile(file);
         });
       }
     });
