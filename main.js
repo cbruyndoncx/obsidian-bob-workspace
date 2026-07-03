@@ -32617,7 +32617,19 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       const card = pMod.createDiv({ cls: "cad-module-card" + (moduleDisabled ? " is-off" : "") + (isCollapsed ? " is-collapsed" : "") });
       const cardHead = card.createDiv({ cls: "cad-module-card-head" });
       cardHead.createSpan({ text: headingText, cls: "cad-module-card-label" });
-      const chevron = cardHead.createSpan({ cls: "cad-module-card-chevron", text: isCollapsed ? "\u203A" : "\u2304" });
+      const headRight = cardHead.createDiv({ cls: "cad-module-card-head-right" });
+      if (isModuleGroup) {
+        const toggleWrap = headRight.createDiv({ cls: "cad-module-card-toggle" });
+        toggleWrap.setAttribute("aria-label", ensureMods()[group.module] !== false ? `Disable ${headingText}` : `Enable ${headingText}`);
+        toggleWrap.addEventListener("click", (e) => e.stopPropagation());
+        new obsidian18.ToggleComponent(toggleWrap).setValue(ensureMods()[group.module] !== false).onChange(async (v) => {
+          ensureMods()[group.module] = v;
+          await this.plugin.saveSettings();
+          this.plugin.refreshOpenViews();
+          this.display();
+        });
+      }
+      const chevron = headRight.createSpan({ cls: "cad-module-card-chevron", text: isCollapsed ? "\u203A" : "\u2304" });
       cardHead.addEventListener("click", () => {
         if (this._collapsedModules.has(cardKey)) {
           this._collapsedModules.delete(cardKey);
@@ -32633,12 +32645,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       const settingGroup = cardBody.createDiv({ cls: "setting-group" + (moduleDisabled ? " cad-settings-panel-off" : "") });
       const panel = settingGroup.createDiv({ cls: "setting-items" });
       if (isModuleGroup) {
-        new obsidian18.Setting(panel).setName(`Enable ${headingText}`).setDesc(moduleLabels[group.module] || `${headingText} module defined in workspace.json.`).addToggle((t) => t.setValue(ensureMods()[group.module] !== false).onChange(async (v) => {
-          ensureMods()[group.module] = v;
-          await this.plugin.saveSettings();
-          this.plugin.refreshOpenViews();
-          this.display();
-        }));
+        panel.createDiv({ cls: "setting-item-description cad-module-card-desc", text: moduleLabels[group.module] || `${headingText} module defined in workspace.json.` });
       }
       const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
       const renderSurfaceRow = (surface, showVisibility = true) => {
@@ -32659,6 +32666,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         if (managedBase) desc.push("Base from workspace.json");
         const s = new obsidian18.Setting(panel).setName(level !== "primary" ? `${surface.label} (${levelLabel})` : surface.label).setDesc(desc.join(" \xB7 "));
         if (moduleDisabled) s.settingEl.classList.add("cad-setting-disabled");
+        if (level !== "primary") s.settingEl.classList.add("cad-setting-nested");
         if (showVisibility) s.addToggle((t) => {
           t.setValue(!disabled.has(surface.id)).onChange(async (v) => {
             const arr = this.plugin.settings.disabledSurfaces || [];

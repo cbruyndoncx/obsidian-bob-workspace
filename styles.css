@@ -1225,11 +1225,34 @@ select.cad-create-input {
   font-weight: 600;
   font-size: 13px;
 }
+.cad-module-card-head-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cad-module-card-toggle {
+  display: flex;
+  align-items: center;
+}
+.cad-module-card-desc {
+  padding: 8px 16px 4px;
+}
 .cad-module-card-chevron {
   font-size: 16px;
   color: var(--text-muted);
   line-height: 1;
   transition: transform 0.15s;
+}
+/* Secondary-tab rows: indent + tree connector so the parent→tab hierarchy reads. */
+.setting-item.cad-setting-nested {
+  margin-left: 20px;
+  padding-left: 16px;
+  border-left: 2px solid var(--background-modifier-border);
+}
+.setting-item.cad-setting-nested .setting-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
 }
 .cad-module-card.is-collapsed .cad-module-card-body {
   display: none;

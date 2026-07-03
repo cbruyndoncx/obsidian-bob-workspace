@@ -1431,7 +1431,24 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       const card = pMod.createDiv({ cls: 'cad-module-card' + (moduleDisabled ? ' is-off' : '') + (isCollapsed ? ' is-collapsed' : '') });
       const cardHead = card.createDiv({ cls: 'cad-module-card-head' });
       cardHead.createSpan({ text: headingText, cls: 'cad-module-card-label' });
-      const chevron = cardHead.createSpan({ cls: 'cad-module-card-chevron', text: isCollapsed ? '›' : '⌄' });
+      const headRight = cardHead.createDiv({ cls: 'cad-module-card-head-right' });
+      // Module enable/disable toggle lives in the HEADER so it's usable while the
+      // card is collapsed. stopPropagation stops toggling it from also collapsing
+      // the card (the header row's own click handler toggles collapse).
+      if (isModuleGroup) {
+        const toggleWrap = headRight.createDiv({ cls: 'cad-module-card-toggle' });
+        toggleWrap.setAttribute('aria-label', ensureMods()[group.module] !== false ? `Disable ${headingText}` : `Enable ${headingText}`);
+        toggleWrap.addEventListener('click', (e) => e.stopPropagation());
+        new obsidian.ToggleComponent(toggleWrap)
+          .setValue(ensureMods()[group.module] !== false)
+          .onChange(async (v) => {
+            ensureMods()[group.module] = v;
+            await this.plugin.saveSettings();
+            this.plugin.refreshOpenViews();
+            this.display();   // re-render to update surface row enabled state
+          });
+      }
+      const chevron = headRight.createSpan({ cls: 'cad-module-card-chevron', text: isCollapsed ? '›' : '⌄' });
       cardHead.addEventListener('click', () => {
         if (this._collapsedModules.has(cardKey)) {
           this._collapsedModules.delete(cardKey);
@@ -1447,19 +1464,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       const settingGroup = cardBody.createDiv({ cls: 'setting-group' + (moduleDisabled ? ' cad-settings-panel-off' : '') });
       const panel = settingGroup.createDiv({ cls: 'setting-items' });
 
-      // Module enable/disable toggle (only for groups with a module ID)
+      // Module description (the enable toggle itself now lives in the header).
       if (isModuleGroup) {
-        new obsidian.Setting(panel)
-          .setName(`Enable ${headingText}`)
-          .setDesc(moduleLabels[group.module] || `${headingText} module defined in workspace.json.`)
-          .addToggle((t) => t
-            .setValue(ensureMods()[group.module] !== false)
-            .onChange(async (v) => {
-              ensureMods()[group.module] = v;
-              await this.plugin.saveSettings();
-              this.plugin.refreshOpenViews();
-              this.display();   // re-render to update surface row enabled state
-            }));
+        panel.createDiv({ cls: 'setting-item-description cad-module-card-desc', text: moduleLabels[group.module] || `${headingText} module defined in workspace.json.` });
       }
 
       // One row per surface: visibility toggle + folder text input + base file dropdown
@@ -1488,6 +1495,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           .setName(level !== 'primary' ? `${surface.label} (${levelLabel})` : surface.label)
           .setDesc(desc.join(' · '));
         if (moduleDisabled) s.settingEl.classList.add('cad-setting-disabled');
+        // Indent non-primary rows so the tab hierarchy under a parent reads visually.
+        if (level !== 'primary') s.settingEl.classList.add('cad-setting-nested');
 
         // Visibility toggle — primary surfaces only; secondary tabs have no
         // per-tab disable mechanism (they show whenever their parent is active).
