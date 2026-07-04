@@ -305,9 +305,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
 
     // Help panels for the remaining tabs (Workspace/Navigation/Modules get their
     // own panels further down, at their content). Content in help-content.ts.
-    this._renderHelpTopic(pReview, 'review-overview');
-    this._renderHelpTopic(pDash, 'dashboards-overview');
-    this._renderHelpTopic(pWidgets, 'widgets-overview');
+    // pReview / pDash / pWidgets help is added inside their render functions —
+    // those panels are emptied on every render, so a panel added here is wiped.
+    // (pDash embeds the full Surface Designer, which shows its own help panel.)
     this._renderHelpTopic(pDm, 'datamodel-overview');
     this._renderHelpTopic(pPlanner, 'planner-overview');
     this._renderHelpTopic(pApp, 'app-overview');
@@ -626,6 +626,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       if (!pReview) return;
       const reviewSeq = ++this._reviewRenderSeq;
       pReview.empty();
+      // Re-add the help panel here: renderWorkspaceReview() empties pReview on
+      // every render, so a one-off panel added at tab-setup time would be wiped.
+      this._renderHelpTopic(pReview, 'review-overview');
       let config: WorkspaceDraft;
       try {
         config = readWorkspaceDraft();
@@ -872,6 +875,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           pDash.createDiv({ cls: 'setting-item-description', text: `Dashboard editor failed: ${e.message}` });
         });
         pWidgets.empty();
+        this._renderHelpTopic(pWidgets, 'widgets-overview');
         dashboardRenderer._renderWidgetCatalog(pWidgets);
       }
     };

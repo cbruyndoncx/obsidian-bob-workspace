@@ -32079,9 +32079,6 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     const pApp = tabPanels["app"];
     const pExp = tabPanels["exports"];
     const pData = tabPanels["data"];
-    this._renderHelpTopic(pReview, "review-overview");
-    this._renderHelpTopic(pDash, "dashboards-overview");
-    this._renderHelpTopic(pWidgets, "widgets-overview");
     this._renderHelpTopic(pDm, "datamodel-overview");
     this._renderHelpTopic(pPlanner, "planner-overview");
     this._renderHelpTopic(pApp, "app-overview");
@@ -32393,6 +32390,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       if (!pReview) return;
       const reviewSeq = ++this._reviewRenderSeq;
       pReview.empty();
+      this._renderHelpTopic(pReview, "review-overview");
       let config;
       try {
         config = readWorkspaceDraft();
@@ -32627,6 +32625,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           pDash.createDiv({ cls: "setting-item-description", text: `Dashboard editor failed: ${e.message}` });
         });
         pWidgets.empty();
+        this._renderHelpTopic(pWidgets, "widgets-overview");
         dashboardRenderer._renderWidgetCatalog(pWidgets);
       }
     };
