@@ -1,6 +1,7 @@
 import { entityBasePath, entityBaseViewName } from '../bases-config';
 import { hasBaseValue, parseBaseFile, readBaseSummary } from '../bases-parse';
 import { BUILTIN_DASHBOARD_DEFAULTS, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
+import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
 import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
 import { CadenceReminderEditModal } from '../modals/capture';
@@ -4065,6 +4066,15 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
+  // Render a named help topic (from help-content.ts) as a collapsible panel.
+  _renderHelpTopic(parent: HTMLElement, topicKey: string) {
+    const topic = HELP_TOPICS[topicKey];
+    if (!topic) return;
+    this._helpPanel(parent, topicKey, topic.title, (body) => {
+      topic.sections.forEach((section) => this._helpBlock(body, section.heading, section.lines));
+    });
+  }
+
   // Small helper: render a heading + paragraph/list items into a help panel body.
   _helpBlock(body: HTMLElement, heading: string, lines: (string | [string, string])[]) {
     body.createDiv({ cls: 'cad-help-heading', text: heading });
@@ -4087,25 +4097,7 @@ export class CadenceAppView extends obsidian.ItemView {
     }
     this._renderPageHeader(root, 'Surface Designer', 'Customize dashboards, reports and widgets');
 
-    this._helpPanel(root, 'designer-overview', 'How the Surface Designer works', (body) => {
-      this._helpBlock(body, 'The basics', [
-        'A surface (like Home or Today) is a dashboard made of widgets arranged in rows and columns.',
-        'Pick a surface from the Dashboard dropdown, edit it on the left, and see a live preview on the right.',
-      ]);
-      this._helpBlock(body, 'Built-in vs custom', [
-        ['Built-in', 'the layout shipped with the workspace. Read-only until you Customize it.'],
-        ['Customize', 'copies the built-in layout into your workspace.json as editable widgets.'],
-        ['Reset to built-in', 'discards your changes and goes back to the shipped layout.'],
-      ]);
-      this._helpBlock(body, 'Editing widgets', [
-        'Each box in the Layout is a widget. Click Edit on a widget to change its type and settings.',
-        'Hover any field label (dotted underline) for a short explanation.',
-        'Drag widgets between columns; use + Col / + Add row to change the grid.',
-      ]);
-      this._helpBlock(body, 'Saving', [
-        'Click Save to write your changes to workspace.json. Switch to JSON mode to edit the raw config.',
-      ]);
-    });
+    this._renderHelpTopic(root, 'designer-overview');
 
     const builtinIds = Object.keys(BUILTIN_DASHBOARD_DEFAULTS);
     const builtinPlannerIds = Object.keys(WORKSPACE_CONFIG.planner || {});
@@ -4682,24 +4674,7 @@ export class CadenceAppView extends obsidian.ItemView {
       }
       return value;
     };
-    // Plain-language help per config key — shown as a hint under the field and
-    // as a hover title, so the editor is self-explanatory.
-    const FIELD_HELP: Record<string, string> = {
-      title: 'Heading shown at the top of this widget.',
-      entity: 'Which record type to read (e.g. task, contact). The widget lists these.',
-      titleFields: 'Frontmatter fields to use as each row’s title (first non-empty wins).',
-      metaFields: 'Frontmatter fields shown as the small grey subtitle on each row.',
-      placeholder: 'Grey hint text shown inside the empty input.',
-      eyebrow: 'Small label above the date (defaults to the weekday).',
-      empty: 'Message shown when there are no rows to display.',
-      section: 'Heading in today’s daily note to bind to (e.g. ## Journal).',
-      limit: 'Maximum number of rows to show.',
-      view: 'Which view inside the selected Base to use (leave blank for its default).',
-      base: 'Read rows from an existing .base file instead of the entity. Optional.',
-      field: 'Frontmatter field this widget reads its number/value from.',
-      metric: 'How to aggregate the field across records (count, sum, average…).',
-      accent: 'Colour accent for this widget.',
-    };
+    // Field-level help (FIELD_HELP) lives in help-content.ts — shown on hover.
     const addRow = (label: string, key: string, opts?: string[], combobox = false) => {
       const r = form.createDiv({ cls: 'cad-de-form-row' });
       const labelEl = r.createDiv({ cls: 'cad-de-form-label', text: label });
@@ -4828,38 +4803,8 @@ export class CadenceAppView extends obsidian.ItemView {
     const fieldOn = (...keys: string[]) => !cardSchema || keys.some((k) => supportedFields.has(k));
     const usesSource = fieldOn('source', 'entity', 'base');
 
-    const WIDGET_INTRO: Record<string, string> = {
-      'date-hero': 'Shows today’s date. No data source needed.',
-      'quick-add': 'A text box that adds a task to today’s note when you press Enter. No data source needed.',
-      'note-section': 'An editable text area bound to a heading in today’s daily note (e.g. the journal).',
-      'task-list': 'A checklist of tasks. Choose where the tasks come from under “Where do the tasks come from?” below.',
-      list: 'A read-only list of records. Choose the source below.',
-      metric: 'A single number (a count or total) from a record type.',
-      kanban: 'A board of cards grouped into columns.',
-    };
-    // Comprehensive per-widget help panel (toggleable, one row of [term, desc]).
-    const WIDGET_GUIDE: Record<string, { what: string; use: string; fields: [string, string][] }> = {
-      'date-hero': { what: 'Shows today’s weekday, day, month and year.', use: 'A header for the Today screen. Needs no data.', fields: [['Eyebrow', 'small label above the date (defaults to the weekday)']] },
-      'quick-add': { what: 'A text box that appends a task to today’s daily note when you press Enter.', use: 'Fast capture on the Today screen.', fields: [['Placeholder', 'grey hint text inside the box']] },
-      'note-section': { what: 'An editable text area bound to a heading in today’s daily note; saves when you click away.', use: 'A journal / notes area on the Today screen.', fields: [['Section', 'which heading to bind to, e.g. ## Journal']] },
-      'task-list': { what: 'A checklist of tasks with checkboxes you can tick. Ticking writes the change back.', use: 'Today’s tasks, or any filtered task list.', fields: [['Entity', 'read task records (e.g. task)'], ['Base', 'or read from a .base file + View'], ['Mode = built-in → planner', 'use the prepared “today” list'], ['Limit', 'max rows shown']] },
-      list: { what: 'A read-only list of records.', use: 'Recent or due items from a record type.', fields: [['Entity', 'which record type'], ['Mode', 'recent / due / base'], ['Title/Meta fields', 'what to show per row']] },
-      metric: { what: 'A single big number.', use: 'A count or total (e.g. open deals).', fields: [['Field', 'which value to read'], ['Metric', 'count / sum / average…']] },
-      gauge: { what: 'A dial showing a value against a maximum (e.g. 72/100).', use: 'A score or completion percentage.', fields: [['Field', 'the value to read'], ['Metric', 'how to aggregate it'], ['Max', 'the full-scale value (default 100)'], ['Suffix', 'text after the number, e.g. %']] },
-      progress: { what: 'A horizontal bar filling toward a target.', use: 'Progress toward a goal (e.g. days active this month).', fields: [['Field', 'the value'], ['Max', 'the target'], ['Suffix', 'text after the number'], ['Label', 'caption under the bar']] },
-      heatmap: { what: 'A calendar grid coloured by activity per day.', use: 'Streaks / cadence over recent days.', fields: [['Date field', 'the date each record is placed on'], ['Field', 'value that sets colour intensity'], ['Days', 'how many days back'], ['Columns', 'grid width (7 = weeks)']] },
-      'bar-chart': { what: 'Bars comparing a value across groups.', use: 'Counts or totals by status, owner, month…', fields: [['Entity', 'which records'], ['Group by', 'field that defines the bars'], ['Metric', 'count / sum of…'], ['Field', 'value to aggregate (for sum/avg)']] },
-      kanban: { what: 'A board of cards in columns you can drag between.', use: 'A pipeline or status board.', fields: [['Entity', 'which records'], ['Group by', 'field that defines the columns'], ['Groups', 'fixed column order (optional)'], ['Title/Meta fields', 'what each card shows']] },
-      selector: { what: 'A dropdown that filters the other widgets on this dashboard.', use: 'Let the viewer pick a client, stage, month…', fields: [['Key', 'the filter name other widgets read (required)'], ['Entity/Field', 'where the options come from'], ['All label', 'text for the “no filter” option']] },
-      'date-range': { what: 'A date-range picker that filters the dashboard.', use: 'This month / last 30 days / custom.', fields: [['Key', 'the filter name (required)'], ['Default', 'the range selected on load'], ['Presets', 'the ranges offered']] },
-      markdown: { what: 'A block of formatted text.', use: 'Notes, instructions, links, headings.', fields: [['Body / Text', 'the markdown to render'], ['Section', 'or pull text from a note heading']] },
-      actions: { what: 'A row of buttons.', use: 'Quick actions — create a record, run a command, open a surface.', fields: [['Actions', 'the buttons: label + what each does']] },
-      'base-link': { what: 'A button that opens a .base file in Obsidian.', use: 'Jump to a full Base view.', fields: [['Base', 'the .base file'], ['View', 'which view to open'], ['Label', 'button text']] },
-      'base-embed': { what: 'A compact list rendered from a .base file’s rows.', use: 'Show Base results inline as a simple list.', fields: [['Base', 'the .base file'], ['View', 'which view supplies the rows'], ['Limit', 'max rows']] },
-      'base-view': { what: 'A live, fully-rendered Obsidian Base view embedded in the card.', use: 'The real Base table/board inside a dashboard.', fields: [['Base', 'the .base file'], ['View', 'which view to render'], ['Height', 'card height'], ['Fallback', 'what to show if it can’t render']] },
-      merge: { what: 'One list combining rows from several sources.', use: 'e.g. tasks from two folders in a single list.', fields: [['Merge', 'the list of sources to combine']] },
-    };
-    const guide = WIDGET_GUIDE[widgetKind];
+    // WIDGET_INTRO / WIDGET_GUIDES live in help-content.ts.
+    const guide = WIDGET_GUIDES[widgetKind];
     if (guide) {
       this._helpPanel(form, `widget-${widgetKind}`, `About the “${cardSchema?.label || widgetKind}” widget`, (body) => {
         this._helpBlock(body, 'What it does', [guide.what]);
@@ -4957,7 +4902,7 @@ export class CadenceAppView extends obsidian.ItemView {
     // hide the whole Source details block so their editor stays simple.
     if (!usesSource) sourceSection.style.display = 'none';
     sourceSection.createDiv({ cls: 'cad-de-section-label', text: 'Where does the data come from?' })
-      .setAttribute('title', 'Pick a Mode: “built-in” uses a prepared planner/home section; “recent”/“due” list records of the Entity above; “base” reads an existing .base file. Most Today widgets use built-in → planner.');
+      .setAttribute('title', SOURCE_SECTION_HELP);
     const sourceModeRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
     sourceModeRow.createDiv({ cls: 'cad-de-form-label', text: 'Mode' });
     const sourceMode = sourceModeRow.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });

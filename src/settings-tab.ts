@@ -2,6 +2,7 @@ import { setWorkspaceConfig } from './workspace-config';
 import { entityBasePath, entityBaseViewName, generateMissingBases } from './bases-config';
 import { baseSummaryCompatibleWithEntity, readBaseSummary } from './bases-parse';
 import { BUILTIN_DASHBOARD_DEFAULTS, summarizeDashboardBlueprint } from './dashboards';
+import { HELP_TOPICS } from './help-content';
 import { ENTITIES } from './entities';
 import { CadenceIconPickerModal, CadencePromptModal, confirmModal } from './modals/common';
 import { NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_CADENCE_APP, migrateWorkspacePlannerConfig } from './nav';
@@ -210,6 +211,15 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     });
   }
 
+  // Render a named help topic (from help-content.ts) as a collapsible panel.
+  _renderHelpTopic(parent: HTMLElement, topicKey: string) {
+    const topic = HELP_TOPICS[topicKey];
+    if (!topic) return;
+    this._helpPanel(parent, topicKey, topic.title, (body) => {
+      topic.sections.forEach((section) => this._helpBlock(body, section.heading, section.lines));
+    });
+  }
+
   // The workspace designers mutate the global WORKSPACE_CONFIG live (for preview)
   // from an unsaved draft. If the tab is closed with such edits unsaved, restore
   // the runtime to the persisted workspace.json so it doesn't silently diverge.
@@ -294,93 +304,18 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const pData = tabPanels['data'];
 
     // Help panels for the remaining tabs (Workspace/Navigation/Modules get their
-    // own contextual panels further down). Added at panel top via declaration order.
-    this._helpPanel(pReview, 'review-overview', 'What the Review tab shows', (body) => {
-      this._helpBlock(body, 'Purpose', [
-        'A read-only summary of your current workspace.json — navigation, dashboards, bases, schemas and settings — so you can sanity-check the whole configuration in one place.',
-      ]);
-      this._helpBlock(body, 'Using it', [
-        'Switch the inner tabs to inspect each area. Nothing here is editable — make changes in the other tabs or the Surface Designer.',
-      ]);
-    });
-    this._helpPanel(pDash, 'dashboards-overview', 'How the Dashboards tab works', (body) => {
-      this._helpBlock(body, 'What this is', [
-        'The same dashboard/layout editor as the Surface Designer, embedded here for each configurable surface.',
-      ]);
-      this._helpBlock(body, 'Key actions', [
-        ['Customize', 'turn a built-in dashboard into editable widgets.'],
-        ['Reset to built-in', 'discard your changes.'],
-        ['Edit a widget', 'change its type and settings; hover field labels for help.'],
-      ]);
-    });
-    this._helpPanel(pWidgets, 'widgets-overview', 'What the Widget catalog is', (body) => {
-      this._helpBlock(body, 'Purpose', [
-        'A reference list of every widget type you can add to a dashboard, with what each one does.',
-      ]);
-      this._helpBlock(body, 'Where you use them', [
-        'Add and configure widgets in the Dashboards tab or the Surface Designer; this tab is the catalogue you pick from.',
-      ]);
-    });
-    this._helpPanel(pDm, 'datamodel-overview', 'How the Data model works', (body) => {
-      this._helpBlock(body, 'The idea', [
-        'Record types (contact, task, invoice…) are defined by schema YAML files. This tab creates and edits those definitions — the shape of your data.',
-      ]);
-      this._helpBlock(body, 'What you can set', [
-        ['Identity & location', 'the type name and which folder its notes live in.'],
-        ['Fields', 'the frontmatter properties, their types and options.'],
-        ['Discriminators', 'extra frontmatter that distinguishes sub-types.'],
-        ['Defaults & aliases', 'starting values and import synonyms.'],
-      ]);
-      this._helpBlock(body, 'Bases', [
-        'Generate missing bases writes a .base file for each record type so it has columns and a view. A backup is written before every save.',
-      ]);
-    });
-    this._helpPanel(pPlanner, 'planner-overview', 'Planner settings', (body) => {
-      this._helpBlock(body, 'What this controls', [
-        'How the planner reads and writes tasks: the task mode (checkboxes in daily notes vs TaskNotes), the headings it looks for, and project folders.',
-      ]);
-      this._helpBlock(body, 'Related', [
-        'The Today / Calendar screens themselves are dashboards — edit their layout in the Surface Designer, not here.',
-      ]);
-    });
-    this._helpPanel(pApp, 'app-overview', 'App settings', (body) => {
-      this._helpBlock(body, 'What lives here', [
-        'Personal preferences that aren’t part of the shared workspace: reminders, daily-note folder/heading, week start, currency, team categories and appearance.',
-      ]);
-      this._helpBlock(body, 'Note', [
-        'These are stored per-install (in plugin data), not in workspace.json, so they don’t travel with a shared template.',
-      ]);
-    });
-    this._helpPanel(pExp, 'exports-overview', 'Export groups', (body) => {
-      this._helpBlock(body, 'Purpose', [
-        'Define which record types are bundled together into each sheet when you export an XLSX workbook.',
-      ]);
-    });
-    this._helpPanel(pData, 'data-overview', 'Import & export', (body) => {
-      this._helpBlock(body, 'What you can do', [
-        ['Export XLSX', 'write your records to an Excel workbook (one sheet per group).'],
-        ['Import XLSX / CSV', 'bring records in, mapping columns to entity fields.'],
-      ]);
-      this._helpBlock(body, 'Tip', [
-        'Import matches columns to fields using each entity’s field aliases, so common header names map automatically.',
-      ]);
-    });
+    // own panels further down, at their content). Content in help-content.ts.
+    this._renderHelpTopic(pReview, 'review-overview');
+    this._renderHelpTopic(pDash, 'dashboards-overview');
+    this._renderHelpTopic(pWidgets, 'widgets-overview');
+    this._renderHelpTopic(pDm, 'datamodel-overview');
+    this._renderHelpTopic(pPlanner, 'planner-overview');
+    this._renderHelpTopic(pApp, 'app-overview');
+    this._renderHelpTopic(pExp, 'exports-overview');
+    this._renderHelpTopic(pData, 'data-overview');
 
     /* ─── Workspace configuration (workspace.json) ─── */
-    this._helpPanel(pWs, 'workspace-overview', 'How the Workspace definition works', (body) => {
-      this._helpBlock(body, 'What this is', [
-        'workspace.json is the single file that composes your whole workspace: navigation, dashboards, Base mappings, schemas and portable settings.',
-        'It lives next to the plugin data and is the source of truth — the other Settings tabs are friendlier editors for parts of it.',
-      ]);
-      this._helpBlock(body, 'Editing safely', [
-        ['Format', 'tidies the JSON.'],
-        ['Save and apply', 'validates, writes the file, and reloads the workspace.'],
-        ['Restore backup', 'loads the last saved backup into the editor.'],
-      ]);
-      this._helpBlock(body, 'Tip', [
-        'Prefer the Navigation, Modules and Surface Designer tabs for day-to-day changes; use this raw editor for bulk edits or blocks with no dedicated UI.',
-      ]);
-    });
+    this._renderHelpTopic(pWs, 'workspace-overview');
     pWs.createEl('h3', { text: 'Workspace definition' });
     const workspaceDesc = pWs.createEl('p', { cls: 'setting-item-description' });
     workspaceDesc.appendText('Define schema loading, Base/view associations and templates in ');
@@ -571,20 +506,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     });
     setTimeout(() => refreshWorkspaceTemplateSelector(), 0);
 
-    this._helpPanel(pNav, 'navigation-overview', 'How Navigation works', (body) => {
-      this._helpBlock(body, 'The idea', [
-        'This designer defines your left-hand navigation: which groups and items appear, and in what order.',
-      ]);
-      this._helpBlock(body, 'Two levels', [
-        ['Primary', 'top-level items shown directly in the left rail.'],
-        ['Secondary tab', 'sub-tabs shown inside a parent surface, not in the left rail.'],
-      ]);
-      this._helpBlock(body, 'Editing', [
-        'Drag items to reorder or move them between groups.',
-        'Each item points at an entity (record type) or a dashboard route.',
-        'Changes apply to workspace.json — click Save and apply when done.',
-      ]);
-    });
+    this._renderHelpTopic(pNav, 'navigation-overview');
 
     const navDesigner = pNav.createDiv({ cls: 'cad-nav-designer' });
     const navDesignerHead = navDesigner.createDiv({ cls: 'cad-nav-designer-head' });
@@ -1555,21 +1477,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const baseSummariesPromise = Promise.all(baseFiles.map((file) => readBaseSummary(this.plugin.app, file)))
       .then((items) => items.filter(Boolean).sort((a, b) => a.label.localeCompare(b.label)));
 
-    this._helpPanel(pMod, 'modules-overview', 'How Modules work', (body) => {
-      this._helpBlock(body, 'What this tab does', [
-        'Each card is a module (CRM, Planner, Finance…). Toggle it on/off to show or hide its whole section in the left navigation.',
-      ]);
-      this._helpBlock(body, 'The rows inside a card', [
-        ['Primary surface', 'a top-level nav item (e.g. Contacts). Toggle hides just that item.'],
-        ['Secondary tab', 'an indented sub-tab shown inside a parent surface (e.g. Meetings under Client Work).'],
-        ['Folder', 'where this record type’s notes live.'],
-        ['Base', 'an optional .base file giving the list its columns/filters/view.'],
-      ]);
-      this._helpBlock(body, 'Dashboards', [
-        ['built-in / ✎ custom chip', 'whether a surface uses the shipped dashboard or your own.'],
-        ['Edit dashboard button', 'opens the Surface Designer for that surface (Customize / Reset there).'],
-      ]);
-    });
+    this._renderHelpTopic(pMod, 'modules-overview');
 
     NAV_GROUPS.forEach((group: NavGroupConfig) => {
       const items = group.items.filter((s) => !['home', 'team', 'settings'].includes(s.id));
