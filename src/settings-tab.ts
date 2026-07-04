@@ -293,6 +293,79 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const pExp = tabPanels['exports'];
     const pData = tabPanels['data'];
 
+    // Help panels for the remaining tabs (Workspace/Navigation/Modules get their
+    // own contextual panels further down). Added at panel top via declaration order.
+    this._helpPanel(pReview, 'review-overview', 'What the Review tab shows', (body) => {
+      this._helpBlock(body, 'Purpose', [
+        'A read-only summary of your current workspace.json — navigation, dashboards, bases, schemas and settings — so you can sanity-check the whole configuration in one place.',
+      ]);
+      this._helpBlock(body, 'Using it', [
+        'Switch the inner tabs to inspect each area. Nothing here is editable — make changes in the other tabs or the Surface Designer.',
+      ]);
+    });
+    this._helpPanel(pDash, 'dashboards-overview', 'How the Dashboards tab works', (body) => {
+      this._helpBlock(body, 'What this is', [
+        'The same dashboard/layout editor as the Surface Designer, embedded here for each configurable surface.',
+      ]);
+      this._helpBlock(body, 'Key actions', [
+        ['Customize', 'turn a built-in dashboard into editable widgets.'],
+        ['Reset to built-in', 'discard your changes.'],
+        ['Edit a widget', 'change its type and settings; hover field labels for help.'],
+      ]);
+    });
+    this._helpPanel(pWidgets, 'widgets-overview', 'What the Widget catalog is', (body) => {
+      this._helpBlock(body, 'Purpose', [
+        'A reference list of every widget type you can add to a dashboard, with what each one does.',
+      ]);
+      this._helpBlock(body, 'Where you use them', [
+        'Add and configure widgets in the Dashboards tab or the Surface Designer; this tab is the catalogue you pick from.',
+      ]);
+    });
+    this._helpPanel(pDm, 'datamodel-overview', 'How the Data model works', (body) => {
+      this._helpBlock(body, 'The idea', [
+        'Record types (contact, task, invoice…) are defined by schema YAML files. This tab creates and edits those definitions — the shape of your data.',
+      ]);
+      this._helpBlock(body, 'What you can set', [
+        ['Identity & location', 'the type name and which folder its notes live in.'],
+        ['Fields', 'the frontmatter properties, their types and options.'],
+        ['Discriminators', 'extra frontmatter that distinguishes sub-types.'],
+        ['Defaults & aliases', 'starting values and import synonyms.'],
+      ]);
+      this._helpBlock(body, 'Bases', [
+        'Generate missing bases writes a .base file for each record type so it has columns and a view. A backup is written before every save.',
+      ]);
+    });
+    this._helpPanel(pPlanner, 'planner-overview', 'Planner settings', (body) => {
+      this._helpBlock(body, 'What this controls', [
+        'How the planner reads and writes tasks: the task mode (checkboxes in daily notes vs TaskNotes), the headings it looks for, and project folders.',
+      ]);
+      this._helpBlock(body, 'Related', [
+        'The Today / Calendar screens themselves are dashboards — edit their layout in the Surface Designer, not here.',
+      ]);
+    });
+    this._helpPanel(pApp, 'app-overview', 'App settings', (body) => {
+      this._helpBlock(body, 'What lives here', [
+        'Personal preferences that aren’t part of the shared workspace: reminders, daily-note folder/heading, week start, currency, team categories and appearance.',
+      ]);
+      this._helpBlock(body, 'Note', [
+        'These are stored per-install (in plugin data), not in workspace.json, so they don’t travel with a shared template.',
+      ]);
+    });
+    this._helpPanel(pExp, 'exports-overview', 'Export groups', (body) => {
+      this._helpBlock(body, 'Purpose', [
+        'Define which record types are bundled together into each sheet when you export an XLSX workbook.',
+      ]);
+    });
+    this._helpPanel(pData, 'data-overview', 'Import & export', (body) => {
+      this._helpBlock(body, 'What you can do', [
+        ['Export XLSX', 'write your records to an Excel workbook (one sheet per group).'],
+        ['Import XLSX / CSV', 'bring records in, mapping columns to entity fields.'],
+      ]);
+      this._helpBlock(body, 'Tip', [
+        'Import matches columns to fields using each entity’s field aliases, so common header names map automatically.',
+      ]);
+    });
+
     /* ─── Workspace configuration (workspace.json) ─── */
     this._helpPanel(pWs, 'workspace-overview', 'How the Workspace definition works', (body) => {
       this._helpBlock(body, 'What this is', [

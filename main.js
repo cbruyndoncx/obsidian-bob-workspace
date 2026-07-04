@@ -29928,7 +29928,20 @@ ${snippet}` : "- No markdown content");
       "note-section": { what: "An editable text area bound to a heading in today\u2019s daily note; saves when you click away.", use: "A journal / notes area on the Today screen.", fields: [["Section", "which heading to bind to, e.g. ## Journal"]] },
       "task-list": { what: "A checklist of tasks with checkboxes you can tick. Ticking writes the change back.", use: "Today\u2019s tasks, or any filtered task list.", fields: [["Entity", "read task records (e.g. task)"], ["Base", "or read from a .base file + View"], ["Mode = built-in \u2192 planner", "use the prepared \u201Ctoday\u201D list"], ["Limit", "max rows shown"]] },
       list: { what: "A read-only list of records.", use: "Recent or due items from a record type.", fields: [["Entity", "which record type"], ["Mode", "recent / due / base"], ["Title/Meta fields", "what to show per row"]] },
-      metric: { what: "A single big number.", use: "A count or total (e.g. open deals).", fields: [["Field", "which value to read"], ["Metric", "count / sum / average\u2026"]] }
+      metric: { what: "A single big number.", use: "A count or total (e.g. open deals).", fields: [["Field", "which value to read"], ["Metric", "count / sum / average\u2026"]] },
+      gauge: { what: "A dial showing a value against a maximum (e.g. 72/100).", use: "A score or completion percentage.", fields: [["Field", "the value to read"], ["Metric", "how to aggregate it"], ["Max", "the full-scale value (default 100)"], ["Suffix", "text after the number, e.g. %"]] },
+      progress: { what: "A horizontal bar filling toward a target.", use: "Progress toward a goal (e.g. days active this month).", fields: [["Field", "the value"], ["Max", "the target"], ["Suffix", "text after the number"], ["Label", "caption under the bar"]] },
+      heatmap: { what: "A calendar grid coloured by activity per day.", use: "Streaks / cadence over recent days.", fields: [["Date field", "the date each record is placed on"], ["Field", "value that sets colour intensity"], ["Days", "how many days back"], ["Columns", "grid width (7 = weeks)"]] },
+      "bar-chart": { what: "Bars comparing a value across groups.", use: "Counts or totals by status, owner, month\u2026", fields: [["Entity", "which records"], ["Group by", "field that defines the bars"], ["Metric", "count / sum of\u2026"], ["Field", "value to aggregate (for sum/avg)"]] },
+      kanban: { what: "A board of cards in columns you can drag between.", use: "A pipeline or status board.", fields: [["Entity", "which records"], ["Group by", "field that defines the columns"], ["Groups", "fixed column order (optional)"], ["Title/Meta fields", "what each card shows"]] },
+      selector: { what: "A dropdown that filters the other widgets on this dashboard.", use: "Let the viewer pick a client, stage, month\u2026", fields: [["Key", "the filter name other widgets read (required)"], ["Entity/Field", "where the options come from"], ["All label", "text for the \u201Cno filter\u201D option"]] },
+      "date-range": { what: "A date-range picker that filters the dashboard.", use: "This month / last 30 days / custom.", fields: [["Key", "the filter name (required)"], ["Default", "the range selected on load"], ["Presets", "the ranges offered"]] },
+      markdown: { what: "A block of formatted text.", use: "Notes, instructions, links, headings.", fields: [["Body / Text", "the markdown to render"], ["Section", "or pull text from a note heading"]] },
+      actions: { what: "A row of buttons.", use: "Quick actions \u2014 create a record, run a command, open a surface.", fields: [["Actions", "the buttons: label + what each does"]] },
+      "base-link": { what: "A button that opens a .base file in Obsidian.", use: "Jump to a full Base view.", fields: [["Base", "the .base file"], ["View", "which view to open"], ["Label", "button text"]] },
+      "base-embed": { what: "A compact list rendered from a .base file\u2019s rows.", use: "Show Base results inline as a simple list.", fields: [["Base", "the .base file"], ["View", "which view supplies the rows"], ["Limit", "max rows"]] },
+      "base-view": { what: "A live, fully-rendered Obsidian Base view embedded in the card.", use: "The real Base table/board inside a dashboard.", fields: [["Base", "the .base file"], ["View", "which view to render"], ["Height", "card height"], ["Fallback", "what to show if it can\u2019t render"]] },
+      merge: { what: "One list combining rows from several sources.", use: "e.g. tasks from two folders in a single list.", fields: [["Merge", "the list of sources to combine"]] }
     };
     const guide = WIDGET_GUIDE[widgetKind];
     if (guide) {
@@ -31895,6 +31908,76 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     const pApp = tabPanels["app"];
     const pExp = tabPanels["exports"];
     const pData = tabPanels["data"];
+    this._helpPanel(pReview, "review-overview", "What the Review tab shows", (body) => {
+      this._helpBlock(body, "Purpose", [
+        "A read-only summary of your current workspace.json \u2014 navigation, dashboards, bases, schemas and settings \u2014 so you can sanity-check the whole configuration in one place."
+      ]);
+      this._helpBlock(body, "Using it", [
+        "Switch the inner tabs to inspect each area. Nothing here is editable \u2014 make changes in the other tabs or the Surface Designer."
+      ]);
+    });
+    this._helpPanel(pDash, "dashboards-overview", "How the Dashboards tab works", (body) => {
+      this._helpBlock(body, "What this is", [
+        "The same dashboard/layout editor as the Surface Designer, embedded here for each configurable surface."
+      ]);
+      this._helpBlock(body, "Key actions", [
+        ["Customize", "turn a built-in dashboard into editable widgets."],
+        ["Reset to built-in", "discard your changes."],
+        ["Edit a widget", "change its type and settings; hover field labels for help."]
+      ]);
+    });
+    this._helpPanel(pWidgets, "widgets-overview", "What the Widget catalog is", (body) => {
+      this._helpBlock(body, "Purpose", [
+        "A reference list of every widget type you can add to a dashboard, with what each one does."
+      ]);
+      this._helpBlock(body, "Where you use them", [
+        "Add and configure widgets in the Dashboards tab or the Surface Designer; this tab is the catalogue you pick from."
+      ]);
+    });
+    this._helpPanel(pDm, "datamodel-overview", "How the Data model works", (body) => {
+      this._helpBlock(body, "The idea", [
+        "Record types (contact, task, invoice\u2026) are defined by schema YAML files. This tab creates and edits those definitions \u2014 the shape of your data."
+      ]);
+      this._helpBlock(body, "What you can set", [
+        ["Identity & location", "the type name and which folder its notes live in."],
+        ["Fields", "the frontmatter properties, their types and options."],
+        ["Discriminators", "extra frontmatter that distinguishes sub-types."],
+        ["Defaults & aliases", "starting values and import synonyms."]
+      ]);
+      this._helpBlock(body, "Bases", [
+        "Generate missing bases writes a .base file for each record type so it has columns and a view. A backup is written before every save."
+      ]);
+    });
+    this._helpPanel(pPlanner, "planner-overview", "Planner settings", (body) => {
+      this._helpBlock(body, "What this controls", [
+        "How the planner reads and writes tasks: the task mode (checkboxes in daily notes vs TaskNotes), the headings it looks for, and project folders."
+      ]);
+      this._helpBlock(body, "Related", [
+        "The Today / Calendar screens themselves are dashboards \u2014 edit their layout in the Surface Designer, not here."
+      ]);
+    });
+    this._helpPanel(pApp, "app-overview", "App settings", (body) => {
+      this._helpBlock(body, "What lives here", [
+        "Personal preferences that aren\u2019t part of the shared workspace: reminders, daily-note folder/heading, week start, currency, team categories and appearance."
+      ]);
+      this._helpBlock(body, "Note", [
+        "These are stored per-install (in plugin data), not in workspace.json, so they don\u2019t travel with a shared template."
+      ]);
+    });
+    this._helpPanel(pExp, "exports-overview", "Export groups", (body) => {
+      this._helpBlock(body, "Purpose", [
+        "Define which record types are bundled together into each sheet when you export an XLSX workbook."
+      ]);
+    });
+    this._helpPanel(pData, "data-overview", "Import & export", (body) => {
+      this._helpBlock(body, "What you can do", [
+        ["Export XLSX", "write your records to an Excel workbook (one sheet per group)."],
+        ["Import XLSX / CSV", "bring records in, mapping columns to entity fields."]
+      ]);
+      this._helpBlock(body, "Tip", [
+        "Import matches columns to fields using each entity\u2019s field aliases, so common header names map automatically."
+      ]);
+    });
     this._helpPanel(pWs, "workspace-overview", "How the Workspace definition works", (body) => {
       this._helpBlock(body, "What this is", [
         "workspace.json is the single file that composes your whole workspace: navigation, dashboards, Base mappings, schemas and portable settings.",
