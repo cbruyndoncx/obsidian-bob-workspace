@@ -43,14 +43,6 @@ export const DASHBOARD_WIDGET_CATALOG: DashboardWidgetCatalogEntry[] = [
     examples: ['client-work.dashboard', 'crm.pipeline', 'reports.sales'],
   },
   {
-    id: 'card-list',
-    label: 'Card list',
-    status: 'implemented',
-    description: 'Recent, open, and due entity cards rendered from entity notes or filtered Base-backed entity sets.',
-    config: ['title', 'entity', 'source', 'titleFields', 'metaFields', 'dateFields', 'empty'],
-    examples: ['client-work.dashboard', 'reports.activity'],
-  },
-  {
     id: 'list',
     label: 'List widget',
     status: 'implemented',
@@ -139,14 +131,6 @@ export const DASHBOARD_WIDGET_CATALOG: DashboardWidgetCatalogEntry[] = [
     examples: ['finance.setup.overview', 'tax.dashboard'],
   },
   {
-    id: 'table',
-    label: 'Table view',
-    status: 'planned',
-    description: 'Planned Base-backed table widget for directly embedding tabular report sections.',
-    config: ['entity', 'base', 'view', 'columns', 'filters', 'sort'],
-    examples: ['future report/table widgets'],
-  },
-  {
     id: 'base-link',
     label: 'Base link',
     status: 'implemented',
@@ -157,8 +141,8 @@ export const DASHBOARD_WIDGET_CATALOG: DashboardWidgetCatalogEntry[] = [
   {
     id: 'base-embed',
     label: 'Base embed',
-    status: 'partial',
-    description: 'Compact embedded preview of a Base-backed result set with open-base fallback for non-table views.',
+    status: 'implemented',
+    description: 'Compact inline list preview of a Base file\'s rows (title + meta per row). For the full live Base UI (any view type) use base-view; for a link that opens the Base in a tab use base-link.',
     config: ['base', 'view', 'entity', 'source', 'titleFields', 'metaFields', 'limit'],
     examples: ['workspace.base-preview', 'report sections'],
   },
