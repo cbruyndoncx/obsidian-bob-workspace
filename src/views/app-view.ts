@@ -1,5 +1,5 @@
 import { entityBasePath, entityBaseViewName } from '../bases-config';
-import { hasBaseValue, parseBaseFile, readBaseSummary } from '../bases-parse';
+import { baseViewRendersInline, hasBaseValue, parseBaseFile, readBaseSummary } from '../bases-parse';
 import { BUILTIN_DASHBOARD_DEFAULTS, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
 import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
@@ -4850,20 +4850,62 @@ export class CadenceAppView extends obsidian.ItemView {
     if (fieldOn('metric')) addRow('Metric', 'metric', ['count', 'sum', 'avg', 'min', 'max', 'filled', 'empty', 'open', 'uniqueCount', 'ratio'], true);
     if (fieldOn('groupBy')) addRow('Group by', 'groupBy');
     if (fieldOn('limit')) addRow('Limit', 'limit');
-    if (fieldOn('view', 'base')) addRow('View', 'view');
-    // Base picker — point this widget's source at an existing .base file (with the
-    // View row above selecting the view). Empty falls back to the entity source.
+    // Resolve the base path this widget reads from: an explicit source.base.file,
+    // else the widget entity's mapped base. Used to populate the View dropdown.
+    const cardSrc = (card.source && typeof card.source === 'object' && !Array.isArray(card.source)) ? card.source as Frontmatter : {};
+    const srcBaseRef = cardSrc.base;
+    const explicitBaseFile = typeof srcBaseRef === 'string' ? srcBaseRef
+      : (srcBaseRef && typeof srcBaseRef === 'object' ? String(srcBaseRef.file || srcBaseRef.base || srcBaseRef.path || '') : '');
+    const resolvedBaseFile = explicitBaseFile || (card.entity ? entityBasePath(this.plugin.settings, String(card.entity)) : '');
+
+    // View — a dropdown of the resolved base's views, each labelled with its type
+    // and how it renders (editable table vs live read-only embed). Falls back to
+    // a free-text row when no base is resolvable.
+    if (fieldOn('view', 'base')) {
+      if (resolvedBaseFile) {
+        const r = form.createDiv({ cls: 'cad-de-form-row' });
+        r.createDiv({ cls: 'cad-de-form-label', text: 'View', attr: { title: FIELD_HELP.view || '' } });
+        const sel = r.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+        sel.createEl('option', { value: '', text: '— default view —' });
+        const currentView = String((card.view as string) || '').trim();
+        if (currentView) { const o = sel.createEl('option', { value: currentView, text: `${currentView} (loading…)` }); o.selected = true; }
+        const file = this.app.vault.getAbstractFileByPath(resolvedBaseFile);
+        if (file instanceof obsidian.TFile) {
+          void readBaseSummary(this.app, file).then((summary) => {
+            const metas = summary?.viewMeta?.length ? summary.viewMeta
+              : (summary?.views || []).map((name) => ({ name, type: 'table' }));
+            sel.empty();
+            sel.createEl('option', { value: '', text: '— default view —' });
+            metas.forEach(({ name, type }) => {
+              const editable = baseViewRendersInline(type);
+              const o = sel.createEl('option', { value: name, text: `${name} — ${type} · ${editable ? 'editable table' : 'live embed'}` });
+              if (name === currentView) o.selected = true;
+            });
+          }).catch(() => {});
+        }
+        sel.addEventListener('change', () => {
+          const v = sel.value;
+          if (v) card.view = v; else delete card.view;
+          // keep source.base.view in sync when the source is an explicit base object
+          if (cardSrc.base && typeof cardSrc.base === 'object' && !Array.isArray(cardSrc.base)) {
+            if (v) (cardSrc.base as Frontmatter).view = v; else delete (cardSrc.base as Frontmatter).view;
+          }
+          onChange();
+        });
+      } else {
+        addRow('View', 'view');
+      }
+    }
+
+    // Base picker — point this widget's source at an existing .base file. Changing
+    // it re-renders the form so the View dropdown repopulates for the new base.
     if (fieldOn('base', 'source')) (() => {
       const r = form.createDiv({ cls: 'cad-de-form-row' });
       r.createDiv({ cls: 'cad-de-form-label', text: 'Base' });
       const sel = r.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
       sel.createEl('option', { value: '', text: '— none (use entity) —' });
-      const src = (card.source && typeof card.source === 'object' && !Array.isArray(card.source)) ? card.source as Frontmatter : {};
-      const srcBase = src.base;
-      const currentBaseFile = typeof srcBase === 'string' ? srcBase
-        : (srcBase && typeof srcBase === 'object' ? String(srcBase.file || srcBase.base || srcBase.path || '') : '');
       this.app.vault.getFiles().filter((f) => f.extension === 'base').map((f) => f.path).sort()
-        .forEach((p) => { const o = sel.createEl('option', { value: p, text: p }); if (p === currentBaseFile) o.selected = true; });
+        .forEach((p) => { const o = sel.createEl('option', { value: p, text: p }); if (p === explicitBaseFile) o.selected = true; });
       sel.addEventListener('change', () => {
         if (sel.value) {
           const view = String((card.view as string) || '').trim();
@@ -4873,6 +4915,8 @@ export class CadenceAppView extends obsidian.ItemView {
           if (!Object.keys(card.source as Frontmatter).length) delete card.source;
         }
         onChange();
+        form.remove();
+        this._renderCardForm(parent, card, onChange);
       });
     })();
     if (fieldOn('height')) addRow('Height', 'height');

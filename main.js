@@ -30151,18 +30151,57 @@ ${snippet}` : "- No markdown content");
     if (fieldOn("metric")) addRow("Metric", "metric", ["count", "sum", "avg", "min", "max", "filled", "empty", "open", "uniqueCount", "ratio"], true);
     if (fieldOn("groupBy")) addRow("Group by", "groupBy");
     if (fieldOn("limit")) addRow("Limit", "limit");
-    if (fieldOn("view", "base")) addRow("View", "view");
+    const cardSrc = card.source && typeof card.source === "object" && !Array.isArray(card.source) ? card.source : {};
+    const srcBaseRef = cardSrc.base;
+    const explicitBaseFile = typeof srcBaseRef === "string" ? srcBaseRef : srcBaseRef && typeof srcBaseRef === "object" ? String(srcBaseRef.file || srcBaseRef.base || srcBaseRef.path || "") : "";
+    const resolvedBaseFile = explicitBaseFile || (card.entity ? entityBasePath(this.plugin.settings, String(card.entity)) : "");
+    if (fieldOn("view", "base")) {
+      if (resolvedBaseFile) {
+        const r = form.createDiv({ cls: "cad-de-form-row" });
+        r.createDiv({ cls: "cad-de-form-label", text: "View", attr: { title: FIELD_HELP.view || "" } });
+        const sel = r.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
+        sel.createEl("option", { value: "", text: "\u2014 default view \u2014" });
+        const currentView = String(card.view || "").trim();
+        if (currentView) {
+          const o = sel.createEl("option", { value: currentView, text: `${currentView} (loading\u2026)` });
+          o.selected = true;
+        }
+        const file = this.app.vault.getAbstractFileByPath(resolvedBaseFile);
+        if (file instanceof obsidian17.TFile) {
+          void readBaseSummary(this.app, file).then((summary) => {
+            const metas = summary?.viewMeta?.length ? summary.viewMeta : (summary?.views || []).map((name) => ({ name, type: "table" }));
+            sel.empty();
+            sel.createEl("option", { value: "", text: "\u2014 default view \u2014" });
+            metas.forEach(({ name, type }) => {
+              const editable2 = baseViewRendersInline(type);
+              const o = sel.createEl("option", { value: name, text: `${name} \u2014 ${type} \xB7 ${editable2 ? "editable table" : "live embed"}` });
+              if (name === currentView) o.selected = true;
+            });
+          }).catch(() => {
+          });
+        }
+        sel.addEventListener("change", () => {
+          const v = sel.value;
+          if (v) card.view = v;
+          else delete card.view;
+          if (cardSrc.base && typeof cardSrc.base === "object" && !Array.isArray(cardSrc.base)) {
+            if (v) cardSrc.base.view = v;
+            else delete cardSrc.base.view;
+          }
+          onChange();
+        });
+      } else {
+        addRow("View", "view");
+      }
+    }
     if (fieldOn("base", "source")) (() => {
       const r = form.createDiv({ cls: "cad-de-form-row" });
       r.createDiv({ cls: "cad-de-form-label", text: "Base" });
       const sel = r.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
       sel.createEl("option", { value: "", text: "\u2014 none (use entity) \u2014" });
-      const src = card.source && typeof card.source === "object" && !Array.isArray(card.source) ? card.source : {};
-      const srcBase = src.base;
-      const currentBaseFile = typeof srcBase === "string" ? srcBase : srcBase && typeof srcBase === "object" ? String(srcBase.file || srcBase.base || srcBase.path || "") : "";
       this.app.vault.getFiles().filter((f) => f.extension === "base").map((f) => f.path).sort().forEach((p) => {
         const o = sel.createEl("option", { value: p, text: p });
-        if (p === currentBaseFile) o.selected = true;
+        if (p === explicitBaseFile) o.selected = true;
       });
       sel.addEventListener("change", () => {
         if (sel.value) {
@@ -30173,6 +30212,8 @@ ${snippet}` : "- No markdown content");
           if (!Object.keys(card.source).length) delete card.source;
         }
         onChange();
+        form.remove();
+        this._renderCardForm(parent, card, onChange);
       });
     })();
     if (fieldOn("height")) addRow("Height", "height");
