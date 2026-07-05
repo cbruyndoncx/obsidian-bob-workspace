@@ -121,7 +121,7 @@ export const HELP_TOPICS: Record<string, HelpTopic> = {
         ['Secondary tab', 'an indented sub-tab shown inside a parent surface (e.g. Meetings under Client Work).'],
         ['Folder', 'where this record type’s notes live.'],
         ['Base', 'an optional .base file giving the list its columns/filters/view.'],
-        ['View', 'which view of the Base to use. Each option is labelled with its type: a “table” view renders inline in the surface; a board/calendar/card view shows an “Open Base” button instead (the plugin renders tables inline only).'],
+        ['View', 'which view of the Base to use. Each option is labelled with its type: a “table” view renders as the plugin’s editable inline table (create/edit/bulk); a board/calendar/card view renders as a live, read-only Obsidian Base embed inline. Both show inline — an “Open Base” action opens the full view in a tab.'],
       ] },
       { heading: 'Dashboards', lines: [
         ['built-in / ✎ custom chip', 'whether a surface uses the shipped dashboard or your own.'],

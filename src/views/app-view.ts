@@ -996,14 +996,31 @@ export class CadenceAppView extends obsidian.ItemView {
     const def = ENTITIES[entityKey];
     const external = def?.externalBaseView as BaseViewRef | undefined;
     if (!external) return false;
-    const wrap = root.createDiv({ cls: 'cad-empty-state' });
-    wrap.createDiv({ cls: 'cad-empty-state-title', text: external.name || 'External Base view' });
-    wrap.createDiv({
-      cls: 'cad-empty-state-desc',
-      text: `This view uses ${external.type}, so BOB Workspace delegates rendering to Obsidian Bases/TaskNotes instead of duplicating that UI.`,
-    });
-    const btn = wrap.createEl('button', { cls: 'cad-btn primary', text: 'Open in Base' });
-    btn.addEventListener('click', () => this._openEntityBase(entityKey));
+    // A non-table view (board/calendar/cards) has no plugin-native editable
+    // equivalent, but Obsidian can render it inline via an `![[base#view]]`
+    // embed — the same mechanism the base-view widget uses. Mount it live here
+    // (read-only, native Bases UI) instead of a dead placeholder; the page
+    // header already carries an "Open Base" action for the full-screen version.
+    // Fall back to a short note if the embed can't mount.
+    const wrap = root.createDiv({ cls: 'cad-external-base-view' });
+    const body = wrap.createDiv({ cls: 'cad-external-base-view-body' });
+    const file = external.basePath ? this.app.vault.getAbstractFileByPath(external.basePath) : null;
+    if (file instanceof obsidian.TFile) {
+      void this._mountLiveBaseView(body, file, external.basePath, external.name || '').catch(() => {
+        body.empty();
+        const fb = body.createDiv({ cls: 'cad-empty-state' });
+        fb.createDiv({ cls: 'cad-empty-state-title', text: external.name || 'Base view' });
+        fb.createDiv({ cls: 'cad-empty-state-desc', text: `This ${external.type || 'non-table'} view couldn't be embedded here — use “Open Base” above to view it in Obsidian Bases.` });
+        const btn = fb.createEl('button', { cls: 'cad-btn primary', text: 'Open in Base' });
+        btn.addEventListener('click', () => this._openEntityBase(entityKey));
+      });
+    } else {
+      const fb = body.createDiv({ cls: 'cad-empty-state' });
+      fb.createDiv({ cls: 'cad-empty-state-title', text: external.name || 'Base view' });
+      fb.createDiv({ cls: 'cad-empty-state-desc', text: external.basePath ? `Base file not found: ${external.basePath}` : 'No Base file configured for this view.' });
+      const btn = fb.createEl('button', { cls: 'cad-btn primary', text: 'Open in Base' });
+      btn.addEventListener('click', () => this._openEntityBase(entityKey));
+    }
     return true;
   }
 

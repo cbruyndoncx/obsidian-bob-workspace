@@ -24877,7 +24877,7 @@ var HELP_TOPICS = {
         ["Secondary tab", "an indented sub-tab shown inside a parent surface (e.g. Meetings under Client Work)."],
         ["Folder", "where this record type\u2019s notes live."],
         ["Base", "an optional .base file giving the list its columns/filters/view."],
-        ["View", "which view of the Base to use. Each option is labelled with its type: a \u201Ctable\u201D view renders inline in the surface; a board/calendar/card view shows an \u201COpen Base\u201D button instead (the plugin renders tables inline only)."]
+        ["View", "which view of the Base to use. Each option is labelled with its type: a \u201Ctable\u201D view renders as the plugin\u2019s editable inline table (create/edit/bulk); a board/calendar/card view renders as a live, read-only Obsidian Base embed inline. Both show inline \u2014 an \u201COpen Base\u201D action opens the full view in a tab."]
       ] },
       { heading: "Dashboards", lines: [
         ["built-in / \u270E custom chip", "whether a surface uses the shipped dashboard or your own."],
@@ -26432,14 +26432,25 @@ var CadenceAppView = class extends obsidian17.ItemView {
     const def = ENTITIES[entityKey];
     const external = def?.externalBaseView;
     if (!external) return false;
-    const wrap = root.createDiv({ cls: "cad-empty-state" });
-    wrap.createDiv({ cls: "cad-empty-state-title", text: external.name || "External Base view" });
-    wrap.createDiv({
-      cls: "cad-empty-state-desc",
-      text: `This view uses ${external.type}, so BOB Workspace delegates rendering to Obsidian Bases/TaskNotes instead of duplicating that UI.`
-    });
-    const btn = wrap.createEl("button", { cls: "cad-btn primary", text: "Open in Base" });
-    btn.addEventListener("click", () => this._openEntityBase(entityKey));
+    const wrap = root.createDiv({ cls: "cad-external-base-view" });
+    const body = wrap.createDiv({ cls: "cad-external-base-view-body" });
+    const file = external.basePath ? this.app.vault.getAbstractFileByPath(external.basePath) : null;
+    if (file instanceof obsidian17.TFile) {
+      void this._mountLiveBaseView(body, file, external.basePath, external.name || "").catch(() => {
+        body.empty();
+        const fb = body.createDiv({ cls: "cad-empty-state" });
+        fb.createDiv({ cls: "cad-empty-state-title", text: external.name || "Base view" });
+        fb.createDiv({ cls: "cad-empty-state-desc", text: `This ${external.type || "non-table"} view couldn't be embedded here \u2014 use \u201COpen Base\u201D above to view it in Obsidian Bases.` });
+        const btn = fb.createEl("button", { cls: "cad-btn primary", text: "Open in Base" });
+        btn.addEventListener("click", () => this._openEntityBase(entityKey));
+      });
+    } else {
+      const fb = body.createDiv({ cls: "cad-empty-state" });
+      fb.createDiv({ cls: "cad-empty-state-title", text: external.name || "Base view" });
+      fb.createDiv({ cls: "cad-empty-state-desc", text: external.basePath ? `Base file not found: ${external.basePath}` : "No Base file configured for this view." });
+      const btn = fb.createEl("button", { cls: "cad-btn primary", text: "Open in Base" });
+      btn.addEventListener("click", () => this._openEntityBase(entityKey));
+    }
     return true;
   }
   _renderUnsupportedBaseFilters(root, def) {
@@ -33353,11 +33364,11 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
               baseSummariesPromise.then((summaries) => {
                 const summary = summaries.find((item) => item.path === currentBase);
                 dd.selectEl.empty();
-                dd.addOption("", "\u2014 all properties (inline table) \u2014");
+                dd.addOption("", "\u2014 all properties (editable table) \u2014");
                 const metas = summary?.viewMeta && summary.viewMeta.length ? summary.viewMeta : (summary?.views || []).map((name) => ({ name, type: "table" }));
                 metas.forEach(({ name, type }) => {
-                  const inline = baseViewRendersInline(type);
-                  dd.addOption(name, `${name} \u2014 ${type} \xB7 ${inline ? "inline" : "opens in Bases"}`);
+                  const editable = baseViewRendersInline(type);
+                  dd.addOption(name, `${name} \u2014 ${type} \xB7 ${editable ? "editable table" : "live embed (read-only)"}`);
                 });
                 dd.setValue(currentView);
                 if (!moduleDisabled) dd.setDisabled(false);

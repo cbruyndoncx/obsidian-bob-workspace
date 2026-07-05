@@ -3426,6 +3426,12 @@ select.cad-form-input {
   text-underline-offset: 3px;
 }
 
+/* Inline live Base embed for non-table entity surfaces */
+.cad-external-base-view { padding: 0 16px 16px; }
+.cad-external-base-view-body { min-height: 120px; }
+.cad-external-base-view-body .bases-embed,
+.cad-external-base-view-body .block-language-base { width: 100%; }
+
 /* Toggleable colored help panel (reusable) */
 .cad-help-block { margin: 0 0 12px; }
 .cad-help-toggle {

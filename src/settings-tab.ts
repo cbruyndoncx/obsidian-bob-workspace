@@ -1652,15 +1652,16 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
               baseSummariesPromise.then((summaries) => {
                 const summary = summaries.find((item) => item.path === currentBase);
                 dd.selectEl.empty();
-                dd.addOption('', '— all properties (inline table) —');
-                // Label each view with its type + whether it renders inline or
-                // opens in Obsidian Bases, so the choice is clear before selecting.
+                dd.addOption('', '— all properties (editable table) —');
+                // Label each view with its type + how it renders: a table view
+                // uses the plugin's editable table; other view types render as a
+                // live (read-only) Obsidian Base embed. Both are inline.
                 const metas = summary?.viewMeta && summary.viewMeta.length
                   ? summary.viewMeta
                   : (summary?.views || []).map((name) => ({ name, type: 'table' }));
                 metas.forEach(({ name, type }) => {
-                  const inline = baseViewRendersInline(type);
-                  dd.addOption(name, `${name} — ${type} · ${inline ? 'inline' : 'opens in Bases'}`);
+                  const editable = baseViewRendersInline(type);
+                  dd.addOption(name, `${name} — ${type} · ${editable ? 'editable table' : 'live embed (read-only)'}`);
                 });
                 dd.setValue(currentView);
                 if (!moduleDisabled) dd.setDisabled(false);
