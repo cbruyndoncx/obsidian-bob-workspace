@@ -56,6 +56,7 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 - `package.json`, `tsconfig.json`, `esbuild.config.mjs`, `esbuild.shared.cjs` — build toolchain (`npm run build` / `dev` / `typecheck` / `check`). `esbuild.shared.cjs` is the single source of the bundle options, shared with the build-freshness test.
 - `tests/` — lightweight regression suite (`node tests/run-tests.js`).
 - `docs/extending-bob-workspace.md` — schema/Base/entities extension model.
+- `docs/installing-into-existing-vault.md` — authoritative first-time-install sequence for a vault that already has notes (schema-first, then bases, then UII).
 - `docs/navigation-inventory.md`, `docs/entity-setup-audit.md` — useful generated snapshots, but confirm against current code before editing.
 - `CLAUDE.md` / `AGENTS.md` — kept in sync (this file); broader implementation notes.
 - `SUBMISSION.md` — release checklist.
@@ -77,6 +78,7 @@ Some supporting documents can lag the implementation. Verify navigation and rele
   - `src/settings.ts` — `DEFAULT_SETTINGS`, `CURRENT_CURRENCY` (+`setCurrentCurrency()`), `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`, create-folder/template helpers
   - `src/workspace-config.ts` — plugin paths, `WORKSPACE_CONFIG` (+`setWorkspaceConfig()`), load/save/validate, `WORKSPACE_OWNED_SETTING_KEYS`, dashboard config validation/resolution
   - `src/widgets.ts`, `src/snapshots.ts`, `src/dashboards.ts` — widget source resolution, home/planner/productivity snapshots, widget catalog
+  - `src/help-content.ts` — single source for all on-screen help text (field hovers, per-widget guides, Surface Designer + Settings help panels); the renderers hold no help strings (translation seam)
   - `src/bases-config.ts`, `src/bases-parse.ts` — Base paths, `generateMissingBases()`, `applyEntityDefinitions()`; `parseBaseFile()` + Base overrides
   - `src/schemas.ts`, `src/schema-designer.ts`, `src/runtime-config.ts`, `src/nav-helpers.ts` — schema loading/bootstrap, designer/codegen helpers, `reloadEntityConfiguration()`, nav-surface helpers
   - `src/utils.ts`, `src/entity-files.ts`, `src/csv.ts`, `src/workbook.ts` — date/format utils, entity file resolution + Base filter evaluation, CSV, XLSX export/import
@@ -284,7 +286,7 @@ Tab-based internal nav, dispatched in `CadenceAppView.render()` via a route map 
 | `finance.*` / `tax.*` / `procurement.*` | secondary tabs + `renderEntityList()` |
 | `reports.*` | config-driven dashboards with widget catalog renderers |
 
-Specialized views (Pipeline kanban, CRM Dashboard, Reports) primarily route through the dashboard/widget system. `home` and `reports.productivity` are config-driven, but some source data is still produced by runtime snapshot helpers (intentional for now; the Base-first path is to materialize that runtime state into notes/frontmatter and point widgets at `source.base`/`source.view`). Small dashboard UI choices that should survive restart (selector picks, date ranges) persist in `workspace.json.settings.dashboardState` — keep that to user intent only; recompute metrics/rows on render.
+Specialized views (Pipeline kanban, CRM Dashboard, Reports) primarily route through the dashboard/widget system. The widget catalog (`PURE_DASHBOARD_WIDGET_TYPES` + `dashboardWidgetSchema`, `src/dashboards.ts`/`src/workspace-config.ts`) covers read-only widgets (`list`, `metric`, `gauge`, `progress`, `heatmap`, `bar-chart`, `kanban`, `selector`, `date-range`, `markdown`, `actions`, `base-link`/`-embed`/`-view`, `merge`) plus **interactive** ones that write back to notes: `task-list` (toggles a task's status/daily-note checkbox), `quick-add` (appends a task to today's note), `note-section` (edits a daily-note body heading), and `date-hero`. Each widget's editable fields are gated by its schema `supports` list; the Surface Designer's Base picker points a widget's `source` at any `.base` in the vault. A per-kind guide lives in `src/help-content.ts`. `home` and `reports.productivity` are config-driven, but some source data is still produced by runtime snapshot helpers (intentional for now; the Base-first path is to materialize that runtime state into notes/frontmatter and point widgets at `source.base`/`source.view`). Small dashboard UI choices that should survive restart (selector picks, date ranges) persist in `workspace.json.settings.dashboardState` — keep that to user intent only; recompute metrics/rows on render.
 
 **Why Home is slower than CRM, and what's been done.** Both surfaces share `renderConfigDashboard`, which paints cards **sequentially** (`await` per card, to preserve layout order). CRM widgets use `mode: 'entity'` → data from `metadataCache` (frontmatter, in-memory) so the sequential paint is imperceptible. Home's sections use `mode: 'built-in'` (`builtIn: 'home' | 'productivity' | 'planner'`, `src/widgets.ts`) → `buildHomeSnapshot`/`buildProductivitySnapshot`/`buildPlannerSnapshot` (`src/snapshots.ts`) which read full note **bodies**, so without help Home reveals section by section. Two mitigations are in place: (1) snapshot/project body reads use `app.vault.cachedRead()` (not `read()`) to serve unchanged files from memory; (2) `renderConfigDashboard` pre-resolves **all** layout widget sources in parallel (`prewarmLayout`) before the paint loop, so the slow snapshot resolutions overlap and the paint hits already-resolved promises (reuses the per-render `widgetCache`; idempotent). These reduce the gap but don't close it — Home still reads bodies where CRM reads only frontmatter; the structural fix is the Base-first migration above (#3).
 
@@ -415,7 +417,7 @@ Prefer schema/`workspace.json` over code for vault-configurable entities. When p
 7. Put the final file at `<vault>/.obsidian/plugins/bob-workspace/workspace.json` (a repo-root file does not affect the running plugin).
 8. Reload with the **Reload workspace.json** command or restart Obsidian.
 
-When supporting an existing vault, prefer an explicit import path that reads vault YAML/JSON, normalizes it into the same `workspace.json`/schema/Base model, and writes visible files rather than relying on hidden plugin state.
+When supporting an existing vault that already has notes, follow `docs/installing-into-existing-vault.md`: describe the vault's real record types with schema YAML (matching the notes' existing `type:`/folders/fields — the bootstrap is gated so it won't overwrite them), regenerate derived outputs, wire bases, then compose the `workspace.json` UI. Prefer describing/importing what exists over restructuring the vault or relying on hidden plugin state.
 
 ### Validation
 
