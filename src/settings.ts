@@ -26,7 +26,6 @@ interface TemplateSpec {
 
 export const DEFAULT_SETTINGS: BobSettings = {
   dailyNoteFolder: 'daily',
-  dailyNoteFormat: 'YYYY-MM-DD',
   journalHeading: '## Journal',
   tasksHeading: '## Today',
   weekStartsOn: 1, // 0 = Sunday, 1 = Monday
@@ -39,7 +38,7 @@ export const DEFAULT_SETTINGS: BobSettings = {
   currency: 'USD',
   cadenceAppDark: false,
   taskProjectLinks: {}, // { "dailyPath::taskText": "Cadence/Projects/X.md" }
-  modules: { crm: false, 'client-work': false, prm: false, srm: false, finance: false, procurement: false, tax: false, planner: false, ai: false },
+  modules: { crm: false, 'client-work': false, prm: false, finance: false, procurement: false, planner: false, ai: false },
   disabledSurfaces: [],    // surface IDs hidden from nav regardless of module toggle
   showSecondaryNav: false,
   showSetupNav: false,

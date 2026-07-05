@@ -16,7 +16,7 @@ import { sameDay, startOfDay, ymd } from './utils';
 import { CadenceAppView } from './views/app-view';
 import { CadencePlaybookRunnerView, PLAYBOOK_RUNNER_VIEW_TYPE } from './views/playbook-runner';
 import { exportAllEntitiesXLSX, promptImportWorkbook } from './workbook';
-import { WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, WORKSPACE_OWNED_SETTING_KEYS, applyWorkspaceOwnedSettings, initPluginPaths, loadWorkspaceConfig, persistedWorkspaceOwnedSettings, saveWorkspaceConfig, validateWorkspaceConfig } from './workspace-config';
+import { WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, WORKSPACE_LOAD_FAILED, WORKSPACE_OWNED_SETTING_KEYS, applyWorkspaceOwnedSettings, initPluginPaths, loadWorkspaceConfig, persistedWorkspaceOwnedSettings, saveWorkspaceConfig, validateWorkspaceConfig } from './workspace-config';
 import { loadWorkspaceTemplates, seedWorkspaceTemplates } from './workspace-templates';
 import * as obsidian from 'obsidian';
 import type { BobSettings, PartialSettings, Reminder } from './types';
@@ -55,6 +55,9 @@ interface StoredReminder extends Reminder {
 
 export class CadencePlugin extends obsidian.Plugin {
   settings: BobSettings;
+  // Set by the Modules settings "Edit dashboard" action to deep-link the Surface
+  // Designer to a specific surface; consumed (once) by renderDashboardEditor.
+  pendingDesignerSurface: string | null = null;
   async onload() {
     initPluginPaths(this);
     await seedWorkspaceTemplates(this.app);
@@ -110,6 +113,13 @@ export class CadencePlugin extends obsidian.Plugin {
       id: 'open-cadence-pipeline',
       name: 'Open BOB Workspace — Pipeline',
       callback: () => this.openApp('crm.pipeline'),
+    });
+    this.addCommand({
+      // Surface Designer isn't in any workspace.json nav (applyWorkspaceRegistries
+      // replaces the built-in nav), so give it a command entry point like Export/Import.
+      id: 'open-surface-designer',
+      name: 'Open BOB Workspace — Surface Designer',
+      callback: () => this.openApp('misc.dashboard-editor'),
     });
     this.addCommand({
       id: 'new-daily-entry',
@@ -215,7 +225,7 @@ export class CadencePlugin extends obsidian.Plugin {
       id: 'reload-workspace-config',
       name: 'Reload workspace.json',
       callback: async () => {
-        await reloadEntityConfiguration(this.app, this.settings);
+        await this.reloadWorkspaceConfiguration();
         this.refreshOpenViews();
         new obsidian.Notice('BOB Workspace: workspace configuration reloaded.');
       },
@@ -458,11 +468,29 @@ export class CadencePlugin extends obsidian.Plugin {
     await this.saveData(dataToSave);
     const workspaceConfig = validateWorkspaceConfig(Object.assign({}, WORKSPACE_CONFIG, { settings: workspaceSettings }));
     setWorkspaceConfig(workspaceConfig);
-    if (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH) || Object.keys(workspaceSettings).length) {
-      await saveWorkspaceConfig(this.app, JSON.stringify(workspaceConfig, null, 2));
+    // Never overwrite a workspace.json that failed to load — an incidental save
+    // (toggle, reminder tick) would replace the user's recoverable config with
+    // an empty `{ settings }` shell and clobber the backup. The settings editor's
+    // explicit "Save and apply" goes through saveWorkspaceConfig directly, which
+    // clears the guard once the file is valid again.
+    if (!WORKSPACE_LOAD_FAILED && (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH) || Object.keys(workspaceSettings).length)) {
+      // Incidental settings-only write (reminder tick, selector, toggle): don't
+      // snapshot the backup — keep it pinned to the last deliberate structural edit.
+      await saveWorkspaceConfig(this.app, JSON.stringify(workspaceConfig, null, 2), false);
     }
     setCurrentCurrency(this.settings.currency);
     syncEntityFolders(this.settings);
+  }
+
+  // Refresh WORKSPACE_CONFIG from disk, then re-overlay workspace-owned settings
+  // onto plugin.settings BEFORE rebuilding registries — so a manual workspace.json
+  // edit or a Settings "Save and apply" is reflected in this.settings and not
+  // reverted by the next saveSettings(). Mirrors the tail of loadSettings().
+  async reloadWorkspaceConfiguration() {
+    await loadWorkspaceConfig(this.app);
+    this.settings = applyWorkspaceOwnedSettings(this.settings) as BobSettings;
+    setCurrentCurrency(this.settings.currency);
+    await reloadEntityConfiguration(this.app, this.settings);
   }
 }
 

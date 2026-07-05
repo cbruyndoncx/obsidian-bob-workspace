@@ -1,6 +1,5 @@
 import { parseBaseFile } from './bases-parse';
-import { BUILTIN_ENTITY_DEFAULTS, BUILT_SURFACES, ENTITIES } from './entities';
-import { NAV_GROUPS, rebuildSurfaceLookups } from './nav';
+import { BUILTIN_ENTITY_DEFAULTS, ENTITIES } from './entities';
 import { pluralizeEntityLabel } from './schemas';
 import { DEFAULT_SETTINGS, ENTITY_FOLDERS, syncEntityFolders } from './settings';
 import { ensureFolderSync } from './utils';
@@ -30,11 +29,15 @@ export function defaultBaseFileName(def: EntityDef, entityKey: string): string {
 }
 
 export function entityBasePath(settings: PartialSettings = {}, entityKey: string): string {
-  // basesFolder is authoritative for the directory. The filename comes from
-  // (in order) workspace.json bases[key].file, plugin baseFiles[key], the
-  // built-in default, or — for schema-defined entities with none of those — a
-  // name derived from the entity. We always strip to the basename and compose
-  // with basesFolder, so changing the Bases folder relocates EVERY base.
+  // The base reference comes from (in order) workspace.json bases[key].file,
+  // plugin baseFiles[key], the built-in default, or — for schema-defined
+  // entities with none of those — a name derived from the entity.
+  //   • A value that includes a directory ('20-COMPANY/skills.base') is an
+  //     explicit vault location and is honored VERBATIM, so a base can live
+  //     anywhere in the vault, not only under basesFolder. This is what the base
+  //     picker stores (it lists every .base in the vault by full path).
+  //   • A bare filename ('People.base') composes with basesFolder and therefore
+  //     relocates when the Bases folder changes.
   const base = configuredBaseDefinition(entityKey) as ConfiguredBaseRef | null;
   let raw: string = base?.file || base?.base
     || (settings.baseFiles || {})[entityKey]
@@ -43,9 +46,10 @@ export function entityBasePath(settings: PartialSettings = {}, entityKey: string
   if (!raw && typeof ENTITIES !== 'undefined' && ENTITIES[entityKey]) {
     raw = defaultBaseFileName(ENTITIES[entityKey], entityKey);
   }
-  const name = String(raw).split('/').pop();
-  if (!name) return '';
-  return `${resolveBasesFolder(settings)}/${name}`;
+  raw = String(raw || '').trim();
+  if (!raw) return '';
+  if (raw.includes('/')) return raw;
+  return `${resolveBasesFolder(settings)}/${raw}`;
 }
 
 // Entities the generator should consider — anything with a base mapping plus
@@ -162,17 +166,12 @@ export function resetEntityRegistry(settings: PartialSettings = {}): void {
   syncEntityFolders(settings);
 }
 
-export async function applyEntityDefinitions(app: obsidian.App, settings: PartialSettings = {}, config: EntityRegistry = {}, injectNavigation = true, configOwnsBase = false): Promise<void> {
+export async function applyEntityDefinitions(app: obsidian.App, settings: PartialSettings = {}, config: EntityRegistry = {}): Promise<void> {
   for (let [key, def] of Object.entries(config)) {
     if (!def || typeof def !== 'object') continue;
 
-    const basePath = configOwnsBase
-      ? (def.base || (settings.baseFiles || {})[key])
-      : ((settings.baseFiles || {})[key] || def.base);
-    const baseView = configOwnsBase
-      ? (def.baseView || (settings.baseViews || {})[key])
-      : ((settings.baseViews || {})[key] || def.baseView);
-    if (configOwnsBase && def.base) CONFIGURED_BASE_ENTITY_KEYS.add(key);
+    const basePath = (settings.baseFiles || {})[key] || def.base;
+    const baseView = (settings.baseViews || {})[key] || def.baseView;
     if (basePath) {
       const baseConfig = await parseBaseFile(app, basePath, baseView);
       if (baseConfig) {
@@ -212,32 +211,6 @@ export async function applyEntityDefinitions(app: obsidian.App, settings: Partia
         if (def[k] != null) ENTITIES[key][k] = def[k] as never;
       });
       ENTITY_FOLDERS[key] = folder;
-
-      if (injectNavigation) {
-        const surfaceId = `custom.${key}`;
-        BUILT_SURFACES.add(surfaceId);
-
-        // Inject nav item - into named module group if specified, else "Custom".
-        let targetGroup = def.module ? NAV_GROUPS.find((g) => g.id === def.module) : null;
-        if (!targetGroup) {
-          targetGroup = NAV_GROUPS.find((g) => g.id === 'custom');
-          if (!targetGroup) {
-            targetGroup = { id: 'custom', label: 'Custom', items: [] };
-            const miscIdx = NAV_GROUPS.findIndex((g) => g.id === 'misc');
-            NAV_GROUPS.splice(miscIdx >= 0 ? miscIdx : NAV_GROUPS.length, 0, targetGroup);
-          }
-        }
-        targetGroup.items.push({
-          id: surfaceId,
-          label: def.plural || pluralizeEntityLabel(def.label),
-          icon: def.icon || 'file-text',
-          module: def.module,
-          entityKey: key,
-          folderKey: def.folderKey,
-          desc: def.desc || `${def.plural || pluralizeEntityLabel(def.label)} - custom entity`,
-        });
-        rebuildSurfaceLookups();
-      }
     } else {
       // Merge fields by key (preserves schema-derived enum/options, adds entities.json type/primary)
       if (def.fields) {

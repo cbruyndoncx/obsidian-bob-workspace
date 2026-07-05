@@ -22,6 +22,13 @@ export let WORKSPACE_CONFIG_PATH = 'Cadence/workspace.json';
 export let WORKSPACE_BACKUP_PATH = 'Cadence/workspace.backup.json';
 export let WORKSPACE_CONFIG: WorkspaceConfig = {};
 
+// True when the on-disk workspace.json exists but failed to parse/validate on
+// the last load. Incidental saveSettings() writes MUST NOT overwrite the file
+// in this state — otherwise a toggle or reminder tick would clobber the user's
+// (recoverable) config with an empty `{ settings }` shell. Reset on any
+// successful load or explicit saveWorkspaceConfig (the user's deliberate fix).
+export let WORKSPACE_LOAD_FAILED = false;
+
 // Modules outside this one must replace the active config via this setter —
 // ES module imports are read-only live bindings.
 export function setWorkspaceConfig(config: WorkspaceConfig) {
@@ -230,6 +237,27 @@ export function dashboardWidgetSchema(kind: string): DashboardWidgetSchema | nul
       label: 'Merge',
       allowSourceOnly: true,
       supports: ['merge', 'title', 'empty'],
+    },
+    'task-list': {
+      label: 'Task list (interactive)',
+      allowSourceOnly: true,
+      requiresEntityOrSource: true,
+      supports: ['entity', 'source', 'base', 'view', 'limit', 'empty', 'title'],
+    },
+    'quick-add': {
+      label: 'Quick-add input',
+      allowSourceOnly: true,
+      supports: ['title', 'placeholder'],
+    },
+    'date-hero': {
+      label: 'Date hero',
+      allowSourceOnly: true,
+      supports: ['eyebrow', 'title'],
+    },
+    'note-section': {
+      label: 'Note section editor',
+      allowSourceOnly: true,
+      supports: ['title', 'section', 'heading'],
     },
   };
   return schemas[kind] || null;
@@ -496,6 +524,19 @@ export function applyWorkspaceOwnedSettings(settings: PartialSettings = {}): Par
   return merged;
 }
 
+// Reset every workspace-owned setting to its DEFAULT_SETTINGS value. Used on a
+// template switch so the new template starts from a clean slate instead of
+// inheriting the previous template's unlisted owned settings. Safe because the
+// outgoing template's full settings are archived in its workspace-<stamp>.json
+// (see archiveTemplateAssets) before this runs.
+export function resetWorkspaceOwnedSettings(settings: PartialSettings = {}): PartialSettings {
+  const merged: PartialSettings = Object.assign({}, settings);
+  WORKSPACE_OWNED_SETTING_KEYS.forEach((key) => {
+    merged[key] = cloneConfig(DEFAULT_SETTINGS[key]);
+  });
+  return merged;
+}
+
 export function persistedWorkspaceOwnedSettings(settings: PartialSettings = {}): PartialSettings {
   const existing = WORKSPACE_CONFIG.settings || {};
   const persisted: PartialSettings = {};
@@ -514,28 +555,41 @@ export function persistedWorkspaceOwnedSettings(settings: PartialSettings = {}):
   return persisted;
 }
 
-export async function saveWorkspaceConfig(app: App, jsonText: string): Promise<WorkspaceConfig> {
+// `writeBackup` snapshots the current file into workspace.backup.json before
+// overwriting. Deliberate structural edits (the settings editor, template apply)
+// pass true; incidental settings-only saves (saveSettings — reminder ticks,
+// dashboard selectors, toggles) pass false, so those don't churn the backup and
+// "Restore backup" keeps the last intentional state.
+export async function saveWorkspaceConfig(app: App, jsonText: string, writeBackup = true): Promise<WorkspaceConfig> {
   const parsed = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(jsonText)) as WorkspaceConfig);
   const adapter = app.vault.adapter;
-  if (await adapter.exists(WORKSPACE_CONFIG_PATH)) {
+  if (writeBackup && await adapter.exists(WORKSPACE_CONFIG_PATH)) {
     await adapter.write(WORKSPACE_BACKUP_PATH, await adapter.read(WORKSPACE_CONFIG_PATH));
   }
   await adapter.write(WORKSPACE_CONFIG_PATH, JSON.stringify(parsed, null, 2));
   WORKSPACE_CONFIG = parsed;
   WORKSPACE_HAS_NAVIGATION = Array.isArray(parsed.navigation?.groups);
+  // Explicit user-driven save succeeded — the on-disk file is valid again, so
+  // clear the load-failed guard and let incidental saves resume.
+  WORKSPACE_LOAD_FAILED = false;
   return parsed;
 }
 
 export async function loadWorkspaceConfig(app: App): Promise<WorkspaceConfig> {
   WORKSPACE_CONFIG = {};
   WORKSPACE_HAS_NAVIGATION = false;
+  WORKSPACE_LOAD_FAILED = false;
   if (!(await app.vault.adapter.exists(WORKSPACE_CONFIG_PATH))) return WORKSPACE_CONFIG;
   try {
     WORKSPACE_CONFIG = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(await app.vault.adapter.read(WORKSPACE_CONFIG_PATH))) as WorkspaceConfig);
     WORKSPACE_HAS_NAVIGATION = Array.isArray(WORKSPACE_CONFIG.navigation?.groups);
   } catch (e) {
-    new obsidian.Notice(`BOB Workspace: workspace.json error - ${e.message}`);
+    // Keep the on-disk file untouched: mark the load failed so saveSettings
+    // skips its incidental write (see saveSettings in plugin.ts). Sticky notice
+    // (duration 0) because this is an error the user must act on.
+    new obsidian.Notice(`BOB Workspace: workspace.json failed to load and is being left untouched - ${e.message}`, 0);
     WORKSPACE_CONFIG = {};
+    WORKSPACE_LOAD_FAILED = true;
   }
   return WORKSPACE_CONFIG;
 }

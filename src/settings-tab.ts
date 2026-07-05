@@ -1,10 +1,11 @@
 import { setWorkspaceConfig } from './workspace-config';
 import { entityBasePath, entityBaseViewName, generateMissingBases } from './bases-config';
 import { baseSummaryCompatibleWithEntity, readBaseSummary } from './bases-parse';
-import { summarizeDashboardBlueprint } from './dashboards';
+import { BUILTIN_DASHBOARD_DEFAULTS, summarizeDashboardBlueprint } from './dashboards';
+import { HELP_TOPICS } from './help-content';
 import { ENTITIES } from './entities';
 import { CadenceIconPickerModal, CadencePromptModal, confirmModal } from './modals/common';
-import { NAV_GROUPS, SURFACE_BY_ID, VIEW_TYPE_CADENCE_APP, migrateWorkspacePlannerConfig } from './nav';
+import { NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_CADENCE_APP, migrateWorkspacePlannerConfig } from './nav';
 import { isTabBackedSurface, makeNavigationSurfacePrimary, navigationSurfaceFromTab, normalizeStandaloneNavigationSurfaces, removeSurfaceFromGroups, surfaceMatchesTab } from './nav-helpers';
 import { reloadEntityConfiguration, workspaceConfigTemplate } from './runtime-config';
 import { applyEditableSchemaFieldDefault, applyEditableSchemaFieldType, bootstrapCanonicalSchemaSources, bootstrapCanonicalSchemaSourcesIfMissing, editableSchemaFieldDefault, editableSchemaFieldType, loadCanonicalSchemaSources, regenerateSchemaOutputs, validateSourceSchemaDefinition, type SourceSchema, type SourceSchemaField } from './schema-designer';
@@ -167,10 +168,67 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
   declare _reviewActiveTab: string;
   declare _reviewRenderSeq: number;
   declare _activeSettingsTab: string;
+  declare _workspaceDraftDirty: boolean;
   declare _collapsedModules: Set<string>;
   declare _dashboardRenderer: SettingsDashboardRenderer;
   declare _schemaDesignerSelectedPath: string;
-  constructor(app: obsidian.App, plugin: CadencePlugin) { super(app, plugin); this.plugin = plugin; this._reviewActiveTab = 'overview'; this._reviewRenderSeq = 0; }
+  declare _openHelpPanels: Set<string> | undefined;
+  constructor(app: obsidian.App, plugin: CadencePlugin) { super(app, plugin); this.plugin = plugin; this._reviewActiveTab = 'overview'; this._reviewRenderSeq = 0; this._workspaceDraftDirty = false; }
+
+  // Reusable toggleable colored help panel (shares .cad-help-* styles with the
+  // Surface Designer). `key` persists open/closed for this session.
+  _helpPanel(parent: HTMLElement, key: string, title: string, build: (body: HTMLElement) => void) {
+    if (!this._openHelpPanels) this._openHelpPanels = new Set<string>();
+    const open = this._openHelpPanels.has(key);
+    const block = parent.createDiv({ cls: 'cad-help-block' });
+    const toggle = block.createEl('button', { cls: 'cad-help-toggle' + (open ? ' is-open' : ''), attr: { type: 'button' } });
+    const icon = toggle.createSpan({ cls: 'cad-help-toggle-icon' });
+    try { obsidian.setIcon(icon, 'help-circle'); } catch (_) { icon.setText('?'); }
+    toggle.createSpan({ cls: 'cad-help-toggle-label', text: title });
+    const chevron = toggle.createSpan({ cls: 'cad-help-toggle-chevron', text: open ? '▾' : '▸' });
+    const panel = block.createDiv({ cls: 'cad-help-panel' });
+    if (!open) panel.style.display = 'none';
+    build(panel);
+    toggle.addEventListener('click', () => {
+      const nowOpen = panel.style.display === 'none';
+      panel.style.display = nowOpen ? '' : 'none';
+      toggle.toggleClass('is-open', nowOpen);
+      chevron.setText(nowOpen ? '▾' : '▸');
+      if (nowOpen) this._openHelpPanels.add(key); else this._openHelpPanels.delete(key);
+    });
+  }
+
+  _helpBlock(body: HTMLElement, heading: string, lines: (string | [string, string])[]) {
+    body.createDiv({ cls: 'cad-help-heading', text: heading });
+    lines.forEach((line) => {
+      const row = body.createDiv({ cls: 'cad-help-line' });
+      if (Array.isArray(line)) {
+        row.createSpan({ cls: 'cad-help-term', text: line[0] });
+        row.createSpan({ cls: 'cad-help-desc', text: line[1] });
+      } else {
+        row.createSpan({ cls: 'cad-help-desc', text: line });
+      }
+    });
+  }
+
+  // Render a named help topic (from help-content.ts) as a collapsible panel.
+  _renderHelpTopic(parent: HTMLElement, topicKey: string) {
+    const topic = HELP_TOPICS[topicKey];
+    if (!topic) return;
+    this._helpPanel(parent, topicKey, topic.title, (body) => {
+      topic.sections.forEach((section) => this._helpBlock(body, section.heading, section.lines));
+    });
+  }
+
+  // The workspace designers mutate the global WORKSPACE_CONFIG live (for preview)
+  // from an unsaved draft. If the tab is closed with such edits unsaved, restore
+  // the runtime to the persisted workspace.json so it doesn't silently diverge.
+  hide() {
+    if (this._workspaceDraftDirty) {
+      this._workspaceDraftDirty = false;
+      void this.plugin.reloadWorkspaceConfiguration().then(() => this.plugin.refreshOpenViews());
+    }
+  }
 
   _dashboardSettingsRenderer() {
     if (!this._dashboardRenderer) {
@@ -219,7 +277,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const tabPanels: Record<string, HTMLDivElement> = {};
     const tabBtns: Record<string, HTMLButtonElement> = {};
     TAB_IDS.forEach((id, i) => {
-      const btn = tabBar.createEl('button', { cls: 'cad-settings-tab', text: TAB_LABELS[i] });
+      const btn = tabBar.createEl('button', { cls: 'cad-settings-tab', text: TAB_LABELS[i], attr: { 'data-tab': id } });
       if (id === this._activeSettingsTab) btn.addClass('is-active');
       btn.addEventListener('click', () => {
         TAB_IDS.forEach((tid) => {
@@ -245,7 +303,19 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const pExp = tabPanels['exports'];
     const pData = tabPanels['data'];
 
+    // Help panels for the remaining tabs (Workspace/Navigation/Modules get their
+    // own panels further down, at their content). Content in help-content.ts.
+    // pReview / pDash / pWidgets help is added inside their render functions —
+    // those panels are emptied on every render, so a panel added here is wiped.
+    // (pDash embeds the full Surface Designer, which shows its own help panel.)
+    this._renderHelpTopic(pDm, 'datamodel-overview');
+    this._renderHelpTopic(pPlanner, 'planner-overview');
+    this._renderHelpTopic(pApp, 'app-overview');
+    this._renderHelpTopic(pExp, 'exports-overview');
+    this._renderHelpTopic(pData, 'data-overview');
+
     /* ─── Workspace configuration (workspace.json) ─── */
+    this._renderHelpTopic(pWs, 'workspace-overview');
     pWs.createEl('h3', { text: 'Workspace definition' });
     const workspaceDesc = pWs.createEl('p', { cls: 'setting-item-description' });
     workspaceDesc.appendText('Define schema loading, Base/view associations and templates in ');
@@ -317,7 +387,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
           }
         }
-        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        await this.plugin.reloadWorkspaceConfiguration();
+        this._workspaceDraftDirty = false;
         this.plugin.refreshOpenViews();
         if (bootstrapFailed.length) {
           new obsidian.Notice(`BOB Workspace: workspace.json saved and applied. Skipped schema for: ${bootstrapFailed.join('; ')}`);
@@ -434,6 +505,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       }
     });
     setTimeout(() => refreshWorkspaceTemplateSelector(), 0);
+
+    this._renderHelpTopic(pNav, 'navigation-overview');
 
     const navDesigner = pNav.createDiv({ cls: 'cad-nav-designer' });
     const navDesignerHead = navDesigner.createDiv({ cls: 'cad-nav-designer-head' });
@@ -553,6 +626,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       if (!pReview) return;
       const reviewSeq = ++this._reviewRenderSeq;
       pReview.empty();
+      // Re-add the help panel here: renderWorkspaceReview() empties pReview on
+      // every render, so a one-off panel added at tab-setup time would be wiped.
+      this._renderHelpTopic(pReview, 'review-overview');
       let config: WorkspaceDraft;
       try {
         config = readWorkspaceDraft();
@@ -799,6 +875,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           pDash.createDiv({ cls: 'setting-item-description', text: `Dashboard editor failed: ${e.message}` });
         });
         pWidgets.empty();
+        this._renderHelpTopic(pWidgets, 'widgets-overview');
         dashboardRenderer._renderWidgetCatalog(pWidgets);
       }
     };
@@ -806,6 +883,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       workspaceTa.value = JSON.stringify(config, null, 2);
       setWorkspaceStatus(message || 'Workspace changed - click Save and apply', true);
       setWorkspaceConfig(validateWorkspaceConfig(migrateWorkspacePlannerConfig(config)));
+      this._workspaceDraftDirty = true;
       renderWorkspaceDesigners();
     };
     const saveWorkspaceBase = async (entityKey: string, file: string, view: string) => {
@@ -819,7 +897,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       }
       workspaceTa.value = JSON.stringify(config, null, 2);
       await saveWorkspaceConfig(this.plugin.app, workspaceTa.value);
-      await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+      await this.plugin.reloadWorkspaceConfiguration();
+      this._workspaceDraftDirty = false;
       this.plugin.refreshOpenViews();
     };
     let activeDragPayload: NavDragPayload | null = null;
@@ -1376,12 +1455,11 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
 
     const ensureMods = () => {
       if (!this.plugin.settings.modules) {
-        this.plugin.settings.modules = { crm: true, 'client-work': true, prm: true, srm: true, finance: true, procurement: true, tax: true, planner: true };
+        this.plugin.settings.modules = { crm: true, 'client-work': true, prm: true, finance: true, procurement: true, planner: true, ai: true };
       }
       if (this.plugin.settings.modules['client-work'] == null) this.plugin.settings.modules['client-work'] = true;
       if (this.plugin.settings.modules.finance == null) this.plugin.settings.modules.finance = true;
       if (this.plugin.settings.modules.procurement == null) this.plugin.settings.modules.procurement = true;
-      if (this.plugin.settings.modules.tax == null) this.plugin.settings.modules.tax = true;
       NAV_GROUPS.filter((group: NavGroupConfig) => group.module).forEach((group: NavGroupConfig) => {
         if (this.plugin.settings.modules[group.module] == null) this.plugin.settings.modules[group.module] = true;
       });
@@ -1391,11 +1469,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       planner: 'Planner — daily planning, projects and capture.',
       crm:     'Customer Relationship Management — Contacts, Clients, My Companies, Pipeline, Activities.',
       'client-work': 'Client Work — Meetings, communications, deliverables, feedback, surveys, testimonials and decisions.',
-      srm:     'Supplier Relationship Management — Suppliers, contracts, spend.',
       prm:     'Partner Relationship Management — Partners, Registrations, Commissions, Leads, Certifications, Analytics.',
       finance: 'Finance — periods, bank, journals, invoices, purchases, trial balances and statements.',
       procurement: 'Procurement — internal purchase requests and formal supplier purchase orders.',
-      tax:     'Tax & Compliance — VAT, corporate tax, deferred tax, transfer pricing, legal rules and retention.',
       ai:      'AI Workspace — playbooks and installed skills.',
     };
 
@@ -1404,6 +1480,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       .sort((a, b) => a.path.localeCompare(b.path));
     const baseSummariesPromise = Promise.all(baseFiles.map((file) => readBaseSummary(this.plugin.app, file)))
       .then((items) => items.filter(Boolean).sort((a, b) => a.label.localeCompare(b.label)));
+
+    this._renderHelpTopic(pMod, 'modules-overview');
 
     NAV_GROUPS.forEach((group: NavGroupConfig) => {
       const items = group.items.filter((s) => !['home', 'team', 'settings'].includes(s.id));
@@ -1420,7 +1498,24 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       const card = pMod.createDiv({ cls: 'cad-module-card' + (moduleDisabled ? ' is-off' : '') + (isCollapsed ? ' is-collapsed' : '') });
       const cardHead = card.createDiv({ cls: 'cad-module-card-head' });
       cardHead.createSpan({ text: headingText, cls: 'cad-module-card-label' });
-      const chevron = cardHead.createSpan({ cls: 'cad-module-card-chevron', text: isCollapsed ? '›' : '⌄' });
+      const headRight = cardHead.createDiv({ cls: 'cad-module-card-head-right' });
+      // Module enable/disable toggle lives in the HEADER so it's usable while the
+      // card is collapsed. stopPropagation stops toggling it from also collapsing
+      // the card (the header row's own click handler toggles collapse).
+      if (isModuleGroup) {
+        const toggleWrap = headRight.createDiv({ cls: 'cad-module-card-toggle' });
+        toggleWrap.setAttribute('aria-label', ensureMods()[group.module] !== false ? `Disable ${headingText}` : `Enable ${headingText}`);
+        toggleWrap.addEventListener('click', (e) => e.stopPropagation());
+        new obsidian.ToggleComponent(toggleWrap)
+          .setValue(ensureMods()[group.module] !== false)
+          .onChange(async (v) => {
+            ensureMods()[group.module] = v;
+            await this.plugin.saveSettings();
+            this.plugin.refreshOpenViews();
+            this.display();   // re-render to update surface row enabled state
+          });
+      }
+      const chevron = headRight.createSpan({ cls: 'cad-module-card-chevron', text: isCollapsed ? '›' : '⌄' });
       cardHead.addEventListener('click', () => {
         if (this._collapsedModules.has(cardKey)) {
           this._collapsedModules.delete(cardKey);
@@ -1436,48 +1531,60 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       const settingGroup = cardBody.createDiv({ cls: 'setting-group' + (moduleDisabled ? ' cad-settings-panel-off' : '') });
       const panel = settingGroup.createDiv({ cls: 'setting-items' });
 
-      // Module enable/disable toggle (only for groups with a module ID)
+      // Module description (the enable toggle itself now lives in the header).
       if (isModuleGroup) {
-        new obsidian.Setting(panel)
-          .setName(`Enable ${headingText}`)
-          .setDesc(moduleLabels[group.module] || `${headingText} module defined in workspace.json.`)
-          .addToggle((t) => t
-            .setValue(ensureMods()[group.module] !== false)
-            .onChange(async (v) => {
-              ensureMods()[group.module] = v;
-              await this.plugin.saveSettings();
-              this.plugin.refreshOpenViews();
-              this.display();   // re-render to update surface row enabled state
-            }));
+        panel.createDiv({ cls: 'setting-item-description cad-module-card-desc', text: moduleLabels[group.module] || `${headingText} module defined in workspace.json.` });
       }
 
       // One row per surface: visibility toggle + folder text input + base file dropdown
       const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
-      items.forEach((surface) => {
+      const renderSurfaceRow = (surface: DraftNavSurface, showVisibility = true) => {
         const eDef = surface.entityKey ? ENTITIES[surface.entityKey] : null;
         const overridden = eDef && (eDef.typeFilter || Array.isArray(eDef.folders));
         const level = surface.navLevel || 'primary';
         const levelLabel = level === 'secondary' ? 'Secondary tab'
           : level === 'setup' ? 'Setup'
           : 'Primary';
+        // Only surface a level chip when it's not the default 'primary' — otherwise
+        // every row just said "(Primary)", which reads as noise.
         const desc = [];
-        desc.push(levelLabel);
+        if (level !== 'primary') desc.push(levelLabel);
         if (surface.parent) desc.push(`parent: ${SURFACE_BY_ID[surface.parent]?.label || surface.parent}`);
         if (overridden) {
           if (eDef.typeFilter)            desc.push(`type: "${eDef.typeFilter}"`);
           if (Array.isArray(eDef.folders))desc.push(`folders: [${eDef.folders.join(', ')}]`);
-        } else {
+        } else if (surface.id) {
           desc.push(surface.id);
         }
         const managedBase = !!configuredBaseDefinition(surface.entityKey);
         if (managedBase) desc.push('Base from workspace.json');
+        // Dashboard state: is this surface a configurable dashboard, and is it a
+        // custom (workspace.json) config or the bundled built-in default?
+        const hasCustomDash = !!((WORKSPACE_CONFIG.dashboards || {})[surface.id] || (WORKSPACE_CONFIG.planner || {})[surface.id]);
+        const hasBuiltinDash = !!BUILTIN_DASHBOARD_DEFAULTS[surface.id];
+        if (hasCustomDash) desc.push('✎ custom dashboard');
+        else if (hasBuiltinDash) desc.push('built-in dashboard');
         const s = new obsidian.Setting(panel)
-          .setName(`${surface.label} (${levelLabel})`)
+          .setName(level !== 'primary' ? `${surface.label} (${levelLabel})` : surface.label)
           .setDesc(desc.join(' · '));
         if (moduleDisabled) s.settingEl.classList.add('cad-setting-disabled');
+        // Deep-link to the Surface Designer for dashboard-bearing surfaces, where
+        // Customize (decompose the built-in into widgets) / Reset to built-in live.
+        if (hasCustomDash || hasBuiltinDash) {
+          s.addExtraButton((b) => b
+            .setIcon('layout-panel-left')
+            .setTooltip(hasCustomDash ? 'Edit custom dashboard in Surface Designer' : 'Customize this dashboard in Surface Designer')
+            .onClick(() => {
+              this.plugin.pendingDesignerSurface = surface.id;
+              this.plugin.openApp('misc.dashboard-editor');
+            }));
+        }
+        // Indent non-primary rows so the tab hierarchy under a parent reads visually.
+        if (level !== 'primary') s.settingEl.classList.add('cad-setting-nested');
 
-        // Visibility toggle
-        s.addToggle((t) => {
+        // Visibility toggle — primary surfaces only; secondary tabs have no
+        // per-tab disable mechanism (they show whenever their parent is active).
+        if (showVisibility) s.addToggle((t) => {
           t.setValue(!disabled.has(surface.id))
             .onChange(async (v) => {
               const arr = this.plugin.settings.disabledSurfaces || [];
@@ -1557,6 +1664,23 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             });
           });
         }
+      };
+      items.forEach((surface) => renderSurfaceRow(surface, true));
+
+      // Secondary tabs live in navigation.secondaryTabs, not in group.items, so
+      // list each primary tab-parent's entity-backed tabs here too (Base/folder
+      // config, same controls as primary surfaces). Route-only tabs are skipped.
+      items.forEach((parent) => {
+        (SECONDARY_TABS[parent.id] || []).forEach((tab: DraftSecondaryTab) => {
+          if (!tab.entityKey || !ENTITIES[tab.entityKey]) return;
+          renderSurfaceRow({
+            id: `${parent.id}.${tab.entityKey}`,
+            label: tab.label || tab.entityKey,
+            entityKey: tab.entityKey,
+            navLevel: 'secondary',
+            parent: parent.id,
+          } as DraftNavSurface, false);
+        });
       });
 
       // Special case: Projects gets a multi-folder editor below its row

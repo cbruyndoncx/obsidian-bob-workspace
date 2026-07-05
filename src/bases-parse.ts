@@ -1,4 +1,4 @@
-import { entityBaseViewName } from './bases-config';
+import { entityBasePath, entityBaseViewName } from './bases-config';
 import { ENTITIES } from './entities';
 import { addDays, startOfDay } from './utils';
 import { CONFIGURED_BASE_ENTITY_KEYS, WORKSPACE_CONFIG } from './workspace-config';
@@ -458,7 +458,9 @@ export async function applyBaseOverrides(app: obsidian.App, settings: PartialSet
   const baseViews: Record<string, string> = settings.baseViews || {};
   for (const [entityKey, basePath] of Object.entries(baseFiles)) {
     if (!basePath || !ENTITIES[entityKey] || CONFIGURED_BASE_ENTITY_KEYS.has(entityKey)) continue;
-    const baseConfig = await parseBaseFile(app, basePath, baseViews[entityKey]);
+    // Resolve through entityBasePath so a filename-only baseFiles entry composes
+    // with settings.basesFolder (not parsed verbatim against the vault root).
+    const baseConfig = await parseBaseFile(app, entityBasePath(settings, entityKey), baseViews[entityKey]);
     mergeBaseConfigIntoEntity(entityKey, baseConfig);
   }
 }
@@ -467,10 +469,16 @@ export async function applyConfiguredBaseOverrides(app: obsidian.App, settings: 
   for (const [entityKey, def] of Object.entries((WORKSPACE_CONFIG.bases || {}) as Record<string, ConfiguredBaseRef>)) {
     const basePath = def?.file || def?.base;
     if (!basePath || !ENTITIES[entityKey]) continue;
-    CONFIGURED_BASE_ENTITY_KEYS.add(entityKey);
     // User selection (settings.baseViews) overrides workspace.json default view.
     const viewName = entityBaseViewName(settings, entityKey);
-    const baseConfig = await parseBaseFile(app, basePath, viewName);
+    // entityBasePath composes bases[key].file with settings.basesFolder, so a
+    // filename-only workspace.json base resolves instead of hitting the vault root.
+    const baseConfig = await parseBaseFile(app, entityBasePath(settings, entityKey), viewName);
+    // Only mark the entity as workspace-owned if the base actually resolved —
+    // otherwise a missing/unparseable file would block the settings.baseFiles
+    // fallback in applyBaseOverrides while contributing nothing.
+    if (!baseConfig) continue;
+    CONFIGURED_BASE_ENTITY_KEYS.add(entityKey);
     mergeBaseConfigIntoEntity(entityKey, baseConfig);
   }
 }

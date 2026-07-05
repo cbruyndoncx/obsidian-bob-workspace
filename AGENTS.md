@@ -56,6 +56,8 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 - `package.json`, `tsconfig.json`, `esbuild.config.mjs`, `esbuild.shared.cjs` — build toolchain (`npm run build` / `dev` / `typecheck` / `check`). `esbuild.shared.cjs` is the single source of the bundle options, shared with the build-freshness test.
 - `tests/` — lightweight regression suite (`node tests/run-tests.js`).
 - `docs/extending-bob-workspace.md` — schema/Base/entities extension model.
+- `docs/installing-into-existing-vault.md` — authoritative first-time-install sequence for a vault that already has notes (schema-first, then bases, then UI).
+- `docs/empty-vault-quickstart.md` — user-facing happy path for a brand-new empty vault (enable → pick template → create first records → make Today interactive).
 - `docs/navigation-inventory.md`, `docs/entity-setup-audit.md` — useful generated snapshots, but confirm against current code before editing.
 - `CLAUDE.md` / `AGENTS.md` — kept in sync (this file); broader implementation notes.
 - `SUBMISSION.md` — release checklist.
@@ -72,11 +74,12 @@ Some supporting documents can lag the implementation. Verify navigation and rele
   - `src/plugin.ts` — `CadencePlugin`: registers views, commands, hotkeys, settings, reminders, workbook commands
   - `src/bundled/templates.ts` — `BUNDLED_WORKSPACE_TEMPLATES` via explicit JSON imports of `templates/workspace-*.json` (a new shipped template must be added here; the template-bundle test enforces coverage)
   - `src/bundled/xlsx.ts` — `loadBundledXLSX()`: lazy `require()` of `vendor/xlsx.mini.min.js`, inlined by esbuild (no eval; compiled on first `getXLSX()` use)
-  - `src/nav.ts` — `VIEW_TYPE_CADENCE_APP`, `BUILTIN_NAV_GROUPS`, runtime registries (`NAV_GROUPS`, `ALL_SURFACES`, `SURFACE_BY_ID`, `SURFACES_BY_ENTITY_KEY`, `SECONDARY_TABS`, `WORKBOOK_EXPORT_GROUPS`), `resetWorkspaceRegistries()`, `applyWorkspaceRegistries()`
+  - `src/nav.ts` — `VIEW_TYPE_CADENCE_APP`, `BUILTIN_NAV_GROUPS`, runtime registries (`NAV_GROUPS`, `ALL_SURFACES`, `SURFACE_BY_ID`, `SECONDARY_TABS`, `WORKBOOK_EXPORT_GROUPS`), `resetWorkspaceRegistries()`, `applyWorkspaceRegistries()`
   - `src/entities.ts` — `ENTITIES`, `BUILTIN_ENTITY_DEFAULTS`, `DEAL_STAGES`, deal/activity field accessors, `BUILT_SURFACES`
   - `src/settings.ts` — `DEFAULT_SETTINGS`, `CURRENT_CURRENCY` (+`setCurrentCurrency()`), `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`, create-folder/template helpers
   - `src/workspace-config.ts` — plugin paths, `WORKSPACE_CONFIG` (+`setWorkspaceConfig()`), load/save/validate, `WORKSPACE_OWNED_SETTING_KEYS`, dashboard config validation/resolution
   - `src/widgets.ts`, `src/snapshots.ts`, `src/dashboards.ts` — widget source resolution, home/planner/productivity snapshots, widget catalog
+  - `src/help-content.ts` — single source for all on-screen help text (field hovers, per-widget guides, Surface Designer + Settings help panels); the renderers hold no help strings (translation seam)
   - `src/bases-config.ts`, `src/bases-parse.ts` — Base paths, `generateMissingBases()`, `applyEntityDefinitions()`; `parseBaseFile()` + Base overrides
   - `src/schemas.ts`, `src/schema-designer.ts`, `src/runtime-config.ts`, `src/nav-helpers.ts` — schema loading/bootstrap, designer/codegen helpers, `reloadEntityConfiguration()`, nav-surface helpers
   - `src/utils.ts`, `src/entity-files.ts`, `src/csv.ts`, `src/workbook.ts` — date/format utils, entity file resolution + Base filter evaluation, CSV, XLSX export/import
@@ -188,7 +191,7 @@ await app.vault.modify(file, updated);
 
 **Built-in entity keys (40+):** `contact`, `company`, `client`, `supplier`, `partner`, `registration`, `commission`, `lead`, `certification`, `activity`, `meeting`, `comms-thread`, `deliverable`, `feedback`, `survey`, `testimonial`, `decision`, `campaign`, `sequence`, `project`, `task`, `accounting-period`, `bank-account`, `bank-reconciliation`, `chart-of-accounts`, `financial-statement`, `fs-notes`, `fx-rates-table`, `inventory`, `invoice`, `journal-entry`, `purchase-order`, `purchase-requisition`, `supplier-invoice`, `trial-balance`, `vat-return`, `corporate-tax-return`, `deferred-tax`, `transfer-pricing`, `free-zone-status`, `legal-rule`, `document-retention`, `deal`
 
-**Deal entity extras:** `valueField`, `closeByField`, `wonStages`, `lostStages`. Access via `dealValueField(def)`, `dealCloseByField(def)`, `dealWonStages(def)`, `dealLostStages(def)`, `dealTerminalStages(def)`.
+**Deal entity extras:** `valueField`, `closeByField`, `wonStages`, `lostStages`. Access via `dealValueField(def)`, `dealWonStages(def)`, `dealLostStages(def)`, `dealTerminalStages(def)`. (`closeByField` is preserved in config but has no dedicated accessor.)
 
 ### Entity file resolution
 
@@ -229,7 +232,7 @@ The active workspace definition is always read from the installed plugin folder:
 
 `initPluginPaths(plugin)` derives this from `plugin.manifest.dir`; the pre-init fallback is legacy `Cadence/workspace.json` and should not be used for current installs. A repo-root `workspace.json` is not read by the running plugin.
 
-`data.json` is no longer the source for portable workspace-owned settings. `CadencePlugin.loadSettings()` reads plugin data, then loads `workspace.json`, then overlays `workspace.json.settings` for keys in `WORKSPACE_OWNED_SETTING_KEYS`. `saveSettings()` removes owned keys from plugin data and writes them back to `workspace.json` whenever a workspace file exists (a `workspace.backup.json` is written first). Personal/non-workspace settings stay in plugin data.
+`data.json` is no longer the source for portable workspace-owned settings. `CadencePlugin.loadSettings()` reads plugin data, then loads `workspace.json`, then overlays `workspace.json.settings` for keys in `WORKSPACE_OWNED_SETTING_KEYS`. `saveSettings()` removes owned keys from plugin data and writes them back to `workspace.json` whenever a workspace file exists or an owned setting is non-default (a `workspace.backup.json` is written first) — **except when the on-disk `workspace.json` failed to load** (`WORKSPACE_LOAD_FAILED`), in which case incidental saves are skipped so the unparseable file is preserved. Personal/non-workspace settings stay in plugin data.
 
 When hand-authoring `workspace.json`, prefer these top-level blocks:
 - `schemas` — schema enablement and schema source folder
@@ -249,12 +252,10 @@ Top-level `schemas` controls schema loading, top-level `bases` controls Base fil
 1. Reset runtime navigation/export registries; load the active plugin-folder `workspace.json` if present.
 2. Reset `ENTITIES` to `BUILTIN_ENTITY_DEFAULTS`; sync folders from the effective settings.
 3. Apply configured `navigation.groups`, `navigation.secondaryTabs`, and `workbookGroups` (these **replace** built-in registries when present — not deep-merged).
-4. Apply deprecated `workspace.json.entities` once before schema loading (migration), injecting navigation only when no configured navigation exists.
-5. Resolve schema settings (top-level `workspace.json.schemas` overrides settings), then `applySchemas()` if enabled. A schema can introduce a generic record type without plugin code.
-6. Apply deprecated `workspace.json.entities` again as post-schema overrides (no nav injection). New entities should not be added here for current vaults.
-7. Merge top-level `workspace.json.bases` with `applyConfiguredBaseOverrides()` (these paths win over `settings.baseFiles`).
-8. Merge remaining settings-selected `.base` behavior with `applyBaseOverrides()`; `settings.baseViews` can override the default view for either source.
-9. Rebuild surface lookups.
+4. Resolve schema settings (top-level `workspace.json.schemas` overrides settings), then `applySchemas()` if enabled. A schema can introduce a generic record type without plugin code. (A top-level `workspace.json.entities` key is **no longer applied** — `validateWorkspaceConfig` rejects it; define record types in schema YAML.)
+5. Merge top-level `workspace.json.bases` with `applyConfiguredBaseOverrides()` (these paths win over `settings.baseFiles`).
+6. Merge remaining settings-selected `.base` behavior with `applyBaseOverrides()`; `settings.baseViews` can override the default view for either source.
+7. Rebuild surface lookups.
 
 Do not assume edits to `ENTITIES` alone control a BOB vault when schemas, custom overrides, or Bases are active.
 
@@ -286,7 +287,7 @@ Tab-based internal nav, dispatched in `CadenceAppView.render()` via a route map 
 | `finance.*` / `tax.*` / `procurement.*` | secondary tabs + `renderEntityList()` |
 | `reports.*` | config-driven dashboards with widget catalog renderers |
 
-Specialized views (Pipeline kanban, CRM Dashboard, Reports) primarily route through the dashboard/widget system. `home` and `reports.productivity` are config-driven, but some source data is still produced by runtime snapshot helpers (intentional for now; the Base-first path is to materialize that runtime state into notes/frontmatter and point widgets at `source.base`/`source.view`). Small dashboard UI choices that should survive restart (selector picks, date ranges) persist in `workspace.json.settings.dashboardState` — keep that to user intent only; recompute metrics/rows on render.
+Specialized views (Pipeline kanban, CRM Dashboard, Reports) primarily route through the dashboard/widget system. The widget catalog (`PURE_DASHBOARD_WIDGET_TYPES` + `dashboardWidgetSchema`, `src/dashboards.ts`/`src/workspace-config.ts`) covers read-only widgets (`list`, `metric`, `gauge`, `progress`, `heatmap`, `bar-chart`, `kanban`, `selector`, `date-range`, `markdown`, `actions`, `base-link`/`-embed`/`-view`, `merge`) plus **interactive** ones that write back to notes: `task-list` (toggles a task's status/daily-note checkbox), `quick-add` (appends a task to today's note), `note-section` (edits a daily-note body heading), and `date-hero`. Each widget's editable fields are gated by its schema `supports` list; the Surface Designer's Base picker points a widget's `source` at any `.base` in the vault. A per-kind guide lives in `src/help-content.ts`. `home` and `reports.productivity` are config-driven, but some source data is still produced by runtime snapshot helpers (intentional for now; the Base-first path is to materialize that runtime state into notes/frontmatter and point widgets at `source.base`/`source.view`). Small dashboard UI choices that should survive restart (selector picks, date ranges) persist in `workspace.json.settings.dashboardState` — keep that to user intent only; recompute metrics/rows on render.
 
 **Why Home is slower than CRM, and what's been done.** Both surfaces share `renderConfigDashboard`, which paints cards **sequentially** (`await` per card, to preserve layout order). CRM widgets use `mode: 'entity'` → data from `metadataCache` (frontmatter, in-memory) so the sequential paint is imperceptible. Home's sections use `mode: 'built-in'` (`builtIn: 'home' | 'productivity' | 'planner'`, `src/widgets.ts`) → `buildHomeSnapshot`/`buildProductivitySnapshot`/`buildPlannerSnapshot` (`src/snapshots.ts`) which read full note **bodies**, so without help Home reveals section by section. Two mitigations are in place: (1) snapshot/project body reads use `app.vault.cachedRead()` (not `read()`) to serve unchanged files from memory; (2) `renderConfigDashboard` pre-resolves **all** layout widget sources in parallel (`prewarmLayout`) before the paint loop, so the slow snapshot resolutions overlap and the paint hits already-resolved promises (reuses the per-render `widgetCache`; idempotent). These reduce the gap but don't close it — Home still reads bodies where CRM reads only frontmatter; the structural fix is the Base-first migration above (#3).
 
@@ -367,7 +368,7 @@ Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it
 3. Add a nav item to the navigation groups (workspace.json `navigation.groups`, or `BUILTIN_NAV_GROUPS` in `src/nav.ts` for built-ins) — include `entityKey`, `folderKey`, `module`.
 4. Add to the `BUILT_SURFACES` set (`src/entities.ts`).
 5. Add a route entry in `CadenceAppView.render()` (`src/views/app-view.ts`) pointing to `renderEntityList()`.
-6. Add a `baseFiles` entry in `DEFAULT_SETTINGS` — just the **filename** matters (e.g. `'People.base'`; see Bases).
+6. Add a `baseFiles` entry in `DEFAULT_SETTINGS` — the **filename** is what matters (e.g. `'People.base'`; see Bases). Both `entityBasePath` and the runtime Base-override merge (`applyBaseOverrides`/`applyConfiguredBaseOverrides`) resolve through `entityBasePath`, so a filename-only path composes with `basesFolder` in every path.
 7. Add inner tabs in `SECONDARY_TABS` if it belongs under a workspace.
 8. Add to `WORKBOOK_EXPORT_GROUPS` in the appropriate group's `entityKeys`.
 9. Verify schemas, custom overrides, Bases, create/edit, and import/export.
@@ -376,7 +377,7 @@ For vault-configured entity types **without** touching source, use a schema YAML
 
 ### Bases (.base files)
 
-`entityBasePath(settings, key)` resolves an entity's `.base` as `${basesFolder}/${basename(filename)}`, where `settings.basesFolder` (default `00-CORE/Bases`) is **authoritative for the directory** and the filename comes (in order) from `WORKSPACE_CONFIG.bases[key].file`, `settings.baseFiles[key]`, the built-in default, or — for schema-defined entities with none of those — a name derived from the entity (e.g. `area` → `Areas.base`). The directory portion of any path is stripped to its basename, so changing the Bases folder relocates **every** base (with the default folder this reproduces the historical `00-CORE/Bases/*.base` paths). `bases[key].view` still selects which view to use.
+`entityBasePath(settings, key)` resolves an entity's `.base` reference, taken (in order) from `WORKSPACE_CONFIG.bases[key].file`, `settings.baseFiles[key]`, the built-in default, or — for schema-defined entities with none of those — a name derived from the entity (e.g. `area` → `Areas.base`). Resolution honors the **shape** of the reference: a value that includes a directory (e.g. `20-COMPANY/skills.base`) is an **explicit vault location, honored verbatim**, so a base can live anywhere — not only under `basesFolder`; a **bare filename** (e.g. `People.base`) composes with `settings.basesFolder` (default `00-CORE/Bases`) and therefore relocates when the Bases folder changes. The base picker lists every `.base` in the vault by full path and stores that path, so a picked base is always honored. `bases[key].view` still selects which view to use.
 
 `generateMissingBases(app, settings)` (command **"Generate missing bases"** / Settings → Data model → Bases) writes a `.base` for each known or schema-registered entity lacking one — a `filters` clause from the entity's `type_value`/`typeFilters`/folder, and a `table` view whose `order` lists the columns (`file.name` for the primary field, `note.<key>` otherwise), with `properties.<id>.displayName` for readable headers. Missing-only: existing files are never overwritten. **In a Base, `order`/`sort` use bare property names (`person_category`), while `properties` keys and `filters` use the `note.<prop>` form; `file.name` is the primary field's column** — match this when hand-authoring or generating.
 
@@ -417,7 +418,7 @@ Prefer schema/`workspace.json` over code for vault-configurable entities. When p
 7. Put the final file at `<vault>/.obsidian/plugins/bob-workspace/workspace.json` (a repo-root file does not affect the running plugin).
 8. Reload with the **Reload workspace.json** command or restart Obsidian.
 
-When supporting an existing vault, prefer an explicit import path that reads vault YAML/JSON, normalizes it into the same `workspace.json`/schema/Base model, and writes visible files rather than relying on hidden plugin state.
+When supporting an existing vault that already has notes, follow `docs/installing-into-existing-vault.md`: describe the vault's real record types with schema YAML (matching the notes' existing `type:`/folders/fields — the bootstrap is gated so it won't overwrite them), regenerate derived outputs, wire bases, then compose the `workspace.json` UI. Prefer describing/importing what exists over restructuring the vault or relying on hidden plugin state.
 
 ### Validation
 

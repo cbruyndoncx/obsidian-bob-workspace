@@ -1,5 +1,7 @@
 # Entity Setup Audit
 
+> ⚠️ **DEPRECATED / STALE (2026-07-02).** A private-vault snapshot that predates the config-driven model. It describes the `entities.json` override mechanism, which is now rejected on load (`entities is no longer supported`); schema/Base counts are vault-specific. Verify against current schema YAML and `src/` before relying on it. Regenerate or delete.
+
 Generated: 2026-05-22
 
 ## Summary

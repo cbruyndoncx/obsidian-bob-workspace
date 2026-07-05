@@ -73,6 +73,21 @@ export function migrateWorkspacePlannerConfig(config: WorkspaceConfig): Workspac
     : null;
   if (dashboards) {
     let moved = false;
+    // (a) Nested container shape: `dashboards.planner` is a map of planner
+    // surface ids → configs (as the shipped templates author it). The literal
+    // key "planner" is never a routable surface, so hoist its planner.* entries
+    // to the top-level `planner` block and drop the container.
+    const nestedPlanner = dashboards.planner as unknown;
+    if (nestedPlanner && typeof nestedPlanner === 'object' && !Array.isArray(nestedPlanner)
+      && Object.keys(nestedPlanner as Record<string, unknown>).some((id) => String(id || '').startsWith('planner.'))) {
+      Object.entries(nestedPlanner as Record<string, DashboardConfig>).forEach(([surfaceId, config]) => {
+        if (!String(surfaceId || '').startsWith('planner.')) return;
+        if (planner[surfaceId] == null) planner[surfaceId] = config;
+      });
+      delete dashboards.planner;
+      moved = true;
+    }
+    // (b) Flat shape: `dashboards["planner.*"]` keys authored at the top level.
     Object.keys(dashboards).forEach((surfaceId) => {
       if (!String(surfaceId || '').startsWith('planner.')) return;
       if (planner[surfaceId] == null) planner[surfaceId] = dashboards[surfaceId];
@@ -95,9 +110,18 @@ export function loadBuiltinDashboardDefaults(): Record<string, DashboardConfig> 
   // and the templates/ folder isn't delivered by the store installer.
   const defaults: Record<string, DashboardConfig> = {};
   ['workspace-bob.json', 'workspace-cadence.json', 'workspace-crm.json'].forEach((fileName) => {
-    const parsed = BUNDLED_WORKSPACE_TEMPLATES[fileName];
-    if (!parsed) return;
+    const raw = BUNDLED_WORKSPACE_TEMPLATES[fileName];
+    if (!raw) return;
+    // Templates author planner surfaces nested under dashboards.planner; unwrap
+    // that (as the runtime load does) so planner.today/inbox/... are real default
+    // keys instead of being lost under a single bogus 'planner' entry. Without
+    // this, "built-in dashboard" detection and the designer's Customize/Reset
+    // never see the planner defaults.
+    const parsed = migrateWorkspacePlannerConfig(cloneConfig(raw) as WorkspaceConfig);
     Object.entries(parsed.dashboards || {} as Record<string, DashboardConfig>).forEach(([surfaceId, config]) => {
+      defaults[surfaceId] = cloneConfig(config);
+    });
+    Object.entries((parsed.planner || {}) as Record<string, DashboardConfig>).forEach(([surfaceId, config]) => {
       defaults[surfaceId] = cloneConfig(config);
     });
   });
@@ -107,16 +131,12 @@ export function loadBuiltinDashboardDefaults(): Record<string, DashboardConfig> 
 export let NAV_GROUPS: NavGroup[] = cloneConfig(BUILTIN_NAV_GROUPS);
 export let ALL_SURFACES: NavSurface[] = [];
 export let SURFACE_BY_ID: Record<string, NavSurface> = {};
-export let SURFACES_BY_ENTITY_KEY: Record<string, NavSurface> = {};
 export let SECONDARY_TABS: Record<string, SecondaryTab[]> = cloneConfig(BUILTIN_SECONDARY_TABS);
 export let WORKBOOK_EXPORT_GROUPS: WorkbookExportGroup[] = cloneConfig(BUILTIN_WORKBOOK_EXPORT_GROUPS);
 
 export function rebuildSurfaceLookups(): void {
   ALL_SURFACES = NAV_GROUPS.flatMap((group) => group.items || []);
   SURFACE_BY_ID = Object.fromEntries(ALL_SURFACES.map((surface): [string, NavSurface] => [surface.id, surface]));
-  SURFACES_BY_ENTITY_KEY = Object.fromEntries(
-    ALL_SURFACES.filter((surface) => surface.entityKey).map((surface): [string, NavSurface] => [surface.entityKey, surface])
-  );
 }
 
 rebuildSurfaceLookups();

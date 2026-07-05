@@ -175,7 +175,6 @@ export interface Reminder {
 
 export interface BobSettings {
   dailyNoteFolder: string;
-  dailyNoteFormat: string;
   journalHeading: string;
   tasksHeading: string;
   weekStartsOn: number;
@@ -234,19 +233,30 @@ export type PartialSettings = Partial<BobSettings>;
 
 /* ── Dashboards / widgets ─────────────────────────────────── */
 
+/** A widget source's Base reference — a plain path string or a {file,view} object. */
+export interface WidgetBaseRef {
+  file?: string;
+  base?: string;
+  path?: string;
+  basePath?: string;
+  view?: string;
+  baseView?: string;
+  base_view?: string;
+}
+
 export interface WidgetSourceConfig {
   mode?: string;
   source?: string;
   builtIn?: string;
   section?: string;
-  base?: string;
+  base?: string | WidgetBaseRef;
   view?: string;
   entity?: string;
   filters?: BaseFilterNode[];
   groupBy?: string;
   sort?: BaseSortSpec[] | string[];
   limit?: number;
-  [key: string]: JsonValue | BaseSortSpec[] | BaseFilterNode[] | undefined;
+  [key: string]: JsonValue | BaseSortSpec[] | BaseFilterNode[] | WidgetBaseRef | undefined;
 }
 
 /**
@@ -336,16 +346,3 @@ export interface SchemaSource {
 
 /* ── Misc shared shapes ───────────────────────────────────── */
 
-export interface ParsedTask {
-  id: string;
-  title: string;
-  done: boolean;
-  date?: string;
-  time?: string;
-}
-
-export interface Milestone {
-  title: string;
-  done: boolean;
-  date?: string;
-}

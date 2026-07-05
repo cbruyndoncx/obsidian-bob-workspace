@@ -30,31 +30,32 @@ const { resolveBasesFolder, entityBasePath, baseFileFromEntityDefinition } = san
   assert.strictEqual(entityBasePath(DEFAULT_SETTINGS, 'deal'), '00-CORE/Bases/Pipeline.base');
 })();
 
-// 2. basesFolder is authoritative — changing it relocates every base (basename preserved),
-//    even when the saved baseFiles value still carries an old directory.
+// 2. A bare filename composes with basesFolder (and relocates with it); a value
+//    that carries a directory is an explicit location, honored verbatim.
 (() => {
-  const moved = { basesFolder: 'My/Bases', baseFiles: { contact: '00-CORE/Bases/People.base' } };
-  assert.strictEqual(entityBasePath(moved, 'contact'), 'My/Bases/People.base');
-  const trailingSlash = { basesFolder: 'My/Bases/', baseFiles: { contact: 'People.base' } };
-  assert.strictEqual(entityBasePath(trailingSlash, 'contact'), 'My/Bases/People.base');
+  const explicit = { basesFolder: 'My/Bases', baseFiles: { contact: '00-CORE/Bases/People.base' } };
+  assert.strictEqual(entityBasePath(explicit, 'contact'), '00-CORE/Bases/People.base'); // honored, not relocated
+  const bare = { basesFolder: 'My/Bases/', baseFiles: { contact: 'People.base' } };
+  assert.strictEqual(entityBasePath(bare, 'contact'), 'My/Bases/People.base');           // composed
   assert.strictEqual(resolveBasesFolder({ basesFolder: 'X/' }), 'X');
 })();
 
-// 3. A bare filename in baseFiles composes; a missing entry falls back to DEFAULT_SETTINGS.
+// 3. A bare filename in baseFiles composes; a missing entry falls back to
+//    DEFAULT_SETTINGS (whose full-path entries are honored verbatim).
 (() => {
   assert.strictEqual(entityBasePath({ basesFolder: 'B', baseFiles: { contact: 'C.base' } }, 'contact'), 'B/C.base');
-  assert.strictEqual(entityBasePath({ basesFolder: 'B' }, 'invoice'), 'B/AR.base'); // from DEFAULT_SETTINGS
+  assert.strictEqual(entityBasePath({ basesFolder: 'B' }, 'invoice'), '00-CORE/Bases/AR.base'); // DEFAULT full path honored
   assert.strictEqual(entityBasePath({ basesFolder: 'B' }, 'unknownEntity'), '');
 })();
 
-// 4. basesFolder is authoritative even over a workspace.json bases full path:
-//    only the filename is taken from bases[key].file; the folder is basesFolder.
-//    (The starter template writes full paths for every entity — those must still
-//    follow the configured Bases folder.)
+// 4. A workspace.json bases[key].file with a directory is honored verbatim, so a
+//    base can live anywhere in the vault (outside basesFolder). A filename-only
+//    entry composes with basesFolder (critical #5).
 (() => {
-  WORKSPACE_CONFIG.bases = { contact: { file: 'Machine/Bases/People.base' } };
-  assert.strictEqual(entityBasePath({ basesFolder: 'New/Bases' }, 'contact'), 'New/Bases/People.base');
-  assert.strictEqual(entityBasePath(DEFAULT_SETTINGS, 'contact'), '00-CORE/Bases/People.base');
+  WORKSPACE_CONFIG.bases = { contact: { file: '20-COMPANY/skills.base' } };
+  assert.strictEqual(entityBasePath({ basesFolder: 'New/Bases' }, 'contact'), '20-COMPANY/skills.base'); // honored, ignores basesFolder
+  WORKSPACE_CONFIG.bases = { contact: { file: 'People.base' } };
+  assert.strictEqual(entityBasePath({ basesFolder: '00-CORE/Bases' }, 'contact'), '00-CORE/Bases/People.base'); // composed
   WORKSPACE_CONFIG.bases = {};
 })();
 

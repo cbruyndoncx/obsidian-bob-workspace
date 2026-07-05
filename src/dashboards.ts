@@ -2,24 +2,12 @@ import { loadBuiltinDashboardDefaults } from './nav';
 import type { DashboardCard, DashboardConfig, WidgetSourceConfig } from './types';
 export const BUILTIN_DASHBOARD_DEFAULTS: Record<string, DashboardConfig> = loadBuiltinDashboardDefaults();
 
-export const INTERNAL_DASHBOARD_PROVIDERS = [
-  'briefing',
-  'home-inbox',
-  'home-today',
-  'home-week',
-  'home-upcoming',
-  'home-partners',
-  'home-projects',
-  'home-pipeline',
-  'home-activities',
-  'productivity-summary',
-  'productivity-trend',
-  'productivity-weekday',
-  'productivity-notes',
-];
-
 export const PURE_DASHBOARD_WIDGET_TYPES = [
   'list',
+  'task-list',
+  'quick-add',
+  'date-hero',
+  'note-section',
   'metric',
   'gauge',
   'progress',
@@ -69,6 +57,38 @@ export const DASHBOARD_WIDGET_CATALOG: DashboardWidgetCatalogEntry[] = [
     description: 'Compact row list for entity results, similar to a lightweight report section.',
     config: ['title', 'entity', 'source', 'titleFields', 'metaFields', 'limit', 'empty'],
     examples: ['workspace.entity-list', 'report sections'],
+  },
+  {
+    id: 'task-list',
+    label: 'Task list (interactive)',
+    status: 'implemented',
+    description: 'Checklist of tasks with toggleable checkboxes. TaskNote-record rows (entity/base sources) write their status back; source can be a built-in daily section, a task entity, or a Base + view.',
+    config: ['title', 'entity', 'source', 'limit', 'empty'],
+    examples: ['planner.today TODAY TASKS', 'Tasks.base + view'],
+  },
+  {
+    id: 'quick-add',
+    label: 'Quick-add input',
+    status: 'implemented',
+    description: 'Text input that appends a checkbox task to today\'s daily note on Enter.',
+    config: ['title', 'placeholder'],
+    examples: ['planner.today capture'],
+  },
+  {
+    id: 'date-hero',
+    label: 'Date hero',
+    status: 'implemented',
+    description: 'Read-only header showing today\'s weekday, day, month and year.',
+    config: ['eyebrow'],
+    examples: ['planner.today header'],
+  },
+  {
+    id: 'note-section',
+    label: 'Note section editor',
+    status: 'implemented',
+    description: 'Editable text bound to a body section of today\'s daily note (default: the Journal heading), saved on blur.',
+    config: ['title', 'section'],
+    examples: ['planner.today journal'],
   },
   {
     id: 'bar-chart',

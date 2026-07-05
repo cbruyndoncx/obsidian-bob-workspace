@@ -797,7 +797,12 @@
         "layout": [
           [
             {
-              "kind": "list",
+              "kind": "date-hero"
+            }
+          ],
+          [
+            {
+              "kind": "task-list",
               "title": "TODAY TASKS",
               "source": {
                 "mode": "built-in",
@@ -808,15 +813,15 @@
               "empty": "No tasks on today's note."
             },
             {
-              "kind": "list",
-              "title": "OVERVIEW",
-              "source": {
-                "mode": "built-in",
-                "builtIn": "planner",
-                "section": "overview"
-              },
-              "limit": 4,
-              "empty": "Planner overview is empty."
+              "kind": "quick-add",
+              "title": "ADD TASK",
+              "placeholder": "Add a task and press Enter…"
+            }
+          ],
+          [
+            {
+              "kind": "note-section",
+              "title": "TODAY’S ENTRY"
             }
           ]
         ]
@@ -1318,8 +1323,7 @@
           "entity": "meeting",
           "count": "all",
           "sub": "client conversations",
-          "accent": "sky",
-          "mode": "client-work.meetings"
+          "accent": "sky"
         },
         {
           "label": "OPEN DELIVERABLES",

@@ -1,6 +1,7 @@
 import { entityBasePath, entityBaseViewName } from '../bases-config';
 import { hasBaseValue, parseBaseFile, readBaseSummary } from '../bases-parse';
 import { BUILTIN_DASHBOARD_DEFAULTS, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
+import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
 import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
 import { CadenceReminderEditModal } from '../modals/capture';
@@ -19,7 +20,7 @@ import { createTaskNote, listTodayTaskNotes, toggleTaskNoteStatus } from '../tas
 import { addDays, dailyNotePath, dateInfo, ensureFolderSync, greeting, pctBand, sameDay, startOfDay, startOfWeek, weekDates, ymd } from '../utils';
 import { filterEntitiesByBaseConfig, normalizeWidgetSortSpec, normalizeWidgetSourceConfig, resolveWidgetSource } from '../widgets';
 import { exportEntitiesXLSX, selectedWorkbookEntityKeys, workbookExportFolder, workbookExportGroups } from '../workbook';
-import { WORKSPACE_CONFIG, WORKSPACE_HAS_NAVIGATION, configuredDashboardDefinition, configuredSurfaceActions, normalizeDashboardConfigShape, resolveSurfaceConfig, saveWorkspaceConfig, validateDashboardConfig, workspaceConfiguredEntityEntries, workspaceConfiguredEntityKeys, workspaceHasEntity } from '../workspace-config';
+import { WORKSPACE_CONFIG, WORKSPACE_HAS_NAVIGATION, configuredDashboardDefinition, configuredSurfaceActions, dashboardWidgetSchema, normalizeDashboardConfigShape, resolveSurfaceConfig, saveWorkspaceConfig, validateDashboardConfig, workspaceConfiguredEntityEntries, workspaceConfiguredEntityKeys, workspaceHasEntity } from '../workspace-config';
 import * as obsidian from 'obsidian';
 import type { CadencePlugin } from '../plugin';
 import type {
@@ -197,7 +198,7 @@ interface ProjectMetaLike {
   percent: number;
   next?: MilestoneItem | null;
 }
-/** Milestone row as parsed/serialized by project-notes.ts (richer than types.Milestone). */
+/** Milestone row as parsed/serialized by project-notes.ts. */
 interface MilestoneItem {
   done: boolean;
   date?: Date | null;
@@ -328,6 +329,8 @@ export class CadenceAppView extends obsidian.ItemView {
   declare _secondaryTabState: Record<string, string> | undefined;
   /** Sort state per `${mode}::${entityKey}` table. */
   declare _tableSortState: Record<string, { key: string | null; dir: string }> | undefined;
+  declare _columnFilterCleanup: (() => void) | null;
+  declare _openHelpPanels: Set<string> | undefined;
   /** Client Work client/project selector state. */
   declare _clientWorkClientId: string | undefined;
   declare _clientWorkProjectId: string | undefined;
@@ -400,6 +403,10 @@ export class CadenceAppView extends obsidian.ItemView {
     if (id === 'planner') return 'planner.calendar';
     if (id === 'srm.suppliers') return 'procurement.suppliers';
     if (id === 'finance.supplier-invoices') return 'procurement.supplier-invoices';
+    // Built-in utility surfaces have route handlers but are not part of the
+    // configured workspace.json nav, so they're absent from SURFACE_BY_ID.
+    // Preserve them (opened via command palette) instead of falling back to home.
+    if (id === 'misc.dashboard-editor' || id === 'misc.export' || id === 'misc.import') return id;
     return SURFACE_BY_ID[id] ? id : (SURFACE_BY_ID.home ? 'home' : (ALL_SURFACES[0]?.id || 'home'));
   }
 
@@ -412,7 +419,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _visibleNavGroups() {
-    const mods = this.plugin.settings.modules || { crm: true, prm: true, srm: true, finance: true, procurement: true, tax: true, planner: true };
+    const mods = this.plugin.settings.modules || { crm: true, 'client-work': true, prm: true, finance: true, procurement: true, planner: true, ai: true };
     const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
     const showSecondary = !!this.plugin.settings.showSecondaryNav;
     const showSetup = !!this.plugin.settings.showSetupNav;
@@ -536,8 +543,11 @@ export class CadenceAppView extends obsidian.ItemView {
   async setMode(m: string) {
     this.mode = this._migrateModeId(m);
     if (this.mode === 'client-work.overview') {
+      // Land on the CONFIGURED first tab (workspace.json secondaryTabs), not a
+      // hardcoded one, so this parent honors config like every other tab parent.
       const state = this._secondaryTabState || (this._secondaryTabState = {});
-      state['client-work.overview'] = 'client-work.dashboard';
+      const firstTab = this._tabsForParent('client-work.overview')[0];
+      state['client-work.overview'] = firstTab ? (firstTab.entityKey || firstTab.route) : 'client-work.dashboard';
     }
     // Switching surfaces clears any open detail form
     this.detailFile = null;
@@ -600,7 +610,14 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
+  // Dispose any open column-filter menu (appended to document.body with a
+  // document click listener) — otherwise a re-render or view close orphans it.
+  _closeColumnFilterMenu() {
+    if (this._columnFilterCleanup) this._columnFilterCleanup();
+  }
+
   async render() {
+    this._closeColumnFilterMenu();
     const root = this.containerEl.children[1];
     const previousNav = root.querySelector ? root.querySelector('.cad-app-nav') : null;
     const previousNavScrollTop = previousNav ? previousNav.scrollTop : (this._navScrollTop || 0);
@@ -793,7 +810,9 @@ export class CadenceAppView extends obsidian.ItemView {
       return;
     }
 
-    const configuredDashboard = this.mode === 'planner.today' ? null : resolveSurfaceConfig(this.mode);
+    // planner.today renders its configured dashboard when workspace.json defines
+    // one; otherwise it falls through to the route map's today-diary pane.
+    const configuredDashboard = resolveSurfaceConfig(this.mode);
     if (configuredDashboard) {
       await this.renderConfigDashboard(this.mode, content, { config: configuredDashboard });
       return;
@@ -807,17 +826,6 @@ export class CadenceAppView extends obsidian.ItemView {
       'planner.projects': () => this.renderProjectsView(content),
       'crm.dashboard': () => this.renderConfigDashboard('crm.dashboard', content),
       'crm.pipeline': () => this.renderConfigDashboard('crm.pipeline', content),
-      'crm.contacts': () => this.renderEntityList(content, 'contact'),
-      'crm.clients': () => this.renderEntityList(content, 'client'),
-      'crm.companies': () => this.renderEntityList(content, 'company'),
-      'crm.activities': () => this.renderEntityList(content, 'activity'),
-      'prm.partners': () => this.renderEntityTabs(content, 'prm.partners', 'prm.partners.overview'),
-      'prm.registrations': () => this.renderEntityList(content, 'registration'),
-      'prm.commissions': () => this.renderEntityList(content, 'commission'),
-      'crm.leads': () => this.renderEntityList(content, 'lead'),
-      'crm.campaigns': () => this.renderEntityTabs(content, 'crm.campaigns', 'crm.campaigns.overview'),
-      'crm.sequences': () => this.renderEntityList(content, 'sequence'),
-      'prm.certifications': () => this.renderEntityList(content, 'certification'),
       'prm.analytics': () => this.renderPRMAnalytics(content),
       'reports.pipeline': () => this.renderConfigDashboard('reports.pipeline', content),
       'reports.sales': () => this.renderConfigDashboard('reports.sales', content),
@@ -829,23 +837,7 @@ export class CadenceAppView extends obsidian.ItemView {
       'misc.dashboard-editor': () => this.renderDashboardEditor(content),
       'misc.export': () => this.renderExport(content),
       'misc.import': () => this.renderImport(content),
-      'ai.playbooks': () => this.renderEntityList(content, 'playbook'),
-      'ai.skills': () => this.renderEntityList(content, 'skill'),
-      'finance.invoices': () => this.renderEntityTabs(content, 'finance.invoices', 'invoice'),
-      'finance.gl': () => this.renderEntityTabs(content, 'finance.gl', 'finance.gl.overview'),
-      'finance.setup': () => this.renderEntityTabs(content, 'finance.setup', 'finance.setup.overview'),
       'client-work.overview': () => this.renderClientWorkWorkspace(content),
-      // Client Work: always render the internal table for these list pages so they don't go blank when
-      // the underlying Base view is non-table (calendar/board/etc). Users can still use "Open Base".
-      'client-work.meetings': () => this._renderClientWorkEntityList(content, 'meeting'),
-      'client-work.comms': () => this._renderClientWorkEntityList(content, 'comms-thread'),
-      'client-work.deliverables': () => this._renderClientWorkEntityList(content, 'deliverable'),
-      'client-work.feedback': () => this._renderClientWorkEntityList(content, 'feedback'),
-      'client-work.surveys': () => this._renderClientWorkEntityList(content, 'survey'),
-      'client-work.testimonials': () => this._renderClientWorkEntityList(content, 'testimonial'),
-      'client-work.decisions': () => this._renderClientWorkEntityList(content, 'decision'),
-      'procurement.suppliers': () => this.renderEntityTabs(content, 'procurement.suppliers', 'procurement.overview'),
-      'tax.overview': () => this.renderEntityTabs(content, 'tax.overview', 'tax.dashboard'),
     };
     if (route[this.mode]) {
       await route[this.mode]();
@@ -854,10 +846,6 @@ export class CadenceAppView extends obsidian.ItemView {
       await this.renderEntityTabs(content, this.mode, firstTab.entityKey || firstTab.route);
     } else if (active && active.entityKey && ENTITIES[active.entityKey]) {
       await this.renderEntityList(content, active.entityKey);
-    } else if (this.mode && this.mode.startsWith('custom.')) {
-      const entityKey = this.mode.slice('custom.'.length);
-      if (ENTITIES[entityKey]) await this.renderEntityList(content, entityKey);
-      else this.renderComingSoon(content, active);
     } else {
       this.renderComingSoon(content, active);
     }
@@ -1144,15 +1132,19 @@ export class CadenceAppView extends obsidian.ItemView {
       dropdown.style.position = 'fixed';
       dropdown.style.top = rect.bottom + 'px';
       dropdown.style.left = rect.left + 'px';
+      // Only one column-filter menu at a time; also lets render()/onClose dispose it.
+      this._closeColumnFilterMenu();
       document.body.appendChild(dropdown);
 
-      const close = (ev: MouseEvent) => {
-        if (!dropdown.contains(ev.target as Node)) {
-          dropdown.remove();
-          document.removeEventListener('click', close);
-        }
+      const onDocClick = (ev: MouseEvent) => {
+        if (!dropdown.contains(ev.target as Node)) this._closeColumnFilterMenu();
       };
-      setTimeout(() => document.addEventListener('click', close), 0);
+      this._columnFilterCleanup = () => {
+        dropdown.remove();
+        document.removeEventListener('click', onDocClick);
+        this._columnFilterCleanup = null;
+      };
+      setTimeout(() => document.addEventListener('click', onDocClick), 0);
     };
 
     const tableWrap = root.createDiv({ cls: 'cad-table-wrap' });
@@ -1559,35 +1551,15 @@ export class CadenceAppView extends obsidian.ItemView {
 	    const selectedClientId = this._clientWorkClientId || '';
 	    const selectedProjectId = this._clientWorkProjectId || '';
 	    const titleParts = [selectedClientId, selectedProjectId].filter(Boolean);
-	    return this.renderEntityTabs(root, 'client-work.overview', 'client-work.dashboard', {
+	    const firstTab = this._tabsForParent('client-work.overview')[0];
+	    const defaultTab = firstTab ? (firstTab.entityKey || firstTab.route) : 'client-work.dashboard';
+	    return this.renderEntityTabs(root, 'client-work.overview', defaultTab, {
 	      filter: (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId),
 	      forceInternal: true,
 	      titleSuffix: titleParts.length ? ` · ${titleParts.join(' · ')}` : '',
 	      renderHeaderControls: (right) => this._renderClientWorkSelector(right),
 	      emptyDescription: titleParts.length
 	        ? `No records matching ${titleParts.join(' / ')} in this tab.`
-	        : null,
-	    });
-	  }
-
-	  async _renderClientWorkEntityList(root: HTMLElement, entityKey: string) {
-	    if (this._clientWorkClientId && !this._clientWorkOptions().some((client) => client.id === this._clientWorkClientId)) {
-	      this._clientWorkClientId = '';
-	    }
-	    if (this._clientWorkProjectId && !this._clientWorkProjectOptions().some((project) => project.id === this._clientWorkProjectId)) {
-	      this._clientWorkProjectId = '';
-	    }
-	    const selectedClientId = this._clientWorkClientId || '';
-	    const selectedProjectId = this._clientWorkProjectId || '';
-	    const titleParts = [selectedClientId, selectedProjectId].filter(Boolean);
-	    return this.renderEntityList(root, entityKey, {
-	      filter: (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId),
-	      // Always show the internal list here so it doesn't "disappear" when the Base view is non-table.
-	      forceInternal: true,
-	      titleSuffix: titleParts.length ? ` · ${titleParts.join(' · ')}` : '',
-	      renderHeaderControls: (right) => this._renderClientWorkSelector(right),
-	      emptyDescription: titleParts.length
-	        ? `No records matching ${titleParts.join(' / ')} in this list.`
 	        : null,
 	    });
 	  }
@@ -1631,10 +1603,6 @@ export class CadenceAppView extends obsidian.ItemView {
       spec.entity = base.entity || card.entity || fallbackEntityKey;
     }
     return spec;
-  }
-
-  _filterEntitiesByBaseConfig(entityKey: string, entities: EntityRecord[], baseConfig: BaseConfig | null, warnings: string[] = []) {
-    return filterEntitiesByBaseConfig(this.app, entityKey, entities, baseConfig, warnings);
   }
 
   async _resolveWidgetEntities(source: unknown, fallbackEntityKey: string | null = null): Promise<ResolvedWidgetSource> {
@@ -2331,6 +2299,22 @@ export class CadenceAppView extends obsidian.ItemView {
       await this._renderListWidget(col, card, getWidgetEntities);
       return true;
     }
+    if (kind === 'task-list' || kind === 'tasklist' || kind === 'checklist') {
+      await this._renderTaskListWidget(col, card, getWidgetEntities);
+      return true;
+    }
+    if (kind === 'quick-add' || kind === 'quickadd') {
+      this._renderQuickAddWidget(col, card);
+      return true;
+    }
+    if (kind === 'date-hero' || kind === 'date') {
+      this._renderDateHeroWidget(col, card);
+      return true;
+    }
+    if (kind === 'note-section' || kind === 'journal') {
+      await this._renderNoteSectionWidget(col, card);
+      return true;
+    }
     if (kind === 'bar-chart' || kind === 'chart-bar') {
       await this._renderBarChartWidget(col, card, getWidgetEntities);
       return true;
@@ -2862,100 +2846,6 @@ export class CadenceAppView extends obsidian.ItemView {
       });
       if (action.description) btn.title = action.description;
       btn.addEventListener('click', async () => { await this._runActionSpec(action); });
-    });
-  }
-
-  async _renderProductivitySummaryWidget(root: HTMLElement) {
-    const snap = await this._productivitySnapshot();
-    const card = root.createDiv({ cls: 'cad-dash-card' });
-    card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'PRODUCTIVITY SUMMARY' });
-    const body = card.createDiv({ cls: 'cad-dash-card-body' });
-    const grid = body.createDiv({ cls: 'cad-stat-grid' });
-    const stat = (label: string, value: string | number, sub: string, accent: string) => {
-      const c = grid.createDiv({ cls: 'cad-stat-card' });
-      if (accent) c.dataset.accent = accent;
-      c.createDiv({ cls: 'cad-stat-label', text: label });
-      c.createDiv({ cls: 'cad-stat-value', text: String(value) });
-      if (sub) c.createDiv({ cls: 'cad-stat-sub', text: sub });
-    };
-    const taskSource = snap.taskMode === 'tasknotes' ? 'TaskNotes' : snap.taskMode === 'hybrid' ? 'daily notes + TaskNotes' : 'daily notes';
-    stat('COMPLETION', `${snap.completion}%`, `${snap.totalDone}/${snap.totalOpen + snap.totalDone} tasks`, 'emerald');
-    stat('STREAK', `${snap.streak}d`, 'consecutive active days', 'mint');
-    stat('ACTIVE', `${snap.activeDays}/30`, 'days with a note', 'sky');
-    stat('JOURNAL', snap.totalJournalChars.toLocaleString(), `${taskSource} activity`, 'warn');
-  }
-
-  async _renderProductivityTrendWidget(root: HTMLElement) {
-    const snap = await this._productivitySnapshot();
-    const card = root.createDiv({ cls: 'cad-dash-card' });
-    card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'PRODUCTIVITY TREND' });
-    const body = card.createDiv({ cls: 'cad-dash-card-body' });
-    body.createDiv({ cls: 'cad-section-label-lg', text: 'TASKS DONE — LAST 14 DAYS' });
-    const last14 = snap.perDay.slice(0, 14).reverse();
-    const max = Math.max(1, ...last14.map((p) => p.done));
-    const chart = body.createDiv({ cls: 'cad-bar-chart' });
-    last14.forEach((p) => {
-      const col = chart.createDiv({ cls: 'cad-bar-col' });
-      const bar = col.createDiv({ cls: 'cad-bar' });
-      bar.style.height = `${(p.done / max) * 100}%`;
-      const ratio = p.done / max;
-      bar.dataset.band = p.done === 0 ? 'empty' : ratio < 0.34 ? 'low' : ratio < 0.67 ? 'mid' : 'high';
-      bar.title = `${p.date.toLocaleDateString()} — ${p.done} done, ${p.open} open`;
-      col.createDiv({ cls: 'cad-bar-label', text: String(p.date.getDate()) });
-    });
-
-    body.createDiv({ cls: 'cad-section-label-lg', text: 'COMPLETION TREND — LAST 12 WEEKS' });
-    const wkChart = body.createDiv({ cls: 'cad-bar-chart cad-bar-chart-tall' });
-    const maxWeek = Math.max(1, ...snap.weeks.map((w) => w.done));
-    snap.weeks.forEach((w) => {
-      const col = wkChart.createDiv({ cls: 'cad-bar-col' });
-      const bar = col.createDiv({ cls: 'cad-bar' });
-      bar.style.height = `${(w.done / maxWeek) * 100}%`;
-      const ratio = w.done / maxWeek;
-      bar.dataset.band = w.done === 0 ? 'empty' : ratio < 0.34 ? 'low' : ratio < 0.67 ? 'mid' : 'high';
-      bar.title = `Week of ${w.label} — ${w.done} done, ${w.open} open`;
-      col.createDiv({ cls: 'cad-bar-label', text: w.label });
-    });
-  }
-
-  async _renderProductivityWeekdayWidget(root: HTMLElement) {
-    const snap = await this._productivitySnapshot();
-    const card = root.createDiv({ cls: 'cad-dash-card' });
-    card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'COMPLETION BY WEEKDAY' });
-    const body = card.createDiv({ cls: 'cad-dash-card-body cad-mini-stat-row' });
-    const wsOn = snap.settings.weekStartsOn;
-    const dayLabels = wsOn === 1
-      ? ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
-      : ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-    const dayAccents = ['emerald', 'mint', 'sky', 'warn', 'rose', 'mint', 'sky'];
-    snap.dayBuckets.forEach((b, i) => {
-      const total = b.done + b.open;
-      const pct = total === 0 ? 0 : Math.round((b.done / total) * 100);
-      const mini = body.createDiv({ cls: 'cad-mini-stat' });
-      mini.dataset.accent = dayAccents[i];
-      mini.createDiv({ cls: 'cad-mini-stat-value', text: total === 0 ? '—' : `${pct}%` });
-      mini.createDiv({ cls: 'cad-mini-stat-label', text: dayLabels[i] });
-      const sub = mini.createDiv({ cls: 'cad-stat-sub' });
-      sub.style.marginTop = '4px';
-      sub.setText(total === 0 ? 'no data' : `${b.done}/${total}`);
-    });
-  }
-
-  async _renderProductivityNotesWidget(root: HTMLElement) {
-    const snap = await this._productivitySnapshot();
-    const card = root.createDiv({ cls: 'cad-dash-card' });
-    card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'TASK NOTES' });
-    const body = card.createDiv({ cls: 'cad-dash-card-body' });
-    if (!snap.taskNotes.length) {
-      body.createDiv({ cls: 'cad-empty', text: 'No TaskNotes in the selected range.' });
-      return;
-    }
-    const list = body.createDiv({ cls: 'cad-home-list' });
-    snap.taskNotes.slice(0, 10).forEach((task: ProductivityTaskRowLike) => {
-      const row = list.createDiv({ cls: 'cad-home-row' });
-      row.createDiv({ cls: 'cad-home-row-title', text: task.text || task.title || 'Task note' });
-      row.createDiv({ cls: 'cad-home-row-meta', text: `${task.date || '—'} · ${task.done ? 'done' : 'open'}` });
-      if (task.file) row.addEventListener('click', () => this.openEntityDetailFromFile(task.file));
     });
   }
 
@@ -3643,6 +3533,147 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
+  // Interactive task list: like _renderListWidget but rows carry a checkbox that
+  // writes back. TaskNote-record rows (entity/base sources) toggle frontmatter
+  // status via toggleTaskNoteStatus; built-in daily-note rows (no file) are shown
+  // read-only for now (write-back for those is Phase 2).
+  async _renderTaskListWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
+    const rows = await this._resolveCardRows(card, getWidgetEntities);
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-list-card cad-task-list-card' });
+    this._applyCardTone(cardEl, Object.assign({ kind: 'task-list' }, card));
+    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
+    head.createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label || 'Tasks').trim() });
+    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    if (card.description || card.subtitle) {
+      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+    }
+    if (!rows.length) {
+      body.createDiv({ cls: 'cad-empty', text: String(card.empty || 'No tasks').trim() });
+      return;
+    }
+    const list = body.createDiv({ cls: 'cad-home-list cad-task-list-widget' });
+    rows.slice(0, Math.max(1, Number(card.limit || 12) || 12)).forEach((row) => {
+      const file = row.file || null;
+      const fm = file ? (this.app.metadataCache.getFileCache(file)?.frontmatter || {}) : {};
+      const dailyIdx = typeof row.taskIndex === 'number' ? row.taskIndex : null;
+      const done = file ? String(fm.status || '').trim().toLowerCase() === 'done' : !!row.done;
+      const item = list.createDiv({ cls: 'cad-task-row cad-dash-task-row' + (done ? ' done' : '') });
+      const cb = item.createEl('input', { type: 'checkbox' });
+      cb.checked = done;
+      if (file) {
+        cb.addEventListener('change', async () => {
+          await toggleTaskNoteStatus(this.app, file, cb.checked);
+          this.render();
+        });
+      } else if (dailyIdx != null) {
+        cb.addEventListener('change', async () => {
+          await this._toggleDailyTaskByIndex(dailyIdx, cb.checked);
+          this.render();
+        });
+      } else {
+        cb.disabled = true;
+      }
+      const main = item.createDiv({ cls: 'cad-task-text cad-home-row-main' });
+      main.createDiv({ cls: 'cad-home-row-title', text: row.title || 'Untitled' });
+      if (row.meta) main.createDiv({ cls: 'cad-home-row-meta', text: row.meta });
+      if (file) {
+        main.classList.add('clickable');
+        main.addEventListener('click', () => {
+          if (row.entityKey) { this.openEntityDetail(row.entityKey, file); return; }
+          this.openEntityDetailFromFile(file);
+        });
+      }
+    });
+  }
+
+  // Toggle a checkbox task in today's daily note by its index in the tasks
+  // section (used by the interactive task-list widget on built-in 'today' rows).
+  async _toggleDailyTaskByIndex(idx: number, checked: boolean) {
+    const file = await ensureDailyNote(this.app, this.plugin.settings) as obsidian.TFile;
+    const content = await this.app.vault.read(file);
+    const parsed = parseSections(content, this.plugin.settings);
+    const taskText = String(parsed.tasks[idx] || '').replace(/^\s*-\s\[(x|X| )\]\s/, '').trim();
+    const newTasks = parsed.tasks.map((line, i) => {
+      if (i !== idx) return line;
+      return checked
+        ? line.replace(/^\s*-\s\[\s\]\s/, '- [x] ')
+        : line.replace(/^\s*-\s\[(x|X)\]\s/, '- [ ] ');
+    });
+    await this.app.vault.modify(file, replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n')));
+    if (taskText) await this._propagateTaskComplete(taskText, checked, { kind: 'daily', file, date: new Date() });
+  }
+
+  // Append a checkbox task to today's daily note (creating it if missing).
+  async _appendDailyTask(text: string) {
+    const file = await ensureDailyNote(this.app, this.plugin.settings) as obsidian.TFile;
+    const content = await this.app.vault.read(file);
+    const parsed = parseSections(content, this.plugin.settings);
+    const newTasks = [...parsed.tasks, `- [ ] ${text}`];
+    await this.app.vault.modify(file, replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n')));
+  }
+
+  // Quick-add input: type + Enter appends a task to today's daily note.
+  _renderQuickAddWidget(root: HTMLElement, card: CardLike) {
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-quick-add-card' });
+    if (card.title || card.label) {
+      cardEl.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label).trim() });
+    }
+    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    const input = body.createEl('input', { type: 'text', cls: 'cad-quick-add-input', attr: { placeholder: String(card.placeholder || 'Add a task and press Enter…') } });
+    input.addEventListener('keydown', async (e) => {
+      if (e.key !== 'Enter') return;
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      await this._appendDailyTask(text);
+      this.render();
+    });
+  }
+
+  // Read-only date hero (weekday / day / month / year).
+  _renderDateHeroWidget(root: HTMLElement, card: CardLike) {
+    const info = dateInfo(new Date());
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-date-hero-card' });
+    cardEl.createDiv({ cls: 'cad-eyebrow', text: String(card.eyebrow || info.weekday).toUpperCase() });
+    const hero = cardEl.createDiv({ cls: 'cad-date-hero' });
+    hero.createDiv({ cls: 'cad-date-day', text: String(info.day) });
+    const col = hero.createDiv();
+    col.createDiv({ cls: 'cad-month', text: info.month });
+    col.createDiv({ cls: 'cad-year', text: String(info.year) });
+  }
+
+  // Editable note-body section (e.g. the daily-note Journal), saved on blur.
+  async _renderNoteSectionWidget(root: HTMLElement, card: CardLike) {
+    const heading = String(card.section || card.heading || '').trim() || this.plugin.settings.journalHeading || '## Journal';
+    const headingFull = heading.startsWith('#') ? heading : `## ${heading}`;
+    const readSection = (content: string): string => {
+      const lines = content.split('\n');
+      const idx = lines.findIndex((l) => l.trim() === headingFull.trim());
+      if (idx < 0) return '';
+      const out: string[] = [];
+      for (let i = idx + 1; i < lines.length; i++) {
+        if (/^#{1,6}\s/.test(lines[i])) break;
+        out.push(lines[i]);
+      }
+      return out.join('\n').replace(/\s+$/, '');
+    };
+    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-note-section-card' });
+    cardEl.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: String(card.title || 'Today’s entry').trim() });
+    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    const path = dailyNotePath(this.plugin.settings);
+    const existing = this.app.vault.getAbstractFileByPath(path) as obsidian.TFile | null;
+    let current = '';
+    if (existing) current = readSection(await this.app.vault.read(existing));
+    const ta = body.createEl('textarea', { cls: 'cad-journal cad-note-section-textarea' });
+    ta.value = current;
+    ta.spellcheck = false;
+    ta.addEventListener('blur', async () => {
+      const file = await ensureDailyNote(this.app, this.plugin.settings) as obsidian.TFile;
+      const content = await this.app.vault.read(file);
+      await this.app.vault.modify(file, replaceSection(content, headingFull, ta.value || ''));
+    });
+  }
+
   async _renderBarChartWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const resolved = await getWidgetEntities(this._widgetSourceSpec(card, card.entity), card.entity);
     const builtInData = resolved.metadata?.builtInData || resolved.metadata?.providerData || null;
@@ -4011,8 +4042,62 @@ export class CadenceAppView extends obsidian.ItemView {
     new CadenceImportModal(this.app, {}).open();
   }
 
+  // Reusable, toggleable colored help panel. `key` persists open/closed state
+  // for this session; `build` populates the panel body (headings, paragraphs,
+  // lists). Returns nothing — appends a "Help" toggle + collapsible panel.
+  _helpPanel(parent: HTMLElement, key: string, title: string, build: (body: HTMLElement) => void) {
+    if (!this._openHelpPanels) this._openHelpPanels = new Set<string>();
+    const open = this._openHelpPanels.has(key);
+    const block = parent.createDiv({ cls: 'cad-help-block' });
+    const toggle = block.createEl('button', { cls: 'cad-help-toggle' + (open ? ' is-open' : ''), attr: { type: 'button' } });
+    const icon = toggle.createSpan({ cls: 'cad-help-toggle-icon' });
+    try { obsidian.setIcon(icon, 'help-circle'); } catch (_) { icon.setText('?'); }
+    toggle.createSpan({ cls: 'cad-help-toggle-label', text: title });
+    const chevron = toggle.createSpan({ cls: 'cad-help-toggle-chevron', text: open ? '▾' : '▸' });
+    const panel = block.createDiv({ cls: 'cad-help-panel' });
+    if (!open) panel.style.display = 'none';
+    build(panel);
+    toggle.addEventListener('click', () => {
+      const nowOpen = panel.style.display === 'none';
+      panel.style.display = nowOpen ? '' : 'none';
+      toggle.toggleClass('is-open', nowOpen);
+      chevron.setText(nowOpen ? '▾' : '▸');
+      if (nowOpen) this._openHelpPanels.add(key); else this._openHelpPanels.delete(key);
+    });
+  }
+
+  // Render a named help topic (from help-content.ts) as a collapsible panel.
+  _renderHelpTopic(parent: HTMLElement, topicKey: string) {
+    const topic = HELP_TOPICS[topicKey];
+    if (!topic) return;
+    this._helpPanel(parent, topicKey, topic.title, (body) => {
+      topic.sections.forEach((section) => this._helpBlock(body, section.heading, section.lines));
+    });
+  }
+
+  // Small helper: render a heading + paragraph/list items into a help panel body.
+  _helpBlock(body: HTMLElement, heading: string, lines: (string | [string, string])[]) {
+    body.createDiv({ cls: 'cad-help-heading', text: heading });
+    lines.forEach((line) => {
+      const row = body.createDiv({ cls: 'cad-help-line' });
+      if (Array.isArray(line)) {
+        row.createSpan({ cls: 'cad-help-term', text: line[0] });
+        row.createSpan({ cls: 'cad-help-desc', text: line[1] });
+      } else {
+        row.createSpan({ cls: 'cad-help-desc', text: line });
+      }
+    });
+  }
+
   async renderDashboardEditor(root: HTMLElement) {
+    // Deep-link target from the Modules settings "Edit dashboard" action.
+    if (this.plugin.pendingDesignerSurface) {
+      this._dashEditorSurfaceId = this.plugin.pendingDesignerSurface;
+      this.plugin.pendingDesignerSurface = null;
+    }
     this._renderPageHeader(root, 'Surface Designer', 'Customize dashboards, reports and widgets');
+
+    this._renderHelpTopic(root, 'designer-overview');
 
     const builtinIds = Object.keys(BUILTIN_DASHBOARD_DEFAULTS);
     const builtinPlannerIds = Object.keys(WORKSPACE_CONFIG.planner || {});
@@ -4589,9 +4674,12 @@ export class CadenceAppView extends obsidian.ItemView {
       }
       return value;
     };
+    // Field-level help (FIELD_HELP) lives in help-content.ts — shown on hover.
     const addRow = (label: string, key: string, opts?: string[], combobox = false) => {
       const r = form.createDiv({ cls: 'cad-de-form-row' });
-      r.createDiv({ cls: 'cad-de-form-label', text: label });
+      const labelEl = r.createDiv({ cls: 'cad-de-form-label', text: label });
+      const help = FIELD_HELP[key];
+      if (help) labelEl.setAttribute('title', help);
       if (opts && !combobox) {
         const sel = r.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
         opts.forEach(v => { const o = sel.createEl('option', { value: v, text: v }); if (v === card[key]) o.selected = true; });
@@ -4707,22 +4795,71 @@ export class CadenceAppView extends obsidian.ItemView {
     if (card.entity && ENTITIES[card.entity] && !sortedEntityKeys.includes(card.entity)) {
       sortedEntityKeys.unshift(card.entity);
     }
+    // Show only the fields relevant to this widget kind — the schema declares
+    // them in `supports`. An unknown kind shows everything (safe fallback).
+    const widgetKind = String(card.kind || (Array.isArray(card.merge) ? 'merge' : 'list')).trim() || 'list';
+    const cardSchema = dashboardWidgetSchema(widgetKind);
+    const supportedFields = new Set(cardSchema?.supports || []);
+    const fieldOn = (...keys: string[]) => !cardSchema || keys.some((k) => supportedFields.has(k));
+    const usesSource = fieldOn('source', 'entity', 'base');
+
+    // WIDGET_INTRO / WIDGET_GUIDES live in help-content.ts.
+    const guide = WIDGET_GUIDES[widgetKind];
+    if (guide) {
+      this._helpPanel(form, `widget-${widgetKind}`, `About the “${cardSchema?.label || widgetKind}” widget`, (body) => {
+        this._helpBlock(body, 'What it does', [guide.what]);
+        this._helpBlock(body, 'When to use it', [guide.use]);
+        if (guide.fields.length) this._helpBlock(body, 'Key settings', guide.fields);
+      });
+    }
+
+    const basicsSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
+    const basicsLabel = basicsSection.createDiv({ cls: 'cad-de-section-label', text: `Settings — ${cardSchema?.label || widgetKind}` });
+    if (WIDGET_INTRO[widgetKind]) basicsLabel.setAttribute('title', WIDGET_INTRO[widgetKind]);
     addRow('Title', 'title');
-    addRow('Entity', 'entity', sortedEntityKeys, true);
-    const titleFieldList = addRow('Title fields', 'titleFields', fieldSuggestions, true);
-    const metaFieldList = addRow('Meta fields', 'metaFields', fieldSuggestions, true);
-    addRow('Empty text', 'empty');
-    addRow('Section', 'section');
-    addRow('Tone', 'tone', ['emerald', 'mint', 'sky', 'warn', 'rose']);
-    addRow('Accent', 'accent', ['emerald', 'mint', 'sky', 'warn', 'rose']);
-    addRow('Field', 'field', fieldSuggestions, true);
-    addRow('Value field', 'valueField');
-    addRow('Metric', 'metric', ['count', 'sum', 'avg', 'min', 'max', 'filled', 'empty', 'open', 'uniqueCount', 'ratio'], true);
-    addRow('Group by', 'groupBy');
-    addRow('Limit', 'limit');
-    addRow('View', 'view');
-    addRow('Height', 'height');
-    addRow('Fallback', 'fallback', ['preview', 'link', 'error']);
+    if (fieldOn('entity')) addRow('Entity', 'entity', sortedEntityKeys, true);
+    let titleFieldList: HTMLDataListElement | null = null;
+    let metaFieldList: HTMLDataListElement | null = null;
+    if (fieldOn('titleFields')) titleFieldList = addRow('Title fields', 'titleFields', fieldSuggestions, true) || null;
+    if (fieldOn('metaFields')) metaFieldList = addRow('Meta fields', 'metaFields', fieldSuggestions, true) || null;
+    if (fieldOn('placeholder')) addRow('Placeholder', 'placeholder');
+    if (fieldOn('eyebrow')) addRow('Eyebrow', 'eyebrow');
+    if (fieldOn('empty')) addRow('Empty text', 'empty');
+    if (fieldOn('section', 'heading')) addRow('Section', 'section');
+    if (fieldOn('tone')) addRow('Tone', 'tone', ['emerald', 'mint', 'sky', 'warn', 'rose']);
+    if (fieldOn('accent')) addRow('Accent', 'accent', ['emerald', 'mint', 'sky', 'warn', 'rose']);
+    if (fieldOn('field')) addRow('Field', 'field', fieldSuggestions, true);
+    if (fieldOn('valueField')) addRow('Value field', 'valueField');
+    if (fieldOn('metric')) addRow('Metric', 'metric', ['count', 'sum', 'avg', 'min', 'max', 'filled', 'empty', 'open', 'uniqueCount', 'ratio'], true);
+    if (fieldOn('groupBy')) addRow('Group by', 'groupBy');
+    if (fieldOn('limit')) addRow('Limit', 'limit');
+    if (fieldOn('view', 'base')) addRow('View', 'view');
+    // Base picker — point this widget's source at an existing .base file (with the
+    // View row above selecting the view). Empty falls back to the entity source.
+    if (fieldOn('base', 'source')) (() => {
+      const r = form.createDiv({ cls: 'cad-de-form-row' });
+      r.createDiv({ cls: 'cad-de-form-label', text: 'Base' });
+      const sel = r.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+      sel.createEl('option', { value: '', text: '— none (use entity) —' });
+      const src = (card.source && typeof card.source === 'object' && !Array.isArray(card.source)) ? card.source as Frontmatter : {};
+      const srcBase = src.base;
+      const currentBaseFile = typeof srcBase === 'string' ? srcBase
+        : (srcBase && typeof srcBase === 'object' ? String(srcBase.file || srcBase.base || srcBase.path || '') : '');
+      this.app.vault.getFiles().filter((f) => f.extension === 'base').map((f) => f.path).sort()
+        .forEach((p) => { const o = sel.createEl('option', { value: p, text: p }); if (p === currentBaseFile) o.selected = true; });
+      sel.addEventListener('change', () => {
+        if (sel.value) {
+          const view = String((card.view as string) || '').trim();
+          card.source = Object.assign({}, view ? { view } : {}, { base: view ? { file: sel.value, view } : { file: sel.value } });
+        } else if (card.source && typeof card.source === 'object' && !Array.isArray(card.source)) {
+          delete (card.source as Frontmatter).base;
+          if (!Object.keys(card.source as Frontmatter).length) delete card.source;
+        }
+        onChange();
+      });
+    })();
+    if (fieldOn('height')) addRow('Height', 'height');
+    if (fieldOn('fallback')) addRow('Fallback', 'fallback', ['preview', 'link', 'error']);
 
     const typeRow = form.createDiv({ cls: 'cad-de-form-row' });
     typeRow.createDiv({ cls: 'cad-de-form-label', text: 'Widget type' });
@@ -4761,7 +4898,11 @@ export class CadenceAppView extends obsidian.ItemView {
       onChange();
     };
     const sourceSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
-    sourceSection.createDiv({ cls: 'cad-de-section-label', text: 'Source details' });
+    // Sourceless widgets (quick-add, date-hero, note-section) don't read data —
+    // hide the whole Source details block so their editor stays simple.
+    if (!usesSource) sourceSection.style.display = 'none';
+    sourceSection.createDiv({ cls: 'cad-de-section-label', text: 'Where does the data come from?' })
+      .setAttribute('title', SOURCE_SECTION_HELP);
     const sourceModeRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
     sourceModeRow.createDiv({ cls: 'cad-de-form-label', text: 'Mode' });
     const sourceMode = sourceModeRow.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
@@ -6034,240 +6175,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Pipeline kanban (deals grouped by stage) ───── */
-  async renderEntityKanban(root: HTMLElement, entityKey: string, groupBy: string, groups: string[]) {
-    root.addClass('cadence-kanban');
-    const def = ENTITIES[entityKey];
-    const entities = listEntities(this.app, entityKey);
-    const totalValue = entities.reduce((sum, e) => sum + (Number(entityValue(e, dealValueField(def), def)) || 0), 0);
-
-    const unsupported = def.unsupportedBaseFilters || [];
-    const unsupportedText = unsupported.length
-      ? ` · ${unsupported.length} Base filter${unsupported.length === 1 ? '' : 's'} not applied`
-      : '';
-    this._renderPageHeader(root, def.plural, `${entities.length} ${entities.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} · ${fmtValue(totalValue, 'currency')} total${unsupportedText}`, (right, ctx) => {
-      this._renderEntityViewSelect(right, entityKey);
-      if (def.externalBaseView) {
-        const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
-        openBaseBtn.addEventListener('click', () => this._openEntityBase(entityKey));
-      }
-      if (!ctx.hasConfiguredActions) {
-        const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
-        btn.addEventListener('click', () => this._createEntityFromPrompt(entityKey));
-      }
-    });
-
-    if (this._renderExternalBaseView(root, entityKey)) return;
-    this._renderUnsupportedBaseFilters(root, def);
-
-    const board = root.createDiv({ cls: 'cad-kanban-board' });
-    groups.forEach((stage) => {
-      const items = entities.filter((e) => String(entityValue(e, groupBy, def) || '') === stage);
-      const stageValue = items.reduce((s, e) => s + (Number(entityValue(e, dealValueField(def), def)) || 0), 0);
-
-      const col = board.createDiv({ cls: 'cad-kanban-col' });
-      col.dataset.stage = stage;
-      const head = col.createDiv({ cls: 'cad-kanban-col-head' });
-      head.createDiv({ cls: 'cad-kanban-col-title', text: stage });
-      head.createDiv({ cls: 'cad-kanban-col-meta', text: `${items.length} · ${fmtValue(stageValue, 'currency')}` });
-
-      const list = col.createDiv({ cls: 'cad-kanban-col-list' });
-
-      // Drop target: drop a card here to update its `groupBy` field to this stage.
-      list.addEventListener('dragover', (ev) => {
-        ev.preventDefault();
-        try { ev.dataTransfer.dropEffect = 'move'; } catch (_) {}
-        col.addClass('drag-over');
-      });
-      list.addEventListener('dragleave', (ev) => {
-        // Only clear when leaving the column entirely
-        if (!col.contains(ev.relatedTarget as Node)) col.removeClass('drag-over');
-      });
-      list.addEventListener('drop', async (ev) => {
-        ev.preventDefault();
-        col.removeClass('drag-over');
-        const path = ev.dataTransfer.getData('text/cadence-entity');
-        const fromStage = ev.dataTransfer.getData('text/cadence-stage');
-        if (!path || fromStage === stage) return;
-        const file = this.app.vault.getAbstractFileByPath(path);
-        if (!file || !(file instanceof obsidian.TFile)) return;
-        try {
-          await this.app.fileManager.processFrontMatter(file, (fm) => { fm[groupBy] = stage; });
-          new obsidian.Notice(`Moved to ${stage}`);
-          // The metadataCache.changed listener re-renders for us.
-        } catch (e) {
-          new obsidian.Notice(`Failed to move: ${e.message}`);
-        }
-      });
-
-      if (!items.length) {
-        list.createDiv({ cls: 'cad-empty', text: '—' });
-      } else {
-        const isMobile = !!(obsidian.Platform && obsidian.Platform.isMobile);
-        items.forEach((e) => {
-          const card = list.createDiv({ cls: 'cad-kanban-card' });
-          card.dataset.path = e.file.path;
-          card.createDiv({ cls: 'cad-kanban-card-title', text: entityPrimaryValue(e, def) });
-          const meta = card.createDiv({ cls: 'cad-kanban-card-meta' });
-          const v = entityValue(e, dealValueField(def), def);
-          if (v) meta.createSpan({ cls: 'cad-kanban-card-value', text: fmtValue(v, 'currency') });
-          const co = entityValue(e, 'company', def);
-          if (co) meta.createSpan({ cls: 'cad-kanban-card-company', text: ' · ' + co });
-
-          /* Drag-to-move is a desktop-only affordance. On mobile, HTML5 drag
-             doesn't reliably fire from touch and the `draggable` attribute
-             can interfere with native scrolling. Mobile users instead tap
-             the card to open detail, then change the stage from there. */
-          if (!isMobile) {
-            card.draggable = true;
-            card.addEventListener('dragstart', (ev) => {
-              card.addClass('dragging');
-              try {
-                ev.dataTransfer.effectAllowed = 'move';
-                ev.dataTransfer.setData('text/cadence-entity', e.file.path);
-                ev.dataTransfer.setData('text/cadence-stage', stage);
-                // Plain text payload too, so dropping into editors yields a link
-                ev.dataTransfer.setData('text/plain', `[[${e.file.basename}]]`);
-              } catch (_) {}
-            });
-            card.addEventListener('dragend', () => card.removeClass('dragging'));
-          } else {
-            card.addClass('cad-kanban-card-touch');
-          }
-          card.addEventListener('click', () => this.openEntityDetail(entityKey, e.file));
-        });
-      }
-    });
-  }
-
   /* ── CRM Dashboard ──────────────────────── */
-  async renderDashboard(root: HTMLElement) {
-    root.addClass('cadence-dashboard');
-
-    // ─── Read all the relevant data ────────────────────
-    const dealDef = ENTITIES.deal;
-    const allDeals = listEntities(this.app, 'deal');
-    const open = allDeals.filter((e) => !dealTerminalStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
-    const won  = allDeals.filter((e) => dealWonStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
-    const lost = allDeals.filter((e) => dealLostStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
-    const dealValue = (e: EntityRecord) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
-    const sumVal = (arr: EntityRecord[]) => arr.reduce((s, e) => s + dealValue(e), 0);
-    const winRate = won.length + lost.length === 0 ? 0 : Math.round((won.length / (won.length + lost.length)) * 100);
-    const avgDeal = won.length === 0 ? 0 : sumVal(won) / won.length;
-
-    const contacts  = listEntityFiles(this.app, 'contact');
-    const companies = listEntityFiles(this.app, 'company');
-    const partners  = listEntityFiles(this.app, 'partner');
-    const activities = listEntities(this.app, 'activity');
-
-    // ─── Header ────────────────────────────────────────
-    this._renderPageHeader(root, 'CRM Dashboard', 'Pipeline · momentum · recent activity', (right, ctx) => {
-      if (!ctx.hasConfiguredActions) {
-        const newDeal = right.createEl('button', { cls: 'cad-btn primary', text: '+ New Deal' });
-        newDeal.addEventListener('click', () => this._createEntityFromPrompt('deal'));
-      }
-    });
-
-    // ─── Top stats (5 cards) ───────────────────────────
-    const grid = root.createDiv({ cls: 'cad-stat-grid' });
-    const stat = (label: string, value: string | number, sub: string, accent: string) => {
-      const c = grid.createDiv({ cls: 'cad-stat-card' });
-      if (accent) c.dataset.accent = accent;
-      c.createDiv({ cls: 'cad-stat-label', text: label });
-      c.createDiv({ cls: 'cad-stat-value', text: String(value) });
-      if (sub) c.createDiv({ cls: 'cad-stat-sub', text: sub });
-    };
-    stat('OPEN PIPELINE', open.length, fmtValue(sumVal(open), 'currency'), 'sky');
-    stat('WON',           won.length,  fmtValue(sumVal(won),  'currency'), 'emerald');
-    stat('LOST',          lost.length, fmtValue(sumVal(lost), 'currency'), 'rose');
-    stat('WIN RATE',      `${winRate}%`, `${won.length}/${won.length + lost.length} closed`, 'mint');
-    stat('AVG DEAL',      fmtValue(avgDeal, 'currency'), `${won.length} won deals`, 'warn');
-
-    // ─── Pipeline by stage ─────────────────────────────
-    root.createDiv({ cls: 'cad-section-label-lg', text: 'PIPELINE BY STAGE' });
-    const stageData = getDealStages(dealDef).map((stage) => {
-      const items = allDeals.filter((e) => String(entityValue(e, dealStageField(dealDef), dealDef)) === stage);
-      return { stage, items, value: sumVal(items) };
-    });
-    const maxStageVal = Math.max(1, ...stageData.map((s) => s.value));
-    const stageWrap = root.createDiv({ cls: 'cad-stage-bars' });
-    stageData.forEach(({ stage, items, value }) => {
-      const row = stageWrap.createDiv({ cls: 'cad-stage-bar-row' });
-      row.dataset.stage = stage;
-      row.createDiv({ cls: 'cad-stage-bar-name', text: stage });
-      row.createDiv({ cls: 'cad-stage-bar-count', text: `${items.length}` });
-      const barWrap = row.createDiv({ cls: 'cad-stage-bar' });
-      const fill = barWrap.createDiv({ cls: 'cad-stage-bar-fill' });
-      fill.style.width = `${(value / maxStageVal) * 100}%`;
-      row.createDiv({ cls: 'cad-stage-bar-value', text: fmtValue(value, 'currency') });
-      row.addEventListener('click', () => this.setMode('crm.pipeline'));
-    });
-
-    // ─── Two-column body ───────────────────────────────
-    const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    const left  = cols.createDiv({ cls: 'cad-dash-col' });
-    const right = cols.createDiv({ cls: 'cad-dash-col' });
-
-    // Hot deals — top by value, open only
-    const topHot = [...open]
-      .sort((a, b) => dealValue(b) - dealValue(a))
-      .slice(0, 5)
-      .map((e) => ({
-        title: entityValue(e, 'title', dealDef) || e.basename,
-        meta: `${entityValue(e, dealStageField(dealDef), dealDef) || '—'} · ${fmtValue(dealValue(e), 'currency')}`,
-        file: e.file,
-      }));
-    this._dashCardSection(left, 'HOT DEALS · top 5 by value', topHot, 'No open deals yet — hit + New Deal above.');
-
-    // Stale deals — open, not touched in 14+ days (file mtime)
-    const staleCutoff = Date.now() - 14 * 86400000;
-    const stale = open
-      .filter((e) => e.file && e.file.stat && e.file.stat.mtime < staleCutoff)
-      .sort((a, b) => (a.file.stat.mtime || 0) - (b.file.stat.mtime || 0))
-      .slice(0, 5)
-      .map((e) => {
-        const days = Math.round((Date.now() - e.file.stat.mtime) / 86400000);
-        return {
-          title: entityValue(e, 'title', dealDef) || e.basename,
-          meta: `${entityValue(e, dealStageField(dealDef), dealDef) || '—'} · ${days}d quiet · ${fmtValue(dealValue(e), 'currency')}`,
-          file: e.file,
-        };
-      });
-    this._dashCardSection(left, 'STALE DEALS · 14+ days no edits', stale, 'No stale deals — momentum is good.');
-
-    // Recent activity
-    const recentAct = [...activities]
-      .sort((a, b) => {
-        const da = new Date(activityDate(a, ENTITIES.activity) || 0).getTime();
-        const db = new Date(activityDate(b, ENTITIES.activity) || 0).getTime();
-        return db - da;
-      })
-      .slice(0, 6)
-      .map((e) => ({
-        title: activityTitle(e, ENTITIES.activity),
-        meta: `${entityValue(e, 'channel', ENTITIES.activity) || '—'} · ${fmtValue(activityDate(e, ENTITIES.activity), 'date')}`,
-        file: e.file,
-      }));
-    this._dashCardSection(right, `RECENT ACTIVITY · ${activities.length} total`, recentAct, 'No activity logged yet. Capture a call or meeting under CRM > Activities.');
-
-    // Customer base — mini stat row inside a card
-    const baseCard = right.createDiv({ cls: 'cad-dash-card' });
-    baseCard.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: `CUSTOMER BASE · ${contacts.length + companies.length + partners.length} records` });
-    const baseBody = baseCard.createDiv({ cls: 'cad-dash-card-body cad-mini-stat-row' });
-    const mkMini = (label: string, val: string | number, accent: string, mode: string) => {
-      const c = baseBody.createDiv({ cls: 'cad-mini-stat' });
-      if (accent) c.dataset.accent = accent;
-      c.createDiv({ cls: 'cad-mini-stat-value', text: String(val) });
-      c.createDiv({ cls: 'cad-mini-stat-label', text: label });
-      if (mode) {
-        c.style.cursor = 'pointer';
-        c.addEventListener('click', () => this.setMode(mode));
-      }
-    };
-    mkMini('CONTACTS',  contacts.length,  'warn', 'crm.contacts');
-    mkMini('COMPANIES', companies.length, 'sky',  'crm.companies');
-    mkMini('PARTNERS',  partners.length,  'rose', 'prm.partners');
-  }
-
   /* Reusable list card on the dashboard. */
   _dashCardSection(parent: HTMLElement, title: string, rows: ProviderRow[], emptyMsg: string) {
     const card = parent.createDiv({ cls: 'cad-dash-card' });
@@ -6291,29 +6199,9 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async _productivitySnapshot() {
-    return buildProductivitySnapshot(this.app, this.plugin.settings);
-  }
-
   /* ── Reports: Productivity (over daily notes) ── */
   async renderProductivity(root: HTMLElement) {
     return this.renderConfigDashboard('reports.productivity', root);
-  }
-
-  async renderReportPipeline(root: HTMLElement) {
-    return this.renderConfigDashboard('reports.pipeline', root);
-  }
-
-  async renderReportSales(root: HTMLElement) {
-    return this.renderConfigDashboard('reports.sales', root);
-  }
-
-  async renderReportPartners(root: HTMLElement) {
-    return this.renderConfigDashboard('reports.partners', root);
-  }
-
-  async renderReportActivity(root: HTMLElement) {
-    return this.renderConfigDashboard('reports.activity', root);
   }
 
   /* ── PRM Analytics ──────────────────────── */
@@ -6915,7 +6803,7 @@ export class CadenceAppView extends obsidian.ItemView {
     this.render();
   }
 
-  async onClose() { /* nothing */ }
+  async onClose() { this._closeColumnFilterMenu(); }
 }
 
 /* ─────────── Settings tab ─────────── */

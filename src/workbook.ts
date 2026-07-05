@@ -268,24 +268,6 @@ export async function importWorkbookEntities(app: App, file: TFile) {
   return result;
 }
 
-export async function importWorkbookEntitiesFromBuffer(app: App, buffer: ArrayBuffer | Uint8Array, filename: string) {
-  const XLSX = getXLSX(app);
-  const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
-  const result: WorkbookImportResult = { created: 0, updated: 0, failed: 0, sheets: 0, skippedSheets: [] };
-  for (const sheetName of wb.SheetNames) {
-    const entityKey = workbookEntityKeyFromSheet(sheetName);
-    if (!entityKey) { result.skippedSheets.push(sheetName); continue; }
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '', raw: false });
-    const nonEmptyRows = rows.filter((row) => Object.values(row).some((v) => String(v || '').trim()));
-    const imported = await importEntityRows(app, entityKey, nonEmptyRows);
-    result.created += imported.created;
-    result.updated += imported.updated || 0;
-    result.failed += imported.failed;
-    result.sheets++;
-  }
-  return result;
-}
-
 export async function promptImportWorkbook(app: App, onDone: (result: WorkbookImportResult) => unknown = () => {}) {
   const workbookFiles = app.vault.getFiles().filter((f) => {
     const p = f.path.toLowerCase();
