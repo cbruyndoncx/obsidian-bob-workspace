@@ -56,7 +56,8 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 - `package.json`, `tsconfig.json`, `esbuild.config.mjs`, `esbuild.shared.cjs` — build toolchain (`npm run build` / `dev` / `typecheck` / `check`). `esbuild.shared.cjs` is the single source of the bundle options, shared with the build-freshness test.
 - `tests/` — lightweight regression suite (`node tests/run-tests.js`).
 - `docs/extending-bob-workspace.md` — schema/Base/entities extension model.
-- `docs/installing-into-existing-vault.md` — authoritative first-time-install sequence for a vault that already has notes (schema-first, then bases, then UII).
+- `docs/installing-into-existing-vault.md` — authoritative first-time-install sequence for a vault that already has notes (schema-first, then bases, then UI).
+- `docs/empty-vault-quickstart.md` — user-facing happy path for a brand-new empty vault (enable → pick template → create first records → make Today interactive).
 - `docs/navigation-inventory.md`, `docs/entity-setup-audit.md` — useful generated snapshots, but confirm against current code before editing.
 - `CLAUDE.md` / `AGENTS.md` — kept in sync (this file); broader implementation notes.
 - `SUBMISSION.md` — release checklist.
