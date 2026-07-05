@@ -1,6 +1,6 @@
 import { setWorkspaceConfig } from './workspace-config';
 import { entityBasePath, entityBaseViewName, generateMissingBases } from './bases-config';
-import { baseSummaryCompatibleWithEntity, readBaseSummary } from './bases-parse';
+import { baseSummaryCompatibleWithEntity, baseViewRendersInline, readBaseSummary } from './bases-parse';
 import { BUILTIN_DASHBOARD_DEFAULTS, summarizeDashboardBlueprint } from './dashboards';
 import { HELP_TOPICS } from './help-content';
 import { ENTITIES } from './entities';
@@ -1652,8 +1652,16 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
               baseSummariesPromise.then((summaries) => {
                 const summary = summaries.find((item) => item.path === currentBase);
                 dd.selectEl.empty();
-                dd.addOption('', '— all properties —');
-                (summary?.views || []).forEach((viewName) => dd.addOption(viewName, viewName));
+                dd.addOption('', '— all properties (inline table) —');
+                // Label each view with its type + whether it renders inline or
+                // opens in Obsidian Bases, so the choice is clear before selecting.
+                const metas = summary?.viewMeta && summary.viewMeta.length
+                  ? summary.viewMeta
+                  : (summary?.views || []).map((name) => ({ name, type: 'table' }));
+                metas.forEach(({ name, type }) => {
+                  const inline = baseViewRendersInline(type);
+                  dd.addOption(name, `${name} — ${type} · ${inline ? 'inline' : 'opens in Bases'}`);
+                });
                 dd.setValue(currentView);
                 if (!moduleDisabled) dd.setDisabled(false);
               });

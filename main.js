@@ -20665,6 +20665,10 @@ function collectUnsupportedBaseFeatureWarnings(properties = {}) {
 function normBaseName(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
+function baseViewRendersInline(type) {
+  const t = String(type || "").trim().toLowerCase();
+  return t === "" || t === "table";
+}
 async function readBaseSummary(app, file) {
   try {
     const raw = await app.vault.read(file);
@@ -20688,6 +20692,7 @@ async function readBaseSummary(app, file) {
       path: file.path,
       label: file.path.split("/").pop().replace(/\.base$/i, ""),
       views: Array.isArray(yaml.views) ? yaml.views.map((v) => v.name).filter(Boolean) : [],
+      viewMeta: Array.isArray(yaml.views) ? yaml.views.filter((v) => v && v.name).map((v) => ({ name: String(v.name), type: String(v.type || "table") })) : [],
       typeFilters: [...new Set(typeFilters)],
       folders: [...new Set(folders)],
       unsupportedBaseFeatures: [...new Set(collectUnsupportedBaseFeatureWarnings(yaml.properties || {}))]
@@ -24871,7 +24876,8 @@ var HELP_TOPICS = {
         ["Primary surface", "a top-level nav item (e.g. Contacts). Toggle hides just that item."],
         ["Secondary tab", "an indented sub-tab shown inside a parent surface (e.g. Meetings under Client Work)."],
         ["Folder", "where this record type\u2019s notes live."],
-        ["Base", "an optional .base file giving the list its columns/filters/view."]
+        ["Base", "an optional .base file giving the list its columns/filters/view."],
+        ["View", "which view of the Base to use. Each option is labelled with its type: a \u201Ctable\u201D view renders inline in the surface; a board/calendar/card view shows an \u201COpen Base\u201D button instead (the plugin renders tables inline only)."]
       ] },
       { heading: "Dashboards", lines: [
         ["built-in / \u270E custom chip", "whether a surface uses the shipped dashboard or your own."],
@@ -33347,8 +33353,12 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
               baseSummariesPromise.then((summaries) => {
                 const summary = summaries.find((item) => item.path === currentBase);
                 dd.selectEl.empty();
-                dd.addOption("", "\u2014 all properties \u2014");
-                (summary?.views || []).forEach((viewName) => dd.addOption(viewName, viewName));
+                dd.addOption("", "\u2014 all properties (inline table) \u2014");
+                const metas = summary?.viewMeta && summary.viewMeta.length ? summary.viewMeta : (summary?.views || []).map((name) => ({ name, type: "table" }));
+                metas.forEach(({ name, type }) => {
+                  const inline = baseViewRendersInline(type);
+                  dd.addOption(name, `${name} \u2014 ${type} \xB7 ${inline ? "inline" : "opens in Bases"}`);
+                });
                 dd.setValue(currentView);
                 if (!moduleDisabled) dd.setDisabled(false);
               });

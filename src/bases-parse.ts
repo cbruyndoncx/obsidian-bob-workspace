@@ -345,9 +345,21 @@ export interface BaseSummary {
   path: string;
   label: string;
   views: string[];
+  // Same views as `views`, but carrying each view's Bases `type` (table/board/
+  // calendar/cards/…). Only `table` views render inline in the plugin — any other
+  // type falls back to an "Open Base" button (see externalBaseView in
+  // parseBaseFile). The picker uses this to tell the user which is which.
+  viewMeta: { name: string; type: string }[];
   typeFilters: string[];
   folders: string[];
   unsupportedBaseFeatures: string[];
+}
+
+// A Bases view renders inline in the plugin only when its type is `table`
+// (a missing type is treated as table). Everything else opens in Obsidian Bases.
+export function baseViewRendersInline(type: string | undefined | null): boolean {
+  const t = String(type || '').trim().toLowerCase();
+  return t === '' || t === 'table';
 }
 
 export async function readBaseSummary(app: obsidian.App, file: obsidian.TFile): Promise<BaseSummary | null> {
@@ -373,6 +385,9 @@ export async function readBaseSummary(app: obsidian.App, file: obsidian.TFile): 
       path: file.path,
       label: file.path.split('/').pop().replace(/\.base$/i, ''),
       views: Array.isArray(yaml.views) ? yaml.views.map((v) => v.name).filter(Boolean) : [],
+      viewMeta: Array.isArray(yaml.views)
+        ? yaml.views.filter((v) => v && v.name).map((v) => ({ name: String(v.name), type: String(v.type || 'table') }))
+        : [],
       typeFilters: [...new Set(typeFilters)],
       folders: [...new Set(folders)],
       unsupportedBaseFeatures: [...new Set(collectUnsupportedBaseFeatureWarnings(yaml.properties || {}))],
