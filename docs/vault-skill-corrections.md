@@ -11,11 +11,21 @@ Both skills are **architecturally correct** (bootstrap owns schema YAML; compose
 owns `workspace.json`; gating and safe-write logic are sound). These are drift
 fixes, not rewrites.
 
+> **✅ Applied 2026-07-05.** All 9 corrections were made to the vault skill files.
+> Both edited scripts pass `python -c ast.parse`, and `validate_workspace.py` on
+> the live `workspace.json` reports 0 errors (2 pre-existing benign base-mapping
+> warnings). One assessment error was corrected against the code during
+> application: `format` **is** read by the plugin (`schemas.ts` maps
+> `format: date`→date UI field) — it is simply not *validated*, so the
+> `format: date` guidance was kept and only the "validation fails on format"
+> claims were removed. A bonus base-widget decision table (link vs embed vs view)
+> was added to `widget_catalog.md`.
+
 ---
 
 ## `bob-workspace-bootstrap`
 
-- [ ] **1. Required-fields shape in SKILL.md is wrong.**
+- [x] **1. Required-fields shape in SKILL.md is wrong.**
   SKILL.md (~lines 167-185) marks `type_value`/`label` as *optional* and omits
   `location_pattern`. The plugin's `validateSourceSchemaDefinition`
   (`src/schema-designer.ts`) **requires** `entity`, `label`, `location_pattern`,
@@ -23,14 +33,14 @@ fixes, not rewrites.
   → Fix the SKILL.md inline example to match `references/yaml_source_schema.md`
   (which is already correct).
 
-- [ ] **2. "Read `data.json` for the configured schema folder" is stale** (SKILL.md ~line 242).
+- [x] **2. "Read `data.json` for the configured schema folder" is stale** (SKILL.md ~line 242).
   `schemasFolder`/`useSchemas` are in `WORKSPACE_OWNED_SETTING_KEYS`, stripped
   from `data.json` and written to `workspace.json.settings`; top-level
   `workspace.json.schemas.folder` wins over all.
   → Read `workspace.json`: top-level `schemas.folder`, else `settings.schemasFolder`
   (default `00-CORE/Schemas/source`). Not `data.json`.
 
-- [ ] **3. `format` is not validated; the real checks are undocumented.**
+- [x] **3. `format` is not validated; the real checks are undocumented.**
   `references/yaml_source_schema.md` (~72-80) and Verification #2 claim regen
   checks `format`. It does not — it validates field `type ∈
   {string,number,integer,boolean,array}` only (no `date` type; dates are strings).
@@ -39,7 +49,7 @@ fixes, not rewrites.
   `co_required`, and `field_aliases` conflicts.
   → Remove the `format` claim; document the checks that actually run.
 
-- [ ] **4. `generate_yaml.py` produces a poor primary field.**
+- [x] **4. `generate_yaml.py` produces a poor primary field.**
   It emits no `key_fields` and prepends a baseline `type` field. `fieldsFromSchema`
   filters `type` out, and with no `key_fields` the primary derives from the first
   remaining field — often `status`, making it the display/basename field.
@@ -49,7 +59,7 @@ fixes, not rewrites.
 
 ## `bob-workspace-compose`
 
-- [ ] **5. The `custom.<entityKey>` render branch no longer exists.**
+- [x] **5. The `custom.<entityKey>` render branch no longer exists.**
   SKILL.md (~211, 251), `references/workspace_schema.md` (~45), and
   `validate_workspace.py` `_reachable` (~246-247) list a branch 5
   `custom.<entityKey>` → entity list. The current `render()` dispatch
@@ -59,7 +69,7 @@ fixes, not rewrites.
   → Remove the `custom.*` reachability branch from the validator, schema ref, and
   SKILL.md.
 
-- [ ] **6. Widget catalog is stale — "nine kinds" is now ~19.**
+- [x] **6. Widget catalog is stale — "nine kinds" is now ~19.**
   `PURE_DASHBOARD_WIDGET_TYPES` (`src/dashboards.ts`) / `dashboardWidgetSchema`
   (`src/workspace-config.ts`) define: metric, list, bar-chart, gauge, progress,
   heatmap, kanban, base-link, base-embed, base-view, markdown, actions, selector,
@@ -74,14 +84,14 @@ fixes, not rewrites.
   `date-hero` (`eyebrow`), `note-section` (`section`); their schemas set
   `allowSourceOnly`/no source required except `task-list`.
 
-- [ ] **7. Validator is looser than the plugin on nav `label`.**
+- [x] **7. Validator is looser than the plugin on nav `label`.**
   `validate_workspace.py` (~138) checks only `id`; `validateWorkspaceConfig`
   (`src/workspace-config.ts`) throws if a nav item lacks `id` **or** `label` and
   rejects the whole `workspace.json` at load. This is the exact
   structurally-valid-but-renderer-rejected class the skill meant to close.
   → Require both `id` and `label` on nav items in the validator.
 
-- [ ] **8. `BUILT_SURFACES` ≠ "always reachable."**
+- [x] **8. `BUILT_SURFACES` ≠ "always reachable."**
   The validator (~78-95) treats the full `BUILT_SURFACES` set (crm.contacts,
   finance.invoices, all client-work.*, …) as reachable, but the real dispatch
   renders those entity surfaces **only** via `active.entityKey`. A nav item with
@@ -90,7 +100,7 @@ fixes, not rewrites.
   dashboards/planner/secondaryTabs binding). Low impact (shipped templates always
   set `entityKey`) but the documented render model is wrong.
 
-- [ ] **9. Destructive-archive warning is overstated — it's SWITCH-ONLY.**
+- [x] **9. Destructive-archive warning is overstated — it's SWITCH-ONLY.**
   SKILL.md Gotcha (~205), dev-issues, and `recover_after_apply.py` state
   unconditionally that *applying a template* archives `00-CORE/Bases/` + Schemas
   and doesn't regenerate. Ground truth (`src/workspace-templates.ts`):
@@ -109,7 +119,11 @@ fixes, not rewrites.
 
 - [ ] Point both skills at `docs/installing-into-existing-vault.md` (in the plugin
   repo) as the canonical first-install sequence, so future drift is caught in one
-  place.
-- [ ] Re-run each skill's objective test (0 errors on live `workspace.json` + all
-  bundled templates) after the widget-kind and nav-label validator fixes — those
-  two change what the validator accepts/warns on.
+  place. — **Not applied:** the repo doc path isn't available to a vault/buyer
+  installing the skill; corrections were folded inline instead. Add a pointer only
+  if the doc is also shipped alongside the skills.
+- [x] Re-run each skill's objective test after the validator fixes.
+  `validate_workspace.py` on the live `workspace.json` → **0 errors** (2 pre-existing
+  benign base-mapping warnings); both edited scripts pass `python -c ast.parse`.
+  (Full "all bundled templates" sweep not re-run here — the live-config acceptance
+  check passed; run the skill's own test harness for the template set.)
