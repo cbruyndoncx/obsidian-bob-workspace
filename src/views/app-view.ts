@@ -2587,6 +2587,19 @@ export class CadenceAppView extends obsidian.ItemView {
   async _mountLiveBaseView(body: HTMLElement, file: obsidian.TFile, basePath: string, viewName: string) {
     const linktext = viewName ? `${basePath}#${viewName}` : basePath;
     const md = `![[${linktext}]]`;
+    // When a SPECIFIC view is requested, use the embed-registry creator first: it
+    // takes the view name as an explicit argument, whereas the `![[file#view]]`
+    // markdown fragment is unreliable for Base views (it renders the base's
+    // DEFAULT view — so two widgets on the same base but different views would
+    // look identical). With no view, the markdown path (default view) is fine.
+    if (viewName) {
+      try {
+        await this._mountLiveBaseViewViaEmbedRegistry(body, file, basePath, viewName);
+        return;
+      } catch (_) {
+        body.empty();
+      }
+    }
     if (obsidian.MarkdownRenderer?.renderMarkdown) {
       try {
         await obsidian.MarkdownRenderer.renderMarkdown(md, body, basePath, this);

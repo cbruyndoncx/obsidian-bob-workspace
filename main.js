@@ -27925,6 +27925,14 @@ ${snippet}` : "- No markdown content");
   async _mountLiveBaseView(body, file, basePath, viewName) {
     const linktext = viewName ? `${basePath}#${viewName}` : basePath;
     const md = `![[${linktext}]]`;
+    if (viewName) {
+      try {
+        await this._mountLiveBaseViewViaEmbedRegistry(body, file, basePath, viewName);
+        return;
+      } catch (_) {
+        body.empty();
+      }
+    }
     if (obsidian17.MarkdownRenderer?.renderMarkdown) {
       try {
         await obsidian17.MarkdownRenderer.renderMarkdown(md, body, basePath, this);
