@@ -2398,17 +2398,28 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   async _resolveBaseWidgetTarget(card: CardLike) {
-    const baseDef = card.base && typeof card.base === 'object' ? card.base : {};
-    const entityKey = String(card.entity || baseDef.entity || '').trim();
-    const mappedBase = entityKey ? entityBasePath(this.plugin.settings, entityKey) : '';
-    const basePath = String(baseDef.file || baseDef.base || card.base || mappedBase || '').trim();
-    const viewName = String(baseDef.view || baseDef.baseView || card.view || '').trim();
-    const label = String(card.title || baseDef.label || baseDef.title || 'Base').trim();
-    const description = String(card.description || baseDef.description || card.subtitle || '').trim();
+    // Resolve the base + view through the SAME normalizer every other widget
+    // uses (_widgetSourceSpec), so base-view/base-embed/base-link accept BOTH
+    // config shapes identically: top-level `base`/`entity`/`view` and the
+    // `source: { base: {file, view} }` form the designer's picker writes. No
+    // separate resolution path.
+    const spec = this._widgetSourceSpec(card, card.entity as string | null) as Frontmatter;
+    const specBase = spec.base;
+    const explicitBase = typeof specBase === 'string' ? specBase
+      : (specBase && typeof specBase === 'object' ? String((specBase as Frontmatter).file || (specBase as Frontmatter).base || (specBase as Frontmatter).path || (specBase as Frontmatter).basePath || '') : '');
+    const specView = String(spec.view || (specBase && typeof specBase === 'object' ? ((specBase as Frontmatter).view || (specBase as Frontmatter).baseView || (specBase as Frontmatter).base_view || '') : '') || '');
+    const entityKey = String(spec.entity || '').trim();
+    // An explicit base path/filename is used as authored; an entity with no
+    // explicit base falls back to its mapped base (entityBasePath, which honors
+    // basesFolder + verbatim directory paths).
+    const basePath = (explicitBase || (entityKey ? entityBasePath(this.plugin.settings, entityKey) : '')).trim();
+    const viewName = specView.trim();
+    const label = String(card.title || 'Base').trim();
+    const description = String(card.description || card.subtitle || '').trim();
     const resolvedEntity = entityKey ? await this._resolveWidgetEntities(null, entityKey).catch((): null => null) : null;
     const entityDef = resolvedEntity?.def || ENTITIES[entityKey] || null;
     const summary = basePath ? await readBaseSummary(this.app, this.app.vault.getAbstractFileByPath(basePath) as obsidian.TFile).catch((): null => null) : null;
-    return { baseDef, entityKey, basePath, viewName, label, description, entityDef, summary };
+    return { baseDef: (typeof specBase === 'object' ? specBase : {}) as Frontmatter, entityKey, basePath, viewName, label, description, entityDef, summary };
   }
 
   async _renderBaseLinkWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {

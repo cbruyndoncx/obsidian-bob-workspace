@@ -27757,17 +27757,19 @@ ${snippet}` : "- No markdown content");
     }
   }
   async _resolveBaseWidgetTarget(card) {
-    const baseDef = card.base && typeof card.base === "object" ? card.base : {};
-    const entityKey = String(card.entity || baseDef.entity || "").trim();
-    const mappedBase = entityKey ? entityBasePath(this.plugin.settings, entityKey) : "";
-    const basePath = String(baseDef.file || baseDef.base || card.base || mappedBase || "").trim();
-    const viewName = String(baseDef.view || baseDef.baseView || card.view || "").trim();
-    const label = String(card.title || baseDef.label || baseDef.title || "Base").trim();
-    const description = String(card.description || baseDef.description || card.subtitle || "").trim();
+    const spec = this._widgetSourceSpec(card, card.entity);
+    const specBase = spec.base;
+    const explicitBase = typeof specBase === "string" ? specBase : specBase && typeof specBase === "object" ? String(specBase.file || specBase.base || specBase.path || specBase.basePath || "") : "";
+    const specView = String(spec.view || (specBase && typeof specBase === "object" ? specBase.view || specBase.baseView || specBase.base_view || "" : "") || "");
+    const entityKey = String(spec.entity || "").trim();
+    const basePath = (explicitBase || (entityKey ? entityBasePath(this.plugin.settings, entityKey) : "")).trim();
+    const viewName = specView.trim();
+    const label = String(card.title || "Base").trim();
+    const description = String(card.description || card.subtitle || "").trim();
     const resolvedEntity = entityKey ? await this._resolveWidgetEntities(null, entityKey).catch(() => null) : null;
     const entityDef = resolvedEntity?.def || ENTITIES[entityKey] || null;
     const summary = basePath ? await readBaseSummary(this.app, this.app.vault.getAbstractFileByPath(basePath)).catch(() => null) : null;
-    return { baseDef, entityKey, basePath, viewName, label, description, entityDef, summary };
+    return { baseDef: typeof specBase === "object" ? specBase : {}, entityKey, basePath, viewName, label, description, entityDef, summary };
   }
   async _renderBaseLinkWidget(root, card, getWidgetEntities) {
     const { entityKey, basePath, viewName, label, description, entityDef, summary } = await this._resolveBaseWidgetTarget(card);
