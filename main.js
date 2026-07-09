@@ -27662,19 +27662,20 @@ ${snippet}` : "- No markdown content");
     const sourceSpec = this._widgetSourceSpec(def, def.entity);
     const resolved = await getWidgetEntities(sourceSpec, def.entity);
     const all = resolved.entities || [];
-    const entityDef = resolved.def || ENTITIES[def.entity];
+    const entityKey = resolved.entityKey || String(sourceSpec.entity || def.entity || "") || null;
+    const entityDef = resolved.def || (entityKey ? ENTITIES[entityKey] : null);
     const source = typeof def.source === "string" ? def.source : String(sourceSpec.source || sourceSpec.kind || "recent");
     if (sourceSpec.mode === "built-in") {
       return this._resolveBuiltInRows(def, resolved);
     }
     const sortSpec = sourceSpec.sort || def.sort || null;
     const limit = sourceSpec.limit || def.limit || 6;
-    if (source === "recent") return this._recentRows(def.entity, all, def.titleFields, def.metaFields, sortSpec, limit);
-    if (source === "recent-open") return this._recentRows(def.entity, all.filter((e) => this._isOpenEntity(e, def.entity)), def.titleFields, def.metaFields, sortSpec, limit);
-    if (source === "due") return this._dueRows(def.entity, all, def.dateFields, def.titleFields, limit);
-    if (source === "due-open") return this._dueRows(def.entity, all.filter((e) => this._isOpenEntity(e, def.entity)), def.dateFields, def.titleFields, limit);
+    if (source === "recent") return this._recentRows(entityKey, all, def.titleFields, def.metaFields, sortSpec, limit, entityDef);
+    if (source === "recent-open") return this._recentRows(entityKey, all.filter((e) => this._isOpenEntity(e, entityKey)), def.titleFields, def.metaFields, sortSpec, limit, entityDef);
+    if (source === "due") return this._dueRows(entityKey, all, def.dateFields, def.titleFields, limit);
+    if (source === "due-open") return this._dueRows(entityKey, all.filter((e) => this._isOpenEntity(e, entityKey)), def.dateFields, def.titleFields, limit);
     if (source === "base" || source === "table" || source === "list" || source === "entity") {
-      return this._recentRows(def.entity, all, def.titleFields, def.metaFields, sortSpec, limit, entityDef);
+      return this._recentRows(entityKey, all, def.titleFields, def.metaFields, sortSpec, limit, entityDef);
     }
     return [];
   }
@@ -29254,7 +29255,7 @@ ${snippet}` : "- No markdown content");
     });
   }
   _recentRows(entityKey, entities, titleFields = ["title", "name"], metaFields = ["status"], sortSpec = null, limit = 6, _entityDef = null) {
-    const def = ENTITIES[entityKey];
+    const def = (entityKey ? ENTITIES[entityKey] : null) || _entityDef || null;
     const sort = normalizeWidgetSortSpec(sortSpec);
     const sorted = [...entities];
     if (sort.length) {
@@ -29265,14 +29266,14 @@ ${snippet}` : "- No markdown content");
     return sorted.slice(0, Math.max(1, Number(limit) || 6)).map((entity) => {
       const titleField = titleFields.find((field) => entityValue(entity, field, def));
       const title = (titleField ? entityValue(entity, titleField, def) : "") || entity.basename;
-      const meta = metaFields.map((field) => fmtValue(entityValue(entity, field, def), def.fields.find((f) => f.key === field)?.type)).filter(Boolean).join(" \xB7 ");
+      const meta = (metaFields || ["status"]).map((field) => fmtValue(entityValue(entity, field, def), def?.fields?.find((f) => f.key === field)?.type)).filter(Boolean).join(" \xB7 ");
       return { title, meta: meta || "No status", file: entity.file };
     });
   }
   _dueRows(entityKey, entities, dateFields, titleFields = ["title", "name"], limit = 6) {
     const today = startOfDay(/* @__PURE__ */ new Date());
     const horizon = addDays(today, 30);
-    const def = ENTITIES[entityKey];
+    const def = (entityKey ? ENTITIES[entityKey] : null) || null;
     return entities.map((entity) => ({ entity, date: this._dateValue(entity, entityKey, dateFields) })).filter((item) => item.date && item.date.getTime() <= horizon.getTime()).sort((a, b) => a.date - b.date).slice(0, Math.max(1, Number(limit) || 6)).map(({ entity, date }) => {
       const titleField = titleFields.find((field) => entityValue(entity, field, def));
       return {
