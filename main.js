@@ -27925,18 +27925,30 @@ ${snippet}` : "- No markdown content");
     }
   }
   async _mountLiveBaseView(body, file, basePath, viewName) {
-    const linktext = viewName ? `${basePath}#${viewName}` : basePath;
-    const md = `![[${linktext}]]`;
-    if (!obsidian17.MarkdownRenderer?.renderMarkdown) {
-      throw new Error("Markdown renderer unavailable for Base embed");
+    const reg = this.app.embedRegistry;
+    const creator = reg?.embedByExtension?.base || reg?.getEmbedCreator?.(file);
+    if (!creator) throw new Error("Base embed unavailable (Obsidian Bases API not found)");
+    const subpath = viewName ? `#${viewName}` : "";
+    const linktext = `${basePath}${subpath}`;
+    const embed = creator(
+      { app: this.app, containerEl: body, sourcePath: basePath, linktext, showInline: true, depth: 0 },
+      file,
+      subpath
+    );
+    if (!embed) throw new Error("Base embed creator returned no embed");
+    if (typeof this.addChild === "function") this.addChild(embed);
+    await (embed.loadFile?.() ?? embed.load?.());
+    if (subpath && typeof embed.setEphemeralState === "function") {
+      try {
+        embed.setEphemeralState({ subpath });
+      } catch (_) {
+      }
     }
-    await obsidian17.MarkdownRenderer.renderMarkdown(md, body, basePath, this);
     for (let i = 0; i < 20; i++) {
       await this._waitForBaseEmbedRender();
-      if (this._baseEmbedMounted(body, md, linktext)) return;
+      if (this._baseEmbedMounted(body, `![[${linktext}]]`, linktext)) return;
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    body.empty();
     throw new Error("Base view did not render inline");
   }
   async _waitForBaseEmbedRender() {

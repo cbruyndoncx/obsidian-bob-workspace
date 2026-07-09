@@ -60,8 +60,24 @@ interface PluginHandle extends CadencePlugin {
 type AppWithInternals = obsidian.App & {
   commands: { executeCommandById: (id: string) => unknown };
   setting: { open: () => void; openTabById: (id: string) => void };
+  embedRegistry?: {
+    embedByExtension?: Record<string, BaseEmbedCreator | undefined>;
+    getEmbedCreator?: (file: obsidian.TFile) => BaseEmbedCreator | undefined;
+  };
   openWithDefaultApp: (path: string) => void;
 };
+
+/** Inline embed component created by the (internal) embed registry. */
+type BaseEmbed = obsidian.Component & {
+  loadFile?: () => Promise<unknown>;
+  load?: () => unknown;
+  setEphemeralState?: (state: unknown) => void;
+};
+type BaseEmbedCreator = (
+  context: { app: obsidian.App; containerEl: HTMLElement; sourcePath: string; linktext: string; showInline: boolean; depth: number },
+  file: obsidian.TFile,
+  subpath: string
+) => BaseEmbed | null;
 
 /**
  * workspace.json dashboard card / config blobs as the renderers read them —
@@ -2584,28 +2600,35 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   async _mountLiveBaseView(body: HTMLElement, file: obsidian.TFile, basePath: string, viewName: string) {
-    // ONE mechanism: the canonical `![[file.base#View]]` embed — exactly what a
-    // user types in a note to embed a specific Base view. The view is carried in
-    // the `#View` subpath (with the `#`). Nothing else selects the view; if this
-    // syntax doesn't render the named view in this Obsidian version, no
-    // programmatic path will, and the answer is one .base file per view.
-    const linktext = viewName ? `${basePath}#${viewName}` : basePath;
-    const md = `![[${linktext}]]`;
-    if (!obsidian.MarkdownRenderer?.renderMarkdown) {
-      throw new Error('Markdown renderer unavailable for Base embed');
+    // Render the real Base view via the embed registry (the static
+    // MarkdownRenderer only leaves an unloaded placeholder for .base files). The
+    // view is selected by the SUBPATH, which — like every Obsidian subpath —
+    // INCLUDES the leading `#`. Passing a bare name (no `#`) is what made it fall
+    // back to the base's default view.
+    const reg = (this.app as AppWithInternals).embedRegistry;
+    const creator = reg?.embedByExtension?.base || reg?.getEmbedCreator?.(file);
+    if (!creator) throw new Error('Base embed unavailable (Obsidian Bases API not found)');
+    const subpath = viewName ? `#${viewName}` : '';
+    const linktext = `${basePath}${subpath}`;
+    const embed = creator(
+      { app: this.app, containerEl: body, sourcePath: basePath, linktext, showInline: true, depth: 0 },
+      file,
+      subpath,
+    );
+    if (!embed) throw new Error('Base embed creator returned no embed');
+    if (typeof this.addChild === 'function') this.addChild(embed);
+    await (embed.loadFile?.() ?? embed.load?.());
+    // Some embeds apply the view via ephemeral state after load rather than the
+    // constructor subpath — set it too so the named view is honored either way.
+    if (subpath && typeof embed.setEphemeralState === 'function') {
+      try { embed.setEphemeralState({ subpath }); } catch (_) { /* ignore */ }
     }
-    await obsidian.MarkdownRenderer.renderMarkdown(md, body, basePath, this);
-    // A Base view mounts its embed wrapper quickly but loads its rows
-    // asynchronously — so we wait for the wrapper to APPEAR (not for it to be
-    // fully populated, which races the async load and caused false "did not
-    // render" fallbacks). Only a total no-embed / unresolved-link / literal-text
-    // outcome is treated as failure.
+    // Give the view a moment to mount, then confirm an embed wrapper is present.
     for (let i = 0; i < 20; i++) {
       await this._waitForBaseEmbedRender();
-      if (this._baseEmbedMounted(body, md, linktext)) return;
+      if (this._baseEmbedMounted(body, `![[${linktext}]]`, linktext)) return;
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    body.empty();
     throw new Error('Base view did not render inline');
   }
 
