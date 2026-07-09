@@ -27927,24 +27927,15 @@ ${snippet}` : "- No markdown content");
   async _mountLiveBaseView(body, file, basePath, viewName) {
     const linktext = viewName ? `${basePath}#${viewName}` : basePath;
     const md = `![[${linktext}]]`;
-    if (viewName) {
-      try {
-        await this._mountLiveBaseViewViaEmbedRegistry(body, file, basePath, viewName);
-        return;
-      } catch (_) {
-        body.empty();
-      }
+    if (!obsidian17.MarkdownRenderer?.renderMarkdown) {
+      throw new Error("Markdown renderer unavailable for Base embed");
     }
-    if (obsidian17.MarkdownRenderer?.renderMarkdown) {
-      try {
-        await obsidian17.MarkdownRenderer.renderMarkdown(md, body, basePath, this);
-        await this._waitForBaseEmbedRender();
-        if (this._hasLiveBaseEmbedContent(body, md, linktext)) return;
-      } finally {
-        if (!this._hasLiveBaseEmbedContent(body, md, linktext)) body.empty();
-      }
+    await obsidian17.MarkdownRenderer.renderMarkdown(md, body, basePath, this);
+    await this._waitForBaseEmbedRender();
+    if (!this._hasLiveBaseEmbedContent(body, md, linktext)) {
+      body.empty();
+      throw new Error("Base view did not render inline");
     }
-    await this._mountLiveBaseViewViaEmbedRegistry(body, file, basePath, viewName);
   }
   async _waitForBaseEmbedRender() {
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -27979,26 +27970,6 @@ ${snippet}` : "- No markdown content");
     if (genericText === md || genericText === linktext || genericText === basePathOnly) return false;
     if (basePathOnly && genericText.includes(basePathOnly) && genericText.length <= basePathOnly.length + 24) return false;
     return genericText.length > 0;
-  }
-  async _mountLiveBaseViewViaEmbedRegistry(body, file, basePath, viewName) {
-    const reg = this.app.embedRegistry;
-    const creator = reg?.embedByExtension?.base || reg?.getEmbedCreator?.(file);
-    if (!creator) throw new Error("Base embed creator unavailable");
-    const linktext = viewName ? `${basePath}#${viewName}` : basePath;
-    const embed = creator(
-      { app: this.app, containerEl: body, sourcePath: basePath, linktext, showInline: true, depth: 0 },
-      file,
-      viewName || ""
-    );
-    if (!embed) throw new Error("Base embed creator returned no embed");
-    if (typeof this.addChild === "function") this.addChild(embed);
-    await (embed.loadFile?.() ?? embed.load?.());
-    await this._waitForBaseEmbedRender();
-    const linktextAfterLoad = viewName ? `${basePath}#${viewName}` : basePath;
-    const mdAfterLoad = `![[${linktextAfterLoad}]]`;
-    if (!this._hasLiveBaseEmbedContent(body, mdAfterLoad, linktextAfterLoad)) {
-      throw new Error("Base embed creator did not render an inline view");
-    }
   }
   async _renderBaseViewFallback(root, card, getWidgetEntities, reason) {
     const mode = String(card.fallback || "preview").trim().toLowerCase();

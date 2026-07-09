@@ -60,20 +60,8 @@ interface PluginHandle extends CadencePlugin {
 type AppWithInternals = obsidian.App & {
   commands: { executeCommandById: (id: string) => unknown };
   setting: { open: () => void; openTabById: (id: string) => void };
-  embedRegistry?: {
-    embedByExtension?: Record<string, BaseEmbedCreator | undefined>;
-    getEmbedCreator?: (file: obsidian.TFile) => BaseEmbedCreator | undefined;
-  };
   openWithDefaultApp: (path: string) => void;
 };
-
-/** Inline embed component created by the (internal) embed registry. */
-type BaseEmbed = obsidian.Component & { loadFile?: () => Promise<unknown>; load?: () => unknown };
-type BaseEmbedCreator = (
-  context: { app: obsidian.App; containerEl: HTMLElement; sourcePath: string; linktext: string; showInline: boolean; depth: number },
-  file: obsidian.TFile,
-  subpath: string
-) => BaseEmbed | null;
 
 /**
  * workspace.json dashboard card / config blobs as the renderers read them —
@@ -2596,31 +2584,22 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   async _mountLiveBaseView(body: HTMLElement, file: obsidian.TFile, basePath: string, viewName: string) {
+    // ONE mechanism: the canonical `![[file.base#View]]` embed — exactly what a
+    // user types in a note to embed a specific Base view. The view is carried in
+    // the `#View` subpath (with the `#`). Nothing else selects the view; if this
+    // syntax doesn't render the named view in this Obsidian version, no
+    // programmatic path will, and the answer is one .base file per view.
     const linktext = viewName ? `${basePath}#${viewName}` : basePath;
     const md = `![[${linktext}]]`;
-    // When a SPECIFIC view is requested, use the embed-registry creator first: it
-    // takes the view name as an explicit argument, whereas the `![[file#view]]`
-    // markdown fragment is unreliable for Base views (it renders the base's
-    // DEFAULT view — so two widgets on the same base but different views would
-    // look identical). With no view, the markdown path (default view) is fine.
-    if (viewName) {
-      try {
-        await this._mountLiveBaseViewViaEmbedRegistry(body, file, basePath, viewName);
-        return;
-      } catch (_) {
-        body.empty();
-      }
+    if (!obsidian.MarkdownRenderer?.renderMarkdown) {
+      throw new Error('Markdown renderer unavailable for Base embed');
     }
-    if (obsidian.MarkdownRenderer?.renderMarkdown) {
-      try {
-        await obsidian.MarkdownRenderer.renderMarkdown(md, body, basePath, this);
-        await this._waitForBaseEmbedRender();
-        if (this._hasLiveBaseEmbedContent(body, md, linktext)) return;
-      } finally {
-        if (!this._hasLiveBaseEmbedContent(body, md, linktext)) body.empty();
-      }
+    await obsidian.MarkdownRenderer.renderMarkdown(md, body, basePath, this);
+    await this._waitForBaseEmbedRender();
+    if (!this._hasLiveBaseEmbedContent(body, md, linktext)) {
+      body.empty();
+      throw new Error('Base view did not render inline');
     }
-    await this._mountLiveBaseViewViaEmbedRegistry(body, file, basePath, viewName);
   }
 
   async _waitForBaseEmbedRender() {
@@ -2659,27 +2638,6 @@ export class CadenceAppView extends obsidian.ItemView {
     if (genericText === md || genericText === linktext || genericText === basePathOnly) return false;
     if (basePathOnly && genericText.includes(basePathOnly) && genericText.length <= basePathOnly.length + 24) return false;
     return genericText.length > 0;
-  }
-
-  async _mountLiveBaseViewViaEmbedRegistry(body: HTMLElement, file: obsidian.TFile, basePath: string, viewName: string) {
-    const reg = (this.app as AppWithInternals).embedRegistry;
-    const creator = reg?.embedByExtension?.base || reg?.getEmbedCreator?.(file);
-    if (!creator) throw new Error('Base embed creator unavailable');
-    const linktext = viewName ? `${basePath}#${viewName}` : basePath;
-    const embed = creator(
-      { app: this.app, containerEl: body, sourcePath: basePath, linktext, showInline: true, depth: 0 },
-      file,
-      viewName || ''
-    );
-    if (!embed) throw new Error('Base embed creator returned no embed');
-    if (typeof this.addChild === 'function') this.addChild(embed);
-    await (embed.loadFile?.() ?? embed.load?.());
-    await this._waitForBaseEmbedRender();
-    const linktextAfterLoad = viewName ? `${basePath}#${viewName}` : basePath;
-    const mdAfterLoad = `![[${linktextAfterLoad}]]`;
-    if (!this._hasLiveBaseEmbedContent(body, mdAfterLoad, linktextAfterLoad)) {
-      throw new Error('Base embed creator did not render an inline view');
-    }
   }
 
   async _renderBaseViewFallback(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities, reason: string) {
