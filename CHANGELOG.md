@@ -4,6 +4,32 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.34] — 2026-07-09
+
+The shipped **BOB Workspace** template gains the vault's full extended layout,
+and the documentation is reconciled with what actually ships.
+
+### Added
+- **BOB template** now ships the complete domain set — **Marketing**,
+  **HR & People** (Recruiting, Payroll), **Research & Knowledge**, and
+  **Operational Audit**, plus **Products**, **Ideas**, **Assets & Close**,
+  **KPI Scoreboard**, and **Base Links** — promoted from the reference vault:
+  14 nav groups, 14 secondary-tab parents, 30 Base mappings, 22 dashboards. The
+  extra domains are schema-backed (nav/tabs/bases + `_assets` schemas), durable
+  across a template re-apply.
+
+### Changed
+- **Operational Audit is tabs-only** — the `audit.overview` parent renders its
+  tab bar (Overview / Findings / Processes / Hidden Costs / Initiatives /
+  Issues); the dashboard moved to `audit.dashboard`, which the Overview tab
+  routes to (mirrors `client-work.overview`).
+
+### Docs
+- Reconciled `CLAUDE.md`/`AGENTS.md` (surfaces, rich-groups, and the corrected
+  live-inline Base-view behavior), the empty-vault and existing-vault guides,
+  and stamped `docs/base-view-widget-spec.md` as implemented with its as-built
+  note.
+
 ## [0.14.4-bob.33] — 2026-07-09
 
 ### Fixed
@@ -114,6 +140,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.34]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.34
 [0.14.4-bob.33]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.33
 [0.14.4-bob.32]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.32
 [0.14.4-bob.31]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.31
