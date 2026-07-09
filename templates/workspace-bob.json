@@ -66,6 +66,14 @@
             "entityKey": "project",
             "folderKey": "folderProjects",
             "desc": "Active projects with milestones, owners, statuses — kanban over project notes."
+          },
+          {
+            "id": "planner.ideas",
+            "label": "Ideas",
+            "icon": "lightbulb",
+            "module": "planner",
+            "entityKey": "idea",
+            "desc": "Idea backlog — capture, status and priority."
           }
         ]
       },
@@ -134,6 +142,27 @@
             "entityKey": "activity",
             "folderKey": "folderActivities",
             "desc": "Cross-cutting activity timeline — calls, meetings, telegram/whatsapp/email logs."
+          },
+          {
+            "id": "crm.products",
+            "label": "Products",
+            "icon": "package",
+            "module": "crm",
+            "entityKey": "product",
+            "desc": "Product catalogue — pricing, category, status; anchors deals."
+          }
+        ]
+      },
+      {
+        "id": "marketing",
+        "label": "Marketing",
+        "items": [
+          {
+            "id": "marketing.content",
+            "label": "Marketing",
+            "icon": "newspaper",
+            "entityKey": "marketing-content",
+            "desc": "Content, courses, video and marketing assets across the create-to-publish chain."
           }
         ]
       },
@@ -195,6 +224,14 @@
             "desc": "Finance setup records: periods, bank accounts, FX rates and inventory/reference setup."
           },
           {
+            "id": "finance.assets",
+            "label": "Assets & Close",
+            "icon": "landmark",
+            "module": "finance",
+            "entityKey": "fixed-asset",
+            "desc": "Close-period entities: fixed assets, leases, provisions, ECL, period-end close and revenue obligations."
+          },
+          {
             "id": "tax.overview",
             "label": "Tax",
             "icon": "receipt-text",
@@ -240,6 +277,26 @@
             "module": "procurement",
             "entityKey": "purchase-order",
             "desc": "Formal supplier purchase orders, approval status and delivery references."
+          }
+        ]
+      },
+      {
+        "id": "hr",
+        "label": "HR & People",
+        "items": [
+          {
+            "id": "hr.recruiting",
+            "label": "Recruiting",
+            "icon": "user-plus",
+            "entityKey": "candidate",
+            "desc": "Hiring pipeline — candidates and sourcing channels."
+          },
+          {
+            "id": "hr.payroll",
+            "label": "Payroll",
+            "icon": "banknote",
+            "entityKey": "wps-record",
+            "desc": "Payroll filing (WPS) and end-of-service gratuity provisions."
           }
         ]
       },
@@ -335,6 +392,19 @@
             "entityKey": "skill",
             "folderKey": "folderSkills",
             "desc": "Agent skills installed in the vault — category, version, enabled/disabled status."
+          }
+        ]
+      },
+      {
+        "id": "research",
+        "label": "Research & Knowledge",
+        "items": [
+          {
+            "id": "research.hub",
+            "label": "Research",
+            "icon": "microscope",
+            "entityKey": "research",
+            "desc": "Research reports, continuous-research domains, KB cycles, regional context and knowledge notes."
           }
         ]
       },
@@ -539,8 +609,129 @@
           "label": "Document Retention",
           "entityKey": "document-retention"
         }
+      ],
+      "marketing.content": [
+        {
+          "label": "Content",
+          "entityKey": "marketing-content"
+        },
+        {
+          "label": "Courses",
+          "entityKey": "courseware"
+        },
+        {
+          "label": "Video",
+          "entityKey": "youtube-video"
+        },
+        {
+          "label": "Assets",
+          "entityKey": "drive-asset"
+        }
+      ],
+      "hr.recruiting": [
+        {
+          "label": "Candidates",
+          "entityKey": "candidate"
+        },
+        {
+          "label": "Channels",
+          "entityKey": "recruiting-channel"
+        }
+      ],
+      "hr.payroll": [
+        {
+          "label": "WPS Records",
+          "entityKey": "wps-record"
+        },
+        {
+          "label": "Gratuity",
+          "entityKey": "gratuity-provision"
+        }
+      ],
+      "research.hub": [
+        {
+          "label": "Research",
+          "entityKey": "research"
+        },
+        {
+          "label": "Analyses",
+          "entityKey": "analysis"
+        },
+        {
+          "label": "Domains",
+          "entityKey": "research-domain"
+        },
+        {
+          "label": "KB Cycles",
+          "entityKey": "research-kb"
+        },
+        {
+          "label": "Regions",
+          "entityKey": "regional-context"
+        },
+        {
+          "label": "Notes",
+          "entityKey": "knowledge-base"
+        },
+        {
+          "label": "References",
+          "entityKey": "reference"
+        }
+      ],
+      "finance.assets": [
+        {
+          "label": "Fixed Assets",
+          "entityKey": "fixed-asset"
+        },
+        {
+          "label": "Leases",
+          "entityKey": "lease"
+        },
+        {
+          "label": "Provisions",
+          "entityKey": "provision"
+        },
+        {
+          "label": "ECL",
+          "entityKey": "ecl-assessment"
+        },
+        {
+          "label": "Period Close",
+          "entityKey": "period-close"
+        },
+        {
+          "label": "Revenue Obligations",
+          "entityKey": "performance-obligation"
+        }
+      ],
+      "audit.overview": [
+        {
+          "label": "Overview",
+          "route": "audit.overview"
+        },
+        {
+          "label": "Findings",
+          "entityKey": "audit-finding"
+        },
+        {
+          "label": "Processes",
+          "entityKey": "audit-process"
+        },
+        {
+          "label": "Hidden Costs",
+          "entityKey": "audit-waste"
+        },
+        {
+          "label": "Initiatives",
+          "entityKey": "ai-initiative"
+        },
+        {
+          "label": "Issues",
+          "entityKey": "issue"
+        }
       ]
-    }
+    },
+    "actions": {}
   },
   "dashboards": {
     "home": {
@@ -3321,6 +3512,127 @@
       "tax": true,
       "planner": true,
       "ai": true
+    }
+  },
+  "bases": {
+    "task": {
+      "file": "00-CORE/Bases/Tasks.base",
+      "view": "This Week"
+    },
+    "skill": {
+      "file": "20-COMPANY/skills-publishing.base"
+    },
+    "marketing-content": {
+      "file": "00-CORE/Bases/Marketing-Content.base",
+      "view": "All Content"
+    },
+    "courseware": {
+      "file": "00-CORE/Bases/courseware-tracking.base",
+      "view": "All Courses"
+    },
+    "youtube-video": {
+      "file": "00-CORE/Bases/Youtube-Video.base",
+      "view": "All Youtube Video"
+    },
+    "drive-asset": {
+      "file": "00-CORE/Bases/Drive-Asset.base",
+      "view": "All Drive Asset"
+    },
+    "candidate": {
+      "file": "00-CORE/Bases/Candidates.base",
+      "view": "Interview Pipeline"
+    },
+    "recruiting-channel": {
+      "file": "00-CORE/Bases/Recruiting-Channels.base",
+      "view": "Leaderboard"
+    },
+    "research": {
+      "file": "00-CORE/Bases/Research.base",
+      "view": "Active Research"
+    },
+    "analysis": {
+      "file": "00-CORE/Bases/Analysis.base",
+      "view": "Active"
+    },
+    "research-domain": {
+      "file": "00-CORE/Bases/Research-Domains.base",
+      "view": "Active Domains"
+    },
+    "research-kb": {
+      "file": "00-CORE/Bases/Research-KBs.base",
+      "view": "By Domain"
+    },
+    "regional-context": {
+      "file": "00-CORE/Bases/Regional-Contexts.base",
+      "view": "Active Regions"
+    },
+    "knowledge-base": {
+      "file": "00-CORE/Bases/Knowledge-Base.base",
+      "view": "All Knowledge Base"
+    },
+    "product": {
+      "file": "00-CORE/Bases/Products.base",
+      "view": "Active Products"
+    },
+    "idea": {
+      "file": "00-CORE/Bases/Ideas.base",
+      "view": "Active"
+    },
+    "issue": {
+      "file": "00-CORE/Bases/Issue.base",
+      "view": "All Issue"
+    },
+    "audit-finding": {
+      "file": "00-CORE/Bases/Operational-Audit.base",
+      "view": "Findings"
+    },
+    "audit-waste": {
+      "file": "00-CORE/Bases/Operational-Audit.base",
+      "view": "Hidden Costs"
+    },
+    "ai-initiative": {
+      "file": "00-CORE/Bases/Operational-Audit.base",
+      "view": "Initiatives (live)"
+    },
+    "audit-process": {
+      "file": "00-CORE/Bases/Audit-Processes.base",
+      "view": "All"
+    },
+    "reference": {
+      "file": "00-CORE/Bases/References.base",
+      "view": "All"
+    },
+    "wps-record": {
+      "file": "00-CORE/Bases/WPS-Records.base",
+      "view": "All"
+    },
+    "gratuity-provision": {
+      "file": "00-CORE/Bases/Gratuity-Provisions.base",
+      "view": "All"
+    },
+    "fixed-asset": {
+      "file": "00-CORE/Bases/Fixed-Assets.base",
+      "view": "All"
+    },
+    "lease": {
+      "file": "00-CORE/Bases/Leases.base",
+      "view": "All"
+    },
+    "provision": {
+      "file": "00-CORE/Bases/Provisions.base",
+      "view": "All"
+    },
+    "ecl-assessment": {
+      "file": "00-CORE/Bases/ECL-Assessments.base",
+      "view": "All"
+    },
+    "performance-obligation": {
+      "file": "00-CORE/Bases/Performance-Obligations.base",
+      "view": "All"
+    },
+    "period-close": {
+      "file": "00-CORE/Bases/Period-Closes.base",
+      "view": "All"
     }
   }
 }
