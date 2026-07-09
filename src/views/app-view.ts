@@ -71,7 +71,6 @@ type AppWithInternals = obsidian.App & {
 type BaseEmbed = obsidian.Component & {
   loadFile?: () => Promise<unknown>;
   load?: () => unknown;
-  setEphemeralState?: (state: unknown) => void;
 };
 type BaseEmbedCreator = (
   context: { app: obsidian.App; containerEl: HTMLElement; sourcePath: string; linktext: string; showInline: boolean; depth: number },
@@ -2618,12 +2617,8 @@ export class CadenceAppView extends obsidian.ItemView {
     if (!embed) throw new Error('Base embed creator returned no embed');
     if (typeof this.addChild === 'function') this.addChild(embed);
     await (embed.loadFile?.() ?? embed.load?.());
-    // Some embeds apply the view via ephemeral state after load rather than the
-    // constructor subpath — set it too so the named view is honored either way.
-    if (subpath && typeof embed.setEphemeralState === 'function') {
-      try { embed.setEphemeralState({ subpath }); } catch (_) { /* ignore */ }
-    }
-    // Give the view a moment to mount, then confirm an embed wrapper is present.
+    // View is applied by the constructor subpath (verified load-bearing).
+    // Give it a moment to mount, then confirm an embed wrapper is present.
     for (let i = 0; i < 20; i++) {
       await this._waitForBaseEmbedRender();
       if (this._baseEmbedMounted(body, `![[${linktext}]]`, linktext)) return;

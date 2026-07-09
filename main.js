@@ -27938,12 +27938,6 @@ ${snippet}` : "- No markdown content");
     if (!embed) throw new Error("Base embed creator returned no embed");
     if (typeof this.addChild === "function") this.addChild(embed);
     await (embed.loadFile?.() ?? embed.load?.());
-    if (subpath && typeof embed.setEphemeralState === "function") {
-      try {
-        embed.setEphemeralState({ subpath });
-      } catch (_) {
-      }
-    }
     for (let i = 0; i < 20; i++) {
       await this._waitForBaseEmbedRender();
       if (this._baseEmbedMounted(body, `![[${linktext}]]`, linktext)) return;
