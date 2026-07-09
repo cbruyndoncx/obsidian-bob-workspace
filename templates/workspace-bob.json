@@ -280,6 +280,12 @@
             "icon": "pie-chart",
             "module": "crm",
             "desc": "Activity mix — calls, meetings, emails by rep and account."
+          },
+          {
+            "id": "reports.kpi",
+            "label": "KPI Scoreboard",
+            "icon": "gauge",
+            "desc": "Weekly value-chain KPIs with RAG status and freshness — computed from the vault, not typed in."
           }
         ]
       },
@@ -329,6 +335,18 @@
             "entityKey": "skill",
             "folderKey": "folderSkills",
             "desc": "Agent skills installed in the vault — category, version, enabled/disabled status."
+          }
+        ]
+      },
+      {
+        "id": "audit_group",
+        "label": "Audit",
+        "items": [
+          {
+            "id": "audit.overview",
+            "label": "Operational Audit",
+            "icon": "clipboard-check",
+            "desc": "Findings, hidden costs, initiatives and process maps from operational audits."
           }
         ]
       }
@@ -3081,6 +3099,124 @@
             "title": "PARTNER NOTES",
             "subtitle": "How partner attribution is counted",
             "body": "## What this measures\n- Partner counts and the partner list respect the selected partner status.\n- Deal attribution currently uses `deal_source == \"partner\"` as a proxy because deal records do not yet expose `partner_ref`.\n- Open commissions and expiring certifications are evidence lists, not summary dashboards.\n\n## TODO\n- Add a real partner relationship field to deal records when the schema is updated, then swap the proxy filters for exact attribution."
+          }
+        ]
+      ]
+    },
+    "audit.overview": {
+      "title": "Operational Audit",
+      "subtitle": "Findings, hidden costs, live initiatives and process maps",
+      "stats": [
+        {
+          "label": "OPEN FINDINGS",
+          "entity": "audit-finding",
+          "count": "open",
+          "accent": "amber"
+        },
+        {
+          "label": "INITIATIVES",
+          "entity": "ai-initiative",
+          "count": "all",
+          "accent": "sky"
+        },
+        {
+          "label": "HIDDEN COSTS",
+          "entity": "audit-waste",
+          "count": "all",
+          "accent": "rose"
+        }
+      ],
+      "layout": [
+        [
+          {
+            "kind": "base-view",
+            "title": "Initiatives — live board",
+            "entity": "ai-initiative",
+            "base": {
+              "file": "00-CORE/Bases/Operational-Audit.base",
+              "view": "Initiatives (live)"
+            },
+            "height": 460,
+            "fallback": "preview",
+            "view": "Initiatives (live)"
+          }
+        ],
+        [
+          {
+            "kind": "base-view",
+            "title": "Findings",
+            "entity": "audit-finding",
+            "base": {
+              "file": "00-CORE/Bases/Operational-Audit.base",
+              "view": "Findings"
+            },
+            "height": 380,
+            "fallback": "preview",
+            "view": "Findings"
+          },
+          {
+            "kind": "base-view",
+            "title": "Hidden Costs",
+            "entity": "audit-waste",
+            "base": {
+              "file": "00-CORE/Bases/Operational-Audit.base",
+              "view": "Hidden Costs"
+            },
+            "height": 380,
+            "fallback": "preview",
+            "view": "Hidden Costs"
+          }
+        ],
+        [
+          {
+            "kind": "base-view",
+            "title": "Portfolio roll-up",
+            "entity": "client-audit-summary",
+            "base": {
+              "file": "00-CORE/Bases/Operational-Audit.base",
+              "view": "Portfolio roll-up"
+            },
+            "height": 260,
+            "fallback": "preview",
+            "view": "Portfolio roll-up"
+          }
+        ]
+      ]
+    },
+    "reports.kpi": {
+      "kind": "report",
+      "title": "KPI Scoreboard",
+      "subtitle": "Value-chain KPIs — auto-refreshed weekly from vault entities",
+      "layout": [
+        [
+          {
+            "kind": "markdown",
+            "title": "How this works",
+            "body": "Each KPI note is refreshed weekly by the **KPI Weekly Refresh** scheduled task (`kpi_refresh.py`, owner-priority-system): pipeline, AR, clients, capacity and publishing cadence are computed from deal / invoice / task / marketing-content notes; cash and MRR come from manual inputs in `kpi_refresh_config.yaml` and are flagged stale after 21 days.\n\n- **Definitions & thresholds**: `20-COMPANY/80-MANAGEMENT/KPI-REGISTRY.md`\n- **Chain coverage & gaps**: `VALUE-CHAINS.md`\n- **Trend history**: `20-COMPANY/80-MANAGEMENT/REPORTS/kpi/kpi_history.json`"
+          }
+        ],
+        [
+          {
+            "kind": "base-view",
+            "title": "All KPIs by domain",
+            "base": {
+              "file": "00-CORE/Bases/KPI.base",
+              "view": "All KPIs"
+            },
+            "height": 360,
+            "fallback": "link"
+          }
+        ],
+        [
+          {
+            "kind": "base-view",
+            "title": "Stale — needs refresh",
+            "base": {
+              "file": "00-CORE/Bases/KPI.base",
+              "view": "Stale (needs refresh)"
+            },
+            "height": 240,
+            "fallback": "link"
           }
         ]
       ]
