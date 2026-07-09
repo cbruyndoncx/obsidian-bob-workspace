@@ -25,7 +25,7 @@ customize later.
 |----------|-----------|----------|
 | **Minimal** | Just Home + Settings; build your own nav | You want a blank slate and will design navigation yourself |
 | **CRM Only** | Pipeline, Contacts, Clients, Leads, Campaigns, Activities, Reports + Planner | You want sales/CRM without Finance/PRM/Procurement |
-| **BOB Workspace** | The full suite: Planner, CRM, PRM, Client Work, Finance, Suppliers & Procurement, Reports, AI Workspace (schema-driven) | You want the complete business workspace |
+| **BOB Workspace** | The full suite: Planner, CRM, Marketing, PRM, Client Work, Finance, Suppliers & Procurement, HR & People, Reports (incl. KPI Scoreboard), AI Workspace, Research & Knowledge, and Operational Audit (schema-driven) | You want the complete business workspace |
 | **Cadence Classic** | Planner, CRM, PRM, Client Work (uses `Cadence/` folders) | You're coming from the original Cadence layout |
 | **EMAI Starter** | PARA-style personal workspace (tasks/projects/areas/people/daily, content, workflows) — brings its own entity definitions | You want a personal/PARA setup rather than a business CRM |
 

@@ -123,7 +123,7 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 - `navLevel` — `'secondary'` (shown only when parent is active) or `'setup'` (shown only when Setup nav is enabled)
 - `parent` — surface ID of the parent when `navLevel` is set
 
-**Built-in vs configured nav.** The hardcoded `BUILTIN_NAV_GROUPS` ships only two groups — **`home_group`** (Home) and **`misc`** (Team, Settings, Surface Designer, Export, Import) — and both have an **empty `label`**. The renderer draws a group header only when `group.label` is truthy (`if (group.label)` in `CadenceAppView.render()`), so a label-less group's items render directly with no section heading — which is why `misc` shows no label. The rich groups (CRM, PRM, Planner, Client Work, Finance, Procurement, Reports, AI Workspace) are **not hardcoded**; they come from the active `workspace.json` `navigation.groups`, applied at runtime by `applyWorkspaceRegistries()`. `BUILTIN_SECONDARY_TABS` and `BUILTIN_WORKBOOK_EXPORT_GROUPS` are likewise empty and populated from `workspace.json`. Navigation is module-driven; `showSecondaryNav` and `showSetupNav` control whether lower-frequency children appear in the left rail (still reachable via parent tabs).
+**Built-in vs configured nav.** The hardcoded `BUILTIN_NAV_GROUPS` ships only two groups — **`home_group`** (Home) and **`misc`** (Team, Settings, Surface Designer, Export, Import) — and both have an **empty `label`**. The renderer draws a group header only when `group.label` is truthy (`if (group.label)` in `CadenceAppView.render()`), so a label-less group's items render directly with no section heading — which is why `misc` shows no label. The rich groups (Planner, CRM, Marketing, PRM, Client Work, Finance, Procurement, HR & People, Reports, AI Workspace, Research & Knowledge, Audit) are **not hardcoded**; they come from the active `workspace.json` `navigation.groups`, applied at runtime by `applyWorkspaceRegistries()`. `BUILTIN_SECONDARY_TABS` and `BUILTIN_WORKBOOK_EXPORT_GROUPS` are likewise empty and populated from `workspace.json`. Navigation is module-driven; `showSecondaryNav` and `showSetupNav` control whether lower-frequency children appear in the left rail (still reachable via parent tabs).
 
 **`SECONDARY_TABS`** — runtime object (built from `workspace.json` `navigation.secondaryTabs`) mapping parent surface IDs to arrays of sub-tab definitions, used by workspace surfaces (e.g. `client-work.overview`, `finance.gl`, `prm.partners`) to render an inner tab bar. A surface with `SECONDARY_TABS` entries renders its first sub-tab automatically (see `CadenceAppView.render()`), which is how custom parent surfaces work without a hardcoded renderer.
 
@@ -131,21 +131,23 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 
 ### Current Surfaces and Modules
 
-- **Planner**: Inbox, Today, Calendar, TaskNotes, Projects
-- **CRM**: Dashboard, Pipeline, Contacts, Clients, My Companies, Leads, Campaigns/Sequences, Activities
+- **Planner**: Inbox, Today, Calendar, TaskNotes, Projects, Ideas
+- **CRM**: Dashboard, Pipeline, Contacts, Clients, My Companies, Leads, Campaigns/Sequences, Activities, Products
 - **Client Work**: overview plus Meetings, Comms, Deliverables, Feedback, Surveys, Testimonials, Decisions; overview selectors filter by client and project
 - **PRM**: Partners, Registrations, Commissions, Certifications, Analytics
-- **Finance**: Customer Invoices, General Ledger, Finance Setup, Tax, and their accounting/compliance child entity lists
+- **Finance**: Customer Invoices, General Ledger, Finance Setup, Assets & Close, Tax, and their accounting/compliance child entity lists
 - **Suppliers & Procurement**: Suppliers, Supplier Invoices, Purchase Requisitions, Purchase Orders
-- **Reports**: Pipeline, Sales, Partners, Activity, Productivity
+- **Reports**: Pipeline, Sales, Partners, Activity, Productivity, KPI Scoreboard
 - **Team**: a filtered People/contact view using configurable `person_category` values, not a separate entity
 - **AI Workspace**: Playbooks and Skills
+
+The shipped `templates/workspace-bob.json` also ships four **schema-backed domains** that are not built-in code modules — they come entirely from `workspace.json` nav/tabs/bases plus template `_assets` schemas: **Marketing** (content), **HR & People** (Recruiting, Payroll), **Research & Knowledge** (research hub), and **Audit** (Operational Audit; a tabs-only parent whose Overview tab routes to the `audit.dashboard` dashboard). The `misc` group also carries a **Base Links** surface. Because these are config/schema-driven, they are edited in `workspace.json` and schema YAML, not `src/` — see "Built-in vs configured nav".
 
 Important specialized behavior:
 - Pipeline is a deal kanban. Drag-to-change-stage is desktop-only; mobile opens cards for editing rather than relying on HTML drag events.
 - Generic entity tables support sorting, enum column filters, inline editing, multi-select, and bulk trashing.
 - Entity detail forms use frontmatter writes; project detail also edits note body sections and task/milestone markdown.
-- External/non-table Base views delegate display to Obsidian Bases and expose an `Open Base` action instead of duplicating the view.
+- Non-table Base views (board, calendar, cards) **render inline** as a live Obsidian Base embed (`![[file#view]]`, mounted via the embed registry with the view in the `#View` subpath); an `Open Base` action remains for opening the Base in a full tab. Table views keep the plugin's own editable inline table.
 - Client Work child lists force the internal table so configured non-table Base views do not make those embedded lists disappear.
 - Mobile layout includes a navigation drawer, compact briefing behavior, and safe-area/responsive CSS.
 

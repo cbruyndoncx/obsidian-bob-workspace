@@ -1,8 +1,9 @@
 # Spec — `kind: base-view` widget (live inline Base on a dashboard)
 
 **Plugin:** BOB Workspace (`bob-workspace`, author `cbruyndoncx`) · studied against build `0.14.4-bob.14`  
-**Status:** proposal / implementation-ready after API verification  
-**Owner action:** implement in the plugin source repo, manually test in Obsidian, then sync shipping artifacts
+**Status:** ✅ **Implemented and shipped in `0.14.4-bob.32`.** This document is the original proposal, kept for context; the sections below are the design as drafted, not all of which matches the final code.
+
+> **As built (differs from the proposal below):** the **markdown route in §4.4 does not work** — `MarkdownRenderer.renderMarkdown('![[X.base#view]]', …)` only leaves a placeholder and never loads a Base embed. The shipped implementation uses the **embed-registry route only** (`app.embedRegistry.embedByExtension.base`), passing the view name as the constructor **`#View` subpath** (with the `#`); a bare view name without `#` falls back to the Base's default view. The plugin then waits for the embed **wrapper** to mount (`_baseEmbedMounted`) rather than racing the async row-load, which removes the false "did not render" fallback. Non-table Base views (board/calendar/cards) on **entity surfaces** now use the same live embed, not just dashboard `base-view` widgets. The companion vault-skill/validator changes in §6 are done. See `CHANGELOG.md` `0.14.4-bob.32`.
 
 ---
 

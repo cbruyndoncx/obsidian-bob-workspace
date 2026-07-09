@@ -146,7 +146,9 @@ options:
     (default `00-CORE/Bases`) and relocates if you change that folder.
 
 A Base is optional for simple lists (they render from folder/type); it is needed
-when you want Base-defined columns/filters/sort/grouping or an external Base view.
+when you want Base-defined columns/filters/sort/grouping, or a non-table Base view
+(board, calendar, cards) — those now render **inline** as a live Base embed on the
+surface (table views keep the plugin's own editable inline table).
 
 ### Step 5 — Compose the UI (navigation + dashboards)
 
