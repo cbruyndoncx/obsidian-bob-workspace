@@ -2595,11 +2595,18 @@ export class CadenceAppView extends obsidian.ItemView {
       throw new Error('Markdown renderer unavailable for Base embed');
     }
     await obsidian.MarkdownRenderer.renderMarkdown(md, body, basePath, this);
-    await this._waitForBaseEmbedRender();
-    if (!this._hasLiveBaseEmbedContent(body, md, linktext)) {
-      body.empty();
-      throw new Error('Base view did not render inline');
+    // A Base view mounts its embed wrapper quickly but loads its rows
+    // asynchronously — so we wait for the wrapper to APPEAR (not for it to be
+    // fully populated, which races the async load and caused false "did not
+    // render" fallbacks). Only a total no-embed / unresolved-link / literal-text
+    // outcome is treated as failure.
+    for (let i = 0; i < 20; i++) {
+      await this._waitForBaseEmbedRender();
+      if (this._baseEmbedMounted(body, md, linktext)) return;
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
+    body.empty();
+    throw new Error('Base view did not render inline');
   }
 
   async _waitForBaseEmbedRender() {
@@ -2613,31 +2620,22 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _hasLiveBaseEmbedContent(body: HTMLElement, md: string, linktext: string) {
-    const renderedText = String(body.textContent || '').trim();
-    const basePathOnly = String(linktext || '').split('#')[0] || '';
-    if (!body.childElementCount) return false;
-    if (renderedText === md || renderedText === linktext) return false;
-    if (basePathOnly && renderedText === basePathOnly) return false;
-    if (basePathOnly && renderedText.replace(/\s+/g, ' ').trim() === basePathOnly) return false;
-    const baseEmbed = body.querySelector?.([
-      '.bases-embed',
-      '.base-embed',
-      '.bases-view',
-      '.bases-embed-container',
-      '.bases-view-container',
-      '[data-type="base"]',
-      '[data-embed-type="base"]',
-      '[src$=".base"]',
+  // True once an embed wrapper for the Base has mounted (it may still be loading
+  // rows). Fails only when nothing embedded, the link is unresolved, or the body
+  // is just the literal `![[…]]` / path text.
+  _baseEmbedMounted(body: HTMLElement, md: string, linktext: string) {
+    const embed = body.querySelector?.([
+      '.bases-embed', '.base-embed', '.bases-view', '.bases-embed-container',
+      '.bases-view-container', '.block-language-base', '[data-type="base"]',
+      '[data-embed-type="base"]', '[src$=".base"]',
+      '.internal-embed', '.markdown-embed', '.file-embed',
     ].join(','));
-    if (baseEmbed) return true;
-    const genericEmbed = body.querySelector?.('.internal-embed, .markdown-embed, .file-embed');
-    if (!genericEmbed) return false;
-    const genericText = String(genericEmbed.textContent || '').replace(/\s+/g, ' ').trim();
-    if (!genericText) return false;
-    if (genericText === md || genericText === linktext || genericText === basePathOnly) return false;
-    if (basePathOnly && genericText.includes(basePathOnly) && genericText.length <= basePathOnly.length + 24) return false;
-    return genericText.length > 0;
+    if (!embed) return false;
+    if ((embed as HTMLElement).classList?.contains('is-unresolved')) return false;
+    const text = String(body.textContent || '').replace(/\s+/g, ' ').trim();
+    const basePathOnly = String(linktext || '').split('#')[0] || '';
+    if (text === md || text === linktext || text === basePathOnly) return false;
+    return true;
   }
 
   async _renderBaseViewFallback(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities, reason: string) {
