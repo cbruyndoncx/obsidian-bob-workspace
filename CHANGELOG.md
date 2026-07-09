@@ -4,6 +4,15 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.33] — 2026-07-09
+
+### Fixed
+- **Home widgets no longer crash** ("Cannot read properties of undefined
+  (reading 'fields')"). List widgets that carry their entity in the source
+  (`source: { mode: 'entity', entityKey: 'deal' }`) now resolve that key instead
+  of the card's absent top-level `entity`; row builders also guard the entity
+  def, so an unknown entity degrades gracefully instead of throwing.
+
 ## [0.14.4-bob.32] — 2026-07-09
 
 Base-view widgets, the Surface Designer base/view picker, and the BOB template.
@@ -105,5 +114,6 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.33]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.33
 [0.14.4-bob.32]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.32
 [0.14.4-bob.31]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.31
