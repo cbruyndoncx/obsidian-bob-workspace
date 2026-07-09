@@ -4,6 +4,40 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.32] — 2026-07-09
+
+Base-view widgets, the Surface Designer base/view picker, and the BOB template.
+
+### Added
+- **Surface Designer**: the widget "View" field is now a dropdown of the
+  selected Base's actual views, each labelled with its type and rendering
+  ("Board — board · live embed" / "Pipeline — table · editable table"); changing
+  the Base repopulates it.
+- Base/view pickers label each option by how it renders (editable table vs live
+  read-only embed).
+- **BOB template** ships the **Operational Audit** and **KPI Scoreboard** screens
+  (nav + dashboards, base-view-backed) so they're durable across a template
+  re-apply.
+
+### Changed
+- **Non-table Base views render inline** on entity surfaces (board/calendar/cards
+  embed live via `![[file#view]]`) instead of showing an "Open Base" placeholder;
+  table views keep the plugin's editable inline table.
+- **Base widgets accept both config shapes** (`base:{file,view}` and
+  `source:{base:{…}}`) through one resolver — no separate/duplicate path.
+
+### Fixed
+- **base-view now applies the configured view.** It renders via the embed
+  registry with the view in the `#View` subpath (the static markdown renderer
+  can't load a Base embed, and a bare view name without `#` fell back to the
+  default view). Also stopped a false "did not render" fallback by waiting for
+  the embed wrapper rather than racing its async row-load.
+
+### Removed
+- Dropped the duplicate/placeholder `table` (never implemented) and `card-list`
+  (a `list` duplicate) widget-catalog entries; re-scoped `base-embed` to
+  "implemented".
+
 ## [0.14.4-bob.31] — 2026-07-05
 
 A large pass over the config-driven ("no-code GUI") layer: fixes the critical
@@ -71,4 +105,5 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.32]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.32
 [0.14.4-bob.31]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.31
