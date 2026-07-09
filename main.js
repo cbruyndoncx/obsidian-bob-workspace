@@ -12478,7 +12478,7 @@ var workspace_bob_default = {
       "audit.overview": [
         {
           label: "Overview",
-          route: "audit.overview"
+          route: "audit.dashboard"
         },
         {
           label: "Findings",
@@ -15065,7 +15065,45 @@ var workspace_bob_default = {
         ]
       ]
     },
-    "audit.overview": {
+    "reports.kpi": {
+      kind: "report",
+      title: "KPI Scoreboard",
+      subtitle: "Value-chain KPIs \u2014 auto-refreshed weekly from vault entities",
+      layout: [
+        [
+          {
+            kind: "markdown",
+            title: "How this works",
+            body: "Each KPI note is refreshed weekly by the **KPI Weekly Refresh** scheduled task (`kpi_refresh.py`, owner-priority-system): pipeline, AR, clients, capacity and publishing cadence are computed from deal / invoice / task / marketing-content notes; cash and MRR come from manual inputs in `kpi_refresh_config.yaml` and are flagged stale after 21 days.\n\n- **Definitions & thresholds**: `20-COMPANY/80-MANAGEMENT/KPI-REGISTRY.md`\n- **Chain coverage & gaps**: `VALUE-CHAINS.md`\n- **Trend history**: `20-COMPANY/80-MANAGEMENT/REPORTS/kpi/kpi_history.json`"
+          }
+        ],
+        [
+          {
+            kind: "base-view",
+            title: "All KPIs by domain",
+            base: {
+              file: "00-CORE/Bases/KPI.base",
+              view: "All KPIs"
+            },
+            height: 360,
+            fallback: "link"
+          }
+        ],
+        [
+          {
+            kind: "base-view",
+            title: "Stale \u2014 needs refresh",
+            base: {
+              file: "00-CORE/Bases/KPI.base",
+              view: "Stale (needs refresh)"
+            },
+            height: 240,
+            fallback: "link"
+          }
+        ]
+      ]
+    },
+    "audit.dashboard": {
       title: "Operational Audit",
       subtitle: "Findings, hidden costs, live initiatives and process maps",
       stats: [
@@ -15141,44 +15179,6 @@ var workspace_bob_default = {
             height: 260,
             fallback: "preview",
             view: "Portfolio roll-up"
-          }
-        ]
-      ]
-    },
-    "reports.kpi": {
-      kind: "report",
-      title: "KPI Scoreboard",
-      subtitle: "Value-chain KPIs \u2014 auto-refreshed weekly from vault entities",
-      layout: [
-        [
-          {
-            kind: "markdown",
-            title: "How this works",
-            body: "Each KPI note is refreshed weekly by the **KPI Weekly Refresh** scheduled task (`kpi_refresh.py`, owner-priority-system): pipeline, AR, clients, capacity and publishing cadence are computed from deal / invoice / task / marketing-content notes; cash and MRR come from manual inputs in `kpi_refresh_config.yaml` and are flagged stale after 21 days.\n\n- **Definitions & thresholds**: `20-COMPANY/80-MANAGEMENT/KPI-REGISTRY.md`\n- **Chain coverage & gaps**: `VALUE-CHAINS.md`\n- **Trend history**: `20-COMPANY/80-MANAGEMENT/REPORTS/kpi/kpi_history.json`"
-          }
-        ],
-        [
-          {
-            kind: "base-view",
-            title: "All KPIs by domain",
-            base: {
-              file: "00-CORE/Bases/KPI.base",
-              view: "All KPIs"
-            },
-            height: 360,
-            fallback: "link"
-          }
-        ],
-        [
-          {
-            kind: "base-view",
-            title: "Stale \u2014 needs refresh",
-            base: {
-              file: "00-CORE/Bases/KPI.base",
-              view: "Stale (needs refresh)"
-            },
-            height: 240,
-            fallback: "link"
           }
         ]
       ]
