@@ -4,6 +4,36 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.35] — 2026-07-10
+
+Makes the **BOB Workspace** template fully self-seeding: applying it to an
+empty vault now yields the complete, fully-featured workspace with no manual
+schema/Base step.
+
+### Added
+- **Template `_assets`** — `workspace-bob.json` now ships the canonical schema
+  YAML for **every** entity it references (74 total, built-ins included) plus
+  **every mapped `.base`** file. Previously it shipped none, so custom domains
+  were undefined and Bases ungenerated on a fresh vault; built-ins fell back to
+  the lean code defaults (41/45 are materially richer in the shipped schemas —
+  e.g. `invoice` 27 fields vs code's 9, `lead` 38 vs 17). `contact` ships as
+  `person.yaml` (`SCHEMA_TO_ENTITY_KEY: person → contact`).
+
+### Changed
+- **KPI scoreboard** — the `reports.kpi` dashboard adopts the improved "How
+  this works" copy (AP-overdue / procure-to-pay, days-since-last-release, 31
+  KPIs) and its base-view now uses the `KPI.base` **Scoreboard** view (RAG +
+  latest value). `KPI.base` (formula-driven RAG/freshness) ships as an asset.
+- Code `ENTITIES` is now purely a **fallback** for BOB — authoritative only for
+  Minimal/CRM-only or when schemas are off — matching the product direction
+  that canonical schema YAML is the source of truth. Vault schema/Base
+  improvements must be re-promoted into the template's `_assets`.
+
+### Docs
+- `CLAUDE.md`/`AGENTS.md` document the full-`_assets` BOB template and the
+  fallback role of code `ENTITIES`; the `bob-workspace-compose` skill gains a
+  re-promotion maintenance note.
+
 ## [0.14.4-bob.34] — 2026-07-09
 
 The shipped **BOB Workspace** template gains the vault's full extended layout,
@@ -140,6 +170,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.35]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.35
 [0.14.4-bob.34]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.34
 [0.14.4-bob.33]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.33
 [0.14.4-bob.32]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.32
