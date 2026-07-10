@@ -3303,18 +3303,18 @@
           {
             "kind": "markdown",
             "title": "How this works",
-            "body": "Each KPI note is refreshed weekly by the **KPI Weekly Refresh** scheduled task (`kpi_refresh.py`, owner-priority-system): pipeline, AR, clients, capacity and publishing cadence are computed from deal / invoice / task / marketing-content notes; cash and MRR come from manual inputs in `kpi_refresh_config.yaml` and are flagged stale after 21 days.\n\n- **Definitions & thresholds**: `20-COMPANY/80-MANAGEMENT/KPI-REGISTRY.md`\n- **Chain coverage & gaps**: `VALUE-CHAINS.md`\n- **Trend history**: `20-COMPANY/80-MANAGEMENT/REPORTS/kpi/kpi_history.json`"
+            "body": "Each KPI note is refreshed weekly by the **KPI Weekly Refresh** scheduled task (`kpi_refresh.py`, owner-priority-system). Computed from vault entities: pipeline, AR overdue, **AP overdue (procure-to-pay)** from supplier invoices, clients, capacity, publishing cadence, and **days since last release (concept-to-launch)** from `40-PRODUCTS/*/release-notes/`. Cash balance and MRR come from manual inputs in `kpi_refresh_config.yaml` and are flagged stale after 21 days. Product release cadence is surfaced but excluded from the overall roll-up (lumpy/monthly).\n\n- **Definitions & thresholds**: `20-COMPANY/80-MANAGEMENT/KPI-REGISTRY.md` (31 KPIs)\n- **Chain coverage & gaps**: `VALUE-CHAINS.md`\n- **Trend history**: `20-COMPANY/80-MANAGEMENT/REPORTS/kpi/kpi_history.json`"
           }
         ],
         [
           {
             "kind": "base-view",
-            "title": "All KPIs by domain",
+            "title": "Status at a glance (RAG + latest value)",
             "base": {
               "file": "00-CORE/Bases/KPI.base",
-              "view": "All KPIs"
+              "view": "Scoreboard"
             },
-            "height": 360,
+            "height": 380,
             "fallback": "link"
           }
         ],
@@ -3633,6 +3633,11 @@
     "period-close": {
       "file": "00-CORE/Bases/Period-Closes.base",
       "view": "All"
+    }
+  },
+  "_assets": {
+    "bases": {
+      "KPI.base": "filters: note.type == \"kpi\"\nformulas:\n  open: link(file.path, \"🔍\")\n  statusRag: if(domain_status == \"red\", \"🔴 Red\", if(domain_status == \"amber\", \"🟡 Amber\", if(domain_status == \"green\", \"🟢 Green\", \"⚪ —\")))\n  severity: if(domain_status == \"red\", 0, if(domain_status == \"amber\", 1, if(domain_status == \"green\", 2, 3)))\n  daysSinceUpdate: if(last_updated, ((number(now()) - number(date(last_updated))) / 86400000).floor(), null)\n  freshness: if(formula.daysSinceUpdate == null, \"—\", if(formula.daysSinceUpdate <= 7, \"🟢 fresh\", if(formula.daysSinceUpdate <= 21, \"🟡 aging\", \"🔴 stale\")))\nproperties:\n  file.name:\n    displayName: Domain\n  note.kpi_category:\n    displayName: Category\n  note.domain_status:\n    displayName: Domain Status\n  note.headline:\n    displayName: Latest\n  note.trend:\n    displayName: Trend\n  note.last_updated:\n    displayName: Last Updated\n  note.update_frequency:\n    displayName: Frequency\n  formula.statusRag:\n    displayName: Status\n  formula.daysSinceUpdate:\n    displayName: Days Old\n  formula.freshness:\n    displayName: Freshness\nviews:\n  - type: table\n    name: Scoreboard\n    order:\n      - formula.open\n      - formula.statusRag\n      - file.name\n      - headline\n      - trend\n      - kpi_category\n      - formula.freshness\n    sort:\n      - property: formula.severity\n        direction: ASC\n      - property: kpi_category\n        direction: ASC\n    columnSize:\n      formula.open: 44\n      formula.statusRag: 96\n      headline: 300\n      trend: 110\n  - type: cards\n    name: RAG Cards\n    groupBy:\n      property: domain_status\n      direction: ASC\n    order:\n      - formula.open\n      - file.name\n      - headline\n      - formula.freshness\n    sort:\n      - property: formula.severity\n        direction: ASC\n    columnSize:\n      formula.open: 44\n  - type: table\n    name: All KPIs\n    order:\n      - formula.open\n      - formula.statusRag\n      - file.name\n      - kpi_category\n      - headline\n      - last_updated\n      - formula.daysSinceUpdate\n      - formula.freshness\n      - update_frequency\n    sort:\n      - property: kpi_category\n        direction: ASC\n    columnSize:\n      formula.open: 44\n  - type: table\n    name: Stale (needs refresh)\n    filters:\n      and:\n        - formula.daysSinceUpdate > 7\n    order:\n      - formula.open\n      - file.name\n      - kpi_category\n      - last_updated\n      - formula.daysSinceUpdate\n      - formula.freshness\n    sort:\n      - property: formula.daysSinceUpdate\n        direction: DESC\n    columnSize:\n      formula.open: 52\n"
     }
   }
 }
