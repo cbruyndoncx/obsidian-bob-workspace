@@ -48,7 +48,14 @@ export function scannableMarkdownFiles(app: App): TFile[] {
   return _scanCache;
 }
 
-export function listEntityFiles(app: App, entityKey: string): TFile[] {
+export interface ListEntityOptions {
+  /** Skip the selected Base *view*'s filter (keep global/type/folder/filename).
+   *  Used by exports so a narrow display-view selection never truncates the
+   *  full dataset — the view is a display choice, not a membership rule. */
+  ignoreViewFilter?: boolean;
+}
+
+export function listEntityFiles(app: App, entityKey: string, opts: ListEntityOptions = {}): TFile[] {
   const def = ENTITIES[entityKey] as BobEntityDef & { baseFilters?: ParsedBaseFilters };
   if (!def) return [];
 
@@ -79,8 +86,10 @@ export function listEntityFiles(app: App, entityKey: string): TFile[] {
     if (def.baseFilters) {
       const globalMatch = evaluateBaseFilterNode(app, f, def.baseFilters.global);
       if (globalMatch === false) return false;
-      const viewMatch = evaluateBaseFilterNode(app, f, def.baseFilters.view);
-      if (viewMatch === false) return false;
+      if (!opts.ignoreViewFilter) {
+        const viewMatch = evaluateBaseFilterNode(app, f, def.baseFilters.view);
+        if (viewMatch === false) return false;
+      }
     }
     return true;
   });
@@ -202,9 +211,9 @@ export function compareBaseDates(actual: Date, op: string, target: Date): boolea
   return true;
 }
 
-export function listEntities(app: App, entityKey: string): EntityRecord[] {
+export function listEntities(app: App, entityKey: string, opts: ListEntityOptions = {}): EntityRecord[] {
   const def = ENTITIES[entityKey];
-  const entities = listEntityFiles(app, entityKey).map((f) => readEntity(app, f));
+  const entities = listEntityFiles(app, entityKey, opts).map((f) => readEntity(app, f));
   if (!def?.baseSort?.length) return entities;
   return entities.sort((a, b) => compareEntitiesByBaseSort(a, b, def));
 }

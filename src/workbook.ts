@@ -71,7 +71,10 @@ export function xlsxCellValue(value: unknown) {
 export function entityRowsForWorkbook(app: App, entityKey: string) {
   const def = ENTITIES[entityKey];
   if (!def) return [];
-  return listEntities(app, entityKey).map((entity) => {
+  // Exports include the full dataset: apply global/type/folder/filename
+  // membership but ignore the selected Base *view*'s filter, so a narrow
+  // display-view selection (e.g. a "Ready" view) never truncates the export.
+  return listEntities(app, entityKey, { ignoreViewFilter: true }).map((entity) => {
     const row: Record<string, unknown> = {};
     row.file_path = entity.file.path;
     row.created = new Date(entity.file.stat.ctime).toISOString();

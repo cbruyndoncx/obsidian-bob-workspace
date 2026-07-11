@@ -24455,7 +24455,7 @@ function scannableMarkdownFiles(app) {
   }
   return _scanCache;
 }
-function listEntityFiles(app, entityKey) {
+function listEntityFiles(app, entityKey, opts = {}) {
   const def = ENTITIES[entityKey];
   if (!def) return [];
   const hasPathFilter = Array.isArray(def.folders);
@@ -24480,8 +24480,10 @@ function listEntityFiles(app, entityKey) {
     if (def.baseFilters) {
       const globalMatch = evaluateBaseFilterNode(app, f, def.baseFilters.global);
       if (globalMatch === false) return false;
-      const viewMatch = evaluateBaseFilterNode(app, f, def.baseFilters.view);
-      if (viewMatch === false) return false;
+      if (!opts.ignoreViewFilter) {
+        const viewMatch = evaluateBaseFilterNode(app, f, def.baseFilters.view);
+        if (viewMatch === false) return false;
+      }
     }
     return true;
   });
@@ -24586,9 +24588,9 @@ function compareBaseDates(actual, op, target) {
   if (op === ">=") return a >= b;
   return true;
 }
-function listEntities(app, entityKey) {
+function listEntities(app, entityKey, opts = {}) {
   const def = ENTITIES[entityKey];
-  const entities = listEntityFiles(app, entityKey).map((f) => readEntity(app, f));
+  const entities = listEntityFiles(app, entityKey, opts).map((f) => readEntity(app, f));
   if (!def?.baseSort?.length) return entities;
   return entities.sort((a, b) => compareEntitiesByBaseSort(a, b, def));
 }
@@ -27025,7 +27027,7 @@ function xlsxCellValue(value) {
 function entityRowsForWorkbook(app, entityKey) {
   const def = ENTITIES[entityKey];
   if (!def) return [];
-  return listEntities(app, entityKey).map((entity) => {
+  return listEntities(app, entityKey, { ignoreViewFilter: true }).map((entity) => {
     const row = {};
     row.file_path = entity.file.path;
     row.created = new Date(entity.file.stat.ctime).toISOString();
