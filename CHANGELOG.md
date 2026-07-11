@@ -4,6 +4,18 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.36] — 2026-07-11
+
+### Fixed
+- **XLSX export was truncated by the selected Base view.** Export built its
+  rows from `listEntities()`, which AND-combines the currently-selected Base
+  *view*'s filter — so a narrow display view silently cut the export (e.g. the
+  skills base's "Free Ready" view reduced a 359-skill export to ~100). Exports
+  now apply global/type/folder/filename membership but **ignore the view-level
+  filter** (`ignoreViewFilter` threaded through `listEntityFiles`/
+  `listEntities`). On-screen lists are unchanged — they still honour the
+  selected view. Regression test added.
+
 ## [0.14.4-bob.35] — 2026-07-10
 
 Makes the **BOB Workspace** template fully self-seeding: applying it to an
@@ -170,6 +182,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.36]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.36
 [0.14.4-bob.35]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.35
 [0.14.4-bob.34]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.34
 [0.14.4-bob.33]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.33
