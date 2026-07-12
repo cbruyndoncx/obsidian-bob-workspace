@@ -4,6 +4,28 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.42] — 2026-07-13
+
+Canvas as a **context-surface render target** (Entity Context Canvas, v1).
+
+### Added
+- **Entity Context Canvas** — from any entity (detail view → **Context canvas**)
+  or any note (command **"BOB: Context canvas for active note"**), BOB generates
+  a *context-explosion* canvas: the focal note at centre, its **evidence** (left),
+  **people & systems** (top, incl. linked URLs as link nodes), **outputs**
+  (right) and **risks / next actions** (bottom), drawn from links + backlinks and
+  bucketed by entity type, with a generated summary node and labelled signal
+  edges. Opens inline in the interactive host.
+- **Canvas render foundations** (`src/canvas.ts`): a spec-compatible node taxonomy
+  (entity=file · insight=text · external=link · zone=group · signal edge), the
+  BOB semantic palette (red/orange/yellow/green/cyan/purple → JSON Canvas 1..6),
+  **stable node IDs** (intent+source+role+target hashed → regeneration keeps edge
+  refs), a deterministic context-explosion layout engine, and a **render manifest**
+  sidecar (`<name>.canvas.bobmeta.json`: source, template, query hash, owned node
+  ids) so the `.canvas` stays standard while BOB keeps render logic beside it.
+  Regenerate-fresh for v1; manual-edit preservation, AI insight nodes, and the
+  Process/Agent-audit templates build on these foundations next.
+
 ## [0.14.4-bob.41] — 2026-07-13
 
 ### Fixed
@@ -249,6 +271,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.42]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.42
 [0.14.4-bob.41]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.41
 [0.14.4-bob.40]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.40
 [0.14.4-bob.39]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.39

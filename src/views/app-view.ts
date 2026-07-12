@@ -1,6 +1,6 @@
 import { entityBasePath, entityBaseViewName } from '../bases-config';
 import { baseViewRendersInline, hasBaseValue, parseBaseFile, readBaseSummary } from '../bases-parse';
-import { CANVAS_GENERATORS, serializeCanvas } from '../canvas';
+import { CANVAS_GENERATORS, buildEntityContextCanvas, serializeCanvas } from '../canvas';
 import { BUILTIN_DASHBOARD_DEFAULTS, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
 import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
@@ -963,6 +963,35 @@ export class CadenceAppView extends obsidian.ItemView {
     const file = await this.app.vault.create(path, serializeCanvas(data));
     new obsidian.Notice(`Generated ${path}`);
     if (file instanceof obsidian.TFile) await this.openCanvas(file);
+  }
+
+  // Entity Context Canvas — render the full operational context around a note
+  // (evidence · people/systems · outputs · risks) and open it inline. Regenerated
+  // deterministically into a stable path (regenerate-fresh) with a BOB manifest
+  // sidecar so a future increment can preserve manual edits.
+  async _generateContextCanvas(file: obsidian.TFile) {
+    if (!(file instanceof obsidian.TFile)) { new obsidian.Notice('No note to build context from.'); return; }
+    let result = null;
+    try { result = buildEntityContextCanvas(this.app, file); } catch (err) {
+      new obsidian.Notice(`Context canvas failed: ${(err as Error)?.message || String(err)}`);
+      return;
+    }
+    if (!result || !result.data.nodes.length) { new obsidian.Notice('No context to render for this note.'); return; }
+    const folder = 'BOB Workspace/Canvases';
+    await ensureFolderSync(this.app, folder);
+    const name = `Context - ${file.basename}`.replace(/[\\/:*?"<>|]/g, '-');
+    const canvasPath = `${folder}/${name}.canvas`;
+    await this._writeOrModify(canvasPath, serializeCanvas(result.data));
+    await this._writeOrModify(`${folder}/${name}.canvas.bobmeta.json`, JSON.stringify(result.manifest, null, 2));
+    const f = this.app.vault.getAbstractFileByPath(canvasPath);
+    if (f instanceof obsidian.TFile) await this.openCanvas(f);
+    else new obsidian.Notice(`Context canvas written to ${canvasPath}`);
+  }
+
+  async _writeOrModify(path: string, content: string) {
+    const existing = this.app.vault.getAbstractFileByPath(path);
+    if (existing instanceof obsidian.TFile) await this.app.vault.modify(existing, content);
+    else await this.app.vault.create(path, content);
   }
 
   async _uniqueCanvasPath(folder: string, base: string): Promise<string> {
@@ -5577,6 +5606,8 @@ export class CadenceAppView extends obsidian.ItemView {
     const savedBadge: SavedBadgeEl = headRight.createSpan({ cls: 'cad-detail-saved', text: '' });
     const openNote = headRight.createEl('button', { cls: 'cad-btn', text: 'Open as note' });
     openNote.addEventListener('click', () => this.app.workspace.openLinkText(file.path, '', false));
+    const ctxCanvas = headRight.createEl('button', { cls: 'cad-btn', text: 'Context canvas' });
+    ctxCanvas.addEventListener('click', () => void this._generateContextCanvas(file));
     const deleteBtn = headRight.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Delete' });
     deleteBtn.addEventListener('click', async () => {
       if (!(await confirmModal(this.app, `Delete this ${def.label.toLowerCase()}? This moves the file to trash.`, { title: 'Delete', cta: 'Delete' }))) return;

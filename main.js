@@ -28708,6 +28708,52 @@ var HELP_TOPICS = {
 };
 
 // src/canvas.ts
+var BOB_COLOR = {
+  risk: "1",
+  // red — blocked / at risk
+  attention: "2",
+  // orange — needs attention
+  pending: "3",
+  // yellow — waiting
+  healthy: "4",
+  // green — healthy / complete
+  info: "5",
+  // cyan — informational / linked context
+  ai: "6"
+  // purple — AI / generated insight
+};
+function shortHash(input) {
+  let h = 5381;
+  const s = String(input);
+  for (let i = 0; i < s.length; i++) h = (h << 5) + h + s.charCodeAt(i) >>> 0;
+  return h.toString(36);
+}
+function canvasNodeId(intent, source, role, target = "") {
+  return `${role}-${shortHash(`${intent}|${source}|${role}|${target}`)}`;
+}
+function entityCard(box, file) {
+  return { ...box, type: "file", file };
+}
+function insightCard(box, text) {
+  return { ...box, type: "text", text };
+}
+function externalCard(box, url) {
+  return { ...box, type: "link", url };
+}
+function zone(box, label) {
+  return { ...box, type: "group", label };
+}
+function signalEdge(id, from, to, label, sides, color) {
+  const e = { id, fromNode: from, toNode: to };
+  if (label) e.label = label;
+  if (sides?.from) e.fromSide = sides.from;
+  if (sides?.to) e.toSide = sides.to;
+  if (color) e.color = color;
+  return e;
+}
+function serializeCanvas(data) {
+  return JSON.stringify(data, null, 2);
+}
 var CARD_W = 260;
 var CARD_H = 80;
 var CARD_GAP = 14;
@@ -28729,14 +28775,10 @@ function buildBoardCanvas(columns) {
     col.cards.forEach((card, i) => {
       const y = HEADER + COL_PAD + i * (CARD_H + CARD_GAP);
       const base = { id: nid(), x: x + COL_PAD, y, width: CARD_W, height: CARD_H };
-      if (card.file) nodes.push({ ...base, type: "file", file: card.file });
-      else nodes.push({ ...base, type: "text", text: card.text || "" });
+      nodes.push(card.file ? { ...base, type: "file", file: card.file } : { ...base, type: "text", text: card.text || "" });
     });
   });
   return { nodes, edges: [] };
-}
-function serializeCanvas(data) {
-  return JSON.stringify(data, null, 2);
 }
 function buildPipelineCanvasData(app) {
   const def = ENTITIES.deal;
@@ -28753,13 +28795,160 @@ function buildPipelineCanvasData(app) {
     if (arr) arr.push(card);
     else unassigned.push(card);
   }
-  const columns = stages.map((stage, i) => ({
-    label: stage,
-    color: String(i % 6 + 1),
-    cards: buckets.get(stage) || []
-  }));
+  const columns = stages.map((stage, i) => ({ label: stage, color: String(i % 6 + 1), cards: buckets.get(stage) || [] }));
   if (unassigned.length) columns.push({ label: "Unassigned", cards: unassigned });
   return buildBoardCanvas(columns);
+}
+var FW = 380;
+var FH = 150;
+var SW = 380;
+var SH = 180;
+var CW = 320;
+var CH = 110;
+var GX = 150;
+var GY = 90;
+var ZP = 30;
+function buildContextExplosion(spec) {
+  const nodes = [];
+  const edges = [];
+  const groups = [];
+  const nid = (role, target = "") => canvasNodeId(spec.intent, spec.source, role, target);
+  const fcx = FW / 2, fcy = FH / 2;
+  const stackV = (items, x) => {
+    const total = items.length * CH + Math.max(items.length - 1, 0) * GY;
+    const startY = fcy - total / 2;
+    return items.map((it, i) => ({ it, x, y: startY + i * (CH + GY) }));
+  };
+  const stackH = (items, y) => {
+    const total = items.length * CW + Math.max(items.length - 1, 0) * GX;
+    const startX = fcx - total / 2;
+    return items.map((it, i) => ({ it, x: startX + i * (CW + GX), y }));
+  };
+  const place = (positioned, sides, edgeLabel) => {
+    for (const p of positioned) {
+      const id = nid(p.it.role, p.it.target || p.it.url || p.it.text || "");
+      const box = { id, x: p.x, y: p.y, width: CW, height: CH };
+      if (p.it.color) box.color = p.it.color;
+      if (p.it.file) nodes.push(entityCard(box, p.it.file));
+      else if (p.it.url) nodes.push(externalCard(box, p.it.url));
+      else nodes.push(insightCard(box, p.it.text || ""));
+      edges.push(signalEdge(nid("edge", `${p.it.role}:${p.it.target || p.it.url || ""}`), focalId, id, edgeLabel, sides));
+    }
+    return positioned;
+  };
+  const wrapZone = (positioned, q, key) => {
+    if (!positioned.length) return;
+    const minX = Math.min(...positioned.map((p) => p.x)) - ZP;
+    const minY = Math.min(...positioned.map((p) => p.y)) - ZP - 24;
+    const maxX = Math.max(...positioned.map((p) => p.x)) + CW + ZP;
+    const maxY = Math.max(...positioned.map((p) => p.y)) + CH + ZP;
+    const g = zone({ id: nid("zone", key), x: minX, y: minY, width: maxX - minX, height: maxY - minY, ...q.color ? { color: q.color } : {} }, q.label);
+    groups.push(g);
+  };
+  const focalId = nid("focal");
+  const focalBox = { id: focalId, x: 0, y: 0, width: FW, height: FH };
+  if (spec.focal.color) focalBox.color = spec.focal.color;
+  const summaryPos = { x: fcx - SW / 2, y: -(GY + SH) };
+  const summaryNode = insightCard({ id: nid("summary"), x: summaryPos.x, y: summaryPos.y, width: SW, height: SH, color: BOB_COLOR.ai }, spec.summary);
+  const leftPos = place(stackV(spec.left.items, -(GX + CW)), { from: "left", to: "right" }, spec.edgeLabels.left);
+  const rightPos = place(stackV(spec.right.items, FW + GX), { from: "right", to: "left" }, spec.edgeLabels.right);
+  const topPos = place(stackH(spec.top.items, summaryPos.y - (GY + CH)), { from: "top", to: "bottom" }, spec.edgeLabels.top);
+  const bottomPos = place(stackH(spec.bottom.items, FH + GY), { from: "bottom", to: "top" }, spec.edgeLabels.bottom);
+  wrapZone(leftPos, spec.left, "left");
+  wrapZone(rightPos, spec.right, "right");
+  wrapZone(topPos, spec.top, "top");
+  wrapZone(bottomPos, spec.bottom, "bottom");
+  const allNodes = [...groups, entityCard(focalBox, spec.focal.file), summaryNode, ...nodes];
+  const ownedIds = [...allNodes.map((n) => n.id), ...edges.map((e) => e.id)];
+  return { data: { nodes: allNodes, edges }, ownedIds };
+}
+var PEOPLE_KEYS = /* @__PURE__ */ new Set(["contact", "company", "client", "supplier", "partner", "person", "profile", "candidate"]);
+var OUTPUT_KEYS = /* @__PURE__ */ new Set(["deliverable", "invoice", "supplier-invoice", "meeting", "comms-thread", "testimonial", "feedback", "survey", "purchase-order", "commission"]);
+var RISK_KEYS = /* @__PURE__ */ new Set(["issue", "audit-finding", "audit-waste", "decision", "legal-rule", "vat-return", "corporate-tax-return"]);
+var URL_FIELDS = ["website", "url", "crm_url", "link", "homepage", "dashboard", "portal"];
+var MAX_PER_QUADRANT = 8;
+function relatedMarkdownFiles(app, file) {
+  const out = /* @__PURE__ */ new Map();
+  const rl = app.metadataCache.resolvedLinks || {};
+  for (const target of Object.keys(rl[file.path] || {})) {
+    const f = app.vault.getAbstractFileByPath(target);
+    if (f && f.extension === "md" && f.path !== file.path) out.set(f.path, f);
+  }
+  for (const [src, targets] of Object.entries(rl)) {
+    if (src === file.path || !targets[file.path]) continue;
+    const f = app.vault.getAbstractFileByPath(src);
+    if (f && f.extension === "md") out.set(f.path, f);
+  }
+  return [...out.values()];
+}
+function buildEntityContextCanvas(app, file) {
+  if (!file) return null;
+  const intent = "entity-context";
+  const focalKey = entityKeyFromFile(app, file);
+  const sourceType = focalKey || "note";
+  const related = relatedMarkdownFiles(app, file);
+  const evidence = [], people = [], outputs = [], risks = [];
+  for (const rf of related) {
+    const key = entityKeyFromFile(app, rf) || "";
+    const item = { role: key || "note", target: rf.path, file: rf.path };
+    if (PEOPLE_KEYS.has(key)) {
+      item.color = BOB_COLOR.info;
+      people.push(item);
+    } else if (OUTPUT_KEYS.has(key)) {
+      item.color = BOB_COLOR.healthy;
+      outputs.push(item);
+    } else if (RISK_KEYS.has(key)) {
+      item.color = BOB_COLOR.risk;
+      risks.push(item);
+    } else if (key === "task") {
+      const done = /done|complete|closed/i.test(String(app.metadataCache.getFileCache(rf)?.frontmatter?.status ?? ""));
+      if (done) evidence.push(item);
+      else {
+        item.color = BOB_COLOR.attention;
+        risks.push(item);
+      }
+    } else evidence.push(item);
+  }
+  const fm = app.metadataCache.getFileCache(file)?.frontmatter || {};
+  for (const key of URL_FIELDS) {
+    const v = fm[key];
+    if (typeof v === "string" && /^https?:\/\//.test(v)) people.push({ role: `url:${key}`, url: v, color: BOB_COLOR.info });
+  }
+  const cap = (arr) => arr.slice(0, MAX_PER_QUADRANT);
+  const label = (k) => k && ENTITIES[k]?.label || "Note";
+  const stageOrStatus = String(fm.stage ?? fm.status ?? "").trim();
+  const summary = [
+    `# ${file.basename}`,
+    `**${label(focalKey || "")}**${stageOrStatus ? ` \xB7 ${stageOrStatus}` : ""}`,
+    "",
+    `- Evidence: ${evidence.length}`,
+    `- People & systems: ${people.length}`,
+    `- Outputs: ${outputs.length}`,
+    `- Risks / next actions: ${risks.length}`,
+    "",
+    "_Generated context surface_"
+  ].join("\n");
+  const spec = {
+    intent,
+    source: file.path,
+    focal: { file: file.path },
+    summary,
+    left: { label: `Evidence \xB7 ${evidence.length}`, items: cap(evidence) },
+    top: { label: `People & Systems \xB7 ${people.length}`, color: BOB_COLOR.info, items: cap(people) },
+    right: { label: `Outputs \xB7 ${outputs.length}`, color: BOB_COLOR.healthy, items: cap(outputs) },
+    bottom: { label: `Risks & Next Actions \xB7 ${risks.length}`, color: BOB_COLOR.risk, items: cap(risks) },
+    edgeLabels: { left: "evidence", top: "informs", right: "produces", bottom: "at risk" }
+  };
+  const { data, ownedIds } = buildContextExplosion(spec);
+  const manifest = {
+    source_path: file.path,
+    source_type: sourceType,
+    template: "context-explosion",
+    generated_at: (/* @__PURE__ */ new Date()).toISOString(),
+    query_hash: shortHash(related.map((f) => f.path).sort().join(",") + "|" + people.length + outputs.length + risks.length + evidence.length),
+    bob_owned_node_ids: ownedIds
+  };
+  return { data, manifest };
 }
 var CANVAS_GENERATORS = [
   { id: "pipeline", label: "Pipeline board (deals by stage)", icon: "kanban", build: buildPipelineCanvasData }
@@ -30155,6 +30344,41 @@ var CadenceAppView = class extends obsidian17.ItemView {
     const file = await this.app.vault.create(path, serializeCanvas(data));
     new obsidian17.Notice(`Generated ${path}`);
     if (file instanceof obsidian17.TFile) await this.openCanvas(file);
+  }
+  // Entity Context Canvas — render the full operational context around a note
+  // (evidence · people/systems · outputs · risks) and open it inline. Regenerated
+  // deterministically into a stable path (regenerate-fresh) with a BOB manifest
+  // sidecar so a future increment can preserve manual edits.
+  async _generateContextCanvas(file) {
+    if (!(file instanceof obsidian17.TFile)) {
+      new obsidian17.Notice("No note to build context from.");
+      return;
+    }
+    let result = null;
+    try {
+      result = buildEntityContextCanvas(this.app, file);
+    } catch (err) {
+      new obsidian17.Notice(`Context canvas failed: ${err?.message || String(err)}`);
+      return;
+    }
+    if (!result || !result.data.nodes.length) {
+      new obsidian17.Notice("No context to render for this note.");
+      return;
+    }
+    const folder = "BOB Workspace/Canvases";
+    await ensureFolderSync(this.app, folder);
+    const name = `Context - ${file.basename}`.replace(/[\\/:*?"<>|]/g, "-");
+    const canvasPath = `${folder}/${name}.canvas`;
+    await this._writeOrModify(canvasPath, serializeCanvas(result.data));
+    await this._writeOrModify(`${folder}/${name}.canvas.bobmeta.json`, JSON.stringify(result.manifest, null, 2));
+    const f = this.app.vault.getAbstractFileByPath(canvasPath);
+    if (f instanceof obsidian17.TFile) await this.openCanvas(f);
+    else new obsidian17.Notice(`Context canvas written to ${canvasPath}`);
+  }
+  async _writeOrModify(path, content) {
+    const existing = this.app.vault.getAbstractFileByPath(path);
+    if (existing instanceof obsidian17.TFile) await this.app.vault.modify(existing, content);
+    else await this.app.vault.create(path, content);
   }
   async _uniqueCanvasPath(folder, base) {
     const safe = base.replace(/[\\/:*?"<>|]/g, "-");
@@ -34568,6 +34792,8 @@ ${snippet}` : "- No markdown content");
     const savedBadge = headRight.createSpan({ cls: "cad-detail-saved", text: "" });
     const openNote = headRight.createEl("button", { cls: "cad-btn", text: "Open as note" });
     openNote.addEventListener("click", () => this.app.workspace.openLinkText(file.path, "", false));
+    const ctxCanvas = headRight.createEl("button", { cls: "cad-btn", text: "Context canvas" });
+    ctxCanvas.addEventListener("click", () => void this._generateContextCanvas(file));
     const deleteBtn = headRight.createEl("button", { cls: "cad-btn cad-btn-danger", text: "Delete" });
     deleteBtn.addEventListener("click", async () => {
       if (!await confirmModal(this.app, `Delete this ${def.label.toLowerCase()}? This moves the file to trash.`, { title: "Delete", cta: "Delete" })) return;
@@ -38279,6 +38505,19 @@ var CadencePlugin = class extends obsidian20.Plugin {
       callback: () => this.openApp("misc.canvases")
     });
     this.addCommand({
+      id: "context-canvas",
+      name: "BOB: Context canvas for active note",
+      callback: async () => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file) {
+          new obsidian20.Notice("Open a note first \u2014 the context canvas is built around the active note.");
+          return;
+        }
+        const view = await this.openApp();
+        if (view && typeof view._generateContextCanvas === "function") await view._generateContextCanvas(file);
+      }
+    });
+    this.addCommand({
       id: "new-daily-entry",
       name: "New today entry (creates if missing)",
       callback: async () => {
@@ -38564,6 +38803,7 @@ var CadencePlugin = class extends obsidian20.Plugin {
       if (target === "planner.calendar") view.plannerAnchor = startOfDay(/* @__PURE__ */ new Date());
       await view.setMode(target);
     }
+    return view;
   }
   onunload() {
   }

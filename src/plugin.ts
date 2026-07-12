@@ -34,6 +34,7 @@ type AppViewLike = obsidian.View & {
   canvasFile?: obsidian.TFile | null;
   setMode?: (mode: string) => Promise<void>;
   render?: () => void;
+  _generateContextCanvas?: (file: obsidian.TFile) => Promise<void>;
 };
 
 /**
@@ -128,6 +129,16 @@ export class CadencePlugin extends obsidian.Plugin {
       id: 'open-canvases',
       name: 'Open BOB Workspace — Canvases',
       callback: () => this.openApp('misc.canvases'),
+    });
+    this.addCommand({
+      id: 'context-canvas',
+      name: 'BOB: Context canvas for active note',
+      callback: async () => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file) { new obsidian.Notice('Open a note first — the context canvas is built around the active note.'); return; }
+        const view = await this.openApp();
+        if (view && typeof view._generateContextCanvas === 'function') await view._generateContextCanvas(file);
+      },
     });
     this.addCommand({
       id: 'new-daily-entry',
@@ -452,6 +463,7 @@ export class CadencePlugin extends obsidian.Plugin {
       if (target === 'planner.calendar') view.plannerAnchor = startOfDay(new Date());
       await view.setMode(target);
     }
+    return view;
   }
 
   onunload() {
