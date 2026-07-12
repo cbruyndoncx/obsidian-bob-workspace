@@ -8,6 +8,7 @@ require('./template-bundle.test');
 require('./template-validate.test');
 require('./xlsx-bundle.test');
 require('./export-view-filter.test');
+require('./canvas.test');
 require('./widget-source.test');
 require('./workspace-config.test');
 require('./plugin-load.test');

@@ -25640,6 +25640,7 @@ var ENTITIES = {
   }
 };
 var BUILTIN_ENTITY_DEFAULTS = JSON.parse(JSON.stringify(ENTITIES));
+var DEAL_STAGES = ["lead", "qualified", "proposal", "negotiation", "won", "lost"];
 function dealStageField(def) {
   return def.stageField || "stage";
 }
@@ -25707,6 +25708,10 @@ function primaryField(def) {
 }
 function primaryFieldKey(def) {
   return primaryField(def)?.key || "";
+}
+function getDealStages(def) {
+  const sf = dealStageField(def);
+  return def.fields?.find((f) => f.key === sf)?.options || DEAL_STAGES;
 }
 function entityKeyFromFile(app, file) {
   if (!file) return null;
@@ -28702,6 +28707,64 @@ var HELP_TOPICS = {
   }
 };
 
+// src/canvas.ts
+var CARD_W = 260;
+var CARD_H = 80;
+var CARD_GAP = 14;
+var COL_PAD = 20;
+var COL_GAP = 48;
+var HEADER = 52;
+function buildBoardCanvas(columns) {
+  const nodes = [];
+  let seq = 0;
+  const nid = () => `n${++seq}`;
+  const colOuterW = CARD_W + COL_PAD * 2;
+  columns.forEach((col, ci) => {
+    const x = ci * (colOuterW + COL_GAP);
+    const count = col.cards.length;
+    const height = HEADER + COL_PAD + Math.max(count, 1) * (CARD_H + CARD_GAP);
+    const group = { id: nid(), type: "group", x, y: 0, width: colOuterW, height, label: `${col.label} \xB7 ${count}` };
+    if (col.color) group.color = col.color;
+    nodes.push(group);
+    col.cards.forEach((card, i) => {
+      const y = HEADER + COL_PAD + i * (CARD_H + CARD_GAP);
+      const base = { id: nid(), x: x + COL_PAD, y, width: CARD_W, height: CARD_H };
+      if (card.file) nodes.push({ ...base, type: "file", file: card.file });
+      else nodes.push({ ...base, type: "text", text: card.text || "" });
+    });
+  });
+  return { nodes, edges: [] };
+}
+function serializeCanvas(data) {
+  return JSON.stringify(data, null, 2);
+}
+function buildPipelineCanvasData(app) {
+  const def = ENTITIES.deal;
+  if (!def) return null;
+  const stageField = dealStageField(def);
+  const stages = getDealStages(def);
+  const buckets = /* @__PURE__ */ new Map();
+  stages.forEach((s) => buckets.set(s, []));
+  const unassigned = [];
+  for (const deal of listEntities(app, "deal")) {
+    const stage = String(deal.frontmatter?.[stageField] ?? "").trim();
+    const card = { file: deal.file.path };
+    const arr = buckets.get(stage);
+    if (arr) arr.push(card);
+    else unassigned.push(card);
+  }
+  const columns = stages.map((stage, i) => ({
+    label: stage,
+    color: String(i % 6 + 1),
+    cards: buckets.get(stage) || []
+  }));
+  if (unassigned.length) columns.push({ label: "Unassigned", cards: unassigned });
+  return buildBoardCanvas(columns);
+}
+var CANVAS_GENERATORS = [
+  { id: "pipeline", label: "Pipeline board (deals by stage)", icon: "kanban", build: buildPipelineCanvasData }
+];
+
 // src/modals/entity-create.ts
 var obsidian14 = __toESM(require("obsidian"));
 var CadenceEntityCreateModal = class extends obsidian14.Modal {
@@ -30032,7 +30095,12 @@ var CadenceAppView = class extends obsidian17.ItemView {
     this._renderPageHeader(
       root,
       "Canvases",
-      `${files.length} ${files.length === 1 ? "canvas" : "canvases"} in the vault \xB7 open full-page or in a tab`
+      `${files.length} ${files.length === 1 ? "canvas" : "canvases"} in the vault \xB7 open full-page or in a tab`,
+      (right) => {
+        const gen = right.createEl("button", { cls: "cad-btn cad-btn-small", text: "+ Generate" });
+        gen.addEventListener("click", (e) => this._openCanvasGenerateMenu(e));
+      },
+      { configuredActions: false }
     );
     if (!files.length) {
       const card = root.createDiv({ cls: "cad-dash-card" });
@@ -30054,6 +30122,42 @@ var CadenceAppView = class extends obsidian17.ItemView {
     };
     search.addEventListener("input", () => draw(search.value));
     draw("");
+  }
+  // Phase 2 — generate a canvas from vault data, then open it inline.
+  _openCanvasGenerateMenu(evt) {
+    const menu = new obsidian17.Menu();
+    for (const gen of CANVAS_GENERATORS) {
+      menu.addItem((item) => item.setTitle(gen.label).setIcon(gen.icon).onClick(() => void this._generateCanvas(gen.id)));
+    }
+    menu.showAtMouseEvent(evt);
+  }
+  async _generateCanvas(generatorId) {
+    const gen = CANVAS_GENERATORS.find((g) => g.id === generatorId);
+    if (!gen) return;
+    let data = null;
+    try {
+      data = gen.build(this.app);
+    } catch (err) {
+      new obsidian17.Notice(`Canvas generation failed: ${err?.message || String(err)}`);
+      return;
+    }
+    if (!data || !data.nodes.length) {
+      new obsidian17.Notice("Nothing to generate \u2014 no matching records found.");
+      return;
+    }
+    const folder = "BOB Workspace/Canvases";
+    await ensureFolderSync(this.app, folder);
+    const path = await this._uniqueCanvasPath(folder, `${gen.label.split(" (")[0]} ${ymd()}`);
+    const file = await this.app.vault.create(path, serializeCanvas(data));
+    new obsidian17.Notice(`Generated ${path}`);
+    if (file instanceof obsidian17.TFile) await this.openCanvas(file);
+  }
+  async _uniqueCanvasPath(folder, base) {
+    const safe = base.replace(/[\\/:*?"<>|]/g, "-");
+    let path = `${folder}/${safe}.canvas`;
+    let i = 2;
+    while (await this.app.vault.adapter.exists(path)) path = `${folder}/${safe} (${i++}).canvas`;
+    return path;
   }
   _renderCanvasRow(list, file) {
     const row = list.createDiv({ cls: "cad-canvas-row" });

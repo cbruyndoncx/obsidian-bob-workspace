@@ -1,5 +1,6 @@
 import { entityBasePath, entityBaseViewName } from '../bases-config';
 import { baseViewRendersInline, hasBaseValue, parseBaseFile, readBaseSummary } from '../bases-parse';
+import { CANVAS_GENERATORS, serializeCanvas } from '../canvas';
 import { BUILTIN_DASHBOARD_DEFAULTS, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
 import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
@@ -905,7 +906,11 @@ export class CadenceAppView extends obsidian.ItemView {
   renderCanvasLibrary(root: HTMLElement) {
     const files = this._scanCanvasFiles();
     this._renderPageHeader(root, 'Canvases',
-      `${files.length} ${files.length === 1 ? 'canvas' : 'canvases'} in the vault · open full-page or in a tab`);
+      `${files.length} ${files.length === 1 ? 'canvas' : 'canvases'} in the vault · open full-page or in a tab`,
+      (right) => {
+        const gen = right.createEl('button', { cls: 'cad-btn cad-btn-small', text: '+ Generate' });
+        gen.addEventListener('click', (e) => this._openCanvasGenerateMenu(e));
+      }, { configuredActions: false });
     if (!files.length) {
       const card = root.createDiv({ cls: 'cad-dash-card' });
       card.createDiv({ cls: 'cad-dash-card-body' })
@@ -924,6 +929,43 @@ export class CadenceAppView extends obsidian.ItemView {
     };
     search.addEventListener('input', () => draw(search.value));
     draw('');
+  }
+
+  // Phase 2 — generate a canvas from vault data, then open it inline.
+  _openCanvasGenerateMenu(evt: MouseEvent) {
+    const menu = new obsidian.Menu();
+    for (const gen of CANVAS_GENERATORS) {
+      menu.addItem((item) => item.setTitle(gen.label).setIcon(gen.icon).onClick(() => void this._generateCanvas(gen.id)));
+    }
+    menu.showAtMouseEvent(evt);
+  }
+
+  async _generateCanvas(generatorId: string) {
+    const gen = CANVAS_GENERATORS.find((g) => g.id === generatorId);
+    if (!gen) return;
+    let data = null;
+    try { data = gen.build(this.app); } catch (err) {
+      new obsidian.Notice(`Canvas generation failed: ${(err as Error)?.message || String(err)}`);
+      return;
+    }
+    if (!data || !data.nodes.length) {
+      new obsidian.Notice('Nothing to generate — no matching records found.');
+      return;
+    }
+    const folder = 'BOB Workspace/Canvases';
+    await ensureFolderSync(this.app, folder);
+    const path = await this._uniqueCanvasPath(folder, `${gen.label.split(' (')[0]} ${ymd()}`);
+    const file = await this.app.vault.create(path, serializeCanvas(data));
+    new obsidian.Notice(`Generated ${path}`);
+    if (file instanceof obsidian.TFile) await this.openCanvas(file);
+  }
+
+  async _uniqueCanvasPath(folder: string, base: string): Promise<string> {
+    const safe = base.replace(/[\\/:*?"<>|]/g, '-');
+    let path = `${folder}/${safe}.canvas`;
+    let i = 2;
+    while (await this.app.vault.adapter.exists(path)) path = `${folder}/${safe} (${i++}).canvas`;
+    return path;
   }
 
   _renderCanvasRow(list: HTMLElement, file: obsidian.TFile) {

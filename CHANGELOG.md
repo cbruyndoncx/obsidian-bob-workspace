@@ -4,6 +4,20 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.40] — 2026-07-13
+
+Canvas Phase 2 (start) — generate canvases from vault data.
+
+### Added
+- **Generate canvas** — the Canvases surface gains a **+ Generate** menu that
+  writes a JSON Canvas from vault data and opens it inline in the interactive
+  host. First generator: **Pipeline board** — deals grouped into columns by
+  stage, each card a live `file` node linking to the deal note. New `src/canvas.ts`
+  is a JSON Canvas writer (open MIT spec — structured file writes, no unstable
+  API); the board layout is pure and unit-tested. Output lands in
+  `BOB Workspace/Canvases/` with a unique name. More generators (project/
+  value-chain maps) and an AI path follow.
+
 ## [0.14.4-bob.39] — 2026-07-12
 
 ### Changed
@@ -224,6 +238,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.40]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.40
 [0.14.4-bob.39]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.39
 [0.14.4-bob.38]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.38
 [0.14.4-bob.37]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.37
