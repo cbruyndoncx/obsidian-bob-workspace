@@ -4,6 +4,25 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.37] — 2026-07-12
+
+Canvas support, Phase 1 — reach and view Obsidian canvases inside BOB.
+
+### Added
+- **Canvas library** (`misc.canvases`) — a built-in surface listing every
+  `.canvas` file in the vault (search + folder/modified metadata), with **Open**
+  (full-page inside BOB) and **Open in tab** actions. Canvases were previously
+  unreachable from BOB (the entity scanner is markdown-only and Bases can't
+  index canvases); this makes every canvas — hand-made or generated —
+  reachable. In the built-in nav and the shipped BOB template's misc group, plus
+  a command **"Open BOB Workspace — Canvases"** (always reachable regardless of
+  nav config).
+- **Full-page canvas render** — opening a canvas mounts it live inside the BOB
+  content pane via the embed registry (the same mechanism as live Base views),
+  with a **Pop out to edit** action (native canvas leaf) and a graceful
+  open-in-Obsidian fallback. Viewer-first by design; in-shell editing is out of
+  Phase 1 scope. Canvas generation is a planned Phase 2.
+
 ## [0.14.4-bob.36] — 2026-07-11
 
 ### Fixed
@@ -182,6 +201,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.37]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.37
 [0.14.4-bob.36]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.36
 [0.14.4-bob.35]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.35
 [0.14.4-bob.34]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.34
