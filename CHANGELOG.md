@@ -4,6 +4,17 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.43] — 2026-07-13
+
+### Added
+- **Process Execution Canvas** — any entity list whose type has a stage/status
+  lifecycle gains a **Process canvas** action that renders a left-to-right
+  *runway*: one lane (group) per stage with the records currently in it, flow
+  edges between consecutive lanes, blockers flagged red, and a summary node
+  (record/stage counts, blocked total). Turns a static list into a live
+  operating surface; opens inline in the interactive host. Generalises across
+  deals, tasks, audit findings, and any lifecycle entity.
+
 ## [0.14.4-bob.42] — 2026-07-13
 
 Canvas as a **context-surface render target** (Entity Context Canvas, v1).
@@ -271,6 +282,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.43]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.43
 [0.14.4-bob.42]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.42
 [0.14.4-bob.41]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.41
 [0.14.4-bob.40]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.40

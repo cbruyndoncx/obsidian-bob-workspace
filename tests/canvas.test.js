@@ -84,4 +84,39 @@ const ctx = loadMainFunctions(
   assert.deepStrictEqual(again.ownedIds.slice().sort(), ownedIds.slice().sort(), 'regeneration yields identical ids');
 })();
 
+// Process runway + lifecycle detection.
+const proc = loadMainFunctions(
+  ['buildProcessRunway', 'entityLifecycle'],
+  { CARD_W: 260, CARD_H: 80, CARD_GAP: 14, COL_PAD: 20, COL_GAP: 48, HEADER: 52,
+    CARD_W_R: 300, CARD_H_R: 64, COL_GAP_R: 64, RUNWAY_SUMMARY_H: 150,
+    BOB_COLOR: { risk: '1', attention: '2', pending: '3', healthy: '4', info: '5', ai: '6' } },
+);
+
+(() => {
+  // lifecycle detection: an enum stage field is a lifecycle; a plain entity is not
+  const lc = proc.entityLifecycle({ fields: [{ key: 'stage', type: 'enum', options: ['a', 'b', 'c'] }] });
+  assert.strictEqual(lc.field, 'stage', 'enum stage field → lifecycle field');
+  assert.strictEqual(lc.stages.join(','), 'a,b,c', 'lifecycle stages come from options');
+  assert.strictEqual(proc.entityLifecycle({ fields: [{ key: 'name', type: 'text' }] }), null, 'no enum stage/status → null');
+  assert.strictEqual(proc.entityLifecycle({ stageField: 'phase', fields: [{ key: 'phase', type: 'enum', options: ['x'] }] }).field, 'phase', 'explicit stageField honoured');
+
+  const runway = proc.buildProcessRunway([
+    { label: 'Intake', color: '1', cards: [{ file: 'a.md' }, { file: 'b.md', color: '1' }] },
+    { label: 'Review', color: '2', cards: [{ file: 'c.md' }] },
+    { label: 'Done', color: '4', cards: [] },
+  ], '# Process');
+
+  const groups = runway.nodes.filter((n) => n.type === 'group');
+  assert.strictEqual(groups.length, 3, 'one lane per stage');
+  assert.ok(/1\. Intake/.test(groups[0].label), 'lanes are numbered');
+  // flow edges between consecutive lanes (3 stages → 2 edges)
+  assert.strictEqual(runway.edges.length, 2, 'flow edges connect consecutive lanes');
+  assert.ok(runway.edges.every((e) => e.fromSide === 'right' && e.toSide === 'left'), 'flow runs left→right');
+  // summary present, lanes advance in x
+  assert.ok(runway.nodes.some((n) => n.type === 'text' && /Process/.test(n.text)), 'summary node present');
+  assert.ok(groups[1].x > groups[0].x && groups[2].x > groups[1].x, 'lanes advance left→right');
+  // blocked card keeps its red color
+  assert.ok(runway.nodes.some((n) => n.type === 'file' && n.file === 'b.md' && n.color === '1'), 'blocked card flagged red');
+})();
+
 console.log('canvas.test.js: ok');

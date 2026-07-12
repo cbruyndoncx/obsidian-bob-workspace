@@ -1,6 +1,6 @@
 import { entityBasePath, entityBaseViewName } from '../bases-config';
 import { baseViewRendersInline, hasBaseValue, parseBaseFile, readBaseSummary } from '../bases-parse';
-import { CANVAS_GENERATORS, buildEntityContextCanvas, serializeCanvas } from '../canvas';
+import { CANVAS_GENERATORS, buildEntityContextCanvas, buildProcessCanvas, entityLifecycle, serializeCanvas } from '../canvas';
 import { BUILTIN_DASHBOARD_DEFAULTS, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
 import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
@@ -986,6 +986,27 @@ export class CadenceAppView extends obsidian.ItemView {
     const f = this.app.vault.getAbstractFileByPath(canvasPath);
     if (f instanceof obsidian.TFile) await this.openCanvas(f);
     else new obsidian.Notice(`Context canvas written to ${canvasPath}`);
+  }
+
+  // Process Execution Canvas — render an entity type's lifecycle as a left-to-
+  // right runway (records by stage, blockers flagged), opened inline.
+  async _generateProcessCanvas(entityKey: string) {
+    const def = ENTITIES[entityKey];
+    if (!def) return;
+    let data = null;
+    try { data = buildProcessCanvas(this.app, entityKey); } catch (err) {
+      new obsidian.Notice(`Process canvas failed: ${(err as Error)?.message || String(err)}`);
+      return;
+    }
+    if (!data || !data.nodes.length) { new obsidian.Notice('This type has no stage/status lifecycle to render.'); return; }
+    const folder = 'BOB Workspace/Canvases';
+    await ensureFolderSync(this.app, folder);
+    const name = `Process - ${def.plural}`.replace(/[\\/:*?"<>|]/g, '-');
+    const canvasPath = `${folder}/${name}.canvas`;
+    await this._writeOrModify(canvasPath, serializeCanvas(data));
+    const f = this.app.vault.getAbstractFileByPath(canvasPath);
+    if (f instanceof obsidian.TFile) await this.openCanvas(f);
+    else new obsidian.Notice(`Process canvas written to ${canvasPath}`);
   }
 
   async _writeOrModify(path: string, content: string) {
@@ -5544,6 +5565,10 @@ export class CadenceAppView extends obsidian.ItemView {
       if (def.externalBaseView) {
         const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
         openBaseBtn.addEventListener('click', () => this._openEntityBase(entityKey));
+      }
+      if (entityLifecycle(def)) {
+        const procBtn = right.createEl('button', { cls: 'cad-btn', text: 'Process canvas' });
+        procBtn.addEventListener('click', () => void this._generateProcessCanvas(entityKey));
       }
       if (!ctx.hasConfiguredActions) {
         const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });

@@ -28950,6 +28950,82 @@ function buildEntityContextCanvas(app, file) {
   };
   return { data, manifest };
 }
+var CARD_W_R = 300;
+var CARD_H_R = 64;
+var COL_GAP_R = 64;
+var RUNWAY_SUMMARY_H = 150;
+function buildProcessRunway(stages, summary = "") {
+  const nodes = [];
+  const edges = [];
+  let seq = 0;
+  const nid = () => `n${++seq}`;
+  const colOuterW = CARD_W_R + COL_PAD * 2;
+  const topOffset = summary ? RUNWAY_SUMMARY_H + 48 : 0;
+  const groupIds = [];
+  stages.forEach((st, ci) => {
+    const x = ci * (colOuterW + COL_GAP_R);
+    const count = st.cards.length;
+    const height = HEADER + COL_PAD + Math.max(count, 1) * (CARD_H_R + CARD_GAP) + COL_PAD;
+    const gid = nid();
+    const g = { id: gid, type: "group", x, y: topOffset, width: colOuterW, height, label: `${ci + 1}. ${st.label} \xB7 ${count}` };
+    if (st.color) g.color = st.color;
+    nodes.push(g);
+    groupIds.push(gid);
+    st.cards.forEach((c, i) => {
+      const y = topOffset + HEADER + COL_PAD + i * (CARD_H_R + CARD_GAP);
+      const base = { id: nid(), x: x + COL_PAD, y, width: CARD_W_R, height: CARD_H_R };
+      if (c.color) base.color = c.color;
+      nodes.push(c.file ? { ...base, type: "file", file: c.file } : { ...base, type: "text", text: c.text || "" });
+    });
+  });
+  for (let i = 0; i < groupIds.length - 1; i++) {
+    edges.push({ id: nid(), fromNode: groupIds[i], toNode: groupIds[i + 1], fromSide: "right", toSide: "left", label: "\u2192" });
+  }
+  if (summary) {
+    const totalW = stages.length * colOuterW + Math.max(stages.length - 1, 0) * COL_GAP_R;
+    nodes.push({ id: nid(), type: "text", x: 0, y: 0, width: Math.min(Math.max(totalW, 420), 820), height: RUNWAY_SUMMARY_H, color: BOB_COLOR.ai, text: summary });
+  }
+  return { nodes, edges };
+}
+function entityLifecycle(def) {
+  if (!def) return null;
+  const enumField = (key) => def.fields?.find((f) => f.key === key && f.type === "enum" && Array.isArray(f.options) && f.options.length);
+  const field = def.stageField || (enumField("stage") ? "stage" : enumField("status") ? "status" : "");
+  if (!field) return null;
+  const stages = def.fields?.find((f) => f.key === field)?.options || [];
+  return stages.length ? { field, stages } : null;
+}
+function buildProcessCanvas(app, entityKey) {
+  const def = ENTITIES[entityKey];
+  const lc = entityLifecycle(def);
+  if (!def || !lc) return null;
+  const buckets = /* @__PURE__ */ new Map();
+  lc.stages.forEach((s) => buckets.set(s, []));
+  const unstaged = [];
+  let blocked = 0;
+  let total = 0;
+  for (const rec of listEntities(app, entityKey)) {
+    total++;
+    const fm = rec.frontmatter || {};
+    const stage = String(fm[lc.field] ?? "").trim();
+    const isBlocked = fm.blocked === true || fm.on_hold === true || /blocked|stuck|on hold|escalat/i.test(String(fm.status ?? "") + " " + String(fm.flag ?? ""));
+    if (isBlocked) blocked++;
+    const card = { file: rec.file.path, ...isBlocked ? { color: BOB_COLOR.risk } : {} };
+    const arr = buckets.get(stage);
+    if (arr) arr.push(card);
+    else unstaged.push(card);
+  }
+  const stages = lc.stages.map((s, i) => ({ label: s, color: String(i % 6 + 1), cards: buckets.get(s) || [] }));
+  if (unstaged.length) stages.push({ label: "Unstaged", color: BOB_COLOR.pending, cards: unstaged });
+  const summary = [
+    `# ${def.plural} \u2014 process runway`,
+    "",
+    `${total} records across ${lc.stages.length} stages \xB7 ${blocked} blocked`,
+    "",
+    `_Lifecycle field: \`${lc.field}\`_`
+  ].join("\n");
+  return buildProcessRunway(stages, summary);
+}
 var CANVAS_GENERATORS = [
   { id: "pipeline", label: "Pipeline board (deals by stage)", icon: "kanban", build: buildPipelineCanvasData }
 ];
@@ -30374,6 +30450,31 @@ var CadenceAppView = class extends obsidian17.ItemView {
     const f = this.app.vault.getAbstractFileByPath(canvasPath);
     if (f instanceof obsidian17.TFile) await this.openCanvas(f);
     else new obsidian17.Notice(`Context canvas written to ${canvasPath}`);
+  }
+  // Process Execution Canvas — render an entity type's lifecycle as a left-to-
+  // right runway (records by stage, blockers flagged), opened inline.
+  async _generateProcessCanvas(entityKey) {
+    const def = ENTITIES[entityKey];
+    if (!def) return;
+    let data = null;
+    try {
+      data = buildProcessCanvas(this.app, entityKey);
+    } catch (err) {
+      new obsidian17.Notice(`Process canvas failed: ${err?.message || String(err)}`);
+      return;
+    }
+    if (!data || !data.nodes.length) {
+      new obsidian17.Notice("This type has no stage/status lifecycle to render.");
+      return;
+    }
+    const folder = "BOB Workspace/Canvases";
+    await ensureFolderSync(this.app, folder);
+    const name = `Process - ${def.plural}`.replace(/[\\/:*?"<>|]/g, "-");
+    const canvasPath = `${folder}/${name}.canvas`;
+    await this._writeOrModify(canvasPath, serializeCanvas(data));
+    const f = this.app.vault.getAbstractFileByPath(canvasPath);
+    if (f instanceof obsidian17.TFile) await this.openCanvas(f);
+    else new obsidian17.Notice(`Process canvas written to ${canvasPath}`);
   }
   async _writeOrModify(path, content) {
     const existing = this.app.vault.getAbstractFileByPath(path);
@@ -34742,6 +34843,10 @@ ${snippet}` : "- No markdown content");
       if (def.externalBaseView) {
         const openBaseBtn = right.createEl("button", { cls: "cad-btn", text: "Open Base" });
         openBaseBtn.addEventListener("click", () => this._openEntityBase(entityKey));
+      }
+      if (entityLifecycle(def)) {
+        const procBtn = right.createEl("button", { cls: "cad-btn", text: "Process canvas" });
+        procBtn.addEventListener("click", () => void this._generateProcessCanvas(entityKey));
       }
       if (!ctx.hasConfiguredActions) {
         const btn = right.createEl("button", { cls: "cad-btn primary", text: `+ New ${def.label}` });
