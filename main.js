@@ -28950,6 +28950,75 @@ function buildEntityContextCanvas(app, file) {
   };
   return { data, manifest };
 }
+function fmArray(v) {
+  if (Array.isArray(v)) return v.map((x) => String(x)).filter(Boolean);
+  if (typeof v === "string" && v.trim()) return v.split(",").map((s) => s.trim()).filter(Boolean);
+  return [];
+}
+function isAgentRunFile(app, file) {
+  if (entityKeyFromFile(app, file) === "ai-session-log") return true;
+  const fm = app.metadataCache.getFileCache(file)?.frontmatter || {};
+  return !!(fm.agents_used || fm.skills_invoked || fm.session_ids || fm.primary_agent);
+}
+function buildAgentAuditCanvas(app, file) {
+  if (!file) return null;
+  const intent = "agent-audit";
+  const fm = app.metadataCache.getFileCache(file)?.frontmatter || {};
+  const top = [];
+  if (fm.date) top.push({ role: "date", text: `\u{1F4C5} ${fm.date}`, color: BOB_COLOR.info });
+  if (fm.bucket) top.push({ role: "bucket", text: `\u{1F5C2} ${fm.bucket}`, color: BOB_COLOR.info });
+  if (fm.primary_agent) top.push({ role: "agent", text: `\u{1F916} ${fm.primary_agent}`, color: BOB_COLOR.info });
+  if (fm.client_id) top.push({ role: "client", text: `\u{1F464} ${fm.client_id}`, color: BOB_COLOR.info });
+  const left = [];
+  fmArray(fm.agents_used).forEach((a, i) => left.push({ role: `agent:${i}`, target: a, text: `agent \xB7 ${a}` }));
+  fmArray(fm.skills_invoked).forEach((s, i) => left.push({ role: `skill:${i}`, target: s, text: `skill \xB7 ${s}` }));
+  const right = [];
+  const outPaths = [...fmArray(fm.deliverable_paths), ...fmArray(fm.files_created)];
+  const seen = /* @__PURE__ */ new Set();
+  for (const p of outPaths) {
+    if (seen.has(p)) continue;
+    seen.add(p);
+    const resolved = app.vault.getAbstractFileByPath(p);
+    if (resolved) right.push({ role: `out:${right.length}`, target: p, file: p, color: BOB_COLOR.healthy });
+    else right.push({ role: `out:${right.length}`, target: p, text: `\u{1F4C4} ${p}`, color: BOB_COLOR.healthy });
+  }
+  const bottom = [];
+  if (fm.total_minutes != null) bottom.push({ role: "minutes", text: `\u23F1 ${fm.total_minutes} min`, color: BOB_COLOR.attention });
+  const tokens = (Number(fm.tokens_in_est) || 0) + (Number(fm.tokens_out_est) || 0);
+  if (tokens) bottom.push({ role: "tokens", text: `\u{1F522} ${tokens} tokens`, color: BOB_COLOR.attention });
+  if (fm.estimated_cost_usd != null) bottom.push({ role: "cost", text: `\u{1F4B2} $${fm.estimated_cost_usd}`, color: BOB_COLOR.attention });
+  if (fm.bucket === "unattributed" || fm.has_deliverable === false) bottom.push({ role: "exception", text: "\u26A0 unattributed / no deliverable", color: BOB_COLOR.risk });
+  const summary = [
+    `# ${file.basename}`,
+    `**Agent audit**${fm.date ? ` \xB7 ${fm.date}` : ""}`,
+    "",
+    `Primary: ${fm.primary_agent || "\u2014"} \xB7 ${fm.sessions ?? 0} session(s) \xB7 $${fm.estimated_cost_usd ?? 0}`,
+    "",
+    `- Agents & skills: ${left.length}`,
+    `- Outputs: ${right.length}`
+  ].join("\n");
+  const spec = {
+    intent,
+    source: file.path,
+    focal: { file: file.path },
+    summary,
+    left: { label: `Agents & Skills \xB7 ${left.length}`, color: BOB_COLOR.info, items: left.slice(0, MAX_PER_QUADRANT) },
+    top: { label: "Context & Inputs", color: BOB_COLOR.info, items: top },
+    right: { label: `Outputs \xB7 ${right.length}`, color: BOB_COLOR.healthy, items: right.slice(0, MAX_PER_QUADRANT) },
+    bottom: { label: "Cost & Exceptions", color: BOB_COLOR.attention, items: bottom },
+    edgeLabels: { left: "used", top: "context", right: "produced", bottom: "cost" }
+  };
+  const { data, ownedIds } = buildContextExplosion(spec);
+  const manifest = {
+    source_path: file.path,
+    source_type: "agent_run",
+    template: "agent-audit",
+    generated_at: (/* @__PURE__ */ new Date()).toISOString(),
+    query_hash: shortHash(outPaths.join(",") + "|" + left.length + "|" + bottom.length),
+    bob_owned_node_ids: ownedIds
+  };
+  return { data, manifest };
+}
 var CARD_W_R = 300;
 var CARD_H_R = 64;
 var COL_GAP_R = 64;
@@ -30430,9 +30499,10 @@ var CadenceAppView = class extends obsidian17.ItemView {
       new obsidian17.Notice("No note to build context from.");
       return;
     }
+    const isAgentRun = isAgentRunFile(this.app, file);
     let result = null;
     try {
-      result = buildEntityContextCanvas(this.app, file);
+      result = isAgentRun ? buildAgentAuditCanvas(this.app, file) : buildEntityContextCanvas(this.app, file);
     } catch (err) {
       new obsidian17.Notice(`Context canvas failed: ${err?.message || String(err)}`);
       return;
@@ -30443,7 +30513,8 @@ var CadenceAppView = class extends obsidian17.ItemView {
     }
     const folder = "BOB Workspace/Canvases";
     await ensureFolderSync(this.app, folder);
-    const name = `Context - ${file.basename}`.replace(/[\\/:*?"<>|]/g, "-");
+    const prefix = isAgentRun ? "Agent audit" : "Context";
+    const name = `${prefix} - ${file.basename}`.replace(/[\\/:*?"<>|]/g, "-");
     const canvasPath = `${folder}/${name}.canvas`;
     await this._writeOrModify(canvasPath, serializeCanvas(result.data));
     await this._writeOrModify(`${folder}/${name}.canvas.bobmeta.json`, JSON.stringify(result.manifest, null, 2));

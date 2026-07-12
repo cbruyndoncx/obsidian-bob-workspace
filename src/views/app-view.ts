@@ -1,6 +1,6 @@
 import { entityBasePath, entityBaseViewName } from '../bases-config';
 import { baseViewRendersInline, hasBaseValue, parseBaseFile, readBaseSummary } from '../bases-parse';
-import { CANVAS_GENERATORS, buildEntityContextCanvas, buildProcessCanvas, entityLifecycle, serializeCanvas } from '../canvas';
+import { CANVAS_GENERATORS, buildAgentAuditCanvas, buildEntityContextCanvas, buildProcessCanvas, entityLifecycle, isAgentRunFile, serializeCanvas } from '../canvas';
 import { BUILTIN_DASHBOARD_DEFAULTS, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
 import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
@@ -971,15 +971,21 @@ export class CadenceAppView extends obsidian.ItemView {
   // sidecar so a future increment can preserve manual edits.
   async _generateContextCanvas(file: obsidian.TFile) {
     if (!(file instanceof obsidian.TFile)) { new obsidian.Notice('No note to build context from.'); return; }
+    // Agent-run notes (ai-session-log / agent signals) get the Agent Audit
+    // surface; everything else gets the Entity Context surface.
+    const isAgentRun = isAgentRunFile(this.app, file);
     let result = null;
-    try { result = buildEntityContextCanvas(this.app, file); } catch (err) {
+    try {
+      result = isAgentRun ? buildAgentAuditCanvas(this.app, file) : buildEntityContextCanvas(this.app, file);
+    } catch (err) {
       new obsidian.Notice(`Context canvas failed: ${(err as Error)?.message || String(err)}`);
       return;
     }
     if (!result || !result.data.nodes.length) { new obsidian.Notice('No context to render for this note.'); return; }
     const folder = 'BOB Workspace/Canvases';
     await ensureFolderSync(this.app, folder);
-    const name = `Context - ${file.basename}`.replace(/[\\/:*?"<>|]/g, '-');
+    const prefix = isAgentRun ? 'Agent audit' : 'Context';
+    const name = `${prefix} - ${file.basename}`.replace(/[\\/:*?"<>|]/g, '-');
     const canvasPath = `${folder}/${name}.canvas`;
     await this._writeOrModify(canvasPath, serializeCanvas(result.data));
     await this._writeOrModify(`${folder}/${name}.canvas.bobmeta.json`, JSON.stringify(result.manifest, null, 2));

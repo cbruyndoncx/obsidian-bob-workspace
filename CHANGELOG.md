@@ -4,6 +4,19 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.44] — 2026-07-13
+
+### Added
+- **Agent Audit Canvas** — agent-run notes (the `ai-session-log` type, or any
+  note with agent/session signals) render as an audit surface: the run at
+  centre, **context & inputs** (date, bucket, primary agent, client) top,
+  **agents & skills used** left, **outputs/deliverables produced** right (live
+  `file` nodes linking to the actual deliverables), and **cost & exceptions**
+  (minutes, tokens, $ cost, unattributed/no-deliverable flag) bottom. The
+  existing **Context canvas** entry (entity detail button / active-note command)
+  auto-routes to this surface for agent runs and to the Entity Context surface
+  otherwise.
+
 ## [0.14.4-bob.43] — 2026-07-13
 
 ### Added
@@ -282,6 +295,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.44]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.44
 [0.14.4-bob.43]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.43
 [0.14.4-bob.42]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.42
 [0.14.4-bob.41]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.41

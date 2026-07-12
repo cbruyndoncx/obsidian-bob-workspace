@@ -301,6 +301,89 @@ export function buildEntityContextCanvas(app: App, file: TFile): { data: CanvasD
   return { data, manifest };
 }
 
+/* ─────────────────── Agent Audit Canvas (agent runs) ────────────────────── */
+
+function fmArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map((x) => String(x)).filter(Boolean);
+  if (typeof v === 'string' && v.trim()) return v.split(',').map((s) => s.trim()).filter(Boolean);
+  return [];
+}
+
+/** Whether a note looks like an AI/agent run — the `ai-session-log` type or any
+ *  note carrying agent/session signals. */
+export function isAgentRunFile(app: App, file: TFile): boolean {
+  if (entityKeyFromFile(app, file) === 'ai-session-log') return true;
+  const fm = (app.metadataCache.getFileCache(file)?.frontmatter || {}) as Record<string, unknown>;
+  return !!(fm.agents_used || fm.skills_invoked || fm.session_ids || fm.primary_agent);
+}
+
+/** Agent Audit Canvas: the run at centre; context/inputs (top), agents & skills
+ *  used (left), outputs/deliverables produced (right, live file nodes), and
+ *  cost / exceptions (bottom). */
+export function buildAgentAuditCanvas(app: App, file: TFile): { data: CanvasData; manifest: CanvasManifest } | null {
+  if (!file) return null;
+  const intent = 'agent-audit';
+  const fm = (app.metadataCache.getFileCache(file)?.frontmatter || {}) as Record<string, unknown>;
+
+  const top: ContextItem[] = [];
+  if (fm.date) top.push({ role: 'date', text: `📅 ${fm.date}`, color: BOB_COLOR.info });
+  if (fm.bucket) top.push({ role: 'bucket', text: `🗂 ${fm.bucket}`, color: BOB_COLOR.info });
+  if (fm.primary_agent) top.push({ role: 'agent', text: `🤖 ${fm.primary_agent}`, color: BOB_COLOR.info });
+  if (fm.client_id) top.push({ role: 'client', text: `👤 ${fm.client_id}`, color: BOB_COLOR.info });
+
+  const left: ContextItem[] = [];
+  fmArray(fm.agents_used).forEach((a, i) => left.push({ role: `agent:${i}`, target: a, text: `agent · ${a}` }));
+  fmArray(fm.skills_invoked).forEach((s, i) => left.push({ role: `skill:${i}`, target: s, text: `skill · ${s}` }));
+
+  const right: ContextItem[] = [];
+  const outPaths = [...fmArray(fm.deliverable_paths), ...fmArray(fm.files_created)];
+  const seen = new Set<string>();
+  for (const p of outPaths) {
+    if (seen.has(p)) continue; seen.add(p);
+    const resolved = app.vault.getAbstractFileByPath(p);
+    if (resolved) right.push({ role: `out:${right.length}`, target: p, file: p, color: BOB_COLOR.healthy });
+    else right.push({ role: `out:${right.length}`, target: p, text: `📄 ${p}`, color: BOB_COLOR.healthy });
+  }
+
+  const bottom: ContextItem[] = [];
+  if (fm.total_minutes != null) bottom.push({ role: 'minutes', text: `⏱ ${fm.total_minutes} min`, color: BOB_COLOR.attention });
+  const tokens = (Number(fm.tokens_in_est) || 0) + (Number(fm.tokens_out_est) || 0);
+  if (tokens) bottom.push({ role: 'tokens', text: `🔢 ${tokens} tokens`, color: BOB_COLOR.attention });
+  if (fm.estimated_cost_usd != null) bottom.push({ role: 'cost', text: `💲 $${fm.estimated_cost_usd}`, color: BOB_COLOR.attention });
+  if (fm.bucket === 'unattributed' || fm.has_deliverable === false) bottom.push({ role: 'exception', text: '⚠ unattributed / no deliverable', color: BOB_COLOR.risk });
+
+  const summary = [
+    `# ${file.basename}`,
+    `**Agent audit**${fm.date ? ` · ${fm.date}` : ''}`,
+    '',
+    `Primary: ${fm.primary_agent || '—'} · ${fm.sessions ?? 0} session(s) · $${fm.estimated_cost_usd ?? 0}`,
+    '',
+    `- Agents & skills: ${left.length}`,
+    `- Outputs: ${right.length}`,
+  ].join('\n');
+
+  const spec: ContextSpec = {
+    intent, source: file.path,
+    focal: { file: file.path },
+    summary,
+    left: { label: `Agents & Skills · ${left.length}`, color: BOB_COLOR.info, items: left.slice(0, MAX_PER_QUADRANT) },
+    top: { label: 'Context & Inputs', color: BOB_COLOR.info, items: top },
+    right: { label: `Outputs · ${right.length}`, color: BOB_COLOR.healthy, items: right.slice(0, MAX_PER_QUADRANT) },
+    bottom: { label: 'Cost & Exceptions', color: BOB_COLOR.attention, items: bottom },
+    edgeLabels: { left: 'used', top: 'context', right: 'produced', bottom: 'cost' },
+  };
+  const { data, ownedIds } = buildContextExplosion(spec);
+  const manifest: CanvasManifest = {
+    source_path: file.path,
+    source_type: 'agent_run',
+    template: 'agent-audit',
+    generated_at: new Date().toISOString(),
+    query_hash: shortHash(outPaths.join(',') + '|' + left.length + '|' + bottom.length),
+    bob_owned_node_ids: ownedIds,
+  };
+  return { data, manifest };
+}
+
 /* ─────────────────── Process Execution Canvas (runway) ──────────────────── */
 
 const CARD_W_R = 300, CARD_H_R = 64, COL_GAP_R = 64, RUNWAY_SUMMARY_H = 150;
