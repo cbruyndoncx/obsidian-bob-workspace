@@ -363,6 +363,12 @@
             "desc": "Test surface for live Base dashboard widgets and configured Base shortcuts."
           },
           {
+            "id": "misc.canvases",
+            "label": "Canvases",
+            "icon": "layout-dashboard",
+            "desc": "Browse and open every Obsidian canvas in the vault — full-page inside BOB or in a tab."
+          },
+          {
             "id": "settings",
             "label": "Settings",
             "icon": "settings-2",

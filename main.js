@@ -12134,6 +12134,12 @@ var workspace_bob_default = {
             desc: "Test surface for live Base dashboard widgets and configured Base shortcuts."
           },
           {
+            id: "misc.canvases",
+            label: "Canvases",
+            icon: "layout-dashboard",
+            desc: "Browse and open every Obsidian canvas in the vault \u2014 full-page inside BOB or in a tab."
+          },
+          {
             id: "settings",
             label: "Settings",
             icon: "settings-2",
@@ -22678,6 +22684,7 @@ var BUILTIN_NAV_GROUPS = [
       { id: "team", label: "Team", icon: "user-cog", desc: "Team members, roles, seats \u2014 admin view of your BOB Workspace." },
       { id: "settings", label: "Settings", icon: "settings-2", desc: "BOB Workspace settings \u2014 folders, headings, week start, API connection." },
       { id: "misc.dashboard-editor", label: "Surface Designer", icon: "layout-panel-left", desc: "Customize dashboard layouts, reports and widgets \u2014 live preview updates as you type." },
+      { id: "misc.canvases", label: "Canvases", icon: "layout-dashboard", desc: "Browse and open every Obsidian canvas in the vault \u2014 full-page inside BOB or in a tab." },
       { id: "misc.export", label: "Export", icon: "download", desc: "Export data to XLSX workbooks." },
       { id: "misc.import", label: "Import", icon: "upload", desc: "Import data from XLSX workbooks or CSV files." }
     ]
@@ -25761,6 +25768,7 @@ var BUILT_SURFACES = /* @__PURE__ */ new Set([
   "team",
   "settings",
   "misc.dashboard-editor",
+  "misc.canvases",
   "misc.export",
   "misc.import",
   "ai.playbooks",
@@ -29523,6 +29531,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
     this.plannerAnchor = startOfDay(/* @__PURE__ */ new Date());
     this.detailFile = null;
     this.detailEntityKey = null;
+    this.canvasFile = null;
     this.mobileNavOpen = false;
     this._navScrollTop = 0;
     this._renderSeq = 0;
@@ -29690,6 +29699,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
     }
     this.detailFile = null;
     this.detailEntityKey = null;
+    this.canvasFile = null;
     await this.render();
   }
   async toggleGroup(groupId) {
@@ -29945,6 +29955,10 @@ var CadenceAppView = class extends obsidian17.ItemView {
       await this.renderEntityDetail(content, this.detailEntityKey, this.detailFile);
       return;
     }
+    if (this.canvasFile) {
+      await this.renderCanvasSurface(content, this.canvasFile);
+      return;
+    }
     const configuredDashboard = resolveSurfaceConfig(this.mode);
     if (configuredDashboard) {
       await this.renderConfigDashboard(this.mode, content, { config: configuredDashboard });
@@ -29967,6 +29981,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
       "team": () => this.renderTeam(content),
       "settings": () => this.openSettingsTab(content),
       "misc.dashboard-editor": () => this.renderDashboardEditor(content),
+      "misc.canvases": () => this.renderCanvasLibrary(content),
       "misc.export": () => this.renderExport(content),
       "misc.import": () => this.renderImport(content),
       "client-work.overview": () => this.renderClientWorkWorkspace(content)
@@ -29995,6 +30010,133 @@ var CadenceAppView = class extends obsidian17.ItemView {
     }
     const meta = wrap.createDiv({ cls: "cad-soon-meta" });
     meta.setText("This surface is scaffolded but not yet built. Tell the team to flesh it out next.");
+  }
+  /* ── Canvas (Obsidian .canvas) surfaces ────────────────── */
+  // Every .canvas file in the vault (excluding template folders), newest first.
+  _scanCanvasFiles() {
+    return this.app.vault.getFiles().filter((f) => f.extension === "canvas" && !isTemplatePath(f.path)).sort((a, b) => (b.stat?.mtime || 0) - (a.stat?.mtime || 0));
+  }
+  // Open a canvas full-page inside the BOB shell (viewer; edit via "Pop out").
+  async openCanvas(file) {
+    if (!file) return;
+    this.detailFile = null;
+    this.detailEntityKey = null;
+    this.canvasFile = file;
+    await this.render();
+  }
+  // #2 — the canvas library: every canvas is reachable from BOB.
+  renderCanvasLibrary(root) {
+    const files = this._scanCanvasFiles();
+    this._renderPageHeader(
+      root,
+      "Canvases",
+      `${files.length} ${files.length === 1 ? "canvas" : "canvases"} in the vault \xB7 open full-page or in a tab`
+    );
+    if (!files.length) {
+      const card = root.createDiv({ cls: "cad-dash-card" });
+      card.createDiv({ cls: "cad-dash-card-body" }).createDiv({ cls: "cad-empty", text: "No canvases yet. Create one in Obsidian (New canvas) and it will appear here." });
+      return;
+    }
+    const wrap = root.createDiv({ cls: "cad-canvas-library" });
+    const search = wrap.createEl("input", { cls: "cad-canvas-search", type: "search", placeholder: "Search canvases\u2026" });
+    const list = wrap.createDiv({ cls: "cad-canvas-list" });
+    const draw = (q) => {
+      list.empty();
+      const needle = String(q || "").trim().toLowerCase();
+      const shown = needle ? files.filter((f) => f.path.toLowerCase().includes(needle)) : files;
+      if (!shown.length) {
+        list.createDiv({ cls: "cad-empty", text: "No canvases match." });
+        return;
+      }
+      shown.forEach((f) => this._renderCanvasRow(list, f));
+    };
+    search.addEventListener("input", () => draw(search.value));
+    draw("");
+  }
+  _renderCanvasRow(list, file) {
+    const row = list.createDiv({ cls: "cad-canvas-row" });
+    const icon = row.createDiv({ cls: "cad-canvas-row-icon" });
+    try {
+      obsidian17.setIcon(icon, "layout-dashboard");
+    } catch (_) {
+    }
+    const main = row.createDiv({ cls: "cad-canvas-row-main" });
+    main.createDiv({ cls: "cad-canvas-row-name", text: file.basename });
+    const folder = file.parent?.path && file.parent.path !== "/" ? file.parent.path : "";
+    const modified = file.stat?.mtime ? new Date(file.stat.mtime).toISOString().slice(0, 10) : "";
+    main.createDiv({ cls: "cad-canvas-row-meta", text: [folder, modified ? `modified ${modified}` : ""].filter(Boolean).join(" \xB7 ") });
+    row.addEventListener("click", () => {
+      void this.openCanvas(file);
+    });
+    const actions = row.createDiv({ cls: "cad-canvas-row-actions" });
+    const openBtn = actions.createEl("button", { cls: "cad-btn cad-btn-small", text: "Open" });
+    openBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      void this.openCanvas(file);
+    });
+    const tabBtn = actions.createEl("button", { cls: "cad-btn cad-btn-small cad-btn-ghost", text: "Open in tab" });
+    tabBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.app.workspace.openLinkText(file.path, "", true);
+    });
+  }
+  // #1 — full-page canvas render inside the BOB shell.
+  async renderCanvasSurface(root, file) {
+    const folder = file.parent?.path && file.parent.path !== "/" ? file.parent.path : "Canvas";
+    this._renderPageHeader(root, file.basename, folder, (right) => {
+      const back = right.createEl("button", { cls: "cad-btn cad-btn-small cad-btn-ghost", text: "\u2190 Canvases" });
+      back.addEventListener("click", () => {
+        void this.setMode("misc.canvases");
+      });
+      const edit = right.createEl("button", { cls: "cad-btn cad-btn-small", text: "Pop out to edit" });
+      edit.addEventListener("click", () => {
+        this.app.workspace.openLinkText(file.path, "", true);
+      });
+    }, { configuredActions: false });
+    const stage = root.createDiv({ cls: "cad-canvas-stage" });
+    try {
+      await this._mountLiveCanvas(stage, file);
+    } catch (err) {
+      stage.empty();
+      const fb = stage.createDiv({ cls: "cad-canvas-fallback" });
+      fb.createDiv({ cls: "cad-soon-desc", text: `Couldn't render this canvas inline (${err?.message || String(err)}).` });
+      const open = fb.createEl("button", { cls: "cad-btn", text: "Open canvas in Obsidian" });
+      open.addEventListener("click", () => this.app.workspace.openLinkText(file.path, "", true));
+    }
+  }
+  // Mount the live canvas via the embed registry (same mechanism as Base views).
+  async _mountLiveCanvas(body, file) {
+    const reg = this.app.embedRegistry;
+    const creator = reg?.embedByExtension?.canvas || reg?.getEmbedCreator?.(file);
+    if (!creator) throw new Error("Canvas embed unavailable (Obsidian Canvas API not found)");
+    const linktext = file.path;
+    const embed = creator(
+      { app: this.app, containerEl: body, sourcePath: file.path, linktext, showInline: true, depth: 0 },
+      file,
+      ""
+    );
+    if (!embed) throw new Error("Canvas embed creator returned no embed");
+    if (typeof this.addChild === "function") this.addChild(embed);
+    await (embed.loadFile?.() ?? embed.load?.());
+    for (let i = 0; i < 20; i++) {
+      await this._waitForBaseEmbedRender();
+      if (this._canvasEmbedMounted(body)) return;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error("Canvas did not render inline");
+  }
+  _canvasEmbedMounted(body) {
+    const el = body.querySelector?.([
+      ".canvas-wrapper",
+      ".canvas",
+      '[data-type="canvas"]',
+      ".internal-embed",
+      ".markdown-embed",
+      ".file-embed"
+    ].join(","));
+    if (!el) return false;
+    if (el.classList?.contains("is-unresolved")) return false;
+    return true;
   }
   /* ── Generic page header ────────────────── */
   _renderPageHeader(root, title, subtitle, actions, options = {}) {
@@ -38002,6 +38144,13 @@ var CadencePlugin = class extends obsidian20.Plugin {
       id: "open-surface-designer",
       name: "Open BOB Workspace \u2014 Surface Designer",
       callback: () => this.openApp("misc.dashboard-editor")
+    });
+    this.addCommand({
+      // The canvas library isn't necessarily in a workspace.json nav, so give it
+      // a command entry point too (always reachable, like Surface Designer).
+      id: "open-canvases",
+      name: "Open BOB Workspace \u2014 Canvases",
+      callback: () => this.openApp("misc.canvases")
     });
     this.addCommand({
       id: "new-daily-entry",

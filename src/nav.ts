@@ -21,6 +21,7 @@ export const BUILTIN_NAV_GROUPS: NavGroup[] = [
       { id: 'team',                  label: 'Team',             icon: 'user-cog',          desc: 'Team members, roles, seats — admin view of your BOB Workspace.' },
       { id: 'settings',              label: 'Settings',         icon: 'settings-2',        desc: 'BOB Workspace settings — folders, headings, week start, API connection.' },
       { id: 'misc.dashboard-editor', label: 'Surface Designer', icon: 'layout-panel-left', desc: 'Customize dashboard layouts, reports and widgets — live preview updates as you type.' },
+      { id: 'misc.canvases',          label: 'Canvases',         icon: 'layout-dashboard',  desc: 'Browse and open every Obsidian canvas in the vault — full-page inside BOB or in a tab.' },
       { id: 'misc.export',            label: 'Export',           icon: 'download',          desc: 'Export data to XLSX workbooks.' },
       { id: 'misc.import',            label: 'Import',           icon: 'upload',            desc: 'Import data from XLSX workbooks or CSV files.' },
     ],

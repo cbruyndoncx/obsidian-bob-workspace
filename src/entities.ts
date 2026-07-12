@@ -885,7 +885,7 @@ export const BUILT_SURFACES: Set<string> = new Set([
   'tax.overview',
   'prm.partners', 'prm.registrations', 'prm.commissions', 'prm.certifications', 'prm.analytics',
   'reports.pipeline', 'reports.sales', 'reports.partners', 'reports.activity', 'reports.productivity',
-  'team', 'settings', 'misc.dashboard-editor', 'misc.export', 'misc.import',
+  'team', 'settings', 'misc.dashboard-editor', 'misc.canvases', 'misc.export', 'misc.import',
   'ai.playbooks', 'ai.skills',
 ]);
 export const BUILTIN_SURFACE_IDS: Set<string> = new Set(BUILT_SURFACES);

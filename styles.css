@@ -3561,3 +3561,40 @@ select.cad-form-input {
 .cad-data-status-ok { color: var(--color-green, #4caf50); }
 .cad-data-status-error { color: var(--color-red, #e53935); }
 .cad-data-open-link { color: var(--interactive-accent); cursor: pointer; text-decoration: underline; }
+
+/* ── Canvas library + full-page canvas surface ────────────────── */
+.cad-canvas-library { display: flex; flex-direction: column; gap: 12px; }
+.cad-canvas-search {
+  width: 100%; max-width: 420px; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--background-modifier-border); background: var(--background-primary);
+  color: var(--text-normal); font-size: 14px;
+}
+.cad-canvas-list { display: flex; flex-direction: column; gap: 6px; }
+.cad-canvas-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; cursor: pointer;
+  border: 1px solid var(--background-modifier-border); border-radius: 10px;
+  background: var(--background-secondary);
+}
+.cad-canvas-row:hover { background: var(--background-modifier-hover); }
+.cad-canvas-row-icon { display: flex; align-items: center; color: var(--text-muted); flex: 0 0 auto; }
+.cad-canvas-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.cad-canvas-row-name { font-weight: 600; color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cad-canvas-row-meta { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cad-canvas-row-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+
+.cad-canvas-stage {
+  position: relative; height: calc(100vh - 190px); min-height: 460px;
+  border: 1px solid var(--background-modifier-border); border-radius: 10px; overflow: hidden;
+  background: var(--background-secondary);
+}
+/* the embedded canvas is height-collapsed by default — force it to fill the stage */
+.cad-canvas-stage > .internal-embed,
+.cad-canvas-stage .markdown-embed,
+.cad-canvas-stage .canvas-wrapper,
+.cad-canvas-stage .canvas { height: 100% !important; width: 100% !important; }
+.cad-canvas-fallback { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; }
+
+@media (max-width: 640px) {
+  .cad-canvas-stage { height: calc(100vh - 210px); }
+  .cad-canvas-row-actions { flex-direction: column; }
+}

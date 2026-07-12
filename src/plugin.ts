@@ -122,6 +122,13 @@ export class CadencePlugin extends obsidian.Plugin {
       callback: () => this.openApp('misc.dashboard-editor'),
     });
     this.addCommand({
+      // The canvas library isn't necessarily in a workspace.json nav, so give it
+      // a command entry point too (always reachable, like Surface Designer).
+      id: 'open-canvases',
+      name: 'Open BOB Workspace — Canvases',
+      callback: () => this.openApp('misc.canvases'),
+    });
+    this.addCommand({
       id: 'new-daily-entry',
       name: 'New today entry (creates if missing)',
       callback: async () => {
