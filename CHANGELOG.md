@@ -4,6 +4,17 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.38] — 2026-07-12
+
+### Fixed
+- **Full-page canvas render no longer wipes a canvas that's still loading.** The
+  inline mount polled a ~1s timeout and, on expiry, emptied the stage and showed
+  the fallback — but a canvas loads its nodes/images asynchronously well past a
+  second, so a canvas that was rendering fine got destroyed. The mount is now
+  non-destructive: it gives the embed one frame and falls back only if it
+  produced no DOM at all, otherwise it leaves the live (still-loading) canvas in
+  place.
+
 ## [0.14.4-bob.37] — 2026-07-12
 
 Canvas support, Phase 1 — reach and view Obsidian canvases inside BOB.
@@ -201,6 +212,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.38]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.38
 [0.14.4-bob.37]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.37
 [0.14.4-bob.36]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.36
 [0.14.4-bob.35]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.35

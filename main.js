@@ -30118,25 +30118,8 @@ var CadenceAppView = class extends obsidian17.ItemView {
     if (!embed) throw new Error("Canvas embed creator returned no embed");
     if (typeof this.addChild === "function") this.addChild(embed);
     await (embed.loadFile?.() ?? embed.load?.());
-    for (let i = 0; i < 20; i++) {
-      await this._waitForBaseEmbedRender();
-      if (this._canvasEmbedMounted(body)) return;
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-    throw new Error("Canvas did not render inline");
-  }
-  _canvasEmbedMounted(body) {
-    const el = body.querySelector?.([
-      ".canvas-wrapper",
-      ".canvas",
-      '[data-type="canvas"]',
-      ".internal-embed",
-      ".markdown-embed",
-      ".file-embed"
-    ].join(","));
-    if (!el) return false;
-    if (el.classList?.contains("is-unresolved")) return false;
-    return true;
+    await this._waitForBaseEmbedRender();
+    if (!body.firstElementChild) throw new Error("Canvas did not render inline");
   }
   /* ── Generic page header ────────────────── */
   _renderPageHeader(root, title, subtitle, actions, options = {}) {

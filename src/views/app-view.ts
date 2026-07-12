@@ -974,22 +974,13 @@ export class CadenceAppView extends obsidian.ItemView {
     if (!embed) throw new Error('Canvas embed creator returned no embed');
     if (typeof this.addChild === 'function') this.addChild(embed);
     await (embed.loadFile?.() ?? embed.load?.());
-    for (let i = 0; i < 20; i++) {
-      await this._waitForBaseEmbedRender();
-      if (this._canvasEmbedMounted(body)) return;
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-    throw new Error('Canvas did not render inline');
-  }
-
-  _canvasEmbedMounted(body: HTMLElement): boolean {
-    const el = body.querySelector?.([
-      '.canvas-wrapper', '.canvas', '[data-type="canvas"]',
-      '.internal-embed', '.markdown-embed', '.file-embed',
-    ].join(','));
-    if (!el) return false;
-    if ((el as HTMLElement).classList?.contains('is-unresolved')) return false;
-    return true;
+    // A canvas mounts and then keeps loading its nodes/images asynchronously,
+    // often well past a second. Do NOT poll with a tight timeout and then wipe
+    // the stage — that destroyed a canvas that was rendering fine. Give it a
+    // single frame, then fall back only if the embed produced no DOM at all;
+    // otherwise leave the live (still-loading) canvas in place.
+    await this._waitForBaseEmbedRender();
+    if (!body.firstElementChild) throw new Error('Canvas did not render inline');
   }
 
   /* ── Generic page header ────────────────── */
