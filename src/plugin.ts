@@ -31,6 +31,7 @@ import type { BobSettings, PartialSettings, Reminder } from './types';
 type AppViewLike = obsidian.View & {
   mode?: string;
   plannerAnchor?: Date;
+  canvasFile?: obsidian.TFile | null;
   setMode?: (mode: string) => Promise<void>;
   render?: () => void;
 };
@@ -385,7 +386,11 @@ export class CadencePlugin extends obsidian.Plugin {
     // scannable set without a vault event, so drop the cache before re-render.
     invalidateEntityScanCache();
     this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP).forEach((leaf) => {
-      if (leaf.view && typeof (leaf.view as AppViewLike).render === 'function') (leaf.view as AppViewLike).render();
+      const view = leaf.view as AppViewLike;
+      // Don't tear down a hosted interactive canvas on incidental refreshes
+      // (reminder tick, schema reload). Navigation re-renders it explicitly.
+      if (view && view.canvasFile) return;
+      if (view && typeof view.render === 'function') view.render();
     });
   }
 

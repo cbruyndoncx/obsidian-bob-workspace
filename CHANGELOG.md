@@ -4,6 +4,17 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.41] — 2026-07-13
+
+### Fixed
+- **Hosted canvas no longer refreshes/flickers every 30s.** The reminder tick
+  (and vault/metadata events) called `refreshOpenViews`, which re-rendered the
+  BOB view and tore down + remounted the hosted CanvasView — a visible periodic
+  refresh that also interrupted editing. Incidental refreshes now **skip a view
+  that is hosting a canvas** (reminder tick in `refreshOpenViews`, plus the
+  modify/create/delete/rename/metadata handlers); explicit navigation still
+  re-renders it.
+
 ## [0.14.4-bob.40] — 2026-07-13
 
 Canvas Phase 2 (start) — generate canvases from vault data.
@@ -238,6 +249,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.41]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.41
 [0.14.4-bob.40]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.40
 [0.14.4-bob.39]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.39
 [0.14.4-bob.38]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.38

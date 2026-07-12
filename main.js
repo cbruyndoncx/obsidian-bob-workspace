@@ -29778,6 +29778,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
     await this.render();
     this.registerEvent(this.app.vault.on("modify", (file) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
+      if (this.canvasFile) return;
       if (this.mode === "planner.today" && this.todayFile && file.path === this.todayFile.path) {
         return this.render();
       }
@@ -29790,17 +29791,20 @@ var CadenceAppView = class extends obsidian17.ItemView {
     }));
     const entityRefresh = (file) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
+      if (this.canvasFile) return;
       if (this._modeUsesEntityFolder(file && file.path)) this.render();
     };
     this.registerEvent(this.app.vault.on("create", entityRefresh));
     this.registerEvent(this.app.vault.on("delete", entityRefresh));
     this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
+      if (this.canvasFile) return;
       if (this._modeUsesEntityFolder(file && file.path) || this._modeUsesEntityFolder(oldPath)) this.render();
     }));
     this.registerEvent(this.app.metadataCache.on("changed", (file) => {
       if (this._basesCache) this._basesCache.clear();
       if (this.detailFile && file && file.path === this.detailFile.path) return;
+      if (this.canvasFile) return;
       if (this._modeUsesEntityFolder(file && file.path)) this.render();
     }));
   }
@@ -38499,7 +38503,9 @@ var CadencePlugin = class extends obsidian20.Plugin {
   refreshOpenViews() {
     invalidateEntityScanCache();
     this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP).forEach((leaf) => {
-      if (leaf.view && typeof leaf.view.render === "function") leaf.view.render();
+      const view = leaf.view;
+      if (view && view.canvasFile) return;
+      if (view && typeof view.render === "function") view.render();
     });
   }
   /* ── Reminder ticker ── */

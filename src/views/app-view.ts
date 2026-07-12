@@ -582,6 +582,8 @@ export class CadenceAppView extends obsidian.ItemView {
       // Skip refresh while the user is editing this exact file in detail view —
       // re-rendering would steal focus from inputs they're still typing in.
       if (this.detailFile && file && file.path === this.detailFile.path) return;
+      // A hosted canvas saves on every edit; re-rendering would tear it down.
+      if (this.canvasFile) return;
       if (this.mode === 'planner.today' && this.todayFile && file.path === this.todayFile.path) {
         return this.render();
       }
@@ -595,17 +597,20 @@ export class CadenceAppView extends obsidian.ItemView {
 
     const entityRefresh = (file: obsidian.TAbstractFile) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
+      if (this.canvasFile) return;
       if (this._modeUsesEntityFolder(file && file.path)) this.render();
     };
     this.registerEvent(this.app.vault.on('create', entityRefresh));
     this.registerEvent(this.app.vault.on('delete', entityRefresh));
     this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
+      if (this.canvasFile) return;
       if (this._modeUsesEntityFolder(file && file.path) || this._modeUsesEntityFolder(oldPath)) this.render();
     }));
     this.registerEvent(this.app.metadataCache.on('changed', (file) => {
       if (this._basesCache) this._basesCache.clear();
       if (this.detailFile && file && file.path === this.detailFile.path) return;
+      if (this.canvasFile) return;
       if (this._modeUsesEntityFolder(file && file.path)) this.render();
     }));
   }
