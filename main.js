@@ -28754,6 +28754,16 @@ function signalEdge(id, from, to, label, sides, color) {
 function serializeCanvas(data) {
   return JSON.stringify(data, null, 2);
 }
+function ownedIdsOf(data) {
+  return [...data.nodes.map((n) => n.id), ...data.edges.map((e) => e.id)];
+}
+function mergeGeneratedCanvas(existing, existingOwnedIds, fresh) {
+  const owned = new Set(existingOwnedIds || []);
+  const userNodes = (existing?.nodes || []).filter((n) => n && n.id && !owned.has(n.id));
+  const nodeIds = /* @__PURE__ */ new Set([...fresh.nodes.map((n) => n.id), ...userNodes.map((n) => n.id)]);
+  const userEdges = (existing?.edges || []).filter((e) => e && e.id && !owned.has(e.id) && nodeIds.has(e.fromNode) && nodeIds.has(e.toNode));
+  return { nodes: [...fresh.nodes, ...userNodes], edges: [...fresh.edges, ...userEdges] };
+}
 var CARD_W = 260;
 var CARD_H = 80;
 var CARD_GAP = 14;
@@ -30483,17 +30493,57 @@ var CadenceAppView = class extends obsidian17.ItemView {
       new obsidian17.Notice("Nothing to generate \u2014 no matching records found.");
       return;
     }
+    await this._writeGeneratedCanvas(gen.label.split(" (")[0], data, this._boardManifest(gen.id, data));
+  }
+  // Manifest for the schematic generators (board / runway) — enough to drive
+  // manual-edit preservation on regeneration.
+  _boardManifest(template, data) {
+    return {
+      source_path: "",
+      source_type: "board",
+      template,
+      generated_at: (/* @__PURE__ */ new Date()).toISOString(),
+      query_hash: String(data.nodes.length),
+      bob_owned_node_ids: ownedIdsOf(data)
+    };
+  }
+  // Single writer for every generated canvas. Regenerate-fresh, but merged over
+  // an existing file so hand-added nodes/edges survive: BOB owns only the ids
+  // recorded in the sidecar manifest. Opens the result inline.
+  async _writeGeneratedCanvas(rawName, data, manifest) {
     const folder = "BOB Workspace/Canvases";
     await ensureFolderSync(this.app, folder);
-    const path = await this._uniqueCanvasPath(folder, `${gen.label.split(" (")[0]} ${ymd()}`);
-    const file = await this.app.vault.create(path, serializeCanvas(data));
-    new obsidian17.Notice(`Generated ${path}`);
-    if (file instanceof obsidian17.TFile) await this.openCanvas(file);
+    const name = rawName.replace(/[\\/:*?"<>|]/g, "-");
+    const canvasPath = `${folder}/${name}.canvas`;
+    const metaPath = `${folder}/${name}.canvas.bobmeta.json`;
+    let out = data;
+    const existing = this.app.vault.getAbstractFileByPath(canvasPath);
+    if (existing instanceof obsidian17.TFile) {
+      try {
+        const oldData = JSON.parse(await this.app.vault.read(existing));
+        let oldOwned = [];
+        const mf = this.app.vault.getAbstractFileByPath(metaPath);
+        if (mf instanceof obsidian17.TFile) {
+          try {
+            oldOwned = JSON.parse(await this.app.vault.read(mf)).bob_owned_node_ids || [];
+          } catch (_) {
+          }
+        }
+        out = mergeGeneratedCanvas(oldData, oldOwned, data);
+      } catch (_) {
+        out = data;
+      }
+    }
+    await this._writeOrModify(canvasPath, serializeCanvas(out));
+    await this._writeOrModify(metaPath, JSON.stringify(manifest, null, 2));
+    const f = this.app.vault.getAbstractFileByPath(canvasPath);
+    if (f instanceof obsidian17.TFile) await this.openCanvas(f);
+    else new obsidian17.Notice(`Canvas written to ${canvasPath}`);
   }
   // Entity Context Canvas — render the full operational context around a note
-  // (evidence · people/systems · outputs · risks) and open it inline. Regenerated
-  // deterministically into a stable path (regenerate-fresh) with a BOB manifest
-  // sidecar so a future increment can preserve manual edits.
+  // (evidence · people/systems · outputs · risks) and open it inline. Written to
+  // a stable path; regeneration refreshes BOB's nodes while preserving any nodes
+  // the user added by hand (see _writeGeneratedCanvas).
   async _generateContextCanvas(file) {
     if (!(file instanceof obsidian17.TFile)) {
       new obsidian17.Notice("No note to build context from.");
@@ -30511,16 +30561,8 @@ var CadenceAppView = class extends obsidian17.ItemView {
       new obsidian17.Notice("No context to render for this note.");
       return;
     }
-    const folder = "BOB Workspace/Canvases";
-    await ensureFolderSync(this.app, folder);
     const prefix = isAgentRun ? "Agent audit" : "Context";
-    const name = `${prefix} - ${file.basename}`.replace(/[\\/:*?"<>|]/g, "-");
-    const canvasPath = `${folder}/${name}.canvas`;
-    await this._writeOrModify(canvasPath, serializeCanvas(result.data));
-    await this._writeOrModify(`${folder}/${name}.canvas.bobmeta.json`, JSON.stringify(result.manifest, null, 2));
-    const f = this.app.vault.getAbstractFileByPath(canvasPath);
-    if (f instanceof obsidian17.TFile) await this.openCanvas(f);
-    else new obsidian17.Notice(`Context canvas written to ${canvasPath}`);
+    await this._writeGeneratedCanvas(`${prefix} - ${file.basename}`, result.data, result.manifest);
   }
   // Process Execution Canvas — render an entity type's lifecycle as a left-to-
   // right runway (records by stage, blockers flagged), opened inline.
@@ -30538,26 +30580,12 @@ var CadenceAppView = class extends obsidian17.ItemView {
       new obsidian17.Notice("This type has no stage/status lifecycle to render.");
       return;
     }
-    const folder = "BOB Workspace/Canvases";
-    await ensureFolderSync(this.app, folder);
-    const name = `Process - ${def.plural}`.replace(/[\\/:*?"<>|]/g, "-");
-    const canvasPath = `${folder}/${name}.canvas`;
-    await this._writeOrModify(canvasPath, serializeCanvas(data));
-    const f = this.app.vault.getAbstractFileByPath(canvasPath);
-    if (f instanceof obsidian17.TFile) await this.openCanvas(f);
-    else new obsidian17.Notice(`Process canvas written to ${canvasPath}`);
+    await this._writeGeneratedCanvas(`Process - ${def.plural}`, data, this._boardManifest("process-runway", data));
   }
   async _writeOrModify(path, content) {
     const existing = this.app.vault.getAbstractFileByPath(path);
     if (existing instanceof obsidian17.TFile) await this.app.vault.modify(existing, content);
     else await this.app.vault.create(path, content);
-  }
-  async _uniqueCanvasPath(folder, base) {
-    const safe = base.replace(/[\\/:*?"<>|]/g, "-");
-    let path = `${folder}/${safe}.canvas`;
-    let i = 2;
-    while (await this.app.vault.adapter.exists(path)) path = `${folder}/${safe} (${i++}).canvas`;
-    return path;
   }
   _renderCanvasRow(list, file) {
     const row = list.createDiv({ cls: "cad-canvas-row" });

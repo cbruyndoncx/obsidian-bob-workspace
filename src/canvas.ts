@@ -78,6 +78,29 @@ export function serializeCanvas(data: CanvasData): string {
   return JSON.stringify(data, null, 2);
 }
 
+/* ── Manual-edit preservation ──────────────────────────────────────────────
+ * Generated canvases are regenerate-fresh, but anything the user added by hand
+ * survives: BOB owns only the ids it wrote (recorded in the manifest), so on
+ * regeneration BOB nodes/edges are replaced while user-authored ones are kept. */
+
+/** Every id in a freshly-built canvas is BOB-owned (a fresh build has no user
+ *  nodes yet); this is what goes into the manifest's bob_owned_node_ids. */
+export function ownedIdsOf(data: CanvasData): string[] {
+  return [...data.nodes.map((n) => n.id), ...data.edges.map((e) => e.id)];
+}
+
+/** Merge a fresh generation over an existing canvas: BOB-owned nodes/edges
+ *  (per the previous manifest) are replaced by the fresh set; everything else
+ *  the user added is preserved. User edges with a now-missing endpoint are
+ *  dropped so the file stays valid. */
+export function mergeGeneratedCanvas(existing: CanvasData | null | undefined, existingOwnedIds: string[], fresh: CanvasData): CanvasData {
+  const owned = new Set(existingOwnedIds || []);
+  const userNodes = (existing?.nodes || []).filter((n) => n && n.id && !owned.has(n.id));
+  const nodeIds = new Set<string>([...fresh.nodes.map((n) => n.id), ...userNodes.map((n) => n.id)]);
+  const userEdges = (existing?.edges || []).filter((e) => e && e.id && !owned.has(e.id) && nodeIds.has(e.fromNode) && nodeIds.has(e.toNode));
+  return { nodes: [...fresh.nodes, ...userNodes], edges: [...fresh.edges, ...userEdges] };
+}
+
 /* ─────────────────────────── Board layout (pipeline) ─────────────────────── */
 
 export interface BoardCard { file?: string; text?: string; }

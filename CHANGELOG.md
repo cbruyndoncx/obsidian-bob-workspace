@@ -4,6 +4,18 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.45] — 2026-07-13
+
+### Added
+- **Manual-edit preservation for generated canvases.** Generated surfaces stay
+  regenerate-fresh, but anything you add by hand now survives regeneration. Each
+  canvas keeps a sidecar manifest of the ids BOB wrote (`bob_owned_node_ids`);
+  on regeneration BOB nodes/edges are replaced while user-authored nodes are
+  kept, and user edges whose endpoint disappeared are dropped so the file stays
+  valid. All generators (Entity Context, Agent Audit, Process runway, Pipeline
+  board) now write to a **stable path** and merge over the existing file instead
+  of piling up new dated copies.
+
 ## [0.14.4-bob.44] — 2026-07-13
 
 ### Added
@@ -295,6 +307,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.45]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.45
 [0.14.4-bob.44]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.44
 [0.14.4-bob.43]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.43
 [0.14.4-bob.42]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.42

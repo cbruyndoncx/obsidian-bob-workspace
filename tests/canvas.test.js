@@ -119,4 +119,45 @@ const proc = loadMainFunctions(
   assert.ok(runway.nodes.some((n) => n.type === 'file' && n.file === 'b.md' && n.color === '1'), 'blocked card flagged red');
 })();
 
+// Manual-edit preservation: regeneration replaces BOB-owned nodes/edges and
+// keeps hand-added ones; user edges with a missing endpoint are dropped.
+const merge = loadMainFunctions(['mergeGeneratedCanvas', 'ownedIdsOf']);
+
+(() => {
+  // existing canvas = 2 BOB nodes + 1 user node + 1 BOB edge + 1 user edge
+  const existing = {
+    nodes: [
+      { id: 'bob-a', type: 'file', file: 'a.md' },
+      { id: 'bob-b', type: 'file', file: 'b.md' },
+      { id: 'user-note', type: 'text', text: 'my annotation' },
+    ],
+    edges: [
+      { id: 'bob-e', fromNode: 'bob-a', toNode: 'bob-b' },
+      { id: 'user-e', fromNode: 'user-note', toNode: 'bob-a' }, // user edge to a surviving BOB node
+      { id: 'user-e2', fromNode: 'user-note', toNode: 'bob-b' },
+    ],
+  };
+  const existingOwned = ['bob-a', 'bob-b', 'bob-e'];
+
+  // fresh generation: bob-a kept, bob-b replaced by bob-c (b.md left the query)
+  const fresh = {
+    nodes: [{ id: 'bob-a', type: 'file', file: 'a.md' }, { id: 'bob-c', type: 'file', file: 'c.md' }],
+    edges: [{ id: 'bob-e2', fromNode: 'bob-a', toNode: 'bob-c' }],
+  };
+
+  const merged = merge.mergeGeneratedCanvas(existing, existingOwned, fresh);
+  const ids = merged.nodes.map((n) => n.id);
+  assert.ok(ids.includes('user-note'), 'user node preserved');
+  assert.ok(ids.includes('bob-a') && ids.includes('bob-c'), 'fresh BOB nodes present');
+  assert.ok(!ids.includes('bob-b'), 'stale BOB node removed');
+  const edgeIds = merged.edges.map((e) => e.id);
+  assert.ok(edgeIds.includes('bob-e2'), 'fresh BOB edge present');
+  assert.ok(!edgeIds.includes('bob-e'), 'stale BOB edge removed');
+  assert.ok(edgeIds.includes('user-e'), 'user edge to surviving node kept');
+  assert.ok(!edgeIds.includes('user-e2'), 'user edge to a now-missing node dropped');
+
+  // a fresh build owns all of its own ids
+  assert.strictEqual(merge.ownedIdsOf(fresh).length, fresh.nodes.length + fresh.edges.length, 'ownedIdsOf covers every fresh id');
+})();
+
 console.log('canvas.test.js: ok');
