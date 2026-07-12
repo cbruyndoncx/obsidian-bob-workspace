@@ -4,6 +4,18 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.39] — 2026-07-12
+
+### Changed
+- **Full-page canvas now hosts Obsidian's real interactive CanvasView** instead of
+  the static embed preview. The embed registry only yields a click-to-open
+  preview (colored node boxes), so the surface now creates an ephemeral leaf,
+  loads the canvas into it, and reparents its DOM into the BOB pane — giving a
+  fully interactive, editable canvas in-shell. Uses guarded internals (the
+  WorkspaceLeaf constructor); on any failure it falls back to the open-in-tab
+  affordance. The hosted leaf is detached on every re-render, navigation, and
+  view close so it never leaks.
+
 ## [0.14.4-bob.38] — 2026-07-12
 
 ### Fixed
@@ -212,6 +224,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.39]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.39
 [0.14.4-bob.38]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.38
 [0.14.4-bob.37]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.37
 [0.14.4-bob.36]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.36

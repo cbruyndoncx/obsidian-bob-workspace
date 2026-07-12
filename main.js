@@ -29532,6 +29532,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
     this.detailFile = null;
     this.detailEntityKey = null;
     this.canvasFile = null;
+    this._canvasLeaf = null;
     this.mobileNavOpen = false;
     this._navScrollTop = 0;
     this._renderSeq = 0;
@@ -29754,6 +29755,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
   }
   async render() {
     this._closeColumnFilterMenu();
+    this._teardownCanvasLeaf();
     const root = this.containerEl.children[1];
     const previousNav = root.querySelector ? root.querySelector(".cad-app-nav") : null;
     const previousNavScrollTop = previousNav ? previousNav.scrollTop : this._navScrollTop || 0;
@@ -30104,22 +30106,54 @@ var CadenceAppView = class extends obsidian17.ItemView {
       open.addEventListener("click", () => this.app.workspace.openLinkText(file.path, "", true));
     }
   }
-  // Mount the live canvas via the embed registry (same mechanism as Base views).
+  // Host Obsidian's REAL interactive CanvasView inside the BOB pane: create an
+  // ephemeral leaf, load the canvas into it, and reparent its DOM. The embed
+  // registry only yields a static click-to-open preview (colored boxes), so we
+  // host the actual view instead. This uses unofficial internals (the
+  // WorkspaceLeaf constructor + setViewState), so it is fully guarded — on any
+  // failure we detach and throw, and the caller shows the open-in-tab fallback.
   async _mountLiveCanvas(body, file) {
-    const reg = this.app.embedRegistry;
-    const creator = reg?.embedByExtension?.canvas || reg?.getEmbedCreator?.(file);
-    if (!creator) throw new Error("Canvas embed unavailable (Obsidian Canvas API not found)");
-    const linktext = file.path;
-    const embed = creator(
-      { app: this.app, containerEl: body, sourcePath: file.path, linktext, showInline: true, depth: 0 },
-      file,
-      ""
-    );
-    if (!embed) throw new Error("Canvas embed creator returned no embed");
-    if (typeof this.addChild === "function") this.addChild(embed);
-    await (embed.loadFile?.() ?? embed.load?.());
-    await this._waitForBaseEmbedRender();
-    if (!body.firstElementChild) throw new Error("Canvas did not render inline");
+    this._teardownCanvasLeaf();
+    const WorkspaceLeafCtor = obsidian17.WorkspaceLeaf;
+    if (typeof WorkspaceLeafCtor !== "function") throw new Error("WorkspaceLeaf constructor unavailable");
+    let leaf = null;
+    try {
+      leaf = new WorkspaceLeafCtor(this.app);
+      await leaf.setViewState({ type: "canvas", state: { file: file.path }, active: false });
+      const view = leaf.view;
+      const viewEl = view?.containerEl || leaf.containerEl;
+      if (!viewEl) throw new Error("canvas view element not found");
+      body.addClass("cad-canvas-stage-live");
+      body.appendChild(viewEl);
+      this._canvasLeaf = leaf;
+      window.setTimeout(() => {
+        try {
+          view?.onResize?.();
+          view?.canvas?.requestFrame?.();
+          view?.canvas?.zoomToFit?.();
+        } catch (_) {
+        }
+      }, 60);
+    } catch (err) {
+      if (leaf) {
+        try {
+          leaf.detach();
+        } catch (_) {
+        }
+      }
+      this._canvasLeaf = null;
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+  }
+  // Detach the ephemeral canvas leaf (idempotent). Called on every re-render,
+  // navigation, and view close so the hosted CanvasView never leaks.
+  _teardownCanvasLeaf() {
+    if (!this._canvasLeaf) return;
+    try {
+      this._canvasLeaf.detach();
+    } catch (_) {
+    }
+    this._canvasLeaf = null;
   }
   /* ── Generic page header ────────────────── */
   _renderPageHeader(root, title, subtitle, actions, options = {}) {
@@ -35792,6 +35826,7 @@ Saved to ${file.path}`, 4e3);
   }
   async onClose() {
     this._closeColumnFilterMenu();
+    this._teardownCanvasLeaf();
   }
 };
 

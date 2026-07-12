@@ -3592,6 +3592,11 @@ select.cad-form-input {
 .cad-canvas-stage .markdown-embed,
 .cad-canvas-stage .canvas-wrapper,
 .cad-canvas-stage .canvas { height: 100% !important; width: 100% !important; }
+/* Reparented live CanvasView leaf: make its content chain fill the stage */
+.cad-canvas-stage-live > .workspace-leaf-content,
+.cad-canvas-stage-live .view-content,
+.cad-canvas-stage-live .canvas-wrapper,
+.cad-canvas-stage-live .canvas { height: 100% !important; width: 100% !important; }
 .cad-canvas-fallback { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; }
 
 @media (max-width: 640px) {
