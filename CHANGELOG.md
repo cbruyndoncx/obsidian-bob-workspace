@@ -4,6 +4,29 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.46] — 2026-07-14
+
+Cleanup / TODO-tail pass.
+
+### Added
+- **Navigation settings** — Settings → App → **Navigation** now has toggles for
+  `showSecondaryNav` (show child surfaces in the rail) and `showSetupNav` (show
+  setup-level surfaces). These settings were read but previously had no UI.
+
+### Changed
+- Built-in dashboard **snapshots always receive default-merged settings**
+  (`DEFAULT_SETTINGS` + `WORKSPACE_CONFIG.settings` + caller) — the old dead
+  `settings || WORKSPACE_CONFIG.settings` fallback could pass sparse settings.
+- Collapsed `_renderSecondaryRoute`'s seven one-line dashboard wrappers (and the
+  `renderProductivity` wrapper) into `renderConfigDashboard` via an
+  `OVERVIEW_DASHBOARD_ROUTES` set — behavior-preserving.
+- Settings nav description no longer references the removed "API connection".
+
+### Tests
+- New `tests/entity-files-filter.test.js` (`listEntityFiles` filter categories +
+  `isTemplatePath`); `run-tests.js` fails loudly on unhandled rejection and prints
+  success on `beforeExit` so async failures can't hide.
+
 ## [0.14.4-bob.45] — 2026-07-13
 
 ### Added
@@ -307,6 +330,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.46]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.46
 [0.14.4-bob.45]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.45
 [0.14.4-bob.44]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.44
 [0.14.4-bob.43]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.43

@@ -37834,6 +37834,19 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         renderProjectFolders();
       }
     });
+    pApp.createEl("h3", { text: "Navigation" });
+    const navGroup = pApp.createDiv({ cls: "setting-group cad-settings-section" });
+    const navPanel = navGroup.createDiv({ cls: "setting-items" });
+    new obsidian18.Setting(navPanel).setName("Show secondary nav items").setDesc("Show lower-frequency child surfaces (e.g. campaign sub-tabs, finance children) directly in the left rail. When off, they stay reachable via their parent surface's tabs.").addToggle((t) => t.setValue(!!this.plugin.settings.showSecondaryNav).onChange(async (v) => {
+      this.plugin.settings.showSecondaryNav = v;
+      await this.plugin.saveSettings();
+      this.plugin.refreshOpenViews();
+    }));
+    new obsidian18.Setting(navPanel).setName("Show setup nav items").setDesc('Show setup-level surfaces (marked navLevel "setup") in the left rail. Off by default to keep the rail focused on day-to-day work.').addToggle((t) => t.setValue(!!this.plugin.settings.showSetupNav).onChange(async (v) => {
+      this.plugin.settings.showSetupNav = v;
+      await this.plugin.saveSettings();
+      this.plugin.refreshOpenViews();
+    }));
     pApp.createEl("h3", { text: "Reminders" });
     const remindersGroup = pApp.createDiv({ cls: "setting-group cad-settings-section" });
     const remindersPanel = remindersGroup.createDiv({ cls: "setting-items" });
