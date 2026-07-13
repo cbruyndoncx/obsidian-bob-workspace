@@ -2,6 +2,18 @@
 
 Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep review, config-pipeline review, reference-vault cross-check against `/mnt/d/OBS/brncx-skills`, CSS/docs/tests drift). Findings deduplicated and ranked; several verified empirically by running the real `validateWorkspaceConfig` against the shipped templates.
 
+## Status (updated 2026-07-14)
+
+**The review sweep is essentially complete.** All 6 **Criticals** ✅, all **dead-code** (TS + CSS) ✅, and all **documentation drift** ✅ are done and merged to `main` (the `fix/config-pipeline-criticals` branch landed). The **real-validator regression test** ✅ is in `tests/template-validate.test.js`.
+
+**Shipped since this review (not tracked below; see `CHANGELOG.md` 0.14.4-bob.34–.45):** full template self-seeding (ships every referenced schema + Base in `workspace-bob.json` `_assets`), KPI scoreboard, the **XLSX export view-filter fix** (+regression test — partially closes the export test gap), and the **Canvas feature** (Phase 1 library + interactive full-page host; Phase 2 generators: Entity Context / Agent Audit / Process runway / Pipeline board; manual-edit preservation) with `tests/canvas.test.js`. See CLAUDE.md → "Canvas surfaces".
+
+**Genuinely still open** (the tail):
+- Medium: `src/widgets.ts` sparse-settings fallback (deferred — needs a defaults decision); enum-filter dropdown orphan (`app-view.ts`).
+- Duplication refactors (4, below) — cosmetic, none behavioral.
+- Test gaps (below) — several subsystems still uncovered.
+- Reference-vault housekeeping (vault-side, owner-gated). The one **repo-side** item here — the Settings nav description still saying "API connection" — is now **fixed** (`src/nav.ts`).
+
 ## Worker instructions (read first)
 
 - **Read `CLAUDE.md` before starting any item.** It is the authoritative architecture/workflow reference.
@@ -77,7 +89,7 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 > ⚠️ Live vault, outside this repo. Confirm each deletion with the owner before touching anything; prefer moving to an archive folder over deleting.
 
 - [ ] Delete leftovers: `entities.json`, `entities.backup.json` (nothing reads them), `xlsx.full.min.js` + `vendor/` (~1.9 MB; XLSX is bundled into main.js), `templates/workspace-bob|cadence|crm|minimal.json` (shadowed — bundled names win; **keep `workspace-release.json`**, live custom template), `templates/client/` (no reader), `.bak-*`/`.pre-*` backups (only `workspace.backup.json` is read).
-- [ ] `data.json`: remove orphans `cadenceApiUrl`/`cadenceApiToken` (removed feature; Settings nav desc still says "API connection" — fix in `src/nav.ts:22` too); stale `collapsedGroups` entries `srm`/`hr`/`tax` harmless.
+- [ ] `data.json`: remove orphans `cadenceApiUrl`/`cadenceApiToken` (removed feature); stale `collapsedGroups` entries `srm`/`hr`/`tax` harmless. (Repo-side follow-up ✅ done 2026-07-14: the Settings nav description no longer says "API connection", `src/nav.ts`.)
 - [ ] `settings.baseViews`: `task` → resolves to missing `TaskNotes.base` (vault has `Tasks.base`); `periodic-note` → missing `Periodic-Note.base` (vault has `PeriodicNotes.base`). Rename files or add explicit `bases`/`baseFiles` mappings.
 - [ ] `dashboards["workspace.quick-actions"|"workspace.report-filters"|"workspace.report-note"]` unreachable (only surfaced via the unreachable Surface Designer).
 

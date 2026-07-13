@@ -22682,7 +22682,7 @@ var BUILTIN_NAV_GROUPS = [
     label: "",
     items: [
       { id: "team", label: "Team", icon: "user-cog", desc: "Team members, roles, seats \u2014 admin view of your BOB Workspace." },
-      { id: "settings", label: "Settings", icon: "settings-2", desc: "BOB Workspace settings \u2014 folders, headings, week start, API connection." },
+      { id: "settings", label: "Settings", icon: "settings-2", desc: "BOB Workspace settings \u2014 modules, folders, data model, Bases, reminders, currency, export/import." },
       { id: "misc.dashboard-editor", label: "Surface Designer", icon: "layout-panel-left", desc: "Customize dashboard layouts, reports and widgets \u2014 live preview updates as you type." },
       { id: "misc.canvases", label: "Canvases", icon: "layout-dashboard", desc: "Browse and open every Obsidian canvas in the vault \u2014 full-page inside BOB or in a tab." },
       { id: "misc.export", label: "Export", icon: "download", desc: "Export data to XLSX workbooks." },
