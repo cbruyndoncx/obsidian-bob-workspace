@@ -187,6 +187,13 @@ interface PageHeaderOptions {
 }
 type PageHeaderActionsFn = (right: HTMLElement, ctx: { surfaceId: string; configuredActionCount: number; hasConfiguredActions: boolean }) => void;
 
+// Known workspace "overview" routes that render through renderConfigDashboard
+// even when unconfigured (so they show the add-dashboard prompt, not "coming soon").
+const OVERVIEW_DASHBOARD_ROUTES = new Set([
+  'client-work.dashboard', 'finance.gl.overview', 'finance.setup.overview',
+  'procurement.overview', 'tax.dashboard', 'prm.partners.overview', 'crm.campaigns.overview',
+]);
+
 /** Daily-note sections as returned by parseSections() (src/notes.ts). */
 interface DailySections {
   tasks: string[];
@@ -854,7 +861,7 @@ export class CadenceAppView extends obsidian.ItemView {
       'reports.sales': () => this.renderConfigDashboard('reports.sales', content),
       'reports.partners': () => this.renderConfigDashboard('reports.partners', content),
       'reports.activity': () => this.renderConfigDashboard('reports.activity', content),
-      'reports.productivity': () => this.renderProductivity(content),
+      'reports.productivity': () => this.renderConfigDashboard('reports.productivity', content),
       'team': () => this.renderTeam(content),
       'settings': () => this.openSettingsTab(content),
       'misc.dashboard-editor': () => this.renderDashboardEditor(content),
@@ -1711,14 +1718,12 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   async _renderSecondaryRoute(root: HTMLElement, route: string, opts: EntityListOptions = {}) {
-    if (configuredDashboardDefinition(route)) return this.renderConfigDashboard(route, root, opts);
-    if (route === 'client-work.dashboard') return this.renderClientWorkDashboard(root, opts);
-    if (route === 'finance.gl.overview') return this.renderFinanceGLDashboard(root);
-    if (route === 'finance.setup.overview') return this.renderFinanceSetupDashboard(root);
-    if (route === 'procurement.overview') return this.renderProcurementDashboard(root);
-    if (route === 'tax.dashboard') return this.renderTaxDashboard(root);
-    if (route === 'prm.partners.overview') return this.renderPartnerWorkspaceDashboard(root);
-    if (route === 'crm.campaigns.overview') return this.renderCampaignWorkspaceDashboard(root);
+    // Configured dashboards render directly; the known overview routes also go
+    // through renderConfigDashboard even without config (it shows the "add
+    // dashboards.<route>" prompt rather than "coming soon").
+    if (configuredDashboardDefinition(route) || OVERVIEW_DASHBOARD_ROUTES.has(route)) {
+      return this.renderConfigDashboard(route, root, opts);
+    }
     if (route === 'prm.analytics') return this.renderPRMAnalytics(root);
     return this.renderComingSoon(root, { label: route, icon: 'layout-dashboard', desc: 'Workspace overview.' });
   }
@@ -4203,33 +4208,6 @@ export class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  async renderClientWorkDashboard(root: HTMLElement, opts: DashboardRenderOptions = {}) {
-    return this.renderConfigDashboard('client-work.dashboard', root, opts);
-  }
-
-  async renderFinanceGLDashboard(root: HTMLElement) {
-    return this.renderConfigDashboard('finance.gl.overview', root);
-  }
-
-  async renderFinanceSetupDashboard(root: HTMLElement) {
-    return this.renderConfigDashboard('finance.setup.overview', root);
-  }
-
-  async renderProcurementDashboard(root: HTMLElement) {
-    return this.renderConfigDashboard('procurement.overview', root);
-  }
-
-  async renderTaxDashboard(root: HTMLElement) {
-    return this.renderConfigDashboard('tax.dashboard', root);
-  }
-
-  async renderPartnerWorkspaceDashboard(root: HTMLElement) {
-    return this.renderConfigDashboard('prm.partners.overview', root);
-  }
-
-  async renderCampaignWorkspaceDashboard(root: HTMLElement) {
-    return this.renderConfigDashboard('crm.campaigns.overview', root);
-  }
 
   async renderExport(root: HTMLElement) {
     this._renderPageHeader(root, 'Export', 'Export your data to an Excel workbook');
@@ -6527,10 +6505,6 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   /* ── Reports: Productivity (over daily notes) ── */
-  async renderProductivity(root: HTMLElement) {
-    return this.renderConfigDashboard('reports.productivity', root);
-  }
-
   /* ── PRM Analytics ──────────────────────── */
   async renderPRMAnalytics(root: HTMLElement) {
     root.addClass('cadence-report');

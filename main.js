@@ -29864,7 +29864,8 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
   };
   if (normalized.mode === "built-in") {
     const builtInName = String(normalized.builtIn || "").trim().toLowerCase();
-    const builtInData = builtInName === "productivity" ? await buildProductivitySnapshot(app, settings || WORKSPACE_CONFIG.settings || {}) : builtInName === "planner" ? await buildPlannerSnapshot(app, settings || WORKSPACE_CONFIG.settings || {}) : builtInName === "home" ? await buildHomeSnapshot(app, settings || WORKSPACE_CONFIG.settings || {}) : null;
+    const snapshotSettings = Object.assign({}, DEFAULT_SETTINGS, WORKSPACE_CONFIG.settings || {}, settings || {});
+    const builtInData = builtInName === "productivity" ? await buildProductivitySnapshot(app, snapshotSettings) : builtInName === "planner" ? await buildPlannerSnapshot(app, snapshotSettings) : builtInName === "home" ? await buildHomeSnapshot(app, snapshotSettings) : null;
     return {
       entityKey: normalized.entityKey || null,
       def: normalized.entityKey && ENTITIES[normalized.entityKey] ? ENTITIES[normalized.entityKey] : null,
@@ -29927,6 +29928,15 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
 
 // src/views/app-view.ts
 var obsidian17 = __toESM(require("obsidian"));
+var OVERVIEW_DASHBOARD_ROUTES = /* @__PURE__ */ new Set([
+  "client-work.dashboard",
+  "finance.gl.overview",
+  "finance.setup.overview",
+  "procurement.overview",
+  "tax.dashboard",
+  "prm.partners.overview",
+  "crm.campaigns.overview"
+]);
 var CadenceAppView = class extends obsidian17.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
@@ -30390,7 +30400,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
       "reports.sales": () => this.renderConfigDashboard("reports.sales", content),
       "reports.partners": () => this.renderConfigDashboard("reports.partners", content),
       "reports.activity": () => this.renderConfigDashboard("reports.activity", content),
-      "reports.productivity": () => this.renderProductivity(content),
+      "reports.productivity": () => this.renderConfigDashboard("reports.productivity", content),
       "team": () => this.renderTeam(content),
       "settings": () => this.openSettingsTab(content),
       "misc.dashboard-editor": () => this.renderDashboardEditor(content),
@@ -31271,14 +31281,9 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     return this.renderEntityList(root, activeTab?.entityKey || defaultEntityKey, opts);
   }
   async _renderSecondaryRoute(root, route, opts = {}) {
-    if (configuredDashboardDefinition(route)) return this.renderConfigDashboard(route, root, opts);
-    if (route === "client-work.dashboard") return this.renderClientWorkDashboard(root, opts);
-    if (route === "finance.gl.overview") return this.renderFinanceGLDashboard(root);
-    if (route === "finance.setup.overview") return this.renderFinanceSetupDashboard(root);
-    if (route === "procurement.overview") return this.renderProcurementDashboard(root);
-    if (route === "tax.dashboard") return this.renderTaxDashboard(root);
-    if (route === "prm.partners.overview") return this.renderPartnerWorkspaceDashboard(root);
-    if (route === "crm.campaigns.overview") return this.renderCampaignWorkspaceDashboard(root);
+    if (configuredDashboardDefinition(route) || OVERVIEW_DASHBOARD_ROUTES.has(route)) {
+      return this.renderConfigDashboard(route, root, opts);
+    }
     if (route === "prm.analytics") return this.renderPRMAnalytics(root);
     return this.renderComingSoon(root, { label: route, icon: "layout-dashboard", desc: "Workspace overview." });
   }
@@ -33551,27 +33556,6 @@ ${snippet}` : "- No markdown content");
       text.createDiv({ cls: "cad-finance-legend-desc", text: desc });
     });
   }
-  async renderClientWorkDashboard(root, opts = {}) {
-    return this.renderConfigDashboard("client-work.dashboard", root, opts);
-  }
-  async renderFinanceGLDashboard(root) {
-    return this.renderConfigDashboard("finance.gl.overview", root);
-  }
-  async renderFinanceSetupDashboard(root) {
-    return this.renderConfigDashboard("finance.setup.overview", root);
-  }
-  async renderProcurementDashboard(root) {
-    return this.renderConfigDashboard("procurement.overview", root);
-  }
-  async renderTaxDashboard(root) {
-    return this.renderConfigDashboard("tax.dashboard", root);
-  }
-  async renderPartnerWorkspaceDashboard(root) {
-    return this.renderConfigDashboard("prm.partners.overview", root);
-  }
-  async renderCampaignWorkspaceDashboard(root) {
-    return this.renderConfigDashboard("crm.campaigns.overview", root);
-  }
   async renderExport(root) {
     this._renderPageHeader(root, "Export", "Export your data to an Excel workbook");
     const section = (parent, title, desc) => {
@@ -35805,9 +35789,6 @@ ${snippet}` : "- No markdown content");
     });
   }
   /* ── Reports: Productivity (over daily notes) ── */
-  async renderProductivity(root) {
-    return this.renderConfigDashboard("reports.productivity", root);
-  }
   /* ── PRM Analytics ──────────────────────── */
   async renderPRMAnalytics(root) {
     root.addClass("cadence-report");

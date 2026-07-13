@@ -8,11 +8,12 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 
 **Shipped since this review (not tracked below; see `CHANGELOG.md` 0.14.4-bob.34–.45):** full template self-seeding (ships every referenced schema + Base in `workspace-bob.json` `_assets`), KPI scoreboard, the **XLSX export view-filter fix** (+regression test — partially closes the export test gap), and the **Canvas feature** (Phase 1 library + interactive full-page host; Phase 2 generators: Entity Context / Agent Audit / Process runway / Pipeline board; manual-edit preservation) with `tests/canvas.test.js`. See CLAUDE.md → "Canvas surfaces".
 
+**Fixed in the 2026-07-14 cleanup pass:** the `src/widgets.ts` sparse-settings fallback (now default-merged), the `_renderSecondaryRoute`/`renderProductivity` dashboard-wrapper duplication (collapsed), the `listEntityFiles` filter + template-path test gap (`tests/entity-files-filter.test.js`), the `run-tests.js` async-ordering gap, and the "API connection" nav string. The enum-filter dropdown orphan and the client-work reset-prologue duplication were found already resolved/stale.
+
 **Genuinely still open** (the tail):
-- Medium: `src/widgets.ts` sparse-settings fallback (deferred — needs a defaults decision); enum-filter dropdown orphan (`app-view.ts`).
-- Duplication refactors (4, below) — cosmetic, none behavioral.
-- Test gaps (below) — several subsystems still uncovered.
-- Reference-vault housekeeping (vault-side, owner-gated). The one **repo-side** item here — the Settings nav description still saying "API connection" — is now **fixed** (`src/nav.ts`).
+- Duplication: Export/Import UI duplicated between the `misc.*` surfaces and the Settings Data tab (real, but a larger refactor). `renderHome` greeting header never shows in configured vaults (cosmetic).
+- Test gaps: `entityKeyFromFile`, `ignoredFolders`/`isIgnoredPath`, scan-cache invalidation; `reloadEntityConfiguration`/`applyWorkspaceRegistries` order; `applySchemas`/bootstrap gating/`regenerateSchemaOutputs` pruning; `exportEntitiesXLSX` sheet composition + `field_aliases` mapping; `archiveTemplateAssets`/`writeTemplateAssets` switching.
+- Reference-vault housekeeping (vault-side, owner-gated).
 
 ## Worker instructions (read first)
 
@@ -48,8 +49,8 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 - [x] Vault + bob template: stat `"mode": "client-work.meetings"` targets a nonexistent surface — click navigates Home. ✅ DONE (2026-07-02) — removed the broken `mode` from the MEETINGS stat in `workspace-bob.json` and `workspace-cadence.json` (the Meetings tab has `route: null`, so no valid surface target exists; the stat is now non-clickable rather than misleading). Note: the real vault's `workspace.json` still carries this — apply the same removal there (or re-apply a fixed template).
 - [x] `srm`/`tax` module remnants — ✅ DONE (2026-07-03). Owner decision: **remove srm/tax + reconcile lists**. Dropped `srm`/`tax` from `DEFAULT_SETTINGS.modules`, `ensureMods`, `moduleLabels`, and the `_visibleNavGroups` fallback, and reconciled all three module-default lists to the canonical set `{crm, client-work, prm, finance, procurement, planner, ai}`. Kept `_migrateModeId`'s `srm.suppliers → procurement.suppliers` redirect (legit migration). Verified no dead srm/tax module refs remain.
 - [~] Orphaned settings: `dailyNoteFormat` (defined/typed, read by nothing) — ✅ REMOVED (2026-07-02). `showSecondaryNav`/`showSetupNav` LEFT AS-IS: they ARE read (`_visibleNavGroups`, Review tab), just have no UI toggle; removing them would break the readers, so the fix is "add a toggle" not "delete" — deferred as a feature, not dead code.
-- [ ] `src/widgets.ts:263-267` falls back to raw sparse `WORKSPACE_CONFIG.settings` (not default-merged) when settings aren't passed — latent wrong-defaults bug. ⚠️ DEFERRED (2026-07-02): `resolveWidgetSource`'s `settings: PartialSettings = {}` default makes the `|| WORKSPACE_CONFIG.settings` branch effectively dead (empty `{}` is truthy), so "fixing" it changes behavior rather than hardening a default. Needs a deliberate decision on what unpassed settings should resolve to (probably `Object.assign({}, DEFAULT_SETTINGS, WORKSPACE_CONFIG.settings)`), with snapshot-behavior checks — not a blind edit.
-- [ ] Enum-filter dropdown appended to `document.body` (`app-view.ts:1143-1155`) can orphan itself + its listener on re-render/close.
+- [x] `src/widgets.ts` sparse-settings fallback — ✅ DONE (2026-07-14): built-in snapshots now always get `Object.assign({}, DEFAULT_SETTINGS, WORKSPACE_CONFIG.settings, settings)` (the old `settings || WORKSPACE_CONFIG.settings` fallback was dead since the `{}` default is truthy). ~~DEFERRED (2026-07-02):~~ `resolveWidgetSource`'s `settings: PartialSettings = {}` default makes the `|| WORKSPACE_CONFIG.settings` branch effectively dead (empty `{}` is truthy), so "fixing" it changes behavior rather than hardening a default. Needs a deliberate decision on what unpassed settings should resolve to (probably `Object.assign({}, DEFAULT_SETTINGS, WORKSPACE_CONFIG.settings)`), with snapshot-behavior checks — not a blind edit.
+- [x] Enum-filter dropdown orphan — ✅ ALREADY HANDLED (verified 2026-07-14): `_columnFilterCleanup` removes the element + document listener, invoked by `_closeColumnFilterMenu()` on render start, `onClose`, and before opening another. No leak.
 
 ## Dead code — safe removals
 
@@ -73,10 +74,10 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 - Verified: all removed classes had zero emitters in `src/`+`templates/`; KEEP classes confirmed live.
 
 ### Duplication worth collapsing
-- [ ] `_renderSecondaryRoute` (`app-view.ts:1446-1457`): seven one-line dashboard wrappers (≈3898-3924) reduce to `renderConfigDashboard(route, ...)`.
-- [ ] Client-work reset prologue duplicated verbatim in `renderClientWorkWorkspace` (1552) and `_renderClientWorkEntityList` (1573).
+- [x] `_renderSecondaryRoute` seven dashboard wrappers — ✅ DONE (2026-07-14): collapsed the 7 route dispatches into an `OVERVIEW_DASHBOARD_ROUTES` set → single `renderConfigDashboard(route, root, opts)`; deleted the 7 one-line wrapper methods (each had a single call site).
+- [x] Client-work reset prologue duplication — ✅ STALE (2026-07-14): `_renderClientWorkEntityList` was already removed with the dead client-work.* routes (see Dead code), so the duplication no longer exists.
 - [ ] Export/Import UI duplicated between `misc.*` surfaces and the Settings Data tab.
-- [ ] `renderProductivity` (6299) pointless wrapper; `renderHome` greeting header (5815-5821) never shows in configured vaults.
+- [x] `renderProductivity` pointless wrapper — ✅ DONE (2026-07-14): inlined into the route map as `renderConfigDashboard('reports.productivity', content)` and removed. (`renderHome` greeting header note left as-is — cosmetic, not dead.)
 
 ## Documentation drift
 
@@ -96,12 +97,12 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 ## Test gaps
 
 - [x] **Add a regression test applying every bundled template through the real `validateWorkspaceConfig`** ✅ DONE (2026-07-02) — new `tests/template-validate.test.js` (wired into `run-tests.js`): strips `_`-prefixed metadata like the real apply path, runs `migrateWorkspacePlannerConfig` + real `validateWorkspaceConfig` on every `templates/workspace-*.json`, and asserts the three rich templates expose a non-empty top-level `planner` block with no residual `dashboards.planner`. Catches both criticals #1 and #2.
-- [ ] `listEntityFiles`/`entityKeyFromFile`/`scannableMarkdownFiles`: typeFilters AND-combination, template-path exclusion, `ignoredFolders`, cache invalidation — zero tests.
+- [x] `listEntityFiles` filter categories + template-path exclusion — ✅ DONE (2026-07-14): `tests/entity-files-filter.test.js` covers `typeFilter`, `typeFilters` AND, `filenameFilter`+folder, `folders` OR, default folder, unknown-entity, and `isTemplatePath`. (`entityKeyFromFile`, `ignoredFolders`/`isIgnoredPath`, and scan-cache invalidation still uncovered.)
 - [ ] `reloadEntityConfiguration` end-to-end order; `applyWorkspaceRegistries`/`resetWorkspaceRegistries`.
 - [ ] `applySchemas`, bootstrap gating, `regenerateSchemaOutputs` pruning.
 - [ ] `exportEntitiesXLSX` sheet composition + `field_aliases` CSV/XLSX import mapping.
 - [ ] `archiveTemplateAssets`/`writeTemplateAssets` template switching.
-- [ ] Minor: `run-tests.js` prints "all tests passed" before async assertions settle (failures still exit non-zero).
+- [x] `run-tests.js` async ordering — ✅ DONE (2026-07-14): an `unhandledRejection` handler exits non-zero, and the success line now prints on `beforeExit` (after async IIFE tests settle), so it can't precede an async failure.
 
 ## Suggested fix order
 

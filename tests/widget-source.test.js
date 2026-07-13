@@ -56,6 +56,7 @@ const sandbox = loadMainFunctions([
   }),
   buildHomeSnapshot: async () => ({}),
   WORKSPACE_CONFIG: { settings: {} },
+  DEFAULT_SETTINGS: {},
   compareEntitiesByBaseSort: () => 0,
   entityValue: (entity, key) => entity?.frontmatter?.[key],
 });

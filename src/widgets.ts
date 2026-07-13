@@ -2,6 +2,7 @@ import { basePropKey, parseBaseFile } from './bases-parse';
 import { ENTITIES } from './entities';
 import { compareEntitiesByBaseSort, entityValue, evaluateBaseFilterNode, listEntities } from './entity-files';
 import { buildHomeSnapshot, buildPlannerSnapshot, buildProductivitySnapshot } from './snapshots';
+import { DEFAULT_SETTINGS } from './settings';
 import { WORKSPACE_CONFIG } from './workspace-config';
 import * as obsidian from 'obsidian';
 import type { App } from 'obsidian';
@@ -259,12 +260,17 @@ export async function resolveWidgetSource(app: App, source: unknown, fallbackEnt
   };
   if (normalized.mode === 'built-in') {
     const builtInName = String(normalized.builtIn || '').trim().toLowerCase();
+    // Snapshots read many settings fields — always hand them a default-merged
+    // object. The caller's `settings` default of `{}` is truthy, so the old
+    // `settings || WORKSPACE_CONFIG.settings` fallback was dead and could pass
+    // raw/sparse settings; merge defaults + workspace config + caller settings.
+    const snapshotSettings = Object.assign({}, DEFAULT_SETTINGS, WORKSPACE_CONFIG.settings || {}, settings || {});
     const builtInData = builtInName === 'productivity'
-      ? await buildProductivitySnapshot(app, settings || WORKSPACE_CONFIG.settings || {})
+      ? await buildProductivitySnapshot(app, snapshotSettings)
       : builtInName === 'planner'
-        ? await buildPlannerSnapshot(app, settings || WORKSPACE_CONFIG.settings || {})
+        ? await buildPlannerSnapshot(app, snapshotSettings)
       : builtInName === 'home'
-        ? await buildHomeSnapshot(app, settings || WORKSPACE_CONFIG.settings || {})
+        ? await buildHomeSnapshot(app, snapshotSettings)
         : null;
     return {
       entityKey: normalized.entityKey || null,
