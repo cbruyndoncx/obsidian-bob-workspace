@@ -4,6 +4,20 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.49] — 2026-07-15
+
+### Added
+- **Configurable canvas folder** — Settings → App → Data: **Canvas folder**
+  (default `BOB Workspace/Canvases`, workspace-owned/portable) sets where
+  generated canvases are written (was hardcoded).
+
+### Changed
+- The **Canvases library scan now honors `ignoredFolders`** (in addition to the
+  template-path exclusion), matching entity scans.
+- Docs: the canvas section flags the two unofficial-internals dependencies to
+  re-test on Obsidian upgrades; the `_assets` note records the ~1.6 MB bundle
+  size as an accepted self-seeding trade-off.
+
 ## [0.14.4-bob.48] — 2026-07-15
 
 ### Fixed
@@ -361,6 +375,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.49]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.49
 [0.14.4-bob.48]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.48
 [0.14.4-bob.47]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.47
 [0.14.4-bob.46]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.46

@@ -15,7 +15,7 @@ import { createEntity, ensureDailyNote, parseSections, replaceSection } from '..
 import { parseH2Sections, parseTasksList, readProjectMeta, stringifyMilestones, stringifyTasks } from '../project-notes';
 import { findProjectTaskReminder, projectNameFromPath, reminderBucket, reminderTimeStr } from '../reminders';
 import { reloadEntityConfiguration } from '../runtime-config';
-import { DEFAULT_SETTINGS, applyDashboardContext, entityFolder } from '../settings';
+import { DEFAULT_SETTINGS, applyDashboardContext, entityFolder, isIgnoredPath } from '../settings';
 import { buildProductivitySnapshot } from '../snapshots';
 import { createTaskNote, listTodayTaskNotes, toggleTaskNoteStatus } from '../task-notes';
 import { addDays, dailyNotePath, dateInfo, ensureFolderSync, greeting, isTemplatePath, pctBand, sameDay, startOfDay, startOfWeek, weekDates, ymd } from '../utils';
@@ -895,7 +895,7 @@ export class CadenceAppView extends obsidian.ItemView {
   // Every .canvas file in the vault (excluding template folders), newest first.
   _scanCanvasFiles(): obsidian.TFile[] {
     return this.app.vault.getFiles()
-      .filter((f) => f.extension === 'canvas' && !isTemplatePath(f.path))
+      .filter((f) => f.extension === 'canvas' && !isTemplatePath(f.path) && !isIgnoredPath(f.path))
       .sort((a, b) => (b.stat?.mtime || 0) - (a.stat?.mtime || 0));
   }
 
@@ -976,7 +976,8 @@ export class CadenceAppView extends obsidian.ItemView {
   // an existing file so hand-added nodes/edges survive: BOB owns only the ids
   // recorded in the sidecar manifest. Opens the result inline.
   async _writeGeneratedCanvas(rawName: string, data: CanvasData, manifest: CanvasManifest) {
-    const folder = 'BOB Workspace/Canvases';
+    const folder = (this.plugin.settings.canvasFolder || DEFAULT_SETTINGS.canvasFolder || 'BOB Workspace/Canvases')
+      .replace(/^\/+/, '').replace(/\/+$/, '');
     await ensureFolderSync(this.app, folder);
     const name = rawName.replace(/[\\/:*?"<>|]/g, '-');
     const canvasPath = `${folder}/${name}.canvas`;

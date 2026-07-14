@@ -198,6 +198,7 @@ export interface BobSettings {
   taskNotesFolder: string;
   taskNotesArchiveFolder: string;
   workbookExportFolder: string;
+  canvasFolder: string;
   folderContacts: string;
   folderCompanies: string;
   folderClients: string;

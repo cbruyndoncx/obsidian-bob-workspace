@@ -50,6 +50,7 @@ export const DEFAULT_SETTINGS: BobSettings = {
   taskNotesFolder: '00-CORE/TaskNotes/Tasks',
   taskNotesArchiveFolder: '00-CORE/TaskNotes/Archive',
   workbookExportFolder: 'BOB Workspace/Exports',
+  canvasFolder: 'BOB Workspace/Canvases',
   // Entity folder locations (all configurable)
   folderContacts: '10-ME/10-PEOPLE',
   folderCompanies: '20-COMPANY/00-PROFILE',

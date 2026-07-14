@@ -467,6 +467,7 @@ export const WORKSPACE_OWNED_SETTING_KEYS = [
   'taskNotesFolder',
   'taskNotesArchiveFolder',
   'workbookExportFolder',
+  'canvasFolder',
   'baseFiles',
   'baseViews',
   'basesFolder',

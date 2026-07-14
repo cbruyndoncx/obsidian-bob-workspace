@@ -2526,6 +2526,16 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           this.plugin.settings.workbookExportFolder = v.trim().replace(/^\/+/, '').replace(/\/+$/, '') || DEFAULT_SETTINGS.workbookExportFolder;
           await this.plugin.saveSettings();
         }));
+    new obsidian.Setting(dataPanel)
+      .setName('Canvas folder')
+      .setDesc('Vault folder where generated canvases (Context / Process / Pipeline / Agent Audit) are written.')
+      .addText((t) => t
+        .setPlaceholder(DEFAULT_SETTINGS.canvasFolder)
+        .setValue(this.plugin.settings.canvasFolder || DEFAULT_SETTINGS.canvasFolder)
+        .onChange(async (v) => {
+          this.plugin.settings.canvasFolder = v.trim().replace(/^\/+/, '').replace(/\/+$/, '') || DEFAULT_SETTINGS.canvasFolder;
+          await this.plugin.saveSettings();
+        }));
     // The full export/import UI (group selection + per-sheet XLSX, import
     // templates, and CSV/XLSX import with column mapping) lives on the Export
     // and Import surfaces — the single canonical implementation. Settings keeps

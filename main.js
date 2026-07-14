@@ -23488,6 +23488,7 @@ var WORKSPACE_OWNED_SETTING_KEYS = [
   "taskNotesFolder",
   "taskNotesArchiveFolder",
   "workbookExportFolder",
+  "canvasFolder",
   "baseFiles",
   "baseViews",
   "basesFolder",
@@ -25953,6 +25954,7 @@ var DEFAULT_SETTINGS = {
   taskNotesFolder: "00-CORE/TaskNotes/Tasks",
   taskNotesArchiveFolder: "00-CORE/TaskNotes/Archive",
   workbookExportFolder: "BOB Workspace/Exports",
+  canvasFolder: "BOB Workspace/Canvases",
   // Entity folder locations (all configurable)
   folderContacts: "10-ME/10-PEOPLE",
   folderCompanies: "20-COMPANY/00-PROFILE",
@@ -30438,7 +30440,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
   /* ── Canvas (Obsidian .canvas) surfaces ────────────────── */
   // Every .canvas file in the vault (excluding template folders), newest first.
   _scanCanvasFiles() {
-    return this.app.vault.getFiles().filter((f) => f.extension === "canvas" && !isTemplatePath(f.path)).sort((a, b) => (b.stat?.mtime || 0) - (a.stat?.mtime || 0));
+    return this.app.vault.getFiles().filter((f) => f.extension === "canvas" && !isTemplatePath(f.path) && !isIgnoredPath(f.path)).sort((a, b) => (b.stat?.mtime || 0) - (a.stat?.mtime || 0));
   }
   // Open a canvas full-page inside the BOB shell (viewer; edit via "Pop out").
   async openCanvas(file) {
@@ -30522,7 +30524,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
   // an existing file so hand-added nodes/edges survive: BOB owns only the ids
   // recorded in the sidecar manifest. Opens the result inline.
   async _writeGeneratedCanvas(rawName, data, manifest) {
-    const folder = "BOB Workspace/Canvases";
+    const folder = (this.plugin.settings.canvasFolder || DEFAULT_SETTINGS.canvasFolder || "BOB Workspace/Canvases").replace(/^\/+/, "").replace(/\/+$/, "");
     await ensureFolderSync(this.app, folder);
     const name = rawName.replace(/[\\/:*?"<>|]/g, "-");
     const canvasPath = `${folder}/${name}.canvas`;
@@ -38525,6 +38527,10 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     const dataPanel = dataGroup.createDiv({ cls: "setting-items" });
     new obsidian18.Setting(dataPanel).setName("Workbook export folder").setDesc("Vault folder where XLSX workbook exports are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.workbookExportFolder).setValue(this.plugin.settings.workbookExportFolder || DEFAULT_SETTINGS.workbookExportFolder).onChange(async (v) => {
       this.plugin.settings.workbookExportFolder = v.trim().replace(/^\/+/, "").replace(/\/+$/, "") || DEFAULT_SETTINGS.workbookExportFolder;
+      await this.plugin.saveSettings();
+    }));
+    new obsidian18.Setting(dataPanel).setName("Canvas folder").setDesc("Vault folder where generated canvases (Context / Process / Pipeline / Agent Audit) are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.canvasFolder).setValue(this.plugin.settings.canvasFolder || DEFAULT_SETTINGS.canvasFolder).onChange(async (v) => {
+      this.plugin.settings.canvasFolder = v.trim().replace(/^\/+/, "").replace(/\/+$/, "") || DEFAULT_SETTINGS.canvasFolder;
       await this.plugin.saveSettings();
     }));
     new obsidian18.Setting(dataPanel).setName("Export & import data").setDesc("Group export (one sheet per entity), import templates, and CSV/XLSX import with column mapping live on the Export and Import screens.").addButton((b) => b.setButtonText("Open Export").onClick(() => this._gotoSurface("misc.export"))).addButton((b) => b.setButtonText("Open Import").onClick(() => this._gotoSurface("misc.import")));
