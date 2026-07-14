@@ -187,15 +187,18 @@ export function buildContextExplosion(spec: ContextSpec): { data: CanvasData; ow
     return items.map((it, i) => ({ it, x: startX + i * (CW + GX), y }));
   };
   const place = (positioned: { it: ContextItem; x: number; y: number }[], sides: { from: string; to: string }, edgeLabel: string) => {
-    for (const p of positioned) {
-      const id = nid(p.it.role, p.it.target || p.it.url || p.it.text || '');
+    // Seed ids with the quadrant side + index so two cards that share a
+    // role/target/text can't collide (still deterministic across regenerations).
+    positioned.forEach((p, i) => {
+      const disc = `${sides.from}:${i}:${p.it.target || p.it.url || p.it.text || ''}`;
+      const id = nid(p.it.role, disc);
       const box: Box = { id, x: p.x, y: p.y, width: CW, height: CH };
       if (p.it.color) box.color = p.it.color;
       if (p.it.file) nodes.push(entityCard(box, p.it.file));
       else if (p.it.url) nodes.push(externalCard(box, p.it.url));
       else nodes.push(insightCard(box, p.it.text || ''));
-      edges.push(signalEdge(nid('edge', `${p.it.role}:${p.it.target || p.it.url || ''}`), focalId, id, edgeLabel, sides));
-    }
+      edges.push(signalEdge(nid('edge', `${disc}:${p.it.role}`), focalId, id, edgeLabel, sides));
+    });
     return positioned;
   };
   const wrapZone = (positioned: { x: number; y: number }[], q: ContextQuadrant, key: string) => {

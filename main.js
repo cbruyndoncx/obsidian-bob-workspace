@@ -28835,15 +28835,16 @@ function buildContextExplosion(spec) {
     return items.map((it, i) => ({ it, x: startX + i * (CW + GX), y }));
   };
   const place = (positioned, sides, edgeLabel) => {
-    for (const p of positioned) {
-      const id = nid(p.it.role, p.it.target || p.it.url || p.it.text || "");
+    positioned.forEach((p, i) => {
+      const disc = `${sides.from}:${i}:${p.it.target || p.it.url || p.it.text || ""}`;
+      const id = nid(p.it.role, disc);
       const box = { id, x: p.x, y: p.y, width: CW, height: CH };
       if (p.it.color) box.color = p.it.color;
       if (p.it.file) nodes.push(entityCard(box, p.it.file));
       else if (p.it.url) nodes.push(externalCard(box, p.it.url));
       else nodes.push(insightCard(box, p.it.text || ""));
-      edges.push(signalEdge(nid("edge", `${p.it.role}:${p.it.target || p.it.url || ""}`), focalId, id, edgeLabel, sides));
-    }
+      edges.push(signalEdge(nid("edge", `${disc}:${p.it.role}`), focalId, id, edgeLabel, sides));
+    });
     return positioned;
   };
   const wrapZone = (positioned, q, key) => {
@@ -30662,6 +30663,13 @@ var CadenceAppView = class extends obsidian17.ItemView {
     try {
       leaf = new WorkspaceLeafCtor(this.app);
       await leaf.setViewState({ type: "canvas", state: { file: file.path }, active: false });
+      if (this.canvasFile?.path !== file.path) {
+        try {
+          leaf.detach();
+        } catch (_) {
+        }
+        return;
+      }
       const view = leaf.view;
       const viewEl = view?.containerEl || leaf.containerEl;
       if (!viewEl) throw new Error("canvas view element not found");
@@ -30691,11 +30699,16 @@ var CadenceAppView = class extends obsidian17.ItemView {
   // navigation, and view close so the hosted CanvasView never leaks.
   _teardownCanvasLeaf() {
     if (!this._canvasLeaf) return;
+    const leaf = this._canvasLeaf;
+    this._canvasLeaf = null;
     try {
-      this._canvasLeaf.detach();
+      leaf.view?.unload?.();
     } catch (_) {
     }
-    this._canvasLeaf = null;
+    try {
+      leaf.detach();
+    } catch (_) {
+    }
   }
   /* ── Generic page header ────────────────── */
   _renderPageHeader(root, title, subtitle, actions, options = {}) {

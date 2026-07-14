@@ -1096,6 +1096,10 @@ export class CadenceAppView extends obsidian.ItemView {
     try {
       leaf = new WorkspaceLeafCtor(this.app);
       await leaf.setViewState({ type: 'canvas', state: { file: file.path }, active: false });
+      // Guard the async gap: if the user navigated away (or opened a different
+      // canvas) while this one was loading, drop the in-flight leaf rather than
+      // mount a stray view into an already-emptied DOM.
+      if (this.canvasFile?.path !== file.path) { try { leaf.detach(); } catch (_) { /* ignore */ } return; }
       const view = leaf.view as (obsidian.View & {
         canvas?: { requestFrame?: () => void; zoomToFit?: () => void };
         onResize?: () => void;
@@ -1120,8 +1124,12 @@ export class CadenceAppView extends obsidian.ItemView {
   // navigation, and view close so the hosted CanvasView never leaks.
   _teardownCanvasLeaf() {
     if (!this._canvasLeaf) return;
-    try { this._canvasLeaf.detach(); } catch (_) { /* ignore */ }
-    this._canvasLeaf = null;
+    const leaf = this._canvasLeaf;
+    this._canvasLeaf = null; // null first so re-entrant teardowns are no-ops
+    // detach() on an ephemeral (never-attached) leaf isn't guaranteed to run the
+    // CanvasView's onunload, so unload the view explicitly before detaching.
+    try { (leaf.view as unknown as { unload?: () => void })?.unload?.(); } catch (_) { /* ignore */ }
+    try { leaf.detach(); } catch (_) { /* ignore */ }
   }
 
   /* ── Generic page header ────────────────── */

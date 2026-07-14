@@ -4,6 +4,21 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.48] — 2026-07-15
+
+### Fixed
+- **Canvas leaf lifecycle** (from a fresh code review of the new canvas code):
+  - *(M1)* Navigating away while a full-page canvas is still loading no longer
+    leaves a stray, still-running `CanvasView` — the mount now bails out and
+    detaches the in-flight leaf if the open canvas changed during the async load.
+  - *(M2)* Canvas teardown now explicitly unloads the view before detaching the
+    ephemeral leaf (`detach()` on a never-attached leaf isn't guaranteed to run
+    the view's `onunload`), and nulls its handle first so re-entrant teardowns
+    are no-ops.
+  - *(L2)* Generated context/agent-audit canvases seed node/edge ids with the
+    quadrant + index, so two cards sharing a role/target/text can't collide
+    (still deterministic across regenerations).
+
 ## [0.14.4-bob.47] — 2026-07-15
 
 ### Changed
@@ -346,6 +361,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.48]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.48
 [0.14.4-bob.47]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.47
 [0.14.4-bob.46]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.46
 [0.14.4-bob.45]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.45
