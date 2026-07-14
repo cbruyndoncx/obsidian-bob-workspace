@@ -4,6 +4,22 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.47] — 2026-07-15
+
+### Changed
+- **Export/import de-duplicated.** The full export/import UI (group export,
+  import templates, CSV/XLSX import with column mapping) now lives only on the
+  **Export** and **Import** surfaces — the single canonical implementation.
+  Settings → Data keeps just the portable **workbook export folder** setting and
+  **Open Export / Open Import** buttons that jump to those screens. Removes a
+  second, divergent copy that had drifted (different group picker, feedback, and
+  behavior).
+
+### Fixed
+- The **Export screen honors the configured export folder** again — it read a
+  never-assigned view field (`this.settings`) and silently fell back to the
+  default folder; it now uses `this.plugin.settings`.
+
 ## [0.14.4-bob.46] — 2026-07-14
 
 Cleanup / TODO-tail pass.
@@ -330,6 +346,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.47]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.47
 [0.14.4-bob.46]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.46
 [0.14.4-bob.45]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.45
 [0.14.4-bob.44]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.44

@@ -13,7 +13,7 @@ import { SCHEMA_FOLDER_DEFAULT, SCHEMA_TO_ENTITY_KEY, pluralizeEntityLabel } fro
 import { DEFAULT_SETTINGS, syncEntityFolders } from './settings';
 import { CURRENCY_OPTIONS, ensureFolderSync } from './utils';
 import { CadenceAppView } from './views/app-view';
-import { exportEntitiesXLSX, promptImportWorkbook, selectedWorkbookEntityKeys, workbookExportFolder, workbookExportGroups } from './workbook';
+import { workbookExportFolder } from './workbook';
 import { PLUGIN_DIR, WORKSPACE_BACKUP_PATH, WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, configuredBaseDefinition, effectiveSchemaSettings, saveWorkspaceConfig, validateWorkspaceConfig, workspaceConfiguredEntityEntries } from './workspace-config';
 import { applyWorkspaceTemplate, loadWorkspaceTemplates, workspaceTemplateKey } from './workspace-templates';
 import * as obsidian from 'obsidian';
@@ -2526,45 +2526,25 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           this.plugin.settings.workbookExportFolder = v.trim().replace(/^\/+/, '').replace(/\/+$/, '') || DEFAULT_SETTINGS.workbookExportFolder;
           await this.plugin.saveSettings();
         }));
-    const exportGroups = workbookExportGroups();
-    const exportSetting = new obsidian.Setting(dataPanel)
-      .setName('Export entity groups to XLSX')
-      .setDesc(`Select one or more configured export groups to create a limited workbook under ${workbookExportFolder(this.plugin.settings)}.`);
-    const exportControl = exportSetting.controlEl.createDiv({ cls: 'cad-workbook-export-control' });
-    const groupSelect = exportControl.createEl('select', { cls: 'dropdown cad-workbook-group-select', attr: { multiple: 'multiple' } });
-    groupSelect.size = Math.min(Math.max(exportGroups.length, 6), 12);
-    exportGroups.forEach((group) => {
-      const option = groupSelect.createEl('option', {
-        value: group.id,
-        text: `${group.label} (${group.entityKeys.length})`,
-      });
-      option.selected = true;
-    });
-    const exportBtn = exportControl.createEl('button', { cls: 'mod-cta', text: 'Export workbook' });
-    exportBtn.addEventListener('click', async () => {
-      const selectedGroups = Array.from(groupSelect.selectedOptions).map((option) => option.value);
-      const entityKeys = selectedWorkbookEntityKeys(selectedGroups);
-      if (!entityKeys.length) {
-        new obsidian.Notice('BOB Workspace: select at least one group to export.');
-        return;
-      }
-      try {
-        const suffix = selectedGroups.length === exportGroups.length ? '' : 'selected';
-        const path = await exportEntitiesXLSX(this.plugin.app, entityKeys, suffix, this.plugin.settings);
-        new obsidian.Notice(`BOB Workspace: exported workbook to ${path}`, 6000);
-      } catch (e) {
-        new obsidian.Notice(`BOB Workspace: XLSX export failed — ${e.message}`, 8000);
-      }
-    });
+    // The full export/import UI (group selection + per-sheet XLSX, import
+    // templates, and CSV/XLSX import with column mapping) lives on the Export
+    // and Import surfaces — the single canonical implementation. Settings keeps
+    // only the portable folder setting and jumps to those screens.
     new obsidian.Setting(dataPanel)
-      .setName('Import entities from XLSX')
-      .setDesc('Imports workbook sheets named after entity keys, labels or plurals, using field keys as column headers.')
+      .setName('Export & import data')
+      .setDesc('Group export (one sheet per entity), import templates, and CSV/XLSX import with column mapping live on the Export and Import screens.')
       .addButton((b) => b
-        .setButtonText('Import workbook')
-        .onClick(async () => {
-          await promptImportWorkbook(this.plugin.app, async () => this.plugin.refreshOpenViews());
-        }));
+        .setButtonText('Open Export')
+        .onClick(() => this._gotoSurface('misc.export')))
+      .addButton((b) => b
+        .setButtonText('Open Import')
+        .onClick(() => this._gotoSurface('misc.import')));
+  }
 
+  // Close the settings dialog (best-effort, internal API) and open a BOB surface.
+  _gotoSurface(mode: string) {
+    try { (this.app as unknown as { setting?: { close?: () => void } }).setting?.close?.(); } catch (_) { /* ignore */ }
+    this.plugin.openApp(mode);
   }
 }
 

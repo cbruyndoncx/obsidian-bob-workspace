@@ -11,7 +11,7 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 **Fixed in the 2026-07-14 cleanup pass:** the `src/widgets.ts` sparse-settings fallback (now default-merged), the `_renderSecondaryRoute`/`renderProductivity` dashboard-wrapper duplication (collapsed), the `listEntityFiles` filter + template-path test gap (`tests/entity-files-filter.test.js`), the `run-tests.js` async-ordering gap, the "API connection" nav string, **`showSecondaryNav`/`showSetupNav` UI toggles** (Settings → App → Navigation), and the full **reference-vault housekeeping** (leftovers archived, `data.json` api orphans removed, `periodic-note` base mapping added). The enum-filter dropdown orphan and the client-work reset-prologue duplication were found already resolved/stale.
 
 **Genuinely still open** (the tail):
-- Duplication: Export/Import UI duplicated between the `misc.*` surfaces and the Settings Data tab (real, but a larger refactor). `renderHome` greeting header never shows in configured vaults (cosmetic).
+- Duplication: `renderHome` greeting header never shows in configured vaults (cosmetic). *(Export/Import UI dedup — ✅ DONE 2026-07-15.)*
 - Test gaps (remaining): the `ignoredFolders`→`IGNORED_FOLDERS` **sync** (`syncEntityFolders`) and scan-cache invalidation; `reloadEntityConfiguration`/`applyWorkspaceRegistries` order (module-registry mutation — hard to assert through the current sandbox); `applySchemas`/bootstrap gating/`regenerateSchemaOutputs` pruning; `archiveTemplateAssets`/`writeTemplateAssets` switching. **Covered 2026-07-14/15:** `entityKeyFromFile`, `isIgnoredPath` matching, `exportEntitiesXLSX` sheet composition, and `field_aliases` import mapping (`safeSheetName`/group→keys/`normalizedImportHeader`/`rowValue`/`configuredFieldAliases`/`rowValueForField` — `tests/workbook.test.js`, `tests/entity-files-filter.test.js`).
 - Vault: 3 unreachable `workspace.*` dashboards (harmless; editable via the now-reachable Surface Designer).
 
@@ -76,7 +76,7 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 ### Duplication worth collapsing
 - [x] `_renderSecondaryRoute` seven dashboard wrappers — ✅ DONE (2026-07-14): collapsed the 7 route dispatches into an `OVERVIEW_DASHBOARD_ROUTES` set → single `renderConfigDashboard(route, root, opts)`; deleted the 7 one-line wrapper methods (each had a single call site).
 - [x] Client-work reset prologue duplication — ✅ STALE (2026-07-14): `_renderClientWorkEntityList` was already removed with the dead client-work.* routes (see Dead code), so the duplication no longer exists.
-- [ ] Export/Import UI duplicated between `misc.*` surfaces and the Settings Data tab.
+- [x] Export/Import UI duplication — ✅ DONE (2026-07-15): the full export/import UI is now single-sourced on the `misc.export`/`misc.import` surfaces. Settings → Data keeps only the portable **export-folder** setting and jumps to those screens (`_gotoSurface` → close settings + `openApp`). Also fixed a latent bug: `renderExport` read the never-assigned `this.settings` (so it ignored the configured folder) — now uses `this.plugin.settings`; removed the dead field.
 - [x] `renderProductivity` pointless wrapper — ✅ DONE (2026-07-14): inlined into the route map as `renderConfigDashboard('reports.productivity', content)` and removed. (`renderHome` greeting header note left as-is — cosmetic, not dead.)
 
 ## Documentation drift

@@ -355,12 +355,6 @@ export class CadenceAppView extends obsidian.ItemView {
   declare _dashboardState: Record<string, DashboardState> | undefined;
   /** Optional parsed-base cache cleared on metadata changes (set externally when present). */
   declare _basesCache: Map<string, unknown> | undefined;
-  /**
-   * NOTE: never assigned on this view — `renderExport()` reads it and passes
-   * `undefined` to workbook helpers (latent bug carried over from main.js;
-   * it almost certainly should be `this.plugin.settings`).
-   */
-  declare settings: BobSettings | undefined;
   constructor(leaf: obsidian.WorkspaceLeaf, plugin: CadencePlugin) {
     super(leaf);
     this.plugin = plugin;
@@ -4238,7 +4232,7 @@ export class CadenceAppView extends obsidian.ItemView {
 
     const destDesc = exportSec.createDiv({ cls: 'cad-data-section-desc' });
     destDesc.setText('Output folder: ');
-    destDesc.createEl('strong', { text: workbookExportFolder(this.settings) });
+    destDesc.createEl('strong', { text: workbookExportFolder(this.plugin.settings) });
 
     const exportRow = exportSec.createDiv({ cls: 'cad-data-action-row' });
     const exportBtnRow = exportRow.createDiv({ cls: 'cad-data-btn-row' });
@@ -4255,7 +4249,7 @@ export class CadenceAppView extends obsidian.ItemView {
       exportStatus.setText('');
       try {
         const suffix = exportGroups.length && checked.size < exportGroups.length ? 'selected' : '';
-        const path = await exportEntitiesXLSX(this.app, keys, suffix, this.settings);
+        const path = await exportEntitiesXLSX(this.app, keys, suffix, this.plugin.settings);
         exportStatus.className = 'cad-data-status cad-data-status-ok';
         exportStatus.setText('Saved to ');
         exportStatus.createEl('strong', { text: path });

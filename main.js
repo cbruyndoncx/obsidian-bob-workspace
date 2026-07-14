@@ -33587,7 +33587,7 @@ ${snippet}` : "- No markdown content");
     }
     const destDesc = exportSec.createDiv({ cls: "cad-data-section-desc" });
     destDesc.setText("Output folder: ");
-    destDesc.createEl("strong", { text: workbookExportFolder(this.settings) });
+    destDesc.createEl("strong", { text: workbookExportFolder(this.plugin.settings) });
     const exportRow = exportSec.createDiv({ cls: "cad-data-action-row" });
     const exportBtnRow = exportRow.createDiv({ cls: "cad-data-btn-row" });
     const exportBtn = exportBtnRow.createEl("button", { cls: "cad-btn", text: "Export workbook" });
@@ -33605,7 +33605,7 @@ ${snippet}` : "- No markdown content");
       exportStatus.setText("");
       try {
         const suffix = exportGroups.length && checked.size < exportGroups.length ? "selected" : "";
-        const path = await exportEntitiesXLSX(this.app, keys, suffix, this.settings);
+        const path = await exportEntitiesXLSX(this.app, keys, suffix, this.plugin.settings);
         exportStatus.className = "cad-data-status cad-data-status-ok";
         exportStatus.setText("Saved to ");
         exportStatus.createEl("strong", { text: path });
@@ -38514,37 +38514,15 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       this.plugin.settings.workbookExportFolder = v.trim().replace(/^\/+/, "").replace(/\/+$/, "") || DEFAULT_SETTINGS.workbookExportFolder;
       await this.plugin.saveSettings();
     }));
-    const exportGroups = workbookExportGroups();
-    const exportSetting = new obsidian18.Setting(dataPanel).setName("Export entity groups to XLSX").setDesc(`Select one or more configured export groups to create a limited workbook under ${workbookExportFolder(this.plugin.settings)}.`);
-    const exportControl = exportSetting.controlEl.createDiv({ cls: "cad-workbook-export-control" });
-    const groupSelect = exportControl.createEl("select", { cls: "dropdown cad-workbook-group-select", attr: { multiple: "multiple" } });
-    groupSelect.size = Math.min(Math.max(exportGroups.length, 6), 12);
-    exportGroups.forEach((group) => {
-      const option = groupSelect.createEl("option", {
-        value: group.id,
-        text: `${group.label} (${group.entityKeys.length})`
-      });
-      option.selected = true;
-    });
-    const exportBtn = exportControl.createEl("button", { cls: "mod-cta", text: "Export workbook" });
-    exportBtn.addEventListener("click", async () => {
-      const selectedGroups = Array.from(groupSelect.selectedOptions).map((option) => option.value);
-      const entityKeys = selectedWorkbookEntityKeys(selectedGroups);
-      if (!entityKeys.length) {
-        new obsidian18.Notice("BOB Workspace: select at least one group to export.");
-        return;
-      }
-      try {
-        const suffix = selectedGroups.length === exportGroups.length ? "" : "selected";
-        const path = await exportEntitiesXLSX(this.plugin.app, entityKeys, suffix, this.plugin.settings);
-        new obsidian18.Notice(`BOB Workspace: exported workbook to ${path}`, 6e3);
-      } catch (e) {
-        new obsidian18.Notice(`BOB Workspace: XLSX export failed \u2014 ${e.message}`, 8e3);
-      }
-    });
-    new obsidian18.Setting(dataPanel).setName("Import entities from XLSX").setDesc("Imports workbook sheets named after entity keys, labels or plurals, using field keys as column headers.").addButton((b) => b.setButtonText("Import workbook").onClick(async () => {
-      await promptImportWorkbook(this.plugin.app, async () => this.plugin.refreshOpenViews());
-    }));
+    new obsidian18.Setting(dataPanel).setName("Export & import data").setDesc("Group export (one sheet per entity), import templates, and CSV/XLSX import with column mapping live on the Export and Import screens.").addButton((b) => b.setButtonText("Open Export").onClick(() => this._gotoSurface("misc.export"))).addButton((b) => b.setButtonText("Open Import").onClick(() => this._gotoSurface("misc.import")));
+  }
+  // Close the settings dialog (best-effort, internal API) and open a BOB surface.
+  _gotoSurface(mode) {
+    try {
+      this.app.setting?.close?.();
+    } catch (_) {
+    }
+    this.plugin.openApp(mode);
   }
 };
 
