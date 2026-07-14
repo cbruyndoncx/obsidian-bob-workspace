@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-15** — completed/historical. Kept for the record; not an active work list. See `CHANGELOG.md` and `CLAUDE.md` for current state.
+
 # TODO — Full code review findings (2026-07-02)
 
 Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep review, config-pipeline review, reference-vault cross-check against `/mnt/d/OBS/brncx-skills`, CSS/docs/tests drift). Findings deduplicated and ranked; several verified empirically by running the real `validateWorkspaceConfig` against the shipped templates.

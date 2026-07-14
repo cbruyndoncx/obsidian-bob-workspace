@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-07-15** — completed/historical. Kept for the record; not an active work list. See `CHANGELOG.md` and `CLAUDE.md` for current state.
+
 # Report Improvement TODO
 
 Audience: junior developer working on BOB Workspace report configuration.
