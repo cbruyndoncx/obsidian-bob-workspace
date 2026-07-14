@@ -34,7 +34,7 @@ const ENTITIES = {
   single: { folder: 'C' },
 };
 
-const { listEntityFiles, isTemplatePath } = loadMainFunctions(['listEntityFiles', 'isTemplatePath'], {
+const { listEntityFiles, isTemplatePath, entityKeyFromFile } = loadMainFunctions(['listEntityFiles', 'isTemplatePath', 'entityKeyFromFile'], {
   ENTITIES,
   scannableMarkdownFiles: () => files,
   entityFolder: (k) => ENTITIES[k].folder || '',
@@ -63,6 +63,17 @@ const paths = (key) => [...listEntityFiles(app, key)].map((f) => f.path).sort();
   assert.strictEqual(isTemplatePath('Templates/x.md'), true, 'case-insensitive');
   assert.strictEqual(isTemplatePath('a/b/template.md'), false, 'template.md filename NOT excluded');
   assert.strictEqual(isTemplatePath('a/b/c.md'), false, 'ordinary path not excluded');
+})();
+
+// entityKeyFromFile: reverse lookup — frontmatter type first, then path prefix
+(() => {
+  const key = (path, fm) => entityKeyFromFile(app, mk(path, path.split('/').pop(), fm || {}));
+  assert.strictEqual(key('anywhere/x.md', { type: 'person' }), 'contact', 'frontmatter type resolved via typeFilter');
+  assert.strictEqual(key('C/three.md', {}), 'single', 'no type → path-prefix fallback');
+  assert.strictEqual(key('skills/a/SKILL.md', {}), 'skill', 'path-prefix (skill folder)');
+  assert.strictEqual(key('nowhere/y.md', {}), null, 'no type + no folder match → null');
+  assert.strictEqual(key('C/three.md', { type: 'zzz' }), 'single', 'unknown type falls through to path prefix');
+  assert.strictEqual(entityKeyFromFile(app, null), null, 'null file → null');
 })();
 
 console.log('entity-files-filter.test.js: ok');

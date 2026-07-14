@@ -12,7 +12,7 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 
 **Genuinely still open** (the tail):
 - Duplication: Export/Import UI duplicated between the `misc.*` surfaces and the Settings Data tab (real, but a larger refactor). `renderHome` greeting header never shows in configured vaults (cosmetic).
-- Test gaps: `entityKeyFromFile`, `ignoredFolders`/`isIgnoredPath`, scan-cache invalidation; `reloadEntityConfiguration`/`applyWorkspaceRegistries` order; `applySchemas`/bootstrap gating/`regenerateSchemaOutputs` pruning; `exportEntitiesXLSX` sheet composition + `field_aliases` mapping; `archiveTemplateAssets`/`writeTemplateAssets` switching.
+- Test gaps (remaining): `ignoredFolders`/`isIgnoredPath`, scan-cache invalidation; `reloadEntityConfiguration`/`applyWorkspaceRegistries` order (module-registry mutation — hard to assert through the current sandbox); `applySchemas`/bootstrap gating/`regenerateSchemaOutputs` pruning; `field_aliases` CSV/XLSX import mapping; `archiveTemplateAssets`/`writeTemplateAssets` switching. **Covered 2026-07-14:** `entityKeyFromFile` (entity-files-filter.test.js) and `exportEntitiesXLSX` sheet composition (`safeSheetName` + workbook group→keys, `tests/workbook.test.js`).
 - Vault: 3 unreachable `workspace.*` dashboards (harmless; editable via the now-reachable Surface Designer).
 
 ## Worker instructions (read first)
@@ -97,10 +97,10 @@ Consolidated from a five-way review (dead-code sweep, app-view/settings-tab deep
 ## Test gaps
 
 - [x] **Add a regression test applying every bundled template through the real `validateWorkspaceConfig`** ✅ DONE (2026-07-02) — new `tests/template-validate.test.js` (wired into `run-tests.js`): strips `_`-prefixed metadata like the real apply path, runs `migrateWorkspacePlannerConfig` + real `validateWorkspaceConfig` on every `templates/workspace-*.json`, and asserts the three rich templates expose a non-empty top-level `planner` block with no residual `dashboards.planner`. Catches both criticals #1 and #2.
-- [x] `listEntityFiles` filter categories + template-path exclusion — ✅ DONE (2026-07-14): `tests/entity-files-filter.test.js` covers `typeFilter`, `typeFilters` AND, `filenameFilter`+folder, `folders` OR, default folder, unknown-entity, and `isTemplatePath`. (`entityKeyFromFile`, `ignoredFolders`/`isIgnoredPath`, and scan-cache invalidation still uncovered.)
+- [x] `listEntityFiles` filter categories + template-path exclusion — ✅ DONE (2026-07-14): `tests/entity-files-filter.test.js` covers `typeFilter`, `typeFilters` AND, `filenameFilter`+folder, `folders` OR, default folder, unknown-entity, and `isTemplatePath`. `entityKeyFromFile` now covered too (frontmatter-type + path-prefix + null cases); `ignoredFolders`/`isIgnoredPath` and scan-cache invalidation still uncovered.)
 - [ ] `reloadEntityConfiguration` end-to-end order; `applyWorkspaceRegistries`/`resetWorkspaceRegistries`.
 - [ ] `applySchemas`, bootstrap gating, `regenerateSchemaOutputs` pruning.
-- [ ] `exportEntitiesXLSX` sheet composition + `field_aliases` CSV/XLSX import mapping.
+- [x] `exportEntitiesXLSX` sheet composition — ✅ DONE (2026-07-14): `tests/workbook.test.js` covers `safeSheetName` (illegal-char sanitize, 31-char truncation, dedup suffix) and `workbookExportGroups`/`entityKeysForWorkbookGroups`/`selectedWorkbookEntityKeys` (ENTITIES filtering, cross-group dedup, empty cases). `field_aliases` import mapping still open.
 - [ ] `archiveTemplateAssets`/`writeTemplateAssets` template switching.
 - [x] `run-tests.js` async ordering — ✅ DONE (2026-07-14): an `unhandledRejection` handler exits non-zero, and the success line now prints on `beforeExit` (after async IIFE tests settle), so it can't precede an async failure.
 
