@@ -76,4 +76,17 @@ const paths = (key) => [...listEntityFiles(app, key)].map((f) => f.path).sort();
   assert.strictEqual(entityKeyFromFile(app, null), null, 'null file → null');
 })();
 
+// isIgnoredPath: ignored-folder exclusion (full-segment prefix or exact match)
+(() => {
+  const ig = loadMainFunctions(['isIgnoredPath'], { IGNORED_FOLDERS: ['99-TMP', 'nested/junk'] }).isIgnoredPath;
+  assert.strictEqual(ig('99-TMP/x.md'), true, 'file under an ignored folder');
+  assert.strictEqual(ig('99-TMP'), true, 'the folder itself');
+  assert.strictEqual(ig('99-TMPX/x.md'), false, 'prefix must be a whole segment (no substring match)');
+  assert.strictEqual(ig('nested/junk/a.md'), true, 'nested ignored folder');
+  assert.strictEqual(ig('other/x.md'), false, 'unrelated path');
+
+  const noIg = loadMainFunctions(['isIgnoredPath'], { IGNORED_FOLDERS: [] }).isIgnoredPath;
+  assert.strictEqual(noIg('99-TMP/x.md'), false, 'empty ignore list → never ignored');
+})();
+
 console.log('entity-files-filter.test.js: ok');

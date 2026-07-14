@@ -47,4 +47,34 @@ const wb = loadMainFunctions(
   assert.strictEqual(wb.selectedWorkbookEntityKeys(null).length, 0, 'null groups → empty');
 })();
 
+// ── field-alias import mapping ───────────────────────────────────────────────
+const imp = loadMainFunctions(['normalizedImportHeader', 'rowValue', 'configuredFieldAliases', 'rowValueForField']);
+
+(() => {
+  // header normalization: lowercase + strip non-alphanumerics
+  assert.strictEqual(imp.normalizedImportHeader('Deal Value'), 'dealvalue');
+  assert.strictEqual(imp.normalizedImportHeader('E-mail'), 'email');
+  assert.strictEqual(imp.normalizedImportHeader(null), '');
+
+  // rowValue: match a row column by normalized header, regardless of case/spacing
+  const row = { 'Deal Value': 100, 'E-mail Address': 'a@b.com' };
+  assert.strictEqual(imp.rowValue(row, 'deal_value'), 100, 'matches "Deal Value" ⇄ deal_value');
+  assert.strictEqual(imp.rowValue(row, 'missing'), '', 'no column → empty string');
+
+  // configuredFieldAliases: normalized-alias → fieldKey, only for existing fields
+  const def = {
+    fields: [{ key: 'email', label: 'Email' }],
+    fieldAliases: { email: ['e-mail', 'Email Address'], ghost: ['x'], bad: 'notarray' },
+  };
+  const aliases = imp.configuredFieldAliases(def);
+  assert.strictEqual(aliases['email'], 'email');
+  assert.strictEqual(aliases['emailaddress'], 'email', 'multi-word alias normalized');
+  assert.ok(!('x' in aliases), 'alias for a non-existent field is skipped');
+
+  // rowValueForField: resolve via key, then label, then alias
+  assert.strictEqual(imp.rowValueForField(row, { key: 'email', label: 'Email' }, def), 'a@b.com', 'resolves the value through an alias column');
+  assert.strictEqual(imp.rowValueForField({ Email: 'z@z.com' }, { key: 'email', label: 'Email' }, def), 'z@z.com', 'resolves via the field label');
+  assert.strictEqual(imp.rowValueForField({}, { key: 'email', label: 'Email' }, def), '', 'no candidate column → empty');
+})();
+
 console.log('workbook.test.js: ok');
