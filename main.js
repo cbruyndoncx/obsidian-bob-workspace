@@ -25944,6 +25944,7 @@ var DEFAULT_SETTINGS = {
   // surface IDs hidden from nav regardless of module toggle
   showSecondaryNav: false,
   showSetupNav: false,
+  inlineNativeViews: false,
   teamPersonCategories: ["employee", "freelancer", "contractor"],
   desktopNotifications: false,
   reminders: [],
@@ -30659,6 +30660,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
   // failure we detach and throw, and the caller shows the open-in-tab fallback.
   async _mountLiveCanvas(body, file) {
     this._teardownCanvasLeaf();
+    if (!this.plugin.settings.inlineNativeViews) throw new Error("inline native views disabled");
     const WorkspaceLeafCtor = obsidian17.WorkspaceLeaf;
     if (typeof WorkspaceLeafCtor !== "function") throw new Error("WorkspaceLeaf constructor unavailable");
     let leaf = null;
@@ -32332,6 +32334,7 @@ ${snippet}` : "- No markdown content");
     }
   }
   async _mountLiveBaseView(body, file, basePath, viewName) {
+    if (!this.plugin.settings.inlineNativeViews) throw new Error("inline native views disabled");
     const reg = this.app.embedRegistry;
     const creator = reg?.embedByExtension?.base || reg?.getEmbedCreator?.(file);
     if (!creator) throw new Error("Base embed unavailable (Obsidian Bases API not found)");
@@ -37859,6 +37862,14 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     }));
     new obsidian18.Setting(navPanel).setName("Show setup nav items").setDesc('Show setup-level surfaces (marked navLevel "setup") in the left rail. Off by default to keep the rail focused on day-to-day work.').addToggle((t) => t.setValue(!!this.plugin.settings.showSetupNav).onChange(async (v) => {
       this.plugin.settings.showSetupNav = v;
+      await this.plugin.saveSettings();
+      this.plugin.refreshOpenViews();
+    }));
+    pApp.createEl("h3", { text: "Rendering" });
+    const renderGroup = pApp.createDiv({ cls: "setting-group cad-settings-section" });
+    const renderPanel = renderGroup.createDiv({ cls: "setting-items" });
+    new obsidian18.Setting(renderPanel).setName("Inline canvases & Base views").setDesc('Render Obsidian canvases and non-table Base views inline inside the workspace. Uses Obsidian internal APIs, so it is off by default \u2014 canvases open in a tab and Base views show an "Open Base" button. Enable for the richer in-app experience (may be affected by Obsidian updates).').addToggle((t) => t.setValue(!!this.plugin.settings.inlineNativeViews).onChange(async (v) => {
+      this.plugin.settings.inlineNativeViews = v;
       await this.plugin.saveSettings();
       this.plugin.refreshOpenViews();
     }));

@@ -1770,6 +1770,20 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           this.plugin.refreshOpenViews();
         }));
 
+    pApp.createEl('h3', { text: 'Rendering' });
+    const renderGroup = pApp.createDiv({ cls: 'setting-group cad-settings-section' });
+    const renderPanel = renderGroup.createDiv({ cls: 'setting-items' });
+    new obsidian.Setting(renderPanel)
+      .setName('Inline canvases & Base views')
+      .setDesc('Render Obsidian canvases and non-table Base views inline inside the workspace. Uses Obsidian internal APIs, so it is off by default — canvases open in a tab and Base views show an "Open Base" button. Enable for the richer in-app experience (may be affected by Obsidian updates).')
+      .addToggle((t) => t
+        .setValue(!!this.plugin.settings.inlineNativeViews)
+        .onChange(async (v) => {
+          this.plugin.settings.inlineNativeViews = v;
+          await this.plugin.saveSettings();
+          this.plugin.refreshOpenViews();
+        }));
+
     pApp.createEl('h3', { text: 'Reminders' });
     const remindersGroup = pApp.createDiv({ cls: 'setting-group cad-settings-section' });
     const remindersPanel = remindersGroup.createDiv({ cls: 'setting-items' });

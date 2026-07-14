@@ -1089,6 +1089,9 @@ export class CadenceAppView extends obsidian.ItemView {
   // failure we detach and throw, and the caller shows the open-in-tab fallback.
   async _mountLiveCanvas(body: HTMLElement, file: obsidian.TFile) {
     this._teardownCanvasLeaf();
+    // Inline hosting uses an unofficial Obsidian internal (WorkspaceLeaf ctor);
+    // gated off by default. When disabled, the caller falls back to open-in-tab.
+    if (!this.plugin.settings.inlineNativeViews) throw new Error('inline native views disabled');
     const WorkspaceLeafCtor = (obsidian as unknown as {
       WorkspaceLeaf?: new (app: obsidian.App) => obsidian.WorkspaceLeaf;
     }).WorkspaceLeaf;
@@ -2867,6 +2870,9 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   async _mountLiveBaseView(body: HTMLElement, file: obsidian.TFile, basePath: string, viewName: string) {
+    // Inline Base rendering uses an unofficial internal (embedRegistry); gated
+    // off by default. When disabled, callers fall back to Open Base / preview.
+    if (!this.plugin.settings.inlineNativeViews) throw new Error('inline native views disabled');
     // Render the real Base view via the embed registry (the static
     // MarkdownRenderer only leaves an unloaded placeholder for .base files). The
     // view is selected by the SUBPATH, which — like every Obsidian subpath —

@@ -4,6 +4,16 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.50] — 2026-07-15
+
+### Added
+- **Inline canvases & Base views toggle** (Settings → App → **Rendering**,
+  default **off**). Inline canvas hosting and inline Base views use Obsidian
+  internal APIs; they are now gated behind an opt-in so the default experience
+  relies only on documented APIs (canvases open in a tab, Base views show
+  "Open Base"). Enable for the richer in-app rendering. Prep for community-store
+  review.
+
 ## [0.14.4-bob.49] — 2026-07-15
 
 ### Added
@@ -375,6 +385,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.50]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.50
 [0.14.4-bob.49]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.49
 [0.14.4-bob.48]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.48
 [0.14.4-bob.47]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.47

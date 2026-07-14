@@ -191,6 +191,7 @@ export interface BobSettings {
   disabledSurfaces: string[];
   showSecondaryNav: boolean;
   showSetupNav: boolean;
+  inlineNativeViews: boolean;
   teamPersonCategories: string[];
   desktopNotifications: boolean;
   reminders: Reminder[];

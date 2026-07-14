@@ -42,6 +42,7 @@ export const DEFAULT_SETTINGS: BobSettings = {
   disabledSurfaces: [],    // surface IDs hidden from nav regardless of module toggle
   showSecondaryNav: false,
   showSetupNav: false,
+  inlineNativeViews: false,
   teamPersonCategories: ['employee', 'freelancer', 'contractor'],
   desktopNotifications: false,
   reminders: [], // [{ id, text, when (ISO|null), repeat ('none'|'daily'|'weekly'), notified, done, createdAt }]
