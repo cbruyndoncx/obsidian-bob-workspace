@@ -58,7 +58,8 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 - `docs/extending-bob-workspace.md` — schema/Base/entities extension model.
 - `docs/installing-into-existing-vault.md` — authoritative first-time-install sequence for a vault that already has notes (schema-first, then bases, then UI).
 - `docs/empty-vault-quickstart.md` — user-facing happy path for a brand-new empty vault (enable → pick template → create first records → make Today interactive).
-- `docs/navigation-inventory.md`, `docs/entity-setup-audit.md` — useful generated snapshots, but confirm against current code before editing.
+- `docs/canvas-surfaces.md` — user guide for the canvas surfaces (library, full-page view, generators).
+- `docs/archive/` — historical/dev material, **not user-facing**: completed TODO/review lists, implemented specs (`base-view-widget-spec.md`), design proposals (`home-base-migration.md`), and stale generated snapshots (`navigation-inventory.md`, `entity-setup-audit.md`). `docs/` itself holds only the user install/usage guides.
 - `CLAUDE.md` / `AGENTS.md` — kept in sync (this file); broader implementation notes.
 - `SUBMISSION.md` — release checklist.
 - A repo-root `workspace.json`, when present, is **not** loaded by Obsidian; treat it as a scratch/template artifact unless copied into the installed plugin directory.

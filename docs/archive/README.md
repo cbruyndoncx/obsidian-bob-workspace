@@ -13,3 +13,12 @@ superseded**, not active backlogs — the current state of the project lives in
 - **`report-improvement-todo.md`** — the report-configuration improvement plan
   (native widgets → dashboards). Largely delivered; remaining items are
   polish/optional.
+
+## Also archived (2026-07-15) — dev/internal, not user-facing
+- `base-view-widget-spec.md` — the `kind: base-view` proposal (implemented in 0.14.4-bob.32).
+- `home-base-migration.md` — design proposal for a Base-first Home (not implemented).
+- `vault-skill-corrections.md` — checklist for the vault-side skills (applied).
+- `navigation-inventory.md`, `entity-setup-audit.md` — generated snapshots (stale; confirm against `main.js`).
+- `dashboard-report-configurability-review.md` — an earlier report-config review.
+
+`docs/` now holds only the user install/usage guides.
