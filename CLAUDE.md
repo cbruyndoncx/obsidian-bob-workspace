@@ -53,6 +53,7 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 - `manifest.json` and `versions.json` — current BOB Workspace release metadata (`versions.json` maps version → min app version).
 - `vendor/xlsx.mini.min.js` and `vendor/xlsx.LICENSE` — SheetJS (mini) source + license; bundled into `main.js` by esbuild as a lazily-initialized CommonJS module (not loaded from disk at runtime).
 - `templates/workspace-*.json` — human-readable starter workspace templates; the canonical sources, imported as JSON by `src/bundled/templates.ts` and inlined at build time. Do not mirror them as hardcoded workspace definitions in source.
+- `skills/bob-workspace-bootstrap/`, `skills/bob-workspace-compose/` — companion AI-agent skills (Claude Code `SKILL.md` format) for maintaining a BOB vault from outside Obsidian: bootstrap censuses a vault's templates/frontmatter into canonical schema YAML, compose authors `workspace.json` (dashboards, navigation, Base wiring). Reference material only — not loaded by the plugin or the build; ship as a convenience for agent-assisted vault maintenance.
 - `package.json`, `tsconfig.json`, `esbuild.config.mjs`, `esbuild.shared.cjs` — build toolchain (`npm run build` / `dev` / `typecheck` / `check`). `esbuild.shared.cjs` is the single source of the bundle options, shared with the build-freshness test.
 - `tests/` — lightweight regression suite (`node tests/run-tests.js`).
 - `docs/extending-bob-workspace.md` — schema/Base/entities extension model.
@@ -478,7 +479,7 @@ For relevant changes:
 
 See `SUBMISSION.md` for the full release checklist. Key reminders:
 
-- `manifest.json` version must match the git tag exactly (no `v` prefix); `versions.json` must map the new version → min-app-version.
+- `manifest.json` version must match the git tag exactly (no `v` prefix); `versions.json` must map the new version → min-app-version. Keep `package.json`'s `version` in sync too (cosmetic only — nothing functional reads it — but a stale value confuses reviewers/contributors).
 - Release assets only need `main.js`, `manifest.json`, `styles.css` (and `versions.json`) — templates and the XLSX library are bundled into `main.js`. Rebuild and verify before tagging: `npm run check` (the build-freshness test fails if the committed `main.js` is stale).
 - No `console.log`, unsafe/untrusted `innerHTML`, or raw frontmatter string manipulation in shipping code.
 - Treat `manifest.json`/`versions.json` as authoritative; confirm any inherited `SUBMISSION.md` instructions before reusing old plugin IDs, repo URLs, or asset lists.

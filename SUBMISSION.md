@@ -20,28 +20,34 @@ Confirm these:
 - [ ] `manifest.json` `name` is `BOB Workspace`
 - [ ] `manifest.json` `version` matches the tag you're about to create (`$VERSION`, no `v` prefix)
 - [ ] `versions.json` lists that version → its min-app version (`1.4.0`)
+- [ ] `package.json` `version` matches `manifest.json` (cosmetic, but keep it in sync)
 - [ ] `LICENSE` is in place
 - [ ] `npm run check` is green (typecheck + production build + `node --check main.js` + regression suite; the build-freshness test fails if the committed `main.js` is stale)
 - [ ] Code audit clean: no `console.log`, no unsafe `innerHTML`, frontmatter via `processFrontMatter`, vault/metadata events via `registerEvent`, intervals via `registerInterval`, destructive prompts via `confirmModal()` not `window.confirm()`
 - [ ] `manifest.json` `author` + `authorUrl` correct (`cbruyndoncx` + `https://github.com/cbruyndoncx`)
 
-## Step 1 — Take screenshots
+## Step 1 — Screenshots
 
-Navigate Obsidian to each surface and capture it with **your OS's screenshot
-tool** (macOS: `screencapture -W -x <file>`; Windows: `Win+Shift+S`; Linux/WSL:
-your desktop's screenshot tool or the Snipping Tool on the Windows host). Save
-into `docs/screenshots/`. Maximize / resize Obsidian to ~1440×900 first for clean
-framing, and check each file isn't tiny (`ls -lh docs/screenshots/`).
+The current store set already lives in `docs/screenshots/` (referenced by the
+README gallery). They were captured from a **fictional demo vault** (Acme /
+Contoso / Fabrikam — no real client data) with only BOB Workspace enabled (clean
+chrome), at Full-HD width:
 
-Suggested set (current surfaces):
+1. `01-home.png` — Home command centre
+2. `02-pipeline.png` — CRM Pipeline kanban across stages
+3. `03-crm-dashboard.png` — CRM Dashboard (metrics + recent leads/activity)
+4. `04-clients.png` — Clients entity list
+5. `05-projects.png` — Projects with milestone progress
+6. `06-invoices.png` — Customer Invoices (finance surfaces)
+7. `07-playbooks.png` — AI Playbooks
 
-1. `01-home.png` — Home dashboard
-2. `02-pipeline.png` — CRM Pipeline kanban with deals across stages
-3. `03-entity-detail.png` — an entity detail form (e.g. a Client or Deal)
-4. `04-today.png` — Planner → Today (interactive task-list + quick-add)
-5. `05-reports.png` — a report/KPI dashboard
-6. `06-capture.png` — Quick-capture modal (text + Remind me toggled)
-7. `07-canvas.png` — a generated **Context canvas** open inline (the standout feature)
+**To regenerate** (e.g. after a UI change): build the demo vault and drive the
+capture from WSL with the `bob-workspace-screenshots` skill —
+`create_demo_vault.py` (copies the starter vault + installs the plugin + coherent
+demo data), then `bob_screenshot_walker.py --vault-name bob-demo` (eval-driven
+walk; needs the target vault **front-most/visible** so Chromium keeps painting it).
+Curate the best few into `docs/screenshots/` with the names above. Otherwise just
+capture each surface with your OS tool (`Win+Shift+S`, `screencapture -W -x`, etc.).
 
 ## Step 2 — Install GitHub CLI (one-time)
 

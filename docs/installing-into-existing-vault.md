@@ -27,7 +27,7 @@ When the plugin loads (`onload`, `src/plugin.ts`), in order:
    then overlays `workspace.json.settings` for the workspace-owned keys.
 4. `reloadEntityConfiguration` — the runtime assembly (see below).
 5. Registers views/commands, then on layout-ready:
-   - **First-run picker:** `CadenceWorkspaceSetupModal` opens **only if
+   - **First-run picker:** `BobWorkspaceSetupModal` opens **only if
      `workspace.json` does not yet exist AND `settings.setupDismissed` is false.**
      Pick a template (or Skip). Skipping sets `setupDismissed` so it won't nag.
 
@@ -147,8 +147,11 @@ options:
 
 A Base is optional for simple lists (they render from folder/type); it is needed
 when you want Base-defined columns/filters/sort/grouping, or a non-table Base view
-(board, calendar, cards) — those now render **inline** as a live Base embed on the
-surface (table views keep the plugin's own editable inline table).
+(board, calendar, cards). By default those show an **Open Base** button (table
+views always keep the plugin's own editable inline table). Toggling
+**Settings → App → Rendering → "Inline canvases & Base views"** (off by default —
+it uses an Obsidian internal API) renders non-table Base views live inside the
+surface instead.
 
 ### Step 5 — Compose the UI (navigation + dashboards)
 

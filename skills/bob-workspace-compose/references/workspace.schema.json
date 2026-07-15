@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thirdbrain.bob/workspace.schema.json",
+  "title": "BOB Workspace workspace.json",
+  "description": "Structural schema for the BOB Workspace plugin's workspace.json UI-composition file. Reverse-engineered from the live config plus the four plugin templates (minimal/crm/bob/cadence) and confirmed against main.js. Structurally typed but ENUM-PERMISSIVE: open vocabularies (widget kind, accent, source string) are documented in references but NOT locked here, because the renderer tolerates values this schema cannot enumerate from a minified bundle. additionalProperties is true at every object level for forward compatibility. The authoritative pass/fail check is scripts/validate_workspace.py; this schema is the formal contract and documentation.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "_comment": { "type": "string" },
+    "_template": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "order": { "type": "integer" }
+      }
+    },
+    "schemas": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "folder": { "type": "string" }
+      }
+    },
+    "navigation": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "groups": { "type": "array", "items": { "$ref": "#/$defs/navGroup" } },
+        "secondaryTabs": { "type": "object" }
+      }
+    },
+    "workbookGroups": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/workbookGroup" }
+    },
+    "dashboards": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/dashboard" }
+    },
+    "bases": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/baseRef" }
+    },
+    "settings": { "type": "object", "additionalProperties": true },
+    "entities": { "type": "object", "additionalProperties": true },
+    "planner": { "type": "object", "additionalProperties": true }
+  },
+  "$defs": {
+    "navGroup": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "items"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "module": { "type": "string" },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/navItem" } }
+      }
+    },
+    "navItem": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "icon": { "type": "string" },
+        "desc": { "type": "string" },
+        "entityKey": { "type": "string" },
+        "folderKey": { "type": "string" },
+        "module": { "type": "string" },
+        "navLevel": { "type": ["integer", "string"] },
+        "parent": { "type": "string" }
+      }
+    },
+    "workbookGroup": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "entityKeys"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "entityKeys": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "baseRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["file"],
+      "properties": {
+        "file": { "type": "string" }
+      }
+    },
+    "dashboard": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "A real dashboard has title + layout. The special 'planner' surface has neither (built-in renderer), so neither is required at schema level; the Python validator enforces title+layout for non-special dashboards.",
+      "properties": {
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "kind": { "type": "string" },
+        "contextFilter": { "type": ["string", "boolean"] },
+        "conditionalRows": { "type": "array" },
+        "legend": { "type": ["array", "object", "string"] },
+        "controls": { "type": "array" },
+        "stats": { "type": "array", "items": { "$ref": "#/$defs/statCard" } },
+        "layout": {
+          "type": "array",
+          "description": "2D grid: outer array = rows, inner array = columns. A cell is a widget object, or a list of stacked widget objects.",
+          "items": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                { "$ref": "#/$defs/widget" },
+                { "type": "array", "items": { "$ref": "#/$defs/widget" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "statCard": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "label": { "type": "string" },
+        "entity": { "type": "string" },
+        "count": { "type": ["string", "integer"] },
+        "sub": { "type": ["string", "object"] },
+        "accent": { "type": "string" },
+        "mode": { "type": "string" },
+        "source": { "$ref": "#/$defs/source" },
+        "metric": { "type": "string" },
+        "field": { "type": "string" }
+      }
+    },
+    "source": {
+      "description": "A widget data source: either a shorthand string (recent, recent-open, recent-all, due, due-open, due-soon, overdue, all) OR an object form for built-in surfaces and filtered queries. Vocabulary is open — not enum-locked.",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "mode": { "type": "string" },
+            "builtIn": { "type": "string" },
+            "section": { "type": "string" },
+            "source": { "type": "string" },
+            "filters": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "widget": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "A dashboard widget. When 'kind' is absent the renderer treats it as the default record-list widget (entity + source + titleFields/metaFields). Known kinds: list, actions, base-link, base-embed, markdown, selector, kanban, bar-chart. Unknown kinds are tolerated (validator warns, does not fail).",
+      "properties": {
+        "kind": { "type": "string" },
+        "title": { "type": "string" },
+        "empty": { "type": "string" },
+        "description": { "type": "string" },
+        "entity": { "type": "string" },
+        "source": { "$ref": "#/$defs/source" },
+        "titleFields": { "type": "array", "items": { "type": "string" } },
+        "metaFields": { "type": "array", "items": { "type": "string" } },
+        "dateFields": { "type": "array", "items": { "type": "string" } },
+        "limit": { "type": "integer" },
+        "merge": { "type": ["array", "boolean", "object"] },
+        "section": { "type": "string" },
+        "field": { "type": "string" },
+        "groupBy": { "type": "string" },
+        "key": { "type": "string" },
+        "label": { "type": "string" },
+        "allLabel": { "type": "string" },
+        "body": { "type": "string" },
+        "base": { "type": "object", "additionalProperties": true },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "label": { "type": "string" },
+              "action": { "type": "string" },
+              "entityKey": { "type": "string" },
+              "icon": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

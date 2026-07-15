@@ -10,16 +10,21 @@ standard `.canvas` files.
 **Canvases** (left rail, near Team/Settings — or the command **"Open BOB
 Workspace — Canvases"**) lists every `.canvas` in your vault, with search and:
 
-- **Open** — full-page, **interactive** inside BOB (pan / zoom / edit; edits save
-  straight to the file).
+- **Open** — full-page, inside BOB.
 - **Open in tab** — the native Obsidian canvas tab.
 
-The full-page view hosts the real canvas editor, so it's fully editable in place;
-use **Pop out to edit** if you'd rather work in a separate tab.
+By default, **Open** shows an **"Open canvas in Obsidian"** button — full
+pan/zoom/edit happens in Obsidian's own canvas tab. Toggle
+**Settings → App → Rendering → "Inline canvases & Base views"** (off by default —
+it hosts Obsidian's real canvas editor in place using an internal API) to make
+**Open** fully interactive inside BOB instead — pan / zoom / edit, with edits
+saving straight to the file, plus a **Pop out to edit** button if you'd rather
+switch to a separate tab.
 
 ## Generate a canvas from your data
 
-Generated canvases open inline and land in `BOB Workspace/Canvases/`.
+Generated canvases land in `BOB Workspace/Canvases/` and open the same way as
+above (an Open button by default, or fully inline with the Rendering toggle on).
 
 | Canvas | Where | What you get |
 |--------|-------|--------------|

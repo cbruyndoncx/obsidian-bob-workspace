@@ -1,0 +1,41 @@
+{
+  "_comment": "REGRESSION FIXTURE — bob-workspace-compose render-safety guard (2026-06-17).\nThis config is STRUCTURALLY VALID (passes the schema-only check, --no-render-check)\nbut DOES NOT RENDER: the 'Team Overview' nav item below uses a free-form id\n('myteam.overview') that is NOT a built surface, NOT an entityKey item, NOT a\n'planner.*' key, NOT registered under navigation.secondaryTabs, AND has no\nmatching 'dashboards' entry. So when the user clicks it, the plugin's render()\ndispatch (mode -> resolveSurfaceConfig -> route -> SECONDARY_TABS -> entityKey ->\ncustom.) falls through every branch to renderComingSoon() — a dead 'coming soon'\nscreen the user cannot use. This is exactly the class of bug the owner hit on\n2026-06-17, where the validate/re-validate step passed schema validity but the\nworkspace did not render.\n\nNOTE the contrast: if you ADD a 'dashboards[\"myteam.overview\"]' entry, the id\nbecomes reachable (branch 1 renders that config) and the guard passes — that is\nthe correct fix and the reason the live config's free-form 'workspace.base-links'\nnav id is fine (it has a matching dashboards entry).\n\nExpected: `validate_workspace.py` reports 1 ERROR for the unreachable nav item\nwith the render guard on (default), and 0 errors with --no-render-check (proving\nschema validity alone is not a sufficient guard).",
+  "schemas": { "enabled": true, "folder": "00-CORE/Schemas/source" },
+  "navigation": {
+    "groups": [
+      {
+        "id": "home_group",
+        "label": "",
+        "items": [
+          { "id": "home", "label": "Home", "icon": "home", "desc": "Command centre." }
+        ]
+      },
+      {
+        "id": "team_group",
+        "label": "Team",
+        "items": [
+          {
+            "id": "myteam.overview",
+            "label": "Team Overview",
+            "icon": "users",
+            "desc": "Custom team view — looks fine in JSON, renders a dead screen because nothing resolves this id."
+          },
+          { "id": "settings", "label": "Settings", "icon": "settings-2", "desc": "Settings." }
+        ]
+      }
+    ],
+    "secondaryTabs": {}
+  },
+  "dashboards": {
+    "home": {
+      "title": "Home",
+      "subtitle": "Command centre",
+      "layout": [
+        [ { "kind": "markdown", "title": "Welcome", "body": "Hello." } ]
+      ]
+    }
+  },
+  "settings": {
+    "modules": { "planner": true }
+  }
+}
