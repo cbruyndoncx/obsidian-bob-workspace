@@ -1,10 +1,10 @@
 import { listEntityFiles } from '../entity-files';
-import { VIEW_TYPE_CADENCE_APP } from '../nav';
+import { VIEW_TYPE_BOB_APP } from '../nav';
 import { projectNameFromPath, reminderTimeStr } from '../reminders';
 import { confirmModal } from './common';
 import * as obsidian from 'obsidian';
 import type { App, TFile } from 'obsidian';
-import type { CadencePlugin } from '../plugin';
+import type { BobPlugin } from '../plugin';
 import type { Reminder } from '../types';
 
 /* Type-only declarations (erased at build time). */
@@ -16,7 +16,7 @@ export interface CaptureResult {
   repeat: string;
 }
 
-interface CadenceCaptureModalOptions {
+interface BobCaptureModalOptions {
   onSubmit: (result: CaptureResult | null) => void;
   defaultText?: string;
   defaultWhen?: string | null;
@@ -26,7 +26,7 @@ interface CadenceCaptureModalOptions {
 /** Reminder being edited: persisted Reminder or a not-yet-saved draft. */
 type EditableReminder = Partial<Reminder> & { notes?: string };
 
-interface CadenceReminderEditModalOptions {
+interface BobReminderEditModalOptions {
   isNew?: boolean;
 }
 
@@ -53,7 +53,7 @@ export function attachRequiredValidation(submitBtn: HTMLButtonElement, requiredI
       return (inp.value || '').trim().length > 0;
     });
     submitBtn.disabled = !allFilled;
-    submitBtn.classList.toggle('cad-btn-disabled', !allFilled);
+    submitBtn.classList.toggle('bob-btn-disabled', !allFilled);
   };
   requiredInputs.forEach(inp => {
     if (!inp) return;
@@ -64,13 +64,13 @@ export function attachRequiredValidation(submitBtn: HTMLButtonElement, requiredI
 }
 
 /* ─────────── Quick-capture modal ─────────── */
-export class CadenceCaptureModal extends obsidian.Modal {
+export class BobCaptureModal extends obsidian.Modal {
   declare onSubmit: (result: CaptureResult | null) => void;
   declare defaultText: string;
   declare defaultWhen: string | null;
   declare defaultRepeat: string;
   declare _submitted: boolean;
-  constructor(app: App, opts: CadenceCaptureModalOptions) {
+  constructor(app: App, opts: BobCaptureModalOptions) {
     super(app);
     this.onSubmit = opts.onSubmit;
     this.defaultText = opts.defaultText || '';
@@ -81,12 +81,12 @@ export class CadenceCaptureModal extends obsidian.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass('cad-capture-modal');
+    contentEl.addClass('bob-capture-modal');
     contentEl.createEl('h3', { text: 'Quick capture' });
 
-    const textRow = contentEl.createDiv({ cls: 'cad-form-row' });
-    textRow.createDiv({ cls: 'cad-form-label', text: 'WHAT' });
-    const textInput = textRow.createEl('input', { type: 'text', cls: 'cad-form-input' });
+    const textRow = contentEl.createDiv({ cls: 'bob-form-row' });
+    textRow.createDiv({ cls: 'bob-form-label', text: 'WHAT' });
+    const textInput = textRow.createEl('input', { type: 'text', cls: 'bob-form-input' });
     textInput.placeholder = 'What needs doing?';
     textInput.value = this.defaultText;
 
@@ -103,15 +103,15 @@ export class CadenceCaptureModal extends obsidian.Modal {
     schedLbl.addEventListener('click', () => { schedCb.checked = !schedCb.checked; schedCb.dispatchEvent(new Event('change')); });
 
     // Schedule fields (hidden until toggled)
-    const schedFields = contentEl.createDiv({ cls: 'cad-capture-sched' });
+    const schedFields = contentEl.createDiv({ cls: 'bob-capture-sched' });
     schedFields.style.display = 'none';
     schedFields.style.marginTop = '12px';
     schedFields.style.gap = '12px';
     schedFields.style.display = 'none';
 
-    const dateRow = schedFields.createDiv({ cls: 'cad-form-row' });
-    dateRow.createDiv({ cls: 'cad-form-label', text: 'WHEN' });
-    const dateInput = dateRow.createEl('input', { type: 'datetime-local', cls: 'cad-form-input' });
+    const dateRow = schedFields.createDiv({ cls: 'bob-form-row' });
+    dateRow.createDiv({ cls: 'bob-form-label', text: 'WHEN' });
+    const dateInput = dateRow.createEl('input', { type: 'datetime-local', cls: 'bob-form-input' });
     if (this.defaultWhen) {
       const d = new Date(this.defaultWhen);
       if (!isNaN(d.getTime())) dateInput.value = toLocalDatetimeValue(d);
@@ -134,7 +134,7 @@ export class CadenceCaptureModal extends obsidian.Modal {
       dateInput.value = toLocalDatetimeValue(d);
     };
     const mkQ = (label: string, deltaMs: number | (() => void)) => {
-      const b = quick.createEl('button', { cls: 'cad-btn cad-btn-sm', text: label });
+      const b = quick.createEl('button', { cls: 'bob-btn bob-btn-sm', text: label });
       b.type = 'button';
       b.addEventListener('click', () => setQuick(deltaMs as number));
     };
@@ -149,10 +149,10 @@ export class CadenceCaptureModal extends obsidian.Modal {
       dateInput.value = toLocalDatetimeValue(d);
     });
 
-    const repeatRow = schedFields.createDiv({ cls: 'cad-form-row' });
+    const repeatRow = schedFields.createDiv({ cls: 'bob-form-row' });
     repeatRow.style.marginTop = '10px';
-    repeatRow.createDiv({ cls: 'cad-form-label', text: 'REPEAT' });
-    const repeatSelect = repeatRow.createEl('select', { cls: 'cad-form-input' });
+    repeatRow.createDiv({ cls: 'bob-form-label', text: 'REPEAT' });
+    const repeatSelect = repeatRow.createEl('select', { cls: 'bob-form-input' });
     [['none', 'No repeat'], ['daily', 'Daily'], ['weekly', 'Weekly']].forEach(([v, l]) => {
       const o = repeatSelect.createEl('option', { value: v, text: l });
       if (v === this.defaultRepeat) o.selected = true;
@@ -169,10 +169,10 @@ export class CadenceCaptureModal extends obsidian.Modal {
     row.style.justifyContent = 'flex-end';
     row.style.gap = '8px';
     row.style.marginTop = '18px';
-    const cancel = row.createEl('button', { cls: 'cad-btn', text: 'Cancel' });
+    const cancel = row.createEl('button', { cls: 'bob-btn', text: 'Cancel' });
     cancel.type = 'button';
     cancel.addEventListener('click', () => this.close());
-    const ok = row.createEl('button', { cls: 'cad-btn primary', text: 'Capture' });
+    const ok = row.createEl('button', { cls: 'bob-btn primary', text: 'Capture' });
     ok.type = 'button';
     attachRequiredValidation(ok, [textInput]);
 
@@ -217,12 +217,12 @@ export function fromLocalDatetimeValue(s: string) {
 }
 
 /* ─────────── Reminder edit modal (text/when/repeat/notes/delete) ─────────── */
-export class CadenceReminderEditModal extends obsidian.Modal {
-  declare plugin: CadencePlugin;
+export class BobReminderEditModal extends obsidian.Modal {
+  declare plugin: BobPlugin;
   declare reminder: EditableReminder;
   declare isNew: boolean;
   declare _submitted: boolean;
-  constructor(app: App, plugin: CadencePlugin, reminder: EditableReminder, opts?: CadenceReminderEditModalOptions) {
+  constructor(app: App, plugin: BobPlugin, reminder: EditableReminder, opts?: BobReminderEditModalOptions) {
     super(app);
     this.plugin = plugin;
     this.reminder = reminder;
@@ -233,54 +233,54 @@ export class CadenceReminderEditModal extends obsidian.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass('cad-create-modal');
-    contentEl.addClass('cad-reminder-edit-modal');
-    contentEl.createEl('h3', { cls: 'cad-create-title', text: this.isNew ? 'New reminder' : 'Edit reminder' });
+    contentEl.addClass('bob-create-modal');
+    contentEl.addClass('bob-reminder-edit-modal');
+    contentEl.createEl('h3', { cls: 'bob-create-title', text: this.isNew ? 'New reminder' : 'Edit reminder' });
 
-    const form = contentEl.createDiv({ cls: 'cad-create-form' });
+    const form = contentEl.createDiv({ cls: 'bob-create-form' });
 
     /* Text */
-    const textRow = form.createDiv({ cls: 'cad-create-row' });
-    textRow.createDiv({ cls: 'cad-create-label', text: 'WHAT *' });
-    const textInput = textRow.createEl('input', { type: 'text', cls: 'cad-create-input' });
+    const textRow = form.createDiv({ cls: 'bob-create-row' });
+    textRow.createDiv({ cls: 'bob-create-label', text: 'WHAT *' });
+    const textInput = textRow.createEl('input', { type: 'text', cls: 'bob-create-input' });
     textInput.value = this.reminder.text || '';
     textInput.placeholder = 'What needs doing?';
 
     /* When */
-    const whenRow = form.createDiv({ cls: 'cad-create-row' });
-    whenRow.createDiv({ cls: 'cad-create-label', text: 'WHEN' });
+    const whenRow = form.createDiv({ cls: 'bob-create-row' });
+    whenRow.createDiv({ cls: 'bob-create-label', text: 'WHEN' });
     const whenWrap = whenRow.createDiv();
     whenWrap.style.display = 'flex';
     whenWrap.style.gap = '8px';
     whenWrap.style.alignItems = 'center';
-    const dateInput = whenWrap.createEl('input', { type: 'datetime-local', cls: 'cad-create-input' });
+    const dateInput = whenWrap.createEl('input', { type: 'datetime-local', cls: 'bob-create-input' });
     dateInput.style.flex = '1';
     if (this.reminder.when) {
       const d = new Date(this.reminder.when);
       if (!isNaN(d.getTime())) dateInput.value = toLocalDatetimeValue(d);
     }
-    const clearBtn = whenWrap.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Clear' });
+    const clearBtn = whenWrap.createEl('button', { cls: 'bob-btn bob-btn-sm', text: 'Clear' });
     clearBtn.type = 'button';
     clearBtn.title = 'Move to unscheduled';
     clearBtn.addEventListener('click', () => { dateInput.value = ''; });
 
     /* Repeat */
-    const repeatRow = form.createDiv({ cls: 'cad-create-row' });
-    repeatRow.createDiv({ cls: 'cad-create-label', text: 'REPEAT' });
-    const repeatSel = repeatRow.createEl('select', { cls: 'cad-create-input' });
+    const repeatRow = form.createDiv({ cls: 'bob-create-row' });
+    repeatRow.createDiv({ cls: 'bob-create-label', text: 'REPEAT' });
+    const repeatSel = repeatRow.createEl('select', { cls: 'bob-create-input' });
     [['none', 'No repeat'], ['daily', 'Daily'], ['weekly', 'Weekly']].forEach(([v, l]) => {
       const o = repeatSel.createEl('option', { value: v, text: l });
       if (v === (this.reminder.repeat || 'none')) o.selected = true;
     });
 
     /* Project link */
-    const projectRow = form.createDiv({ cls: 'cad-create-row' });
-    projectRow.createDiv({ cls: 'cad-create-label', text: 'PROJECT' });
-    const projectField = projectRow.createDiv({ cls: 'cad-rem-project-field' });
+    const projectRow = form.createDiv({ cls: 'bob-create-row' });
+    projectRow.createDiv({ cls: 'bob-create-label', text: 'PROJECT' });
+    const projectField = projectRow.createDiv({ cls: 'bob-rem-project-field' });
     const renderProjectField = () => {
       projectField.empty();
       if (this.reminder.project) {
-        const chip = projectField.createEl('a', { cls: 'cad-rem-project-chip', text: '📁 ' + (projectNameFromPath(this.app, this.reminder.project) || 'Project') });
+        const chip = projectField.createEl('a', { cls: 'bob-rem-project-chip', text: '📁 ' + (projectNameFromPath(this.app, this.reminder.project) || 'Project') });
         chip.title = 'Open project (closes this modal)';
         chip.addEventListener('click', (e) => {
           e.preventDefault();
@@ -288,24 +288,24 @@ export class CadenceReminderEditModal extends obsidian.Modal {
           if (file && file instanceof obsidian.TFile) {
             this._submitted = true;
             this.close();
-            const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
+            const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP)[0];
             const leafView = leaf?.view as obsidian.View & { openEntityDetailFromFile?: (file: TFile) => void };
             if (leaf && leafView && typeof leafView.openEntityDetailFromFile === 'function') {
               leafView.openEntityDetailFromFile(file);
             }
           }
         });
-        const changeBtn = projectField.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Change' });
+        const changeBtn = projectField.createEl('button', { cls: 'bob-btn bob-btn-sm', text: 'Change' });
         changeBtn.type = 'button';
         changeBtn.addEventListener('click', () => this._openReminderProjectPicker(renderProjectField));
-        const removeBtn = projectField.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: 'Remove' });
+        const removeBtn = projectField.createEl('button', { cls: 'bob-btn bob-btn-sm bob-btn-danger', text: 'Remove' });
         removeBtn.type = 'button';
         removeBtn.addEventListener('click', () => {
           this.reminder.project = null;
           renderProjectField();
         });
       } else {
-        const linkBtn = projectField.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '📁 Link to project' });
+        const linkBtn = projectField.createEl('button', { cls: 'bob-btn bob-btn-sm', text: '📁 Link to project' });
         linkBtn.type = 'button';
         linkBtn.addEventListener('click', () => this._openReminderProjectPicker(renderProjectField));
       }
@@ -313,10 +313,10 @@ export class CadenceReminderEditModal extends obsidian.Modal {
     renderProjectField();
 
     /* Notes */
-    const notesRow = form.createDiv({ cls: 'cad-create-row' });
+    const notesRow = form.createDiv({ cls: 'bob-create-row' });
     notesRow.style.alignItems = 'flex-start';
-    notesRow.createDiv({ cls: 'cad-create-label', text: 'NOTES' });
-    const notesArea = notesRow.createEl('textarea', { cls: 'cad-create-input' });
+    notesRow.createDiv({ cls: 'bob-create-label', text: 'NOTES' });
+    const notesArea = notesRow.createEl('textarea', { cls: 'bob-create-input' });
     notesArea.rows = 6;
     notesArea.placeholder = 'Context, follow-ups, what happened, related links…';
     notesArea.value = this.reminder.notes || '';
@@ -324,9 +324,9 @@ export class CadenceReminderEditModal extends obsidian.Modal {
     notesArea.style.fontFamily = 'inherit';
 
     /* Actions */
-    const actions = contentEl.createDiv({ cls: 'cad-create-actions' });
+    const actions = contentEl.createDiv({ cls: 'bob-create-actions' });
     if (!this.isNew) {
-      const del = actions.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Delete' });
+      const del = actions.createEl('button', { cls: 'bob-btn bob-btn-danger', text: 'Delete' });
       del.type = 'button';
       del.style.marginRight = 'auto';
       del.addEventListener('click', async () => {
@@ -336,10 +336,10 @@ export class CadenceReminderEditModal extends obsidian.Modal {
         this.close();
       });
     }
-    const cancel = actions.createEl('button', { cls: 'cad-btn', text: 'Cancel' });
+    const cancel = actions.createEl('button', { cls: 'bob-btn', text: 'Cancel' });
     cancel.type = 'button';
     cancel.addEventListener('click', () => this.close());
-    const save = actions.createEl('button', { cls: 'cad-btn primary', text: this.isNew ? 'Create reminder' : 'Save' });
+    const save = actions.createEl('button', { cls: 'bob-btn primary', text: this.isNew ? 'Create reminder' : 'Save' });
     save.type = 'button';
     attachRequiredValidation(save, [textInput]);
 

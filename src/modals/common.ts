@@ -1,7 +1,7 @@
 import * as obsidian from 'obsidian';
 import type { App } from 'obsidian';
 
-interface CadencePromptModalOptions {
+interface BobPromptModalOptions {
   title?: string;
   placeholder?: string;
   defaultValue?: string;
@@ -9,14 +9,14 @@ interface CadencePromptModalOptions {
   onSubmit: (value: string | null) => void;
 }
 
-export class CadencePromptModal extends obsidian.Modal {
+export class BobPromptModal extends obsidian.Modal {
   declare title: string;
   declare placeholder: string;
   declare defaultValue: string;
   declare cta: string;
   declare onSubmit: (value: string | null) => void;
   declare _submitted: boolean;
-  constructor(app: App, opts: CadencePromptModalOptions) {
+  constructor(app: App, opts: BobPromptModalOptions) {
     super(app);
     this.title = opts.title || 'Enter a name';
     this.placeholder = opts.placeholder || '';
@@ -28,7 +28,7 @@ export class CadencePromptModal extends obsidian.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass('cad-prompt-modal');
+    contentEl.addClass('bob-prompt-modal');
     contentEl.createEl('h3', { text: this.title });
 
     const input = contentEl.createEl('input', { type: 'text' });
@@ -71,7 +71,7 @@ export class CadencePromptModal extends obsidian.Modal {
 }
 
 /* ─────────── Yes/No confirmation modal ─────────── */
-interface CadenceConfirmModalOptions {
+interface BobConfirmModalOptions {
   message?: string;
   title?: string;
   cta?: string;
@@ -79,14 +79,14 @@ interface CadenceConfirmModalOptions {
   onResolve: (confirmed: boolean) => void;
 }
 
-export class CadenceConfirmModal extends obsidian.Modal {
+export class BobConfirmModal extends obsidian.Modal {
   declare message: string;
   declare heading: string;
   declare cta: string;
   declare danger: boolean;
   declare onResolve: (confirmed: boolean) => void;
   declare _answered: boolean;
-  constructor(app: App, opts: CadenceConfirmModalOptions) {
+  constructor(app: App, opts: BobConfirmModalOptions) {
     super(app);
     this.message = opts.message || 'Are you sure?';
     this.heading = opts.title || 'Confirm';
@@ -98,11 +98,11 @@ export class CadenceConfirmModal extends obsidian.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass('cad-confirm-modal');
+    contentEl.addClass('bob-confirm-modal');
     contentEl.createEl('h3', { text: this.heading });
     String(this.message).split('\n').forEach((line) => contentEl.createEl('p', { text: line }));
 
-    const row = contentEl.createDiv({ cls: 'cad-confirm-actions' });
+    const row = contentEl.createDiv({ cls: 'bob-confirm-actions' });
     const cancel = row.createEl('button', { text: 'Cancel' });
     cancel.addEventListener('click', () => this.close());
     const ok = row.createEl('button', { text: this.cta, cls: this.danger ? 'mod-warning' : 'mod-cta' });
@@ -117,9 +117,9 @@ export class CadenceConfirmModal extends obsidian.Modal {
 }
 
 // Promise-based replacement for window.confirm(); resolves true on confirm, false otherwise.
-export function confirmModal(app: App, message: string, opts: Partial<Omit<CadenceConfirmModalOptions, 'message' | 'onResolve'>> = {}): Promise<boolean> {
+export function confirmModal(app: App, message: string, opts: Partial<Omit<BobConfirmModalOptions, 'message' | 'onResolve'>> = {}): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
-    new CadenceConfirmModal(app, { message, ...opts, onResolve: resolve }).open();
+    new BobConfirmModal(app, { message, ...opts, onResolve: resolve }).open();
   });
 }
 
@@ -130,7 +130,7 @@ interface IconSuggestion {
   clear?: boolean;
 }
 
-export class CadenceIconPickerModal extends obsidian.SuggestModal<IconSuggestion> {
+export class BobIconPickerModal extends obsidian.SuggestModal<IconSuggestion> {
   declare currentIcon: string;
   declare onChoose: (iconId: string) => void;
   declare iconIds: string[];
@@ -162,12 +162,12 @@ export class CadenceIconPickerModal extends obsidian.SuggestModal<IconSuggestion
   }
 
   renderSuggestion(item: IconSuggestion, el: HTMLElement) {
-    el.addClass('cad-icon-picker-result');
-    const preview = el.createSpan({ cls: 'cad-icon-picker-preview' });
+    el.addClass('bob-icon-picker-result');
+    const preview = el.createSpan({ cls: 'bob-icon-picker-preview' });
     try { obsidian.setIcon(preview, item.clear ? 'circle-x' : item.iconId); } catch (_) {}
-    el.createSpan({ cls: 'cad-icon-picker-name', text: item.clear ? 'No icon' : item.iconId });
+    el.createSpan({ cls: 'bob-icon-picker-name', text: item.clear ? 'No icon' : item.iconId });
     if (!item.clear && item.iconId === this.currentIcon) {
-      el.createSpan({ cls: 'cad-icon-picker-current', text: 'current' });
+      el.createSpan({ cls: 'bob-icon-picker-current', text: 'current' });
     }
   }
 

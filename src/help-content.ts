@@ -3,7 +3,7 @@
  * (field hovers, widget guides, and the collapsible help panels in the Surface
  * Designer and Settings tabs). Kept in one module so copy is easy to maintain
  * and to translate: a translator edits only this file, and a localized build
- * can swap it wholesale. The renderers (CadenceAppView / CadenceSettingTab) read
+ * can swap it wholesale. The renderers (BobAppView / BobSettingTab) read
  * from these tables and contain no help strings of their own.
  *
  * A help "line" is either a plain sentence or a [term, description] pair

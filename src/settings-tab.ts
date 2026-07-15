@@ -4,20 +4,20 @@ import { baseSummaryCompatibleWithEntity, baseViewRendersInline, readBaseSummary
 import { BUILTIN_DASHBOARD_DEFAULTS, summarizeDashboardBlueprint } from './dashboards';
 import { HELP_TOPICS } from './help-content';
 import { ENTITIES } from './entities';
-import { CadenceIconPickerModal, CadencePromptModal, confirmModal } from './modals/common';
-import { NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_CADENCE_APP, migrateWorkspacePlannerConfig } from './nav';
+import { BobIconPickerModal, BobPromptModal, confirmModal } from './modals/common';
+import { NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_BOB_APP, migrateWorkspacePlannerConfig } from './nav';
 import { isTabBackedSurface, makeNavigationSurfacePrimary, navigationSurfaceFromTab, normalizeStandaloneNavigationSurfaces, removeSurfaceFromGroups, surfaceMatchesTab } from './nav-helpers';
 import { reloadEntityConfiguration, workspaceConfigTemplate } from './runtime-config';
 import { applyEditableSchemaFieldDefault, applyEditableSchemaFieldType, bootstrapCanonicalSchemaSources, bootstrapCanonicalSchemaSourcesIfMissing, editableSchemaFieldDefault, editableSchemaFieldType, loadCanonicalSchemaSources, regenerateSchemaOutputs, validateSourceSchemaDefinition, type SourceSchema, type SourceSchemaField } from './schema-designer';
 import { SCHEMA_FOLDER_DEFAULT, SCHEMA_TO_ENTITY_KEY, pluralizeEntityLabel } from './schemas';
 import { DEFAULT_SETTINGS, syncEntityFolders } from './settings';
 import { CURRENCY_OPTIONS, ensureFolderSync } from './utils';
-import { CadenceAppView } from './views/app-view';
+import { BobAppView } from './views/app-view';
 import { workbookExportFolder } from './workbook';
 import { PLUGIN_DIR, WORKSPACE_BACKUP_PATH, WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, configuredBaseDefinition, effectiveSchemaSettings, saveWorkspaceConfig, validateWorkspaceConfig, workspaceConfiguredEntityEntries } from './workspace-config';
 import { applyWorkspaceTemplate, loadWorkspaceTemplates, workspaceTemplateKey } from './workspace-templates';
 import * as obsidian from 'obsidian';
-import type { CadencePlugin } from './plugin';
+import type { BobPlugin } from './plugin';
 import type {
   JsonValue,
   NavGroup,
@@ -138,16 +138,16 @@ type DesignerSchemaField = SourceSchemaField;
 /** Canonical schema source with the designer-edited optional blocks. */
 type DesignerSchemaSource = SourceSchema;
 
-/** Cadence app leaf view re-rendered after settings changes. */
+/** BOB Workspace app leaf view re-rendered after settings changes. */
 type RenderableViewLike = obsidian.View & { render?: () => void };
 
 /**
- * Detached CadenceAppView (built from its prototype, never attached to a
+ * Detached BobAppView (built from its prototype, never attached to a
  * leaf) that hosts the dashboard editor / widget catalog inside Settings.
  */
 interface SettingsDashboardRenderer {
   app: obsidian.App;
-  plugin: CadencePlugin;
+  plugin: BobPlugin;
   settings: BobSettings;
   mode: string;
   detailFile: obsidian.TFile | null;
@@ -163,8 +163,8 @@ interface SettingsDashboardRenderer {
   _renderDashboardInventory: (root: HTMLElement) => void;
 }
 
-export class CadenceSettingTab extends obsidian.PluginSettingTab {
-  declare plugin: CadencePlugin;
+export class BobSettingTab extends obsidian.PluginSettingTab {
+  declare plugin: BobPlugin;
   declare _reviewActiveTab: string;
   declare _reviewRenderSeq: number;
   declare _activeSettingsTab: string;
@@ -173,20 +173,20 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
   declare _dashboardRenderer: SettingsDashboardRenderer;
   declare _schemaDesignerSelectedPath: string;
   declare _openHelpPanels: Set<string> | undefined;
-  constructor(app: obsidian.App, plugin: CadencePlugin) { super(app, plugin); this.plugin = plugin; this._reviewActiveTab = 'overview'; this._reviewRenderSeq = 0; this._workspaceDraftDirty = false; }
+  constructor(app: obsidian.App, plugin: BobPlugin) { super(app, plugin); this.plugin = plugin; this._reviewActiveTab = 'overview'; this._reviewRenderSeq = 0; this._workspaceDraftDirty = false; }
 
-  // Reusable toggleable colored help panel (shares .cad-help-* styles with the
+  // Reusable toggleable colored help panel (shares .bob-help-* styles with the
   // Surface Designer). `key` persists open/closed for this session.
   _helpPanel(parent: HTMLElement, key: string, title: string, build: (body: HTMLElement) => void) {
     if (!this._openHelpPanels) this._openHelpPanels = new Set<string>();
     const open = this._openHelpPanels.has(key);
-    const block = parent.createDiv({ cls: 'cad-help-block' });
-    const toggle = block.createEl('button', { cls: 'cad-help-toggle' + (open ? ' is-open' : ''), attr: { type: 'button' } });
-    const icon = toggle.createSpan({ cls: 'cad-help-toggle-icon' });
+    const block = parent.createDiv({ cls: 'bob-help-block' });
+    const toggle = block.createEl('button', { cls: 'bob-help-toggle' + (open ? ' is-open' : ''), attr: { type: 'button' } });
+    const icon = toggle.createSpan({ cls: 'bob-help-toggle-icon' });
     try { obsidian.setIcon(icon, 'help-circle'); } catch (_) { icon.setText('?'); }
-    toggle.createSpan({ cls: 'cad-help-toggle-label', text: title });
-    const chevron = toggle.createSpan({ cls: 'cad-help-toggle-chevron', text: open ? '▾' : '▸' });
-    const panel = block.createDiv({ cls: 'cad-help-panel' });
+    toggle.createSpan({ cls: 'bob-help-toggle-label', text: title });
+    const chevron = toggle.createSpan({ cls: 'bob-help-toggle-chevron', text: open ? '▾' : '▸' });
+    const panel = block.createDiv({ cls: 'bob-help-panel' });
     if (!open) panel.style.display = 'none';
     build(panel);
     toggle.addEventListener('click', () => {
@@ -199,14 +199,14 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
   }
 
   _helpBlock(body: HTMLElement, heading: string, lines: (string | [string, string])[]) {
-    body.createDiv({ cls: 'cad-help-heading', text: heading });
+    body.createDiv({ cls: 'bob-help-heading', text: heading });
     lines.forEach((line) => {
-      const row = body.createDiv({ cls: 'cad-help-line' });
+      const row = body.createDiv({ cls: 'bob-help-line' });
       if (Array.isArray(line)) {
-        row.createSpan({ cls: 'cad-help-term', text: line[0] });
-        row.createSpan({ cls: 'cad-help-desc', text: line[1] });
+        row.createSpan({ cls: 'bob-help-term', text: line[0] });
+        row.createSpan({ cls: 'bob-help-desc', text: line[1] });
       } else {
-        row.createSpan({ cls: 'cad-help-desc', text: line });
+        row.createSpan({ cls: 'bob-help-desc', text: line });
       }
     });
   }
@@ -232,7 +232,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
 
   _dashboardSettingsRenderer() {
     if (!this._dashboardRenderer) {
-      const renderer = Object.create(CadenceAppView.prototype);
+      const renderer = Object.create(BobAppView.prototype);
       renderer.mode = 'settings.dashboard-editor';
       renderer.detailFile = null;
       renderer.detailEntityKey = null;
@@ -273,11 +273,11 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const TAB_LABELS = ['Workspace', 'Review', 'Navigation', 'Dashboards', 'Widgets', 'Modules', 'Data model', 'Planner', 'App', 'Exports', 'Data'];
     if (!this._activeSettingsTab) this._activeSettingsTab = 'workspace';
     if (!this._collapsedModules) this._collapsedModules = new Set<string>();
-    const tabBar = containerEl.createDiv({ cls: 'cad-settings-tabs' });
+    const tabBar = containerEl.createDiv({ cls: 'bob-settings-tabs' });
     const tabPanels: Record<string, HTMLDivElement> = {};
     const tabBtns: Record<string, HTMLButtonElement> = {};
     TAB_IDS.forEach((id, i) => {
-      const btn = tabBar.createEl('button', { cls: 'cad-settings-tab', text: TAB_LABELS[i], attr: { 'data-tab': id } });
+      const btn = tabBar.createEl('button', { cls: 'bob-settings-tab', text: TAB_LABELS[i], attr: { 'data-tab': id } });
       if (id === this._activeSettingsTab) btn.addClass('is-active');
       btn.addEventListener('click', () => {
         TAB_IDS.forEach((tid) => {
@@ -287,7 +287,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         this._activeSettingsTab = id;
       });
       tabBtns[id] = btn;
-      const panel = containerEl.createDiv({ cls: 'cad-settings-tab-panel' });
+      const panel = containerEl.createDiv({ cls: 'bob-settings-tab-panel' });
       if (id !== this._activeSettingsTab) panel.style.display = 'none';
       tabPanels[id] = panel;
     });
@@ -322,9 +322,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     workspaceDesc.createEl('code', { text: 'workspace.json' });
     workspaceDesc.appendText(' next to plugin data. Use the other tabs for navigation, dashboards, widget catalog and export-group editing.');
 
-    const workspaceWrap = pWs.createDiv({ cls: 'cad-settings-entities' });
-    const workspaceStatus = workspaceWrap.createDiv({ cls: 'cad-settings-entities-status' });
-    const workspaceTa = workspaceWrap.createEl('textarea', { cls: 'cad-settings-entities-textarea' });
+    const workspaceWrap = pWs.createDiv({ cls: 'bob-settings-entities' });
+    const workspaceStatus = workspaceWrap.createDiv({ cls: 'bob-settings-entities-status' });
+    const workspaceTa = workspaceWrap.createEl('textarea', { cls: 'bob-settings-entities-textarea' });
     workspaceTa.rows = 18;
     workspaceTa.spellcheck = false;
     workspaceTa.style.width = '100%';
@@ -360,7 +360,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         setWorkspaceStatus(`Invalid JSON/config: ${e.message}`, false);
       }
     });
-    const workspaceBtns = workspaceWrap.createDiv({ cls: 'cad-settings-entities-btns' });
+    const workspaceBtns = workspaceWrap.createDiv({ cls: 'bob-settings-entities-btns' });
     workspaceBtns.style.display = 'flex';
     workspaceBtns.style.gap = '8px';
     workspaceBtns.style.marginTop = '8px';
@@ -442,10 +442,10 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     templateDesc.appendText('. Applying a template writes the active ');
     templateDesc.createEl('code', { text: 'workspace.json' });
     templateDesc.appendText(' and stores the selected template in plugin data.');
-    const templateWrap = pWs.createDiv({ cls: 'setting-group cad-settings-section' });
+    const templateWrap = pWs.createDiv({ cls: 'setting-group bob-settings-section' });
     const templatePanel = templateWrap.createDiv({ cls: 'setting-items' });
     const templateStatus = templatePanel.createDiv({ cls: 'setting-item-description' });
-    const templateRow = templatePanel.createDiv({ cls: 'cad-workspace-template-row' });
+    const templateRow = templatePanel.createDiv({ cls: 'bob-workspace-template-row' });
     const templateSelect = templateRow.createEl('select', { cls: 'dropdown' });
     const templateReloadBtn = templateRow.createEl('button', { text: 'Reload' });
     const templateApplyBtn = templateRow.createEl('button', { text: 'Apply selected', cls: 'mod-cta' });
@@ -508,23 +508,23 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
 
     this._renderHelpTopic(pNav, 'navigation-overview');
 
-    const navDesigner = pNav.createDiv({ cls: 'cad-nav-designer' });
-    const navDesignerHead = navDesigner.createDiv({ cls: 'cad-nav-designer-head' });
+    const navDesigner = pNav.createDiv({ cls: 'bob-nav-designer' });
+    const navDesignerHead = navDesigner.createDiv({ cls: 'bob-nav-designer-head' });
     navDesignerHead.createEl('h4', { text: 'Navigation designer' });
     navDesignerHead.createEl('p', {
       cls: 'setting-item-description',
       text: 'Drag unassigned tabs or record types into groups and move existing menu items between groups. Choose icons from Obsidian\'s registered icon library. Remove an item to return it to its available pool. Changes update the workspace JSON draft; use Save and apply above to persist them.',
     });
-    const navDesignerBody = navDesigner.createDiv({ cls: 'cad-nav-designer-body' });
+    const navDesignerBody = navDesigner.createDiv({ cls: 'bob-nav-designer-body' });
     pExp.createEl('h3', { text: 'Exports' });
-    const workbookDesigner = pExp.createDiv({ cls: 'cad-workbook-designer' });
-    const workbookDesignerHead = workbookDesigner.createDiv({ cls: 'cad-nav-designer-head' });
+    const workbookDesigner = pExp.createDiv({ cls: 'bob-workbook-designer' });
+    const workbookDesignerHead = workbookDesigner.createDiv({ cls: 'bob-nav-designer-head' });
     workbookDesignerHead.createEl('h4', { text: 'Workbook export groups' });
     workbookDesignerHead.createEl('p', {
       cls: 'setting-item-description',
       text: 'Define reusable XLSX export bundles in workspace.json. Assign a record type to more than one bundle when separate exports need overlapping data.',
     });
-    const workbookDesignerBody = workbookDesigner.createDiv({ cls: 'cad-workbook-designer-body' });
+    const workbookDesignerBody = workbookDesigner.createDiv({ cls: 'bob-workbook-designer-body' });
 
     const readWorkspaceDraft = () => validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(workspaceTa.value))) as WorkspaceDraft;
     const reviewText = (value: unknown, fallback = '—') => {
@@ -537,14 +537,14 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       return String(value);
     };
     const renderReviewTable = (parent: HTMLElement, title: string, headers: string[], rows: ReviewRow[], emptyText = 'Nothing to review yet') => {
-      const section = parent.createDiv({ cls: 'cad-review-section' });
-      section.createDiv({ cls: 'cad-section-label-lg', text: title });
+      const section = parent.createDiv({ cls: 'bob-review-section' });
+      section.createDiv({ cls: 'bob-section-label-lg', text: title });
       if (!rows.length) {
-        section.createDiv({ cls: 'cad-empty', text: emptyText });
+        section.createDiv({ cls: 'bob-empty', text: emptyText });
         return section;
       }
-      const wrap = section.createDiv({ cls: 'cad-review-table-wrap' });
-      const table = wrap.createEl('table', { cls: 'cad-review-table' });
+      const wrap = section.createDiv({ cls: 'bob-review-table-wrap' });
+      const table = wrap.createEl('table', { cls: 'bob-review-table' });
       const thead = table.createEl('thead');
       const headRow = thead.createEl('tr');
       headers.forEach((header) => headRow.createEl('th', { text: header }));
@@ -647,14 +647,14 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         ['unassigned', 'Unassigned'],
       ];
       if (!reviewTabs.some(([id]) => id === activeTab)) this._reviewActiveTab = 'overview';
-      const tabBar = pReview.createDiv({ cls: 'cad-settings-tabs cad-review-tabs' });
-      const panel = pReview.createDiv({ cls: 'cad-settings-tab-panel cad-review-panel' });
+      const tabBar = pReview.createDiv({ cls: 'bob-settings-tabs bob-review-tabs' });
+      const panel = pReview.createDiv({ cls: 'bob-settings-tab-panel bob-review-panel' });
       const setActiveTab = (id: string) => {
         this._reviewActiveTab = id;
         void renderWorkspaceReview();
       };
       reviewTabs.forEach(([id, label]) => {
-        const btn = tabBar.createEl('button', { cls: 'cad-settings-tab cad-review-tab', text: label });
+        const btn = tabBar.createEl('button', { cls: 'bob-settings-tab bob-review-tab', text: label });
         btn.toggleClass('is-active', id === activeTab);
         btn.addEventListener('click', () => setActiveTab(id));
       });
@@ -823,7 +823,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         ]));
 
       if (schemaSources.errors.length) {
-        const details = panel.createEl('details', { cls: 'cad-base-filter-warnings' });
+        const details = panel.createEl('details', { cls: 'bob-base-filter-warnings' });
         details.createEl('summary', { text: `${schemaSources.errors.length} schema source warning${schemaSources.errors.length === 1 ? '' : 's'}` });
         const list = details.createEl('ul');
         schemaSources.errors.forEach((error) => {
@@ -832,22 +832,22 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       }
 
       if (activeTab === 'overview') {
-        const summary = panel.createDiv({ cls: 'cad-review-summary' });
+        const summary = panel.createDiv({ cls: 'bob-review-summary' });
         counts.forEach(([label, value]) => {
-          const card = summary.createDiv({ cls: 'cad-review-summary-card' });
-          card.createDiv({ cls: 'cad-review-summary-value', text: String(value) });
-          card.createDiv({ cls: 'cad-review-summary-label', text: String(label) });
+          const card = summary.createDiv({ cls: 'bob-review-summary-card' });
+          card.createDiv({ cls: 'bob-review-summary-value', text: String(value) });
+          card.createDiv({ cls: 'bob-review-summary-label', text: String(label) });
         });
-        const note = panel.createDiv({ cls: 'cad-widget-gap' });
-        note.createDiv({ cls: 'cad-widget-gap-title', text: 'Review focus' });
+        const note = panel.createDiv({ cls: 'bob-widget-gap' });
+        note.createDiv({ cls: 'bob-widget-gap-title', text: 'Review focus' });
         note.createDiv({
           cls: 'setting-item-description',
           text: 'Use the dedicated tabs to inspect navigation, bases, dashboards, widgets, and the reverse entity mapping. The reverse map shows which schema and base-backed entities are not yet represented in the menu tree.',
         });
         const missingCount = allEntityRows.filter((row) => row.menuStatus !== 'in menu' && (row.schemaPath || row.basePath)).length;
-        const missingCard = note.createDiv({ cls: 'cad-review-summary-card' });
-        missingCard.createDiv({ cls: 'cad-review-summary-value', text: String(missingCount) });
-        missingCard.createDiv({ cls: 'cad-review-summary-label', text: 'Entities not in menu' });
+        const missingCard = note.createDiv({ cls: 'bob-review-summary-card' });
+        missingCard.createDiv({ cls: 'bob-review-summary-value', text: String(missingCount) });
+        missingCard.createDiv({ cls: 'bob-review-summary-label', text: 'Entities not in menu' });
       } else if (activeTab === 'navigation') {
         renderReviewTable(panel, 'Navigation inventory', ['Label', 'Surface', 'Group', 'Order', 'Parent', 'Level', 'Module', 'Entity', 'Source', 'Visibility'], navRows, 'No navigation items are available.');
       } else if (activeTab === 'secondary') {
@@ -924,22 +924,22 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const createIconPickerButton = (parent: HTMLElement, initialIcon: string | undefined, onChange: (iconId: string) => void, emptyText = 'Choose icon') => {
       let currentIcon = initialIcon || '';
       const button = parent.createEl('button', {
-        cls: 'cad-nav-designer-icon-button',
+        cls: 'bob-nav-designer-icon-button',
         attr: { type: 'button', title: 'Choose an Obsidian icon' },
       });
       button.draggable = false;
       const render = () => {
         button.empty();
-        const preview = button.createSpan({ cls: 'cad-nav-designer-icon-preview' });
+        const preview = button.createSpan({ cls: 'bob-nav-designer-icon-preview' });
         try { obsidian.setIcon(preview, currentIcon || 'shapes'); } catch (_) {}
-        button.createSpan({ cls: 'cad-nav-designer-icon-name', text: currentIcon || emptyText });
+        button.createSpan({ cls: 'bob-nav-designer-icon-name', text: currentIcon || emptyText });
       };
       button.addEventListener('mousedown', (event) => event.stopPropagation());
       button.addEventListener('dragstart', (event) => event.stopPropagation());
       button.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
-        new CadenceIconPickerModal(this.plugin.app, currentIcon, (iconId) => {
+        new BobIconPickerModal(this.plugin.app, currentIcon, (iconId) => {
           currentIcon = iconId;
           render();
           onChange(iconId);
@@ -1067,7 +1067,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       const assignedSurfaces = allSurfaces.filter((surface) =>
         !isTabBackedSurface(surface, config.navigation.secondaryTabs || {}) || surface.placement === 'navigation'
       );
-      const addGroupRow = navDesignerBody.createDiv({ cls: 'cad-nav-designer-add-group' });
+      const addGroupRow = navDesignerBody.createDiv({ cls: 'bob-nav-designer-add-group' });
       const newGroupInput = addGroupRow.createEl('input', { type: 'text', placeholder: 'New group label' });
       let newGroupIcon = '';
       createIconPickerButton(addGroupRow, '', (iconId) => { newGroupIcon = iconId; });
@@ -1084,23 +1084,23 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         groups.push(group);
         updateWorkspaceDraft(config, `${label} group added - click Save and apply`);
       });
-      const palette = navDesignerBody.createDiv({ cls: 'cad-nav-designer-tabs' });
-      palette.createDiv({ cls: 'cad-nav-designer-label', text: 'Tabs - drag a tab into navigation, or drop an item into a parent tab area' });
-      const tabParents = palette.createDiv({ cls: 'cad-nav-designer-tab-parents' });
+      const palette = navDesignerBody.createDiv({ cls: 'bob-nav-designer-tabs' });
+      palette.createDiv({ cls: 'bob-nav-designer-label', text: 'Tabs - drag a tab into navigation, or drop an item into a parent tab area' });
+      const tabParents = palette.createDiv({ cls: 'bob-nav-designer-tab-parents' });
       const tabEntityKeys = new Set<string>();
       Object.entries(config.navigation.secondaryTabs || {}).forEach(([parentId, tabs]) => {
         const parentSurface = allSurfaces.find((surface) => surface.id === parentId);
-        const parentEl = tabParents.createDiv({ cls: 'cad-nav-designer-tab-parent' });
-        const parentHead = parentEl.createDiv({ cls: 'cad-nav-designer-tab-parent-head' });
+        const parentEl = tabParents.createDiv({ cls: 'bob-nav-designer-tab-parent' });
+        const parentHead = parentEl.createDiv({ cls: 'bob-nav-designer-tab-parent-head' });
         parentHead.createSpan({ text: parentSurface?.label || parentId });
         if (!tabs.length) {
-          const removeTabs = parentHead.createEl('button', { cls: 'cad-nav-designer-action danger', text: 'Remove' });
+          const removeTabs = parentHead.createEl('button', { cls: 'bob-nav-designer-action danger', text: 'Remove' });
           removeTabs.addEventListener('click', () => {
             delete config.navigation.secondaryTabs[parentId];
             updateWorkspaceDraft(config, `${parentSurface?.label || parentId} tab area removed - click Save and apply`);
           });
         }
-        const tabChips = parentEl.createDiv({ cls: 'cad-nav-designer-tab-chips' });
+        const tabChips = parentEl.createDiv({ cls: 'bob-nav-designer-tab-chips' });
         tabs.forEach((tab, tabIndex) => {
           if (tab.entityKey) tabEntityKeys.add(tab.entityKey);
           const existing = assignedSurfaces.find((surface) =>
@@ -1108,10 +1108,10 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             ((tab.entityKey && surface.entityKey === tab.entityKey) || (tab.route && surface.id === tab.route))
           );
           if (existing) return;
-          const chip = tabChips.createDiv({ cls: 'cad-nav-designer-tab' });
+          const chip = tabChips.createDiv({ cls: 'bob-nav-designer-tab' });
           chip.draggable = true;
           chip.createSpan({ text: tab.label });
-          const removeTab = chip.createEl('button', { cls: 'cad-nav-designer-tab-remove', text: '\u00d7' });
+          const removeTab = chip.createEl('button', { cls: 'bob-nav-designer-tab-remove', text: '\u00d7' });
           removeTab.type = 'button';
           removeTab.title = `Remove ${tab.label} tab`;
           removeTab.draggable = false;
@@ -1132,7 +1132,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           chip.addEventListener('dragstart', (event) => dragPayload(event, { type: 'tab', parentId, tabIndex }));
           chip.addEventListener('dragend', clearDragPayload);
         });
-        if (!tabChips.childElementCount) tabChips.createSpan({ cls: 'cad-nav-designer-empty', text: 'Drop a child here' });
+        if (!tabChips.childElementCount) tabChips.createSpan({ cls: 'bob-nav-designer-empty', text: 'Drop a child here' });
         parentEl.addEventListener('dragover', (event) => {
           const payload = parseDragData(event);
           const itemSurface = payload?.type === 'item'
@@ -1157,23 +1157,23 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           clearDragPayload();
         });
       });
-      if (!tabParents.childElementCount) tabParents.createSpan({ cls: 'cad-nav-designer-empty', text: 'Create a tab area from a navigation parent to add tabs.' });
-      const entityPalette = navDesignerBody.createDiv({ cls: 'cad-nav-designer-tabs' });
-      entityPalette.createDiv({ cls: 'cad-nav-designer-label', text: 'Unassigned record types - drag into a navigation group' });
-      const entityChips = entityPalette.createDiv({ cls: 'cad-nav-designer-tab-chips' });
+      if (!tabParents.childElementCount) tabParents.createSpan({ cls: 'bob-nav-designer-empty', text: 'Create a tab area from a navigation parent to add tabs.' });
+      const entityPalette = navDesignerBody.createDiv({ cls: 'bob-nav-designer-tabs' });
+      entityPalette.createDiv({ cls: 'bob-nav-designer-label', text: 'Unassigned record types - drag into a navigation group' });
+      const entityChips = entityPalette.createDiv({ cls: 'bob-nav-designer-tab-chips' });
       workspaceConfiguredEntityEntries(config).forEach(([entityKey, def]) => {
         if (!def || !def.label) return;
         const existing = assignedSurfaces.find((surface) => surface.entityKey === entityKey);
         if (existing || tabEntityKeys.has(entityKey)) return;
-        const chip = entityChips.createDiv({ cls: 'cad-nav-designer-tab' });
+        const chip = entityChips.createDiv({ cls: 'bob-nav-designer-tab' });
         chip.draggable = true;
         chip.createSpan({ text: def.plural || pluralizeEntityLabel(def.label) });
         chip.addEventListener('dragstart', (event) => dragPayload(event, { type: 'entity', entityKey }));
         chip.addEventListener('dragend', clearDragPayload);
       });
-      if (!entityChips.childElementCount) entityChips.createSpan({ cls: 'cad-nav-designer-empty', text: 'All record types are assigned.' });
+      if (!entityChips.childElementCount) entityChips.createSpan({ cls: 'bob-nav-designer-empty', text: 'All record types are assigned.' });
 
-      const removeZone = navDesignerBody.createDiv({ cls: 'cad-nav-designer-remove', text: 'Drop a navigation item here to remove it and return it to the available pool' });
+      const removeZone = navDesignerBody.createDiv({ cls: 'bob-nav-designer-remove', text: 'Drop a navigation item here to remove it and return it to the available pool' });
       removeZone.addEventListener('dragover', (event) => {
         if (parseDragData(event)?.type !== 'item') return;
         event.preventDefault();
@@ -1191,9 +1191,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         clearDragPayload();
       });
 
-      const board = navDesignerBody.createDiv({ cls: 'cad-nav-designer-board' });
+      const board = navDesignerBody.createDiv({ cls: 'bob-nav-designer-board' });
       groups.forEach((group, groupIndex) => {
-        const groupEl = board.createDiv({ cls: 'cad-nav-designer-group' });
+        const groupEl = board.createDiv({ cls: 'bob-nav-designer-group' });
         groupEl.dataset.groupIndex = String(groupIndex);
         groupEl.addEventListener('dragover', (event) => {
           if (!parseDragData(event)) return;
@@ -1214,15 +1214,15 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           }
           clearDragPayload();
         });
-        const groupHead = groupEl.createDiv({ cls: 'cad-nav-designer-group-head' });
+        const groupHead = groupEl.createDiv({ cls: 'bob-nav-designer-group-head' });
         groupHead.draggable = true;
         groupHead.addEventListener('dragstart', (event) => {
           event.stopPropagation();
           dragPayload(event, { type: 'group', groupIndex });
         });
         groupHead.addEventListener('dragend', clearDragPayload);
-        groupHead.createSpan({ cls: 'cad-nav-designer-handle', text: '::' });
-        const groupTitleInput = groupHead.createEl('input', { cls: 'cad-nav-designer-group-title-input', type: 'text' });
+        groupHead.createSpan({ cls: 'bob-nav-designer-handle', text: '::' });
+        const groupTitleInput = groupHead.createEl('input', { cls: 'bob-nav-designer-group-title-input', type: 'text' });
         groupTitleInput.value = group.label || '';
         groupTitleInput.placeholder = group.id;
         groupTitleInput.title = 'Group label (leave blank for no heading)';
@@ -1242,7 +1242,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           updateWorkspaceDraft(config, `${group.label || group.id} icon updated - click Save and apply`);
         });
         if (!(group.items || []).length) {
-          const removeGroup = groupHead.createEl('button', { cls: 'cad-nav-designer-action danger', text: 'Remove' });
+          const removeGroup = groupHead.createEl('button', { cls: 'bob-nav-designer-action danger', text: 'Remove' });
           removeGroup.draggable = false;
           removeGroup.addEventListener('mousedown', (event) => event.stopPropagation());
           removeGroup.addEventListener('click', (event) => {
@@ -1251,11 +1251,11 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             updateWorkspaceDraft(config, `${group.label || group.id} group removed - click Save and apply`);
           });
         }
-        const groupItems = groupEl.createDiv({ cls: 'cad-nav-designer-items' });
+        const groupItems = groupEl.createDiv({ cls: 'bob-nav-designer-items' });
         (group.items || []).forEach((surface, itemIndex) => {
           const isTabBacked = isTabBackedSurface(surface, config.navigation.secondaryTabs || {});
           if (isTabBacked && surface.placement !== 'navigation') return;
-          const item = groupItems.createDiv({ cls: 'cad-nav-designer-item' });
+          const item = groupItems.createDiv({ cls: 'bob-nav-designer-item' });
           item.draggable = true;
           item.addEventListener('dragstart', (event) => {
             event.stopPropagation();
@@ -1282,17 +1282,17 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             }
             clearDragPayload();
           });
-          item.createSpan({ cls: 'cad-nav-designer-handle', text: '::' });
-          const itemText = item.createSpan({ cls: 'cad-nav-designer-item-text', text: surface.label });
+          item.createSpan({ cls: 'bob-nav-designer-handle', text: '::' });
+          const itemText = item.createSpan({ cls: 'bob-nav-designer-item-text', text: surface.label });
           itemText.title = surface.id;
           createIconPickerButton(item, surface.icon, (iconId) => {
             if (iconId) surface.icon = iconId;
             else delete surface.icon;
             updateWorkspaceDraft(config, `${surface.label} icon updated - click Save and apply`);
           });
-          if (surface.navLevel) item.createSpan({ cls: 'cad-nav-designer-level', text: surface.navLevel });
+          if (surface.navLevel) item.createSpan({ cls: 'bob-nav-designer-level', text: surface.navLevel });
           if (!surface.parent && !Object.prototype.hasOwnProperty.call(config.navigation.secondaryTabs || {}, surface.id)) {
-            const addTabs = item.createEl('button', { cls: 'cad-nav-designer-action', text: '+ Tabs' });
+            const addTabs = item.createEl('button', { cls: 'bob-nav-designer-action', text: '+ Tabs' });
             addTabs.draggable = false;
             addTabs.addEventListener('mousedown', (event) => event.stopPropagation());
             addTabs.addEventListener('click', (event) => {
@@ -1305,7 +1305,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             });
           }
           const remove = item.createEl('button', {
-            cls: 'cad-nav-designer-action danger',
+            cls: 'bob-nav-designer-action danger',
             text: isTabBacked ? 'As tabs' : 'Remove',
           });
           remove.draggable = false;
@@ -1318,7 +1318,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
               : `${surface.label} removed from navigation - click Save and apply`);
           });
         });
-        const empty = groupItems.createDiv({ cls: 'cad-nav-designer-dropzone', text: 'Drop available item here' });
+        const empty = groupItems.createDiv({ cls: 'bob-nav-designer-dropzone', text: 'Drop available item here' });
         empty.addEventListener('dragover', (event) => {
           if (!parseDragData(event)) return;
           event.preventDefault();
@@ -1351,7 +1351,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         return;
       }
       if (!Array.isArray(config.workbookGroups)) config.workbookGroups = [];
-      const addRow = workbookDesignerBody.createDiv({ cls: 'cad-nav-designer-add-group' });
+      const addRow = workbookDesignerBody.createDiv({ cls: 'bob-nav-designer-add-group' });
       const newGroupInput = addRow.createEl('input', { type: 'text', placeholder: 'New export group label' });
       const addGroup = addRow.createEl('button', { text: '+ Add export group' });
       addGroup.addEventListener('click', () => {
@@ -1365,15 +1365,15 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         updateWorkspaceDraft(config, `${label} export group added - click Save and apply`);
       });
       if (!config.workbookGroups.length) {
-        workbookDesignerBody.createDiv({ cls: 'cad-nav-designer-empty', text: 'No export groups defined. Add a group to make selected workbook exports available.' });
+        workbookDesignerBody.createDiv({ cls: 'bob-nav-designer-empty', text: 'No export groups defined. Add a group to make selected workbook exports available.' });
         return;
       }
       const entities = workspaceConfiguredEntityEntries(config);
-      const board = workbookDesignerBody.createDiv({ cls: 'cad-workbook-designer-board' });
+      const board = workbookDesignerBody.createDiv({ cls: 'bob-workbook-designer-board' });
       config.workbookGroups.forEach((group, groupIndex) => {
-        const card = board.createDiv({ cls: 'cad-workbook-designer-group' });
-        const head = card.createDiv({ cls: 'cad-workbook-designer-group-head' });
-        const labelInput = head.createEl('input', { type: 'text', cls: 'cad-workbook-designer-title' });
+        const card = board.createDiv({ cls: 'bob-workbook-designer-group' });
+        const head = card.createDiv({ cls: 'bob-workbook-designer-group-head' });
+        const labelInput = head.createEl('input', { type: 'text', cls: 'bob-workbook-designer-title' });
         labelInput.value = group.label;
         labelInput.addEventListener('change', () => {
           const next = labelInput.value.trim();
@@ -1384,7 +1384,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           group.label = next;
           updateWorkspaceDraft(config, `${next} export group renamed - click Save and apply`);
         });
-        const up = head.createEl('button', { cls: 'cad-nav-designer-action', text: 'Up' });
+        const up = head.createEl('button', { cls: 'bob-nav-designer-action', text: 'Up' });
         up.disabled = groupIndex === 0;
         up.addEventListener('click', () => {
           if (groupIndex === 0) return;
@@ -1392,7 +1392,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             [config.workbookGroups[groupIndex], config.workbookGroups[groupIndex - 1]];
           updateWorkspaceDraft(config, 'Export group order updated - click Save and apply');
         });
-        const down = head.createEl('button', { cls: 'cad-nav-designer-action', text: 'Down' });
+        const down = head.createEl('button', { cls: 'bob-nav-designer-action', text: 'Down' });
         down.disabled = groupIndex === config.workbookGroups.length - 1;
         down.addEventListener('click', () => {
           if (groupIndex >= config.workbookGroups.length - 1) return;
@@ -1400,14 +1400,14 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             [config.workbookGroups[groupIndex + 1], config.workbookGroups[groupIndex]];
           updateWorkspaceDraft(config, 'Export group order updated - click Save and apply');
         });
-        const remove = head.createEl('button', { cls: 'cad-nav-designer-action danger', text: 'Remove' });
+        const remove = head.createEl('button', { cls: 'bob-nav-designer-action danger', text: 'Remove' });
         remove.addEventListener('click', () => {
           config.workbookGroups.splice(groupIndex, 1);
           updateWorkspaceDraft(config, `${group.label} export group removed - click Save and apply`);
         });
-        const choices = card.createDiv({ cls: 'cad-workbook-designer-choices' });
+        const choices = card.createDiv({ cls: 'bob-workbook-designer-choices' });
         entities.forEach(([entityKey, def]) => {
-          const row = choices.createEl('label', { cls: 'cad-workbook-designer-choice' });
+          const row = choices.createEl('label', { cls: 'bob-workbook-designer-choice' });
           const checkbox = row.createEl('input', { type: 'checkbox' });
           checkbox.checked = group.entityKeys.includes(entityKey);
           row.createSpan({ text: def.plural || pluralizeEntityLabel(def.label) });
@@ -1495,15 +1495,15 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
 
       const cardKey = group.module || group.id;
       const isCollapsed = this._collapsedModules.has(cardKey);
-      const card = pMod.createDiv({ cls: 'cad-module-card' + (moduleDisabled ? ' is-off' : '') + (isCollapsed ? ' is-collapsed' : '') });
-      const cardHead = card.createDiv({ cls: 'cad-module-card-head' });
-      cardHead.createSpan({ text: headingText, cls: 'cad-module-card-label' });
-      const headRight = cardHead.createDiv({ cls: 'cad-module-card-head-right' });
+      const card = pMod.createDiv({ cls: 'bob-module-card' + (moduleDisabled ? ' is-off' : '') + (isCollapsed ? ' is-collapsed' : '') });
+      const cardHead = card.createDiv({ cls: 'bob-module-card-head' });
+      cardHead.createSpan({ text: headingText, cls: 'bob-module-card-label' });
+      const headRight = cardHead.createDiv({ cls: 'bob-module-card-head-right' });
       // Module enable/disable toggle lives in the HEADER so it's usable while the
       // card is collapsed. stopPropagation stops toggling it from also collapsing
       // the card (the header row's own click handler toggles collapse).
       if (isModuleGroup) {
-        const toggleWrap = headRight.createDiv({ cls: 'cad-module-card-toggle' });
+        const toggleWrap = headRight.createDiv({ cls: 'bob-module-card-toggle' });
         toggleWrap.setAttribute('aria-label', ensureMods()[group.module] !== false ? `Disable ${headingText}` : `Enable ${headingText}`);
         toggleWrap.addEventListener('click', (e) => e.stopPropagation());
         new obsidian.ToggleComponent(toggleWrap)
@@ -1515,7 +1515,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             this.display();   // re-render to update surface row enabled state
           });
       }
-      const chevron = headRight.createSpan({ cls: 'cad-module-card-chevron', text: isCollapsed ? '›' : '⌄' });
+      const chevron = headRight.createSpan({ cls: 'bob-module-card-chevron', text: isCollapsed ? '›' : '⌄' });
       cardHead.addEventListener('click', () => {
         if (this._collapsedModules.has(cardKey)) {
           this._collapsedModules.delete(cardKey);
@@ -1527,13 +1527,13 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           chevron.setText('›');
         }
       });
-      const cardBody = card.createDiv({ cls: 'cad-module-card-body' });
-      const settingGroup = cardBody.createDiv({ cls: 'setting-group' + (moduleDisabled ? ' cad-settings-panel-off' : '') });
+      const cardBody = card.createDiv({ cls: 'bob-module-card-body' });
+      const settingGroup = cardBody.createDiv({ cls: 'setting-group' + (moduleDisabled ? ' bob-settings-panel-off' : '') });
       const panel = settingGroup.createDiv({ cls: 'setting-items' });
 
       // Module description (the enable toggle itself now lives in the header).
       if (isModuleGroup) {
-        panel.createDiv({ cls: 'setting-item-description cad-module-card-desc', text: moduleLabels[group.module] || `${headingText} module defined in workspace.json.` });
+        panel.createDiv({ cls: 'setting-item-description bob-module-card-desc', text: moduleLabels[group.module] || `${headingText} module defined in workspace.json.` });
       }
 
       // One row per surface: visibility toggle + folder text input + base file dropdown
@@ -1567,7 +1567,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         const s = new obsidian.Setting(panel)
           .setName(level !== 'primary' ? `${surface.label} (${levelLabel})` : surface.label)
           .setDesc(desc.join(' · '));
-        if (moduleDisabled) s.settingEl.classList.add('cad-setting-disabled');
+        if (moduleDisabled) s.settingEl.classList.add('bob-setting-disabled');
         // Deep-link to the Surface Designer for dashboard-bearing surfaces, where
         // Customize (decompose the built-in into widgets) / Reset to built-in live.
         if (hasCustomDash || hasBuiltinDash) {
@@ -1580,7 +1580,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             }));
         }
         // Indent non-primary rows so the tab hierarchy under a parent reads visually.
-        if (level !== 'primary') s.settingEl.classList.add('cad-setting-nested');
+        if (level !== 'primary') s.settingEl.classList.add('bob-setting-nested');
 
         // Visibility toggle — primary surfaces only; secondary tabs have no
         // per-tab disable mechanism (they show whenever their parent is active).
@@ -1694,7 +1694,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
 
       // Special case: Projects gets a multi-folder editor below its row
       if (group.id === 'planner') {
-        const projectFoldersEl = panel.createDiv({ cls: 'cad-project-folders' });
+        const projectFoldersEl = panel.createDiv({ cls: 'bob-project-folders' });
         projectFoldersEl.style.cssText = 'padding:0 16px 12px;';
         const renderProjectFolders = () => {
           projectFoldersEl.empty();
@@ -1704,9 +1704,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
             ...(this.plugin.settings.projectFolders || []),
           ];
           allFolders.forEach((folder, idx) => {
-            const row = projectFoldersEl.createDiv({ cls: 'cad-folder-row' });
+            const row = projectFoldersEl.createDiv({ cls: 'bob-folder-row' });
             row.style.cssText = 'display:flex;align-items:center;gap:6px;margin:4px 0;';
-            const inp = row.createEl('input', { type: 'text', cls: 'cad-folder-input' });
+            const inp = row.createEl('input', { type: 'text', cls: 'bob-folder-input' });
             inp.style.cssText = 'flex:1;';
             inp.value = folder;
             inp.placeholder = idx === 0 ? 'Default folder' : 'Additional folder';
@@ -1747,7 +1747,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     });
 
     pApp.createEl('h3', { text: 'Navigation' });
-    const navGroup = pApp.createDiv({ cls: 'setting-group cad-settings-section' });
+    const navGroup = pApp.createDiv({ cls: 'setting-group bob-settings-section' });
     const navPanel = navGroup.createDiv({ cls: 'setting-items' });
     new obsidian.Setting(navPanel)
       .setName('Show secondary nav items')
@@ -1771,7 +1771,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         }));
 
     pApp.createEl('h3', { text: 'Rendering' });
-    const renderGroup = pApp.createDiv({ cls: 'setting-group cad-settings-section' });
+    const renderGroup = pApp.createDiv({ cls: 'setting-group bob-settings-section' });
     const renderPanel = renderGroup.createDiv({ cls: 'setting-items' });
     new obsidian.Setting(renderPanel)
       .setName('Inline canvases & Base views')
@@ -1785,7 +1785,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         }));
 
     pApp.createEl('h3', { text: 'Reminders' });
-    const remindersGroup = pApp.createDiv({ cls: 'setting-group cad-settings-section' });
+    const remindersGroup = pApp.createDiv({ cls: 'setting-group bob-settings-section' });
     const remindersPanel = remindersGroup.createDiv({ cls: 'setting-items' });
     new obsidian.Setting(remindersPanel)
       .setName('Desktop notifications')
@@ -1821,10 +1821,10 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       }));
 
     /* ─── App ─── */
-    const appGroup = pApp.createDiv({ cls: 'setting-group cad-settings-section' });
+    const appGroup = pApp.createDiv({ cls: 'setting-group bob-settings-section' });
     const appPanel = appGroup.createDiv({ cls: 'setting-items' });
     /* ─── Planner settings ─── */
-    const plannerGroup = pPlanner.createDiv({ cls: 'setting-group cad-settings-section' });
+    const plannerGroup = pPlanner.createDiv({ cls: 'setting-group bob-settings-section' });
     const plannerPanel = plannerGroup.createDiv({ cls: 'setting-items' });
 
     const peopleCategories = ENTITIES.contact.fields.find((f) => f.key === 'person_category')?.options
@@ -1838,9 +1838,9 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     const teamSetting = new obsidian.Setting(appPanel)
       .setName('Team person categories')
       .setDesc('People categories included on the Team screen.');
-    const teamControls = teamSetting.controlEl.createDiv({ cls: 'cad-settings-checkboxes' });
+    const teamControls = teamSetting.controlEl.createDiv({ cls: 'bob-settings-checkboxes' });
     peopleCategories.forEach((category) => {
-      const label = teamControls.createEl('label', { cls: 'cad-settings-checkbox' });
+      const label = teamControls.createEl('label', { cls: 'bob-settings-checkbox' });
       const checkbox = label.createEl('input', { type: 'checkbox' });
       checkbox.checked = selectedTeamCategories.has(category);
       label.createEl('span', { text: category });
@@ -1947,8 +1947,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         d.onChange(async (v) => {
           this.plugin.settings.currency = v;
           await this.plugin.saveSettings();
-          // Re-render any open Cadence tabs so values reformat immediately
-          this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP).forEach((leaf) => {
+          // Re-render any open BOB Workspace tabs so values reformat immediately
+          this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP).forEach((leaf) => {
             if (leaf.view && typeof (leaf.view as RenderableViewLike).render === 'function') (leaf.view as RenderableViewLike).render();
           });
         });
@@ -1991,7 +1991,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     pDm.createEl('h3', { text: 'Data model' });
 
     /* ─── Bases ─── */
-    const basesGroup = pDm.createDiv({ cls: 'setting-group cad-settings-section' });
+    const basesGroup = pDm.createDiv({ cls: 'setting-group bob-settings-section' });
     const basesPanel = basesGroup.createDiv({ cls: 'setting-items' });
     new obsidian.Setting(basesPanel)
       .setName('Bases folder')
@@ -2022,21 +2022,21 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           }
         }));
 
-    const schemasGroup = pDm.createDiv({ cls: 'setting-group cad-settings-section' });
+    const schemasGroup = pDm.createDiv({ cls: 'setting-group bob-settings-section' });
     const schemasPanel = schemasGroup.createDiv({ cls: 'setting-items' });
     const configuredSchemas = WORKSPACE_CONFIG.schemas || {};
     const schemaSettings = effectiveSchemaSettings(this.plugin.settings);
     const schemasManaged = configuredSchemas.enabled != null || !!configuredSchemas.folder;
     if (schemasManaged) {
-      const banner = schemasPanel.createDiv({ cls: 'cad-managed-banner' });
-      const icon = banner.createSpan({ cls: 'cad-managed-banner-icon' });
+      const banner = schemasPanel.createDiv({ cls: 'bob-managed-banner' });
+      const icon = banner.createSpan({ cls: 'bob-managed-banner-icon' });
       try { obsidian.setIcon(icon, 'lock'); } catch (_) {}
       banner.createSpan({ text: 'Schema settings are controlled by ' });
       banner.createEl('code', { text: 'workspace.json' });
       banner.createSpan({ text: '. Edit the ' });
-      const wsLink = banner.createEl('a', { text: 'Workspace tab', cls: 'cad-managed-banner-link' });
+      const wsLink = banner.createEl('a', { text: 'Workspace tab', cls: 'bob-managed-banner-link' });
       wsLink.addEventListener('click', () => {
-        const wsTab = containerEl.querySelector<HTMLElement>('.cad-settings-tab[data-tab="workspace"]');
+        const wsTab = containerEl.querySelector<HTMLElement>('.bob-settings-tab[data-tab="workspace"]');
         if (wsTab) wsTab.click();
       });
       banner.createSpan({ text: ' to change them.' });
@@ -2081,13 +2081,13 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           }
         }));
 
-    const schemaBootstrapBanner = schemasPanel.createDiv({ cls: 'cad-managed-banner cad-schema-bootstrap-banner' });
+    const schemaBootstrapBanner = schemasPanel.createDiv({ cls: 'bob-managed-banner bob-schema-bootstrap-banner' });
     schemaBootstrapBanner.style.display = 'none';
-    const bootstrapIcon = schemaBootstrapBanner.createSpan({ cls: 'cad-managed-banner-icon' });
+    const bootstrapIcon = schemaBootstrapBanner.createSpan({ cls: 'bob-managed-banner-icon' });
     try { obsidian.setIcon(bootstrapIcon, 'database'); } catch (_) {}
     const bootstrapText = schemaBootstrapBanner.createSpan({ text: 'No schema sources found in the configured folder.' });
     schemaBootstrapBanner.createSpan({ text: ' ' });
-    const bootstrapAction = schemaBootstrapBanner.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Bootstrap schemas' });
+    const bootstrapAction = schemaBootstrapBanner.createEl('button', { cls: 'bob-btn bob-btn-sm', text: 'Bootstrap schemas' });
     bootstrapAction.addEventListener('click', async () => {
       if (!(await confirmModal(this.plugin.app, 'Create canonical schema YAML from the current workspace entity definitions? Existing source files will be left untouched.', { title: 'Bootstrap schemas', cta: 'Bootstrap', danger: false }))) return;
       try {
@@ -2102,22 +2102,22 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       }
     });
 
-    const schemaDesigner = schemasPanel.createDiv({ cls: 'cad-schema-designer' });
-    const schemaDesignerHead = schemaDesigner.createDiv({ cls: 'cad-schema-designer-head' });
+    const schemaDesigner = schemasPanel.createDiv({ cls: 'bob-schema-designer' });
+    const schemaDesignerHead = schemaDesigner.createDiv({ cls: 'bob-schema-designer-head' });
     schemaDesignerHead.createEl('h4', { text: 'Data model designer' });
     schemaDesignerHead.createEl('p', {
       cls: 'setting-item-description',
       text: 'Edit canonical entity schema YAML visually. Schema sources define record structure and BOB display hints; generated JSON Schemas and Metadata Menu FileClasses are derived with one click.',
     });
-    const schemaToolbar = schemaDesigner.createDiv({ cls: 'cad-schema-designer-toolbar' });
+    const schemaToolbar = schemaDesigner.createDiv({ cls: 'bob-schema-designer-toolbar' });
     const schemaSelect = schemaToolbar.createEl('select', { cls: 'dropdown' });
     const schemaNew = schemaToolbar.createEl('button', { text: '+ New entity' });
     const schemaReload = schemaToolbar.createEl('button', { text: 'Reload source' });
     const schemaSave = schemaToolbar.createEl('button', { text: 'Save schema source', cls: 'mod-cta' });
     const schemaSaveGenerate = schemaToolbar.createEl('button', { text: 'Save and regenerate', cls: 'mod-cta' });
     const schemaDelete = schemaToolbar.createEl('button', { text: 'Archive source', cls: 'mod-warning' });
-    const schemaStatus = schemaDesigner.createDiv({ cls: 'cad-schema-designer-status setting-item-description' });
-    const schemaForm = schemaDesigner.createDiv({ cls: 'cad-schema-designer-form' });
+    const schemaStatus = schemaDesigner.createDiv({ cls: 'bob-schema-designer-status setting-item-description' });
+    const schemaForm = schemaDesigner.createDiv({ cls: 'bob-schema-designer-form' });
     let sourceSchema: DesignerSchemaSource | null = null;
     let sourceSchemaPath = '';
     let schemaDirty = false;
@@ -2139,12 +2139,12 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
 
     const setSchemaStatus = (text: string, ok = true) => {
       schemaStatus.setText(text || '');
-      schemaStatus.toggleClass('cad-status-ok', !!ok);
-      schemaStatus.toggleClass('cad-status-err', !ok);
+      schemaStatus.toggleClass('bob-status-ok', !!ok);
+      schemaStatus.toggleClass('bob-status-err', !ok);
     };
     const highlightSaveButtons = (on: boolean) => {
-      schemaSave.toggleClass('cad-schema-save-needed', on);
-      schemaSaveGenerate.toggleClass('cad-schema-save-needed', on);
+      schemaSave.toggleClass('bob-schema-save-needed', on);
+      schemaSaveGenerate.toggleClass('bob-schema-save-needed', on);
     };
     const autoSaveSchema = async () => {
       if (!sourceSchema || !sourceSchemaPath) return;
@@ -2214,15 +2214,15 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       return parsed;
     };
     const fieldRow = (parent: HTMLElement, label: string) => {
-      const row = parent.createDiv({ cls: 'cad-schema-designer-row' });
-      row.createDiv({ cls: 'cad-schema-designer-label', text: label });
-      return row.createDiv({ cls: 'cad-schema-designer-control' });
+      const row = parent.createDiv({ cls: 'bob-schema-designer-row' });
+      row.createDiv({ cls: 'bob-schema-designer-label', text: label });
+      return row.createDiv({ cls: 'bob-schema-designer-control' });
     };
     const textControl = (parent: HTMLElement, label: string, value: string | undefined, onInput: (value: string) => void, multiline = false) => {
       const control = fieldRow(parent, label);
       const input = multiline
-        ? control.createEl('textarea', { cls: 'cad-schema-designer-input' })
-        : control.createEl('input', { type: 'text', cls: 'cad-schema-designer-input' });
+        ? control.createEl('textarea', { cls: 'bob-schema-designer-input' })
+        : control.createEl('input', { type: 'text', cls: 'bob-schema-designer-input' });
       input.value = value || '';
       if (multiline) (input as HTMLTextAreaElement).rows = 2;
       input.addEventListener('input', () => {
@@ -2240,7 +2240,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         schemaForm.createDiv({ cls: 'setting-item-description', text: 'Select an entity schema, or create a new one.' });
         return;
       }
-      const identity = schemaForm.createDiv({ cls: 'cad-schema-designer-section' });
+      const identity = schemaForm.createDiv({ cls: 'bob-schema-designer-section' });
       identity.createEl('h5', { text: sourceSchemaPath || sourceSchema.entity });
       textControl(identity, 'Entity key', sourceSchema.entity, (value) => { sourceSchema.entity = value.trim(); });
       textControl(identity, 'Label', sourceSchema.label, (value) => { sourceSchema.label = value; });
@@ -2249,14 +2249,14 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         else delete sourceSchema.plural;
       });
       const iconControl = fieldRow(identity, 'Default icon');
-      const iconButton = iconControl.createEl('button', { cls: 'cad-nav-designer-icon-button', attr: { type: 'button' } });
+      const iconButton = iconControl.createEl('button', { cls: 'bob-nav-designer-icon-button', attr: { type: 'button' } });
       const renderSchemaIcon = () => {
         iconButton.empty();
-        const preview = iconButton.createSpan({ cls: 'cad-nav-designer-icon-preview' });
+        const preview = iconButton.createSpan({ cls: 'bob-nav-designer-icon-preview' });
         try { obsidian.setIcon(preview, sourceSchema.icon || 'file-text'); } catch (_) {}
-        iconButton.createSpan({ cls: 'cad-nav-designer-icon-name', text: sourceSchema.icon || 'Choose icon' });
+        iconButton.createSpan({ cls: 'bob-nav-designer-icon-name', text: sourceSchema.icon || 'Choose icon' });
       };
-      iconButton.addEventListener('click', () => new CadenceIconPickerModal(this.plugin.app, sourceSchema.icon, (iconId) => {
+      iconButton.addEventListener('click', () => new BobIconPickerModal(this.plugin.app, sourceSchema.icon, (iconId) => {
         if (iconId) sourceSchema.icon = iconId;
         else delete sourceSchema.icon;
         markSchemaDirty();
@@ -2300,8 +2300,8 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         }
       }, true);
 
-      const fieldsSection = schemaForm.createDiv({ cls: 'cad-schema-designer-section' });
-      const fieldsHead = fieldsSection.createDiv({ cls: 'cad-schema-designer-fields-head' });
+      const fieldsSection = schemaForm.createDiv({ cls: 'bob-schema-designer-section' });
+      const fieldsHead = fieldsSection.createDiv({ cls: 'bob-schema-designer-fields-head' });
       fieldsHead.createEl('h5', { text: 'Fields' });
       const addField = fieldsHead.createEl('button', { text: '+ Add field' });
       addField.addEventListener('click', () => {
@@ -2312,13 +2312,13 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
         renderSourceSchema();
       });
       (sourceSchema.fields || []).forEach((field, index) => {
-        const card = fieldsSection.createDiv({ cls: 'cad-schema-field' });
-        const row = card.createDiv({ cls: 'cad-schema-field-main' });
-        const nameInput = row.createEl('input', { type: 'text', cls: 'cad-schema-designer-input', placeholder: 'field_name' });
+        const card = fieldsSection.createDiv({ cls: 'bob-schema-field' });
+        const row = card.createDiv({ cls: 'bob-schema-field-main' });
+        const nameInput = row.createEl('input', { type: 'text', cls: 'bob-schema-designer-input', placeholder: 'field_name' });
         nameInput.value = field.name || '';
         nameInput.addEventListener('input', () => { field.name = nameInput.value.trim(); markSchemaDirty(); });
         nameInput.addEventListener('blur', () => { if (schemaDirty) autoSaveSchema(); });
-        const typeSelect = row.createEl('select', { cls: 'dropdown cad-schema-field-type' });
+        const typeSelect = row.createEl('select', { cls: 'dropdown bob-schema-field-type' });
         [['string', 'Text'], ['number', 'Number'], ['integer', 'Integer'], ['boolean', 'Boolean'], ['array', 'Array'], ['date', 'Date'], ['datetime', 'Date/time'], ['enum', 'Enum']].forEach(([value, label]) => {
           typeSelect.createEl('option', { value, text: label });
         });
@@ -2329,12 +2329,12 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           autoSaveSchema();
           renderSourceSchema();
         });
-        const requiredWrap = row.createEl('label', { cls: 'cad-schema-required' });
+        const requiredWrap = row.createEl('label', { cls: 'bob-schema-required' });
         const required = requiredWrap.createEl('input', { type: 'checkbox' });
         required.checked = !!field.required;
         requiredWrap.appendText(' Required');
         required.addEventListener('change', () => { field.required = required.checked; markSchemaDirty(); autoSaveSchema(); });
-        const up = row.createEl('button', { cls: 'cad-nav-designer-action', text: '\u2191', attr: { title: 'Move up' } });
+        const up = row.createEl('button', { cls: 'bob-nav-designer-action', text: '\u2191', attr: { title: 'Move up' } });
         up.disabled = index === 0;
         up.addEventListener('click', () => {
           if (index === 0) return;
@@ -2343,7 +2343,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           autoSaveSchema();
           renderSourceSchema();
         });
-        const down = row.createEl('button', { cls: 'cad-nav-designer-action', text: '\u2193', attr: { title: 'Move down' } });
+        const down = row.createEl('button', { cls: 'bob-nav-designer-action', text: '\u2193', attr: { title: 'Move down' } });
         down.disabled = index === sourceSchema.fields.length - 1;
         down.addEventListener('click', () => {
           if (index >= sourceSchema.fields.length - 1) return;
@@ -2352,16 +2352,16 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
           autoSaveSchema();
           renderSourceSchema();
         });
-        const remove = row.createEl('button', { cls: 'cad-nav-designer-action danger', text: 'Remove' });
+        const remove = row.createEl('button', { cls: 'bob-nav-designer-action danger', text: 'Remove' });
         remove.addEventListener('click', () => {
           sourceSchema.fields.splice(index, 1);
           markSchemaDirty();
           autoSaveSchema();
           renderSourceSchema();
         });
-        const detail = card.createDiv({ cls: 'cad-schema-field-detail' });
+        const detail = card.createDiv({ cls: 'bob-schema-field-detail' });
         const displayControl = fieldRow(detail, 'BOB display');
-        const displayType = displayControl.createEl('select', { cls: 'dropdown cad-schema-field-type' });
+        const displayType = displayControl.createEl('select', { cls: 'dropdown bob-schema-field-type' });
         [['', 'Derived'], ['text', 'Text'], ['email', 'Email'], ['currency', 'Currency'], ['tags', 'Tags'], ['date', 'Date'], ['enum', 'Enum'], ['number', 'Number']].forEach(([value, label]) => {
           displayType.createEl('option', { value, text: label });
         });
@@ -2435,7 +2435,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
       await refreshSchemaSelect(sourceSchemaPath);
     });
     schemaNew.addEventListener('click', () => {
-      new CadencePromptModal(this.plugin.app, {
+      new BobPromptModal(this.plugin.app, {
         title: 'New entity schema',
         placeholder: 'entity-key',
         cta: 'Create',
@@ -2528,7 +2528,7 @@ export class CadenceSettingTab extends obsidian.PluginSettingTab {
     setTimeout(() => refreshSchemaSelect(initialSchemaPath), 0);
 
     pData.createEl('h3', { text: 'Data import/export' });
-    const dataGroup = pData.createDiv({ cls: 'setting-group cad-settings-section' });
+    const dataGroup = pData.createDiv({ cls: 'setting-group bob-settings-section' });
     const dataPanel = dataGroup.createDiv({ cls: 'setting-items' });
     new obsidian.Setting(dataPanel)
       .setName('Workbook export folder')

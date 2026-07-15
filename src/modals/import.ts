@@ -19,13 +19,13 @@ export interface ImportResult {
   entityKey: string;
 }
 
-interface CadenceImportModalOptions {
+interface BobImportModalOptions {
   entityKey?: string;
   onSubmit?: (result: ImportResult) => void;
   prefillCsv?: string;
 }
 
-export class CadenceImportModal extends obsidian.Modal {
+export class BobImportModal extends obsidian.Modal {
   declare entityKey: string;
   declare onSubmit: (result: ImportResult) => void;
   declare csvText: string;
@@ -35,7 +35,7 @@ export class CadenceImportModal extends obsidian.Modal {
   declare fieldInfoEl: HTMLDivElement;
   declare previewEl: HTMLDivElement;
   declare importBtn: HTMLButtonElement;
-  constructor(app: App, opts: CadenceImportModalOptions) {
+  constructor(app: App, opts: BobImportModalOptions) {
     super(app);
     this.entityKey = (opts && opts.entityKey) || 'contact';
     this.onSubmit = (opts && opts.onSubmit) || (() => {});
@@ -48,20 +48,20 @@ export class CadenceImportModal extends obsidian.Modal {
   onOpen() {
     const { contentEl, modalEl } = this;
     contentEl.empty();
-    contentEl.addClass('cad-import-modal');
-    if (modalEl) modalEl.addClass('cad-import-modal-shell');
-    contentEl.createEl('h3', { cls: 'cad-create-title', text: 'Import' });
+    contentEl.addClass('bob-import-modal');
+    if (modalEl) modalEl.addClass('bob-import-modal-shell');
+    contentEl.createEl('h3', { cls: 'bob-create-title', text: 'Import' });
 
     /* Top row: entity picker + file source buttons */
-    const srcRow = contentEl.createDiv({ cls: 'cad-data-btn-row cad-import-src-row' });
-    const entitySelect = srcRow.createEl('select', { cls: 'cad-de-select' });
-    const fileBtn  = srcRow.createEl('button', { cls: 'cad-btn', text: 'Pick .csv file…' });
+    const srcRow = contentEl.createDiv({ cls: 'bob-data-btn-row bob-import-src-row' });
+    const entitySelect = srcRow.createEl('select', { cls: 'bob-de-select' });
+    const fileBtn  = srcRow.createEl('button', { cls: 'bob-btn', text: 'Pick .csv file…' });
     fileBtn.type = 'button';
-    const xlsxBtn = srcRow.createEl('button', { cls: 'cad-btn', text: 'Pick .xlsx file…' });
+    const xlsxBtn = srcRow.createEl('button', { cls: 'bob-btn', text: 'Pick .xlsx file…' });
     xlsxBtn.type = 'button';
 
     /* Entity selector (same select, wired below) */
-    const entityRow = contentEl.createDiv({ cls: 'cad-create-row' });
+    const entityRow = contentEl.createDiv({ cls: 'bob-create-row' });
     entityRow.style.display = 'none'; // hidden — entity select is in srcRow
     entitySelect.createEl('option', { value: '', text: 'Please select entity…', attr: { disabled: '', selected: '' } });
     const importEntityEntries = workspaceConfiguredEntityEntries(WORKSPACE_CONFIG) as [string, BobEntityDef][];
@@ -80,19 +80,19 @@ export class CadenceImportModal extends obsidian.Modal {
       this._renderPreview();
     });
 
-    this.fieldInfoEl = contentEl.createDiv({ cls: 'cad-import-field-ref' });
+    this.fieldInfoEl = contentEl.createDiv({ cls: 'bob-import-field-ref' });
     this._renderFieldReference();
 
     /* CSV input */
-    const csvRow = contentEl.createDiv({ cls: 'cad-create-row' });
+    const csvRow = contentEl.createDiv({ cls: 'bob-create-row' });
     csvRow.style.alignItems = 'flex-start';
-    csvRow.createDiv({ cls: 'cad-create-label', text: 'CSV DATA' });
+    csvRow.createDiv({ cls: 'bob-create-label', text: 'CSV DATA' });
     const csvWrap = csvRow.createDiv();
     csvWrap.style.display = 'flex';
     csvWrap.style.flexDirection = 'column';
     csvWrap.style.gap = '8px';
 
-    const ta = csvWrap.createEl('textarea', { cls: 'cad-create-input' });
+    const ta = csvWrap.createEl('textarea', { cls: 'bob-create-input' });
     ta.rows = 8;
     ta.placeholder = 'Paste CSV here, including a header row…';
     ta.style.fontFamily = 'var(--font-monospace-theme, var(--font-monospace))';
@@ -127,15 +127,15 @@ export class CadenceImportModal extends obsidian.Modal {
     });
 
     /* Preview area */
-    this.previewEl = contentEl.createDiv({ cls: 'cad-import-preview' });
+    this.previewEl = contentEl.createDiv({ cls: 'bob-import-preview' });
     this._renderPreview();
 
     /* Action row */
-    const actions = contentEl.createDiv({ cls: 'cad-create-actions' });
-    const cancel = actions.createEl('button', { cls: 'cad-btn', text: 'Cancel' });
+    const actions = contentEl.createDiv({ cls: 'bob-create-actions' });
+    const cancel = actions.createEl('button', { cls: 'bob-btn', text: 'Cancel' });
     cancel.type = 'button';
     cancel.addEventListener('click', () => this.close());
-    this.importBtn = actions.createEl('button', { cls: 'cad-btn primary', text: 'Import' });
+    this.importBtn = actions.createEl('button', { cls: 'bob-btn primary', text: 'Import' });
     this.importBtn.type = 'button';
     this.importBtn.disabled = true;
     this.importBtn.addEventListener('click', () => this._submitImport());
@@ -147,23 +147,23 @@ export class CadenceImportModal extends obsidian.Modal {
     const def = ENTITIES[this.entityKey];
     if (!def) return;
 
-    const head = this.fieldInfoEl.createDiv({ cls: 'cad-import-field-ref-head' });
-    head.createDiv({ cls: 'cad-create-label', text: 'EXPECTED FIELDS' });
-    const hint = head.createDiv({ cls: 'cad-import-field-hint' });
+    const head = this.fieldInfoEl.createDiv({ cls: 'bob-import-field-ref-head' });
+    head.createDiv({ cls: 'bob-create-label', text: 'EXPECTED FIELDS' });
+    const hint = head.createDiv({ cls: 'bob-import-field-hint' });
     hint.appendText('Use field keys as CSV headers for automatic mapping. ');
     hint.createEl('code', { text: def.fields.map((f) => f.key).join(', ') });
 
-    const list = this.fieldInfoEl.createDiv({ cls: 'cad-import-field-list' });
+    const list = this.fieldInfoEl.createDiv({ cls: 'bob-import-field-list' });
     def.fields.forEach((f, idx) => {
       const required = idx === 0 || f.required === true;
-      const item = list.createDiv({ cls: 'cad-import-field-item' + (required ? ' required' : '') });
-      item.createDiv({ cls: 'cad-import-field-key', text: f.key });
-      item.createDiv({ cls: 'cad-import-field-label', text: f.label || f.key });
+      const item = list.createDiv({ cls: 'bob-import-field-item' + (required ? ' required' : '') });
+      item.createDiv({ cls: 'bob-import-field-key', text: f.key });
+      item.createDiv({ cls: 'bob-import-field-label', text: f.label || f.key });
       const meta = [f.type || 'text'];
       if (required) meta.push('required');
       if (f.type === 'enum' && f.options?.length) meta.push(f.options.join(' / '));
       if (def.fieldAliases?.[f.key]?.length) meta.push(`aliases: ${def.fieldAliases[f.key].join(' / ')}`);
-      item.createDiv({ cls: 'cad-import-field-meta', text: meta.join(' · ') });
+      item.createDiv({ cls: 'bob-import-field-meta', text: meta.join(' · ') });
     });
   }
 
@@ -317,20 +317,20 @@ export class CadenceImportModal extends obsidian.Modal {
   _renderPreview() {
     this.previewEl.empty();
     if (!this.headers.length) {
-      this.previewEl.createDiv({ cls: 'cad-empty', text: 'Paste or pick a CSV to preview…' });
-      if (this.importBtn) { this.importBtn.disabled = true; this.importBtn.classList.add('cad-btn-disabled'); }
+      this.previewEl.createDiv({ cls: 'bob-empty', text: 'Paste or pick a CSV to preview…' });
+      if (this.importBtn) { this.importBtn.disabled = true; this.importBtn.classList.add('bob-btn-disabled'); }
       return;
     }
 
     const def = ENTITIES[this.entityKey];
 
     /* Mapping table */
-    const head = this.previewEl.createDiv({ cls: 'cad-create-label' });
+    const head = this.previewEl.createDiv({ cls: 'bob-create-label' });
     head.style.marginTop = '14px';
     head.setText('COLUMN MAPPING');
 
-    const tableWrap = this.previewEl.createDiv({ cls: 'cad-import-table-wrap' });
-    const table = tableWrap.createEl('table', { cls: 'cad-import-table' });
+    const tableWrap = this.previewEl.createDiv({ cls: 'bob-import-table-wrap' });
+    const table = tableWrap.createEl('table', { cls: 'bob-import-table' });
     const thr = table.createEl('thead').createEl('tr');
     thr.createEl('th', { text: 'CSV column' });
     thr.createEl('th', { text: 'Maps to' });
@@ -341,7 +341,7 @@ export class CadenceImportModal extends obsidian.Modal {
       const tr = tbody.createEl('tr');
       tr.createEl('td', { text: h });
       const mc = tr.createEl('td');
-      const sel = mc.createEl('select', { cls: 'cad-create-input cad-import-select' });
+      const sel = mc.createEl('select', { cls: 'bob-create-input bob-import-select' });
       sel.createEl('option', { value: '', text: '— skip —' });
       def.fields.forEach((f) => {
         const o = sel.createEl('option', { value: f.key, text: f.label });
@@ -358,25 +358,25 @@ export class CadenceImportModal extends obsidian.Modal {
     });
 
     /* Summary */
-    const summary = this.previewEl.createDiv({ cls: 'cad-import-summary' });
+    const summary = this.previewEl.createDiv({ cls: 'bob-import-summary' });
     // Required = explicit primary + any field with required: true
     const primary = primaryField(def);
     const requiredFields = def.fields.filter((f) => f.key === primary?.key || f.required === true);
     const mappedKeys = new Set(Object.values(this.mapping).filter(Boolean));
     const missing = requiredFields.filter(f => !mappedKeys.has(f.key));
     if (missing.length) {
-      summary.addClass('cad-import-summary-warn');
+      summary.addClass('bob-import-summary-warn');
       summary.setText(`Missing required column${missing.length === 1 ? '' : 's'}: ${missing.map(f => `"${f.label}"`).join(', ')}. Map ${missing.length === 1 ? 'it' : 'them'} above to enable import.`);
       if (this.importBtn) {
         this.importBtn.disabled = true;
-        this.importBtn.classList.add('cad-btn-disabled');
+        this.importBtn.classList.add('bob-btn-disabled');
       }
     } else {
       const mappedCount = mappedKeys.size;
       summary.setText(`Will create ${this.rows.length} ${this.rows.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${entityFolder(this.entityKey)}/  ·  ${mappedCount} column${mappedCount === 1 ? '' : 's'} mapped`);
       if (this.importBtn) {
         this.importBtn.disabled = false;
-        this.importBtn.classList.remove('cad-btn-disabled');
+        this.importBtn.classList.remove('bob-btn-disabled');
       }
     }
   }

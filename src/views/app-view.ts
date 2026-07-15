@@ -5,11 +5,11 @@ import { BUILTIN_DASHBOARD_DEFAULTS, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WI
 import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
 import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
-import { CadenceReminderEditModal } from '../modals/capture';
-import { CadencePromptModal, confirmModal } from '../modals/common';
-import { CadenceEntityCreateModal } from '../modals/entity-create';
-import { CadenceImportModal } from '../modals/import';
-import { ALL_SURFACES, NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_CADENCE_APP, cloneConfig, reorderPinnedList } from '../nav';
+import { BobReminderEditModal } from '../modals/capture';
+import { BobPromptModal, confirmModal } from '../modals/common';
+import { BobEntityCreateModal } from '../modals/entity-create';
+import { BobImportModal } from '../modals/import';
+import { ALL_SURFACES, NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_BOB_APP, cloneConfig, reorderPinnedList } from '../nav';
 import { isTabBackedSurface, surfaceMatchesTab } from '../nav-helpers';
 import { createEntity, ensureDailyNote, parseSections, replaceSection } from '../notes';
 import { parseH2Sections, parseTasksList, readProjectMeta, stringifyMilestones, stringifyTasks } from '../project-notes';
@@ -23,7 +23,7 @@ import { filterEntitiesByBaseConfig, normalizeWidgetSortSpec, normalizeWidgetSou
 import { exportEntitiesXLSX, selectedWorkbookEntityKeys, workbookExportFolder, workbookExportGroups } from '../workbook';
 import { WORKSPACE_CONFIG, WORKSPACE_HAS_NAVIGATION, configuredDashboardDefinition, configuredSurfaceActions, dashboardWidgetSchema, normalizeDashboardConfigShape, resolveSurfaceConfig, saveWorkspaceConfig, validateDashboardConfig, workspaceConfiguredEntityEntries, workspaceConfiguredEntityKeys, workspaceHasEntity } from '../workspace-config';
 import * as obsidian from 'obsidian';
-import type { CadencePlugin } from '../plugin';
+import type { BobPlugin } from '../plugin';
 import type {
   BaseConfig,
   BobSettings,
@@ -43,10 +43,10 @@ import type {
 /* ── Module-local types (type-only; erased by esbuild) ─────────── */
 
 /**
- * CadencePlugin with the members this view consumes sharpened (signatures
- * read from src/plugin.ts) while remaining assignable to CadencePlugin.
+ * BobPlugin with the members this view consumes sharpened (signatures
+ * read from src/plugin.ts) while remaining assignable to BobPlugin.
  */
-interface PluginHandle extends CadencePlugin {
+interface PluginHandle extends BobPlugin {
   settings: BobSettings;
   saveSettings(): Promise<void>;
   refreshOpenViews(): void;
@@ -322,7 +322,7 @@ interface PlannerDay {
   tasks: string[];
 }
 
-export class CadenceAppView extends obsidian.ItemView {
+export class BobAppView extends obsidian.ItemView {
   declare plugin: PluginHandle;
   /** Active surface id (route). */
   declare mode: string;
@@ -355,7 +355,7 @@ export class CadenceAppView extends obsidian.ItemView {
   declare _dashboardState: Record<string, DashboardState> | undefined;
   /** Optional parsed-base cache cleared on metadata changes (set externally when present). */
   declare _basesCache: Map<string, unknown> | undefined;
-  constructor(leaf: obsidian.WorkspaceLeaf, plugin: CadencePlugin) {
+  constructor(leaf: obsidian.WorkspaceLeaf, plugin: BobPlugin) {
     super(leaf);
     this.plugin = plugin;
     // Migrate older mode IDs from previous versions
@@ -383,7 +383,7 @@ export class CadenceAppView extends obsidian.ItemView {
   _toggleMobileNav(force?: boolean) {
     const root = this.containerEl.children[1];
     this.mobileNavOpen = (typeof force === 'boolean') ? force : !this.mobileNavOpen;
-    if (root) root.toggleClass('cad-mobile-nav-open', this.mobileNavOpen);
+    if (root) root.toggleClass('bob-mobile-nav-open', this.mobileNavOpen);
   }
 
   async openEntityDetail(entityKey: string, file: obsidian.TFile) {
@@ -421,10 +421,10 @@ export class CadenceAppView extends obsidian.ItemView {
     return SURFACE_BY_ID[id] ? id : (SURFACE_BY_ID.home ? 'home' : (ALL_SURFACES[0]?.id || 'home'));
   }
 
-  /* Toggle Cadence-app dark mode. Scoped to `.cadence-app` only —
+  /* Toggle BOB app dark mode. Scoped to `.bob-app` only —
      does not affect Obsidian's overall light/dark mode. Persisted in settings. */
-  async _toggleCadenceDark() {
-    this.plugin.settings.cadenceAppDark = !this.plugin.settings.cadenceAppDark;
+  async _toggleBobDark() {
+    this.plugin.settings.bobAppDark = !this.plugin.settings.bobAppDark;
     await this.plugin.saveSettings();
     this.render();
   }
@@ -547,7 +547,7 @@ export class CadenceAppView extends obsidian.ItemView {
     return reminders.filter((r) => r.when && new Date(r.when).getTime() <= now).length;
   }
 
-  getViewType()    { return VIEW_TYPE_CADENCE_APP; }
+  getViewType()    { return VIEW_TYPE_BOB_APP; }
   getDisplayText() { return 'BOB Workspace'; }
   getIcon()        { return 'sparkles'; }
 
@@ -637,12 +637,12 @@ export class CadenceAppView extends obsidian.ItemView {
     this._closeColumnFilterMenu();
     this._teardownCanvasLeaf();
     const root = this.containerEl.children[1];
-    const previousNav = root.querySelector ? root.querySelector('.cad-app-nav') : null;
+    const previousNav = root.querySelector ? root.querySelector('.bob-app-nav') : null;
     const previousNavScrollTop = previousNav ? previousNav.scrollTop : (this._navScrollTop || 0);
     const renderSeq = ++this._renderSeq;
     root.empty();
-    root.addClass('cadence-app');
-    root.toggleClass('cad-dark', !!this.plugin.settings.cadenceAppDark);
+    root.addClass('bob-app');
+    root.toggleClass('bob-dark', !!this.plugin.settings.bobAppDark);
 
     if (!SURFACE_BY_ID[this.mode]) this.mode = this._migrateModeId(this.mode);
     const active = SURFACE_BY_ID[this.mode] || SURFACE_BY_ID.home || ALL_SURFACES[0] || {
@@ -651,62 +651,62 @@ export class CadenceAppView extends obsidian.ItemView {
     const activeParentId = active?.parent || null;
 
     /* ── Top brand bar ──────────────────────── */
-    const topbar = root.createDiv({ cls: 'cad-app-topbar' });
+    const topbar = root.createDiv({ cls: 'bob-app-topbar' });
 
     /* Hamburger — visible only on mobile via CSS, toggles the nav drawer */
-    const burger = topbar.createEl('button', { cls: 'cad-mobile-burger' });
+    const burger = topbar.createEl('button', { cls: 'bob-mobile-burger' });
     try { obsidian.setIcon(burger, 'menu'); } catch (_) {}
     burger.title = 'Show nav';
     burger.addEventListener('click', () => this._toggleMobileNav());
 
-    const brand = topbar.createDiv({ cls: 'cad-app-brand' });
-    brand.createSpan({ cls: 'cad-app-brand-mark', text: '◐' });
-    brand.createSpan({ cls: 'cad-app-brand-text', text: 'BOB Workspace' });
+    const brand = topbar.createDiv({ cls: 'bob-app-brand' });
+    brand.createSpan({ cls: 'bob-app-brand-mark', text: '◐' });
+    brand.createSpan({ cls: 'bob-app-brand-text', text: 'BOB Workspace' });
 
-    const topRight = topbar.createDiv({ cls: 'cad-app-topbar-right' });
+    const topRight = topbar.createDiv({ cls: 'bob-app-topbar-right' });
 
     /* BOB Workspace dark mode toggle (scoped — does NOT touch Obsidian's mode) */
-    const dark = !!this.plugin.settings.cadenceAppDark;
-    const themeBtn = topRight.createEl('button', { cls: 'cad-topbar-icon-btn' });
+    const dark = !!this.plugin.settings.bobAppDark;
+    const themeBtn = topRight.createEl('button', { cls: 'bob-topbar-icon-btn' });
     try { obsidian.setIcon(themeBtn, dark ? 'sun' : 'moon'); } catch (_) {}
     themeBtn.title = dark ? 'BOB Workspace: switch to light' : 'BOB Workspace: switch to dark';
-    themeBtn.addEventListener('click', () => this._toggleCadenceDark());
+    themeBtn.addEventListener('click', () => this._toggleBobDark());
 
-    const eyebrow = topRight.createDiv({ cls: 'cad-app-topbar-meta' });
+    const eyebrow = topRight.createDiv({ cls: 'bob-app-topbar-meta' });
     eyebrow.setText(active.label.toUpperCase());
 
     /* ── Body: left grouped nav + main content ──────── */
-    const body = root.createDiv({ cls: 'cad-app-body' });
+    const body = root.createDiv({ cls: 'bob-app-body' });
 
     /* Backdrop — only visible on mobile when drawer is open; tapping dismisses. */
-    const backdrop = body.createDiv({ cls: 'cad-mobile-backdrop' });
+    const backdrop = body.createDiv({ cls: 'bob-mobile-backdrop' });
     backdrop.addEventListener('click', () => this._toggleMobileNav(false));
 
-    const nav = body.createDiv({ cls: 'cad-app-nav' });
+    const nav = body.createDiv({ cls: 'bob-app-nav' });
     this._navScrollTop = previousNavScrollTop;
     const collapsed = this.plugin.settings.collapsedGroups || {};
     const pinnedIds = this._pinnedNavSurfaceIds();
     const pinnedSet = new Set(pinnedIds);
 
     if (pinnedIds.length) {
-      const pinnedWrap = nav.createDiv({ cls: 'cad-nav-pinned' });
-      const pinnedRow = pinnedWrap.createDiv({ cls: 'cad-nav-pinned-row' });
+      const pinnedWrap = nav.createDiv({ cls: 'bob-nav-pinned' });
+      const pinnedRow = pinnedWrap.createDiv({ cls: 'bob-nav-pinned-row' });
       pinnedIds.forEach((surfaceId) => {
         const surface = SURFACE_BY_ID[surfaceId];
-        const pinWrap = pinnedRow.createDiv({ cls: 'cad-nav-pinned-item-wrap' });
+        const pinWrap = pinnedRow.createDiv({ cls: 'bob-nav-pinned-item-wrap' });
         const pin = pinWrap.createEl('button', {
-          cls: 'cad-nav-pinned-item' + (this.mode === surfaceId ? ' active' : ''),
+          cls: 'bob-nav-pinned-item' + (this.mode === surfaceId ? ' active' : ''),
           attr: { type: 'button' },
         });
         pin.title = surface.label;
-        const ic = pin.createSpan({ cls: 'cad-nav-pinned-icon' });
+        const ic = pin.createSpan({ cls: 'bob-nav-pinned-icon' });
         try { obsidian.setIcon(ic, surface.icon); } catch (_) {}
         pin.addEventListener('click', () => {
           this.setMode(surfaceId);
           if (this.mobileNavOpen) this._toggleMobileNav(false);
         });
         const remove = pinWrap.createEl('button', {
-          cls: 'cad-nav-pinned-remove',
+          cls: 'bob-nav-pinned-remove',
           attr: { type: 'button', 'aria-label': `Unpin ${surface.label}` },
         });
         remove.title = `Unpin ${surface.label}`;
@@ -753,40 +753,40 @@ export class CadenceAppView extends obsidian.ItemView {
 
     const visibleGroups = this._visibleNavGroups();
     visibleGroups.forEach((group) => {
-      if (!Array.isArray(group.items)) { nav.createEl('hr', { cls: 'cad-nav-separator' }); return; }
-      const groupEl = nav.createDiv({ cls: 'cad-nav-group' });
+      if (!Array.isArray(group.items)) { nav.createEl('hr', { cls: 'bob-nav-separator' }); return; }
+      const groupEl = nav.createDiv({ cls: 'bob-nav-group' });
       const isCollapsed = !!collapsed[group.id];
 
       if (group.label) {
-        const head = groupEl.createDiv({ cls: 'cad-nav-group-head' });
-        const chev = head.createSpan({ cls: 'cad-nav-group-chev' });
+        const head = groupEl.createDiv({ cls: 'bob-nav-group-head' });
+        const chev = head.createSpan({ cls: 'bob-nav-group-chev' });
         try { obsidian.setIcon(chev, isCollapsed ? 'chevron-right' : 'chevron-down'); } catch (_) {}
         if (group.icon) {
-          const groupIcon = head.createSpan({ cls: 'cad-nav-group-icon' });
+          const groupIcon = head.createSpan({ cls: 'bob-nav-group-icon' });
           try { obsidian.setIcon(groupIcon, group.icon); } catch (_) {}
         }
-        head.createSpan({ cls: 'cad-nav-group-label', text: group.label.toUpperCase() });
+        head.createSpan({ cls: 'bob-nav-group-label', text: group.label.toUpperCase() });
         head.addEventListener('click', () => this.toggleGroup(group.id));
       }
 
       if (!isCollapsed || !group.label) {
-        const list = groupEl.createDiv({ cls: 'cad-nav-group-items' });
+        const list = groupEl.createDiv({ cls: 'bob-nav-group-items' });
         group.items.forEach((s) => {
           const isActive = this.mode === s.id;
           const isActiveParent = activeParentId === s.id;
           const item = list.createDiv({
-            cls: 'cad-app-nav-item' + (isActive ? ' active' : '') + (isActiveParent ? ' active-parent' : ''),
+            cls: 'bob-app-nav-item' + (isActive ? ' active' : '') + (isActiveParent ? ' active-parent' : ''),
           });
           if (isActive) item.setAttribute('aria-current', 'page');
-          const ic = item.createSpan({ cls: 'cad-app-nav-icon' });
+          const ic = item.createSpan({ cls: 'bob-app-nav-icon' });
           try { obsidian.setIcon(ic, s.icon); } catch (_) {}
-          item.createSpan({ cls: 'cad-app-nav-label', text: s.label });
+          item.createSpan({ cls: 'bob-app-nav-label', text: s.label });
           if (!BUILT_SURFACES.has(s.id) && !s.entityKey) {
-            item.createSpan({ cls: 'cad-app-nav-badge', text: 'soon' });
+            item.createSpan({ cls: 'bob-app-nav-badge', text: 'soon' });
           }
           const isPinned = pinnedSet.has(s.id);
           const pinBtn = item.createEl('button', {
-            cls: 'cad-nav-pin-toggle' + (isPinned ? ' is-pinned' : ''),
+            cls: 'bob-nav-pin-toggle' + (isPinned ? ' is-pinned' : ''),
             attr: { type: 'button' },
           });
           pinBtn.title = isPinned ? `Unpin ${s.label}` : `Pin ${s.label}`;
@@ -800,7 +800,7 @@ export class CadenceAppView extends obsidian.ItemView {
           // Inbox: badge with overdue count
           if (s.id === 'planner.inbox') {
             const overdue = this._inboxOverdueCount();
-            if (overdue > 0) item.createSpan({ cls: 'cad-app-nav-badge cad-nav-badge-alert', text: String(overdue) });
+            if (overdue > 0) item.createSpan({ cls: 'bob-app-nav-badge bob-nav-badge-alert', text: String(overdue) });
           }
           item.addEventListener('click', () => {
             this.setMode(s.id);
@@ -820,7 +820,7 @@ export class CadenceAppView extends obsidian.ItemView {
     restoreNavScroll();
     requestAnimationFrame(restoreNavScroll);
 
-    const content = body.createDiv({ cls: 'cad-app-content' });
+    const content = body.createDiv({ cls: 'bob-app-content' });
 
     // Detail view trumps the normal surface routing
     if (this.detailFile && this.detailEntityKey) {
@@ -877,16 +877,16 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   renderComingSoon(root: HTMLElement, surface: Partial<NavSurfaceLike>) {
-    root.addClass('cadence-soon');
-    const wrap = root.createDiv({ cls: 'cad-soon-wrap' });
-    wrap.createDiv({ cls: 'cad-eyebrow', text: 'COMING SOON' });
-    wrap.createDiv({ cls: 'cad-soon-title', text: surface.label });
-    wrap.createDiv({ cls: 'cad-soon-desc', text: surface.desc });
+    root.addClass('bob-soon');
+    const wrap = root.createDiv({ cls: 'bob-soon-wrap' });
+    wrap.createDiv({ cls: 'bob-eyebrow', text: 'COMING SOON' });
+    wrap.createDiv({ cls: 'bob-soon-title', text: surface.label });
+    wrap.createDiv({ cls: 'bob-soon-desc', text: surface.desc });
 
-    const ic = wrap.createDiv({ cls: 'cad-soon-icon' });
+    const ic = wrap.createDiv({ cls: 'bob-soon-icon' });
     try { obsidian.setIcon(ic, surface.icon); } catch (_) {}
 
-    const meta = wrap.createDiv({ cls: 'cad-soon-meta' });
+    const meta = wrap.createDiv({ cls: 'bob-soon-meta' });
     meta.setText('This surface is scaffolded but not yet built. Tell the team to flesh it out next.');
   }
 
@@ -914,23 +914,23 @@ export class CadenceAppView extends obsidian.ItemView {
     this._renderPageHeader(root, 'Canvases',
       `${files.length} ${files.length === 1 ? 'canvas' : 'canvases'} in the vault · open full-page or in a tab`,
       (right) => {
-        const gen = right.createEl('button', { cls: 'cad-btn cad-btn-small', text: '+ Generate' });
+        const gen = right.createEl('button', { cls: 'bob-btn bob-btn-small', text: '+ Generate' });
         gen.addEventListener('click', (e) => this._openCanvasGenerateMenu(e));
       }, { configuredActions: false });
     if (!files.length) {
-      const card = root.createDiv({ cls: 'cad-dash-card' });
-      card.createDiv({ cls: 'cad-dash-card-body' })
-        .createDiv({ cls: 'cad-empty', text: 'No canvases yet. Create one in Obsidian (New canvas) and it will appear here.' });
+      const card = root.createDiv({ cls: 'bob-dash-card' });
+      card.createDiv({ cls: 'bob-dash-card-body' })
+        .createDiv({ cls: 'bob-empty', text: 'No canvases yet. Create one in Obsidian (New canvas) and it will appear here.' });
       return;
     }
-    const wrap = root.createDiv({ cls: 'cad-canvas-library' });
-    const search = wrap.createEl('input', { cls: 'cad-canvas-search', type: 'search', placeholder: 'Search canvases…' });
-    const list = wrap.createDiv({ cls: 'cad-canvas-list' });
+    const wrap = root.createDiv({ cls: 'bob-canvas-library' });
+    const search = wrap.createEl('input', { cls: 'bob-canvas-search', type: 'search', placeholder: 'Search canvases…' });
+    const list = wrap.createDiv({ cls: 'bob-canvas-list' });
     const draw = (q: string) => {
       list.empty();
       const needle = String(q || '').trim().toLowerCase();
       const shown = needle ? files.filter((f) => f.path.toLowerCase().includes(needle)) : files;
-      if (!shown.length) { list.createDiv({ cls: 'cad-empty', text: 'No canvases match.' }); return; }
+      if (!shown.length) { list.createDiv({ cls: 'bob-empty', text: 'No canvases match.' }); return; }
       shown.forEach((f) => this._renderCanvasRow(list, f));
     };
     search.addEventListener('input', () => draw(search.value));
@@ -1044,19 +1044,19 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _renderCanvasRow(list: HTMLElement, file: obsidian.TFile) {
-    const row = list.createDiv({ cls: 'cad-canvas-row' });
-    const icon = row.createDiv({ cls: 'cad-canvas-row-icon' });
+    const row = list.createDiv({ cls: 'bob-canvas-row' });
+    const icon = row.createDiv({ cls: 'bob-canvas-row-icon' });
     try { obsidian.setIcon(icon, 'layout-dashboard'); } catch (_) {}
-    const main = row.createDiv({ cls: 'cad-canvas-row-main' });
-    main.createDiv({ cls: 'cad-canvas-row-name', text: file.basename });
+    const main = row.createDiv({ cls: 'bob-canvas-row-main' });
+    main.createDiv({ cls: 'bob-canvas-row-name', text: file.basename });
     const folder = file.parent?.path && file.parent.path !== '/' ? file.parent.path : '';
     const modified = file.stat?.mtime ? new Date(file.stat.mtime).toISOString().slice(0, 10) : '';
-    main.createDiv({ cls: 'cad-canvas-row-meta', text: [folder, modified ? `modified ${modified}` : ''].filter(Boolean).join(' · ') });
+    main.createDiv({ cls: 'bob-canvas-row-meta', text: [folder, modified ? `modified ${modified}` : ''].filter(Boolean).join(' · ') });
     row.addEventListener('click', () => { void this.openCanvas(file); });
-    const actions = row.createDiv({ cls: 'cad-canvas-row-actions' });
-    const openBtn = actions.createEl('button', { cls: 'cad-btn cad-btn-small', text: 'Open' });
+    const actions = row.createDiv({ cls: 'bob-canvas-row-actions' });
+    const openBtn = actions.createEl('button', { cls: 'bob-btn bob-btn-small', text: 'Open' });
     openBtn.addEventListener('click', (e) => { e.stopPropagation(); void this.openCanvas(file); });
-    const tabBtn = actions.createEl('button', { cls: 'cad-btn cad-btn-small cad-btn-ghost', text: 'Open in tab' });
+    const tabBtn = actions.createEl('button', { cls: 'bob-btn bob-btn-small bob-btn-ghost', text: 'Open in tab' });
     tabBtn.addEventListener('click', (e) => { e.stopPropagation(); this.app.workspace.openLinkText(file.path, '', true); });
   }
 
@@ -1064,19 +1064,19 @@ export class CadenceAppView extends obsidian.ItemView {
   async renderCanvasSurface(root: HTMLElement, file: obsidian.TFile) {
     const folder = file.parent?.path && file.parent.path !== '/' ? file.parent.path : 'Canvas';
     this._renderPageHeader(root, file.basename, folder, (right) => {
-      const back = right.createEl('button', { cls: 'cad-btn cad-btn-small cad-btn-ghost', text: '← Canvases' });
+      const back = right.createEl('button', { cls: 'bob-btn bob-btn-small bob-btn-ghost', text: '← Canvases' });
       back.addEventListener('click', () => { void this.setMode('misc.canvases'); });
-      const edit = right.createEl('button', { cls: 'cad-btn cad-btn-small', text: 'Pop out to edit' });
+      const edit = right.createEl('button', { cls: 'bob-btn bob-btn-small', text: 'Pop out to edit' });
       edit.addEventListener('click', () => { this.app.workspace.openLinkText(file.path, '', true); });
     }, { configuredActions: false });
-    const stage = root.createDiv({ cls: 'cad-canvas-stage' });
+    const stage = root.createDiv({ cls: 'bob-canvas-stage' });
     try {
       await this._mountLiveCanvas(stage, file);
     } catch (err) {
       stage.empty();
-      const fb = stage.createDiv({ cls: 'cad-canvas-fallback' });
-      fb.createDiv({ cls: 'cad-soon-desc', text: `Couldn't render this canvas inline (${(err as Error)?.message || String(err)}).` });
-      const open = fb.createEl('button', { cls: 'cad-btn', text: 'Open canvas in Obsidian' });
+      const fb = stage.createDiv({ cls: 'bob-canvas-fallback' });
+      fb.createDiv({ cls: 'bob-soon-desc', text: `Couldn't render this canvas inline (${(err as Error)?.message || String(err)}).` });
+      const open = fb.createEl('button', { cls: 'bob-btn', text: 'Open canvas in Obsidian' });
       open.addEventListener('click', () => this.app.workspace.openLinkText(file.path, '', true));
     }
   }
@@ -1110,7 +1110,7 @@ export class CadenceAppView extends obsidian.ItemView {
       }) | undefined;
       const viewEl = view?.containerEl || (leaf as unknown as { containerEl?: HTMLElement }).containerEl;
       if (!viewEl) throw new Error('canvas view element not found');
-      body.addClass('cad-canvas-stage-live');
+      body.addClass('bob-canvas-stage-live');
       body.appendChild(viewEl);
       this._canvasLeaf = leaf;
       // The canvas must relayout inside its new parent; kick it once the DOM settles.
@@ -1138,12 +1138,12 @@ export class CadenceAppView extends obsidian.ItemView {
 
   /* ── Generic page header ────────────────── */
   _renderPageHeader(root: HTMLElement, title: string, subtitle: string | null, actions?: PageHeaderActionsFn | null, options: PageHeaderOptions = {}) {
-    const head = root.createDiv({ cls: 'cad-page-header' });
-    const left = head.createDiv({ cls: 'cad-page-header-left' });
-    left.createDiv({ cls: 'cad-eyebrow', text: 'BOB WORKSPACE' });
-    left.createDiv({ cls: 'cad-page-title', text: title });
-    if (subtitle) left.createDiv({ cls: 'cad-page-subtitle', text: subtitle });
-    const right = head.createDiv({ cls: 'cad-page-header-right' });
+    const head = root.createDiv({ cls: 'bob-page-header' });
+    const left = head.createDiv({ cls: 'bob-page-header-left' });
+    left.createDiv({ cls: 'bob-eyebrow', text: 'BOB WORKSPACE' });
+    left.createDiv({ cls: 'bob-page-title', text: title });
+    if (subtitle) left.createDiv({ cls: 'bob-page-subtitle', text: subtitle });
+    const right = head.createDiv({ cls: 'bob-page-header-right' });
     const surfaceId = options.surfaceId || this.mode;
     const renderConfigured = options.configuredActions !== false;
     const configuredActionCount = renderConfigured ? this._configuredHeaderActionCount(surfaceId) : 0;
@@ -1172,7 +1172,7 @@ export class CadenceAppView extends obsidian.ItemView {
       if (action.entityKey) {
         const def = ENTITIES[action.entityKey];
         const btn = container.createEl('button', {
-          cls: `cad-btn${action.primary ? ' primary' : ''}`,
+          cls: `bob-btn${action.primary ? ' primary' : ''}`,
           text: action.label || `+ ${def.label}`,
         });
         btn.addEventListener('click', () => this._createEntityFromPrompt(action.entityKey));
@@ -1190,7 +1190,7 @@ export class CadenceAppView extends obsidian.ItemView {
       );
       if (!label) return;
       const btn = container.createEl('button', {
-        cls: `cad-btn${action.primary ? ' primary' : ''}`,
+        cls: `bob-btn${action.primary ? ' primary' : ''}`,
         text: label,
       });
       btn.addEventListener('click', () => {
@@ -1208,7 +1208,7 @@ export class CadenceAppView extends obsidian.ItemView {
     if (!basePath) return;
 
     const select = container.createEl('select', {
-      cls: 'dropdown cad-page-view-select',
+      cls: 'dropdown bob-page-view-select',
       attr: { 'aria-label': 'Base view' },
     });
     select.title = 'Base view';
@@ -1273,23 +1273,23 @@ export class CadenceAppView extends obsidian.ItemView {
     // (read-only, native Bases UI) instead of a dead placeholder; the page
     // header already carries an "Open Base" action for the full-screen version.
     // Fall back to a short note if the embed can't mount.
-    const wrap = root.createDiv({ cls: 'cad-external-base-view' });
-    const body = wrap.createDiv({ cls: 'cad-external-base-view-body' });
+    const wrap = root.createDiv({ cls: 'bob-external-base-view' });
+    const body = wrap.createDiv({ cls: 'bob-external-base-view-body' });
     const file = external.basePath ? this.app.vault.getAbstractFileByPath(external.basePath) : null;
     if (file instanceof obsidian.TFile) {
       void this._mountLiveBaseView(body, file, external.basePath, external.name || '').catch(() => {
         body.empty();
-        const fb = body.createDiv({ cls: 'cad-empty-state' });
-        fb.createDiv({ cls: 'cad-empty-state-title', text: external.name || 'Base view' });
-        fb.createDiv({ cls: 'cad-empty-state-desc', text: `This ${external.type || 'non-table'} view couldn't be embedded here — use “Open Base” above to view it in Obsidian Bases.` });
-        const btn = fb.createEl('button', { cls: 'cad-btn primary', text: 'Open in Base' });
+        const fb = body.createDiv({ cls: 'bob-empty-state' });
+        fb.createDiv({ cls: 'bob-empty-state-title', text: external.name || 'Base view' });
+        fb.createDiv({ cls: 'bob-empty-state-desc', text: `This ${external.type || 'non-table'} view couldn't be embedded here — use “Open Base” above to view it in Obsidian Bases.` });
+        const btn = fb.createEl('button', { cls: 'bob-btn primary', text: 'Open in Base' });
         btn.addEventListener('click', () => this._openEntityBase(entityKey));
       });
     } else {
-      const fb = body.createDiv({ cls: 'cad-empty-state' });
-      fb.createDiv({ cls: 'cad-empty-state-title', text: external.name || 'Base view' });
-      fb.createDiv({ cls: 'cad-empty-state-desc', text: external.basePath ? `Base file not found: ${external.basePath}` : 'No Base file configured for this view.' });
-      const btn = fb.createEl('button', { cls: 'cad-btn primary', text: 'Open in Base' });
+      const fb = body.createDiv({ cls: 'bob-empty-state' });
+      fb.createDiv({ cls: 'bob-empty-state-title', text: external.name || 'Base view' });
+      fb.createDiv({ cls: 'bob-empty-state-desc', text: external.basePath ? `Base file not found: ${external.basePath}` : 'No Base file configured for this view.' });
+      const btn = fb.createEl('button', { cls: 'bob-btn primary', text: 'Open in Base' });
       btn.addEventListener('click', () => this._openEntityBase(entityKey));
     }
     return true;
@@ -1298,7 +1298,7 @@ export class CadenceAppView extends obsidian.ItemView {
   _renderUnsupportedBaseFilters(root: HTMLElement, def: EntityDef) {
     const unsupported = def?.unsupportedBaseFilters || [];
     if (!unsupported.length) return;
-    const details = root.createEl('details', { cls: 'cad-base-filter-warnings' });
+    const details = root.createEl('details', { cls: 'bob-base-filter-warnings' });
     details.createEl('summary', { text: `${unsupported.length} Base filter${unsupported.length === 1 ? '' : 's'} not applied` });
     const list = details.createEl('ul');
     unsupported.forEach((filter: string) => {
@@ -1331,9 +1331,9 @@ export class CadenceAppView extends obsidian.ItemView {
     const def = ENTITIES[entityKey];
     const selected = new Set<string>(); // selected file paths
 
-    const bulkBar = root.createDiv({ cls: 'cad-bulk-bar cad-bulk-bar-hidden' });
-    const bulkCount = bulkBar.createSpan({ cls: 'cad-bulk-count' });
-    const bulkDelete = bulkBar.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Delete selected' });
+    const bulkBar = root.createDiv({ cls: 'bob-bulk-bar bob-bulk-bar-hidden' });
+    const bulkCount = bulkBar.createSpan({ cls: 'bob-bulk-count' });
+    const bulkDelete = bulkBar.createEl('button', { cls: 'bob-btn bob-btn-danger', text: 'Delete selected' });
     bulkDelete.addEventListener('click', async () => {
       // Resolve all files before any deletion so paths can't shift mid-loop
       const filesToDelete = [...selected]
@@ -1350,10 +1350,10 @@ export class CadenceAppView extends obsidian.ItemView {
 
     const updateBulkBar = () => {
       if (selected.size > 0) {
-        bulkBar.removeClass('cad-bulk-bar-hidden');
+        bulkBar.removeClass('bob-bulk-bar-hidden');
         bulkCount.setText(`${selected.size} selected`);
       } else {
-        bulkBar.addClass('cad-bulk-bar-hidden');
+        bulkBar.addClass('bob-bulk-bar-hidden');
       }
     };
 
@@ -1372,22 +1372,22 @@ export class CadenceAppView extends obsidian.ItemView {
     };
 
     const openFilterDropdown = (th: HTMLElement, field: EntityField, filterBtn: HTMLElement) => {
-      document.querySelector('.cad-filter-dropdown')?.remove();
+      document.querySelector('.bob-filter-dropdown')?.remove();
       const current = filterState.get(field.key); // Set or undefined
       const dropdown = document.createElement('div');
-      dropdown.className = 'cad-filter-dropdown';
+      dropdown.className = 'bob-filter-dropdown';
       // Prevent clicks inside dropdown from bubbling to th (which would trigger sort)
       dropdown.addEventListener('click', (ev) => ev.stopPropagation());
 
       const hdr = document.createElement('div');
-      hdr.className = 'cad-filter-header';
+      hdr.className = 'bob-filter-header';
       hdr.textContent = field.label;
       const clearBtn = document.createElement('button');
-      clearBtn.className = 'cad-filter-clear';
+      clearBtn.className = 'bob-filter-clear';
       clearBtn.textContent = 'Clear';
       clearBtn.addEventListener('click', () => {
         filterState.delete(field.key);
-        filterBtn.classList.remove('cad-filter-btn-active');
+        filterBtn.classList.remove('bob-filter-btn-active');
         dropdown.remove();
         renderBody(applyFilters(sortEntities([...entities])));
       });
@@ -1398,7 +1398,7 @@ export class CadenceAppView extends obsidian.ItemView {
       let sel = current ? new Set(current) : null; // null = all
       field.options.forEach((opt) => {
         const label = document.createElement('label');
-        label.className = 'cad-filter-option';
+        label.className = 'bob-filter-option';
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.checked = !sel || sel.has(opt);
@@ -1408,7 +1408,7 @@ export class CadenceAppView extends obsidian.ItemView {
           const isAll = sel.size === field.options.length;
           if (isAll) { filterState.delete(field.key); sel = null; }
           else filterState.set(field.key, new Set(sel));
-          filterBtn.classList.toggle('cad-filter-btn-active', filterState.has(field.key));
+          filterBtn.classList.toggle('bob-filter-btn-active', filterState.has(field.key));
           renderBody(applyFilters(sortEntities([...entities])));
         });
         label.appendChild(cb);
@@ -1435,8 +1435,8 @@ export class CadenceAppView extends obsidian.ItemView {
       setTimeout(() => document.addEventListener('click', onDocClick), 0);
     };
 
-    const tableWrap = root.createDiv({ cls: 'cad-table-wrap' });
-    const table = tableWrap.createEl('table', { cls: 'cad-table' });
+    const tableWrap = root.createDiv({ cls: 'bob-table-wrap' });
+    const table = tableWrap.createEl('table', { cls: 'bob-table' });
 
     const thead = table.createEl('thead');
     const trh = thead.createEl('tr');
@@ -1486,7 +1486,7 @@ export class CadenceAppView extends obsidian.ItemView {
       updateBulkBar();
       if (selectAllCb) { selectAllCb.checked = false; selectAllCb.indeterminate = false; }
       arr.forEach((e) => {
-        const tr = tbody.createEl('tr', { cls: 'cad-row' });
+        const tr = tbody.createEl('tr', { cls: 'bob-row' });
         tr.addEventListener('dblclick', () => {
           tr.querySelectorAll('td').forEach((cell: EditableCellEl) => {
             clearTimeout(cell._cadEditTimer);
@@ -1496,11 +1496,11 @@ export class CadenceAppView extends obsidian.ItemView {
         });
 
         // Checkbox cell
-        const tdCb = tr.createEl('td', { cls: 'cad-col-cb' });
-        const cb = tdCb.createEl('input', { type: 'checkbox', cls: 'cad-row-cb' });
+        const tdCb = tr.createEl('td', { cls: 'bob-col-cb' });
+        const cb = tdCb.createEl('input', { type: 'checkbox', cls: 'bob-row-cb' });
         cb.addEventListener('change', () => {
           if (cb.checked) selected.add(e.file.path); else selected.delete(e.file.path);
-          tr.toggleClass('cad-row-selected', cb.checked);
+          tr.toggleClass('bob-row-selected', cb.checked);
           updateBulkBar();
           if (selectAllCb) {
             selectAllCb.indeterminate = selected.size > 0 && selected.size < arr.length;
@@ -1515,7 +1515,7 @@ export class CadenceAppView extends obsidian.ItemView {
           const val = entityValue(e, f.key, def);
           const formatted = fmtValue(val, f.type);
           if (i === 0) {
-            const a = td.createEl('a', { cls: 'cad-row-primary', text: formatted || e.basename });
+            const a = td.createEl('a', { cls: 'bob-row-primary', text: formatted || e.basename });
             a.addEventListener('click', (ev) => {
               ev.preventDefault();
               this.openEntityDetail(entityKey, e.file);
@@ -1530,15 +1530,15 @@ export class CadenceAppView extends obsidian.ItemView {
     const renderHeader = () => {
       trh.empty();
       // Select-all checkbox header
-      const thCb = trh.createEl('th', { cls: 'cad-col-cb' });
-      selectAllCb = thCb.createEl('input', { type: 'checkbox', cls: 'cad-row-cb' });
+      const thCb = trh.createEl('th', { cls: 'bob-col-cb' });
+      selectAllCb = thCb.createEl('input', { type: 'checkbox', cls: 'bob-row-cb' });
       selectAllCb.addEventListener('change', () => {
         if (selectAllCb.checked) currentArr.forEach((e) => selected.add(e.file.path));
         else selected.clear();
         tbody.querySelectorAll('tr').forEach((tr, idx) => {
-          const cb = tr.querySelector<HTMLInputElement>('.cad-row-cb');
+          const cb = tr.querySelector<HTMLInputElement>('.bob-row-cb');
           if (cb) cb.checked = selectAllCb.checked;
-          tr.toggleClass('cad-row-selected', selectAllCb.checked);
+          tr.toggleClass('bob-row-selected', selectAllCb.checked);
         });
         selectAllCb.indeterminate = false;
         updateBulkBar();
@@ -1546,11 +1546,11 @@ export class CadenceAppView extends obsidian.ItemView {
       cols.forEach((f) => {
         const isActive = currentSort.key === f.key;
         const th = trh.createEl('th', {
-          cls: 'cad-th-sortable' + (isActive ? ' cad-th-sorted' : ''),
+          cls: 'bob-th-sortable' + (isActive ? ' bob-th-sorted' : ''),
         });
-        const label = th.createSpan({ cls: 'cad-th-label' });
+        const label = th.createSpan({ cls: 'bob-th-label' });
         label.createSpan({ text: f.label });
-        const ind = label.createSpan({ cls: 'cad-th-indicator' });
+        const ind = label.createSpan({ cls: 'bob-th-indicator' });
         if (isActive) ind.setText(currentSort.dir === 'DESC' ? 'v' : '^');
         else ind.setText('');
         th.addEventListener('click', () => {
@@ -1563,7 +1563,7 @@ export class CadenceAppView extends obsidian.ItemView {
         if (f.type === 'enum' && f.options?.length) {
           const isFiltered = filterState.has(f.key);
           const filterBtn = th.createEl('button', {
-            cls: 'cad-filter-btn' + (isFiltered ? ' cad-filter-btn-active' : ''),
+            cls: 'bob-filter-btn' + (isFiltered ? ' bob-filter-btn-active' : ''),
             text: '▾',
           });
           filterBtn.addEventListener('click', (ev) => {
@@ -1579,7 +1579,7 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _makeInlineEditable(td: EditableCellEl, entity: EntityRecord, field: EntityField, def: EntityDef, initialFormatted: string) {
-    td.addClass('cad-cell-editable');
+    td.addClass('bob-cell-editable');
     td.setText(initialFormatted || '');
     td._cadEditing = false;
 
@@ -1588,7 +1588,7 @@ export class CadenceAppView extends obsidian.ItemView {
       const fm = cache?.frontmatter || {};
       const newVal = entityValue({ file: entity.file, frontmatter: fm, basename: entity.basename }, field.key, def);
       td.empty();
-      td.removeClass('cad-cell-editing');
+      td.removeClass('bob-cell-editing');
       td._cadEditing = false;
       td.setText(fmtValue(newVal, field.type) || '');
     };
@@ -1628,17 +1628,17 @@ export class CadenceAppView extends obsidian.ItemView {
       );
       const fieldType = field.type || 'text';
       td.empty();
-      td.addClass('cad-cell-editing');
+      td.addClass('bob-cell-editing');
 
       const cancel = () => {
         td.empty();
-        td.removeClass('cad-cell-editing');
+        td.removeClass('bob-cell-editing');
         td._cadEditing = false;
         td.setText(fmtValue(currentVal, field.type) || '');
       };
 
       if (fieldType === 'enum') {
-        const sel = td.createEl('select', { cls: 'cad-cell-input' });
+        const sel = td.createEl('select', { cls: 'bob-cell-input' });
         sel.createEl('option', { value: '', text: '—' });
         (field.options || []).forEach((opt) => {
           const o = sel.createEl('option', { value: opt, text: opt });
@@ -1650,7 +1650,7 @@ export class CadenceAppView extends obsidian.ItemView {
         sel.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { committed = true; cancel(); } });
         sel.focus();
       } else if (fieldType === 'date') {
-        const inp = td.createEl('input', { type: 'date', cls: 'cad-cell-input' });
+        const inp = td.createEl('input', { type: 'date', cls: 'bob-cell-input' });
         inp.lang = navigator.language || '';
         if (currentVal) {
           const d = new Date(String(currentVal).slice(0, 10));
@@ -1666,7 +1666,7 @@ export class CadenceAppView extends obsidian.ItemView {
         inp.focus();
       } else {
         const inputType = fieldType === 'email' ? 'email' : (fieldType === 'number' || fieldType === 'currency') ? 'number' : 'text';
-        const inp = td.createEl('input', { type: inputType, cls: 'cad-cell-input' });
+        const inp = td.createEl('input', { type: inputType, cls: 'bob-cell-input' });
         if (fieldType === 'tags' && Array.isArray(currentVal)) inp.value = currentVal.join(', ');
         else if (currentVal != null) inp.value = String(currentVal);
         let committed = false;
@@ -1706,11 +1706,11 @@ export class CadenceAppView extends obsidian.ItemView {
     const activeKey = activeTab?.entityKey || activeTab?.route || defaultEntityKey;
     state[parentId] = activeKey;
 
-    const tabWrap = root.createDiv({ cls: 'cad-secondary-tabs' });
+    const tabWrap = root.createDiv({ cls: 'bob-secondary-tabs' });
     tabs.forEach((tab) => {
       const key = tab.entityKey || tab.route;
       const btn = tabWrap.createEl('button', {
-        cls: 'cad-secondary-tab' + (key === activeKey ? ' active' : ''),
+        cls: 'bob-secondary-tab' + (key === activeKey ? ' active' : ''),
         text: tab.label,
       });
       btn.addEventListener('click', async () => {
@@ -1795,8 +1795,8 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _renderClientWorkSelector(container: HTMLElement) {
-    const wrap = container.createDiv({ cls: 'cad-client-work-filter' });
-    const clientSelect = wrap.createEl('select', { cls: 'dropdown cad-client-work-client-select' });
+    const wrap = container.createDiv({ cls: 'bob-client-work-filter' });
+    const clientSelect = wrap.createEl('select', { cls: 'dropdown bob-client-work-client-select' });
     clientSelect.createEl('option', { value: '', text: 'All clients' });
     const clients = this._clientWorkOptions();
     clients.forEach((client) => {
@@ -1811,7 +1811,7 @@ export class CadenceAppView extends obsidian.ItemView {
       await this.render();
     });
 
-    const projectSelect = wrap.createEl('select', { cls: 'dropdown cad-client-work-project-select' });
+    const projectSelect = wrap.createEl('select', { cls: 'dropdown bob-client-work-project-select' });
     projectSelect.createEl('option', { value: '', text: 'All projects' });
     const projects = this._clientWorkProjectOptions();
     projects.forEach((project) => {
@@ -1987,16 +1987,16 @@ export class CadenceAppView extends obsidian.ItemView {
       if (!opts.skipHeader) {
         this._renderPageHeader(root, surface.label || surfaceId || 'Dashboard', 'No dashboard configuration found');
       }
-      const card = root.createDiv({ cls: 'cad-dash-card' });
-      const body = card.createDiv({ cls: 'cad-dash-card-body' });
+      const card = root.createDiv({ cls: 'bob-dash-card' });
+      const body = card.createDiv({ cls: 'bob-dash-card-body' });
       body.createDiv({
-        cls: 'cad-empty',
+        cls: 'bob-empty',
         text: `Add dashboards.${surfaceId} to workspace.json to render this surface.`,
       });
       return;
     }
-    root.toggleClass('cadence-report', config.kind === 'report' || String(surfaceId || '').startsWith('reports.'));
-    root.toggleClass('cadence-planner', config.kind === 'planner' || String(surfaceId || '').startsWith('planner.'));
+    root.toggleClass('bob-report', config.kind === 'report' || String(surfaceId || '').startsWith('reports.'));
+    root.toggleClass('bob-planner', config.kind === 'planner' || String(surfaceId || '').startsWith('planner.'));
 
     const dashboardWarnings: string[] = [];
     const widgetCache = new Map<string, Promise<ResolvedWidgetSource>>();
@@ -2066,7 +2066,7 @@ export class CadenceAppView extends obsidian.ItemView {
         config.subtitle,
         (r, ctx) => {
           if (config.contextFilter === 'client-work') this._renderClientWorkSelector(r);
-          const exportBtn = r.createEl('button', { cls: 'cad-btn', text: 'Save' });
+          const exportBtn = r.createEl('button', { cls: 'bob-btn', text: 'Save' });
           exportBtn.addEventListener('click', async () => {
             exportBtn.disabled = true;
             exportBtn.textContent = 'Saving…';
@@ -2085,13 +2085,13 @@ export class CadenceAppView extends obsidian.ItemView {
     }
 
     if (Array.isArray(config.controls) && config.controls.length) {
-      const controlsSection = root.createDiv({ cls: 'cad-dash-filter-group' });
-      const controlsHead = controlsSection.createDiv({ cls: 'cad-dash-filter-group-head' });
-      controlsHead.createDiv({ cls: 'cad-dash-card-title', text: 'FILTERS' });
-      controlsHead.createDiv({ cls: 'cad-dash-filter-group-note', text: 'All filters are combined with AND.' });
-      const controlsWrap = controlsSection.createDiv({ cls: 'cad-dash-controls' });
+      const controlsSection = root.createDiv({ cls: 'bob-dash-filter-group' });
+      const controlsHead = controlsSection.createDiv({ cls: 'bob-dash-filter-group-head' });
+      controlsHead.createDiv({ cls: 'bob-dash-card-title', text: 'FILTERS' });
+      controlsHead.createDiv({ cls: 'bob-dash-filter-group-note', text: 'All filters are combined with AND.' });
+      const controlsWrap = controlsSection.createDiv({ cls: 'bob-dash-controls' });
       for (const control of config.controls) {
-        await this._renderConfigCard(controlsWrap.createDiv({ cls: 'cad-dash-col' }), control, getWidgetEntities);
+        await this._renderConfigCard(controlsWrap.createDiv({ cls: 'bob-dash-col' }), control, getWidgetEntities);
       }
     }
 
@@ -2157,9 +2157,9 @@ export class CadenceAppView extends obsidian.ItemView {
 
     await prewarmLayout;
     for (const row of config.layout || []) {
-      const cols = root.createDiv({ cls: 'cad-dash-cols' });
+      const cols = root.createDiv({ cls: 'bob-dash-cols' });
       for (const colDef of row) {
-        const col = cols.createDiv({ cls: 'cad-dash-col' });
+        const col = cols.createDiv({ cls: 'bob-dash-col' });
         for (const card of (Array.isArray(colDef) ? colDef : [colDef])) {
           await this._renderConfigCard(col, card, getWidgetEntities, dashboardContext);
         }
@@ -2170,14 +2170,14 @@ export class CadenceAppView extends obsidian.ItemView {
       const resolvedConditions = await Promise.all((cr.condition?.entities || []).map((key: string) => getWidgetEntities(null, key)));
       const hasData = resolvedConditions.some((resolved) => resolved.entities.length > 0);
       if (!hasData) continue;
-      const extra = root.createDiv({ cls: 'cad-dash-cols' });
+      const extra = root.createDiv({ cls: 'bob-dash-cols' });
       for (const card of cr.cards) {
-        await this._renderConfigCard(extra.createDiv({ cls: 'cad-dash-col' }), card, getWidgetEntities, dashboardContext);
+        await this._renderConfigCard(extra.createDiv({ cls: 'bob-dash-col' }), card, getWidgetEntities, dashboardContext);
       }
     }
 
     if (dashboardWarnings.length) {
-      const details = root.createEl('details', { cls: 'cad-base-filter-warnings' });
+      const details = root.createEl('details', { cls: 'bob-base-filter-warnings' });
       details.createEl('summary', { text: `${dashboardWarnings.length} dashboard warning${dashboardWarnings.length === 1 ? '' : 's'}` });
       const list = details.createEl('ul');
       dashboardWarnings.forEach((warning: string) => {
@@ -2201,13 +2201,13 @@ export class CadenceAppView extends obsidian.ItemView {
 
   _renderWidgetErrorCard(col: HTMLElement, card: CardLike | null | undefined, error: unknown) {
     const title = String(card?.title || card?.kind || 'Widget').trim();
-    const cardEl = col.createDiv({ cls: 'cad-dash-card cad-widget-error-card' });
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: title });
-    head.createSpan({ cls: 'cad-widget-catalog-badge cad-widget-error-badge', text: 'Error' });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
-    body.createDiv({ cls: 'cad-empty', text: 'This widget failed to render.' });
-    const details = body.createEl('details', { cls: 'cad-widget-error-details' });
+    const cardEl = col.createDiv({ cls: 'bob-dash-card bob-widget-error-card' });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: title });
+    head.createSpan({ cls: 'bob-widget-catalog-badge bob-widget-error-badge', text: 'Error' });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
+    body.createDiv({ cls: 'bob-empty', text: 'This widget failed to render.' });
+    const details = body.createEl('details', { cls: 'bob-widget-error-details' });
     details.createEl('summary', { text: 'Show details' });
     details.createEl('code', { text: String((error as Error | null)?.message || error || 'Unknown widget error') });
   }
@@ -2215,13 +2215,13 @@ export class CadenceAppView extends obsidian.ItemView {
   _renderRowProgress(parent: HTMLElement, progress: ProgressLike | null | undefined) {
     if (!progress || typeof progress !== 'object') return;
     const value = Math.max(0, Math.min(100, Number(progress.value ?? progress.percent ?? progress.pct ?? 0) || 0));
-    const wrap = parent.createDiv({ cls: 'cad-proj-progress-wrap cad-row-progress' });
+    const wrap = parent.createDiv({ cls: 'bob-proj-progress-wrap bob-row-progress' });
     wrap.dataset.pctBand = pctBand(value);
-    const label = wrap.createDiv({ cls: 'cad-proj-progress-label' });
+    const label = wrap.createDiv({ cls: 'bob-proj-progress-label' });
     label.createSpan({ text: String(progress.label || 'Progress') });
-    label.createSpan({ cls: 'cad-proj-progress-pct', text: String(progress.pct || `${value}%`) });
-    const bar = wrap.createDiv({ cls: 'cad-proj-progress-bar' });
-    const fill = bar.createDiv({ cls: 'cad-proj-progress-fill' });
+    label.createSpan({ cls: 'bob-proj-progress-pct', text: String(progress.pct || `${value}%`) });
+    const bar = wrap.createDiv({ cls: 'bob-proj-progress-bar' });
+    const fill = bar.createDiv({ cls: 'bob-proj-progress-fill' });
     fill.style.width = `${value}%`;
   }
 
@@ -2699,33 +2699,33 @@ export class CadenceAppView extends obsidian.ItemView {
   async _renderBaseLinkWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const { entityKey, basePath, viewName, label, description, entityDef, summary } = await this._resolveBaseWidgetTarget(card);
 
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-base-link-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-base-link-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'base-link' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: label });
-    if (viewName) head.createSpan({ cls: 'cad-widget-catalog-badge', text: viewName });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
-    if (description) body.createDiv({ cls: 'cad-dash-card-sub', text: description });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: label });
+    if (viewName) head.createSpan({ cls: 'bob-widget-catalog-badge', text: viewName });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
+    if (description) body.createDiv({ cls: 'bob-dash-card-sub', text: description });
     if (basePath) {
-      body.createDiv({ cls: 'cad-dash-card-path', text: basePath });
+      body.createDiv({ cls: 'bob-dash-card-path', text: basePath });
     } else {
-      body.createDiv({ cls: 'cad-empty', text: 'No Base file selected.' });
+      body.createDiv({ cls: 'bob-empty', text: 'No Base file selected.' });
     }
     if (summary) {
-      const meta = body.createDiv({ cls: 'cad-dashboard-inventory-meta' });
-      meta.createSpan({ cls: 'cad-dashboard-inventory-chip', text: summary.label || 'base' });
+      const meta = body.createDiv({ cls: 'bob-dashboard-inventory-meta' });
+      meta.createSpan({ cls: 'bob-dashboard-inventory-chip', text: summary.label || 'base' });
       if (Array.isArray(summary.views) && summary.views.length) {
-        meta.createSpan({ cls: 'cad-dashboard-inventory-chip', text: `${summary.views.length} views` });
+        meta.createSpan({ cls: 'bob-dashboard-inventory-chip', text: `${summary.views.length} views` });
       }
       if (Array.isArray(summary.typeFilters) && summary.typeFilters.length) {
-        meta.createSpan({ cls: 'cad-dashboard-inventory-chip', text: summary.typeFilters.join(', ') });
+        meta.createSpan({ cls: 'bob-dashboard-inventory-chip', text: summary.typeFilters.join(', ') });
       }
     }
     if ((entityDef?.externalBaseView as BaseViewRef | undefined)?.basePath) {
       body.createDiv({ cls: 'setting-item-description', text: `Entity-backed Base target for ${entityDef.label} is available through the configured entity mapping.` });
     }
-    const actions = body.createDiv({ cls: 'cad-de-actions' });
-    const openBtn = actions.createEl('button', { cls: 'cad-btn primary', text: 'Open Base' });
+    const actions = body.createDiv({ cls: 'bob-de-actions' });
+    const openBtn = actions.createEl('button', { cls: 'bob-btn primary', text: 'Open Base' });
     openBtn.addEventListener('click', async () => {
       if (entityKey && entityDef?.externalBaseView) {
         this._openEntityBase(entityKey);
@@ -2740,7 +2740,7 @@ export class CadenceAppView extends obsidian.ItemView {
       }
     });
     if (viewName && basePath) {
-      const copyBtn = actions.createEl('button', { cls: 'cad-btn', text: 'Copy config' });
+      const copyBtn = actions.createEl('button', { cls: 'bob-btn', text: 'Copy config' });
       copyBtn.addEventListener('click', async () => {
         const snippet = JSON.stringify({ base: { file: basePath, view: viewName } }, null, 2);
         try {
@@ -2764,32 +2764,32 @@ export class CadenceAppView extends obsidian.ItemView {
     const limit = Math.max(1, Number(card.limit || 5) || 5);
     const preview = entities.slice(0, limit);
 
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-base-embed-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-base-embed-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'base-embed' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: label });
-    if (viewName) head.createSpan({ cls: 'cad-widget-catalog-badge', text: viewName });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
-    if (description) body.createDiv({ cls: 'cad-dash-card-sub', text: description });
-    if (basePath) body.createDiv({ cls: 'cad-dash-card-path', text: basePath });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: label });
+    if (viewName) head.createSpan({ cls: 'bob-widget-catalog-badge', text: viewName });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
+    if (description) body.createDiv({ cls: 'bob-dash-card-sub', text: description });
+    if (basePath) body.createDiv({ cls: 'bob-dash-card-path', text: basePath });
 
-    const meta = body.createDiv({ cls: 'cad-dashboard-inventory-meta' });
+    const meta = body.createDiv({ cls: 'bob-dashboard-inventory-meta' });
     if (summary) {
-      meta.createSpan({ cls: 'cad-dashboard-inventory-chip', text: summary.label || 'base' });
+      meta.createSpan({ cls: 'bob-dashboard-inventory-chip', text: summary.label || 'base' });
       if (Array.isArray(summary.views) && summary.views.length) {
-        meta.createSpan({ cls: 'cad-dashboard-inventory-chip', text: `${summary.views.length} views` });
+        meta.createSpan({ cls: 'bob-dashboard-inventory-chip', text: `${summary.views.length} views` });
       }
       if (Array.isArray(summary.typeFilters) && summary.typeFilters.length) {
-        meta.createSpan({ cls: 'cad-dashboard-inventory-chip', text: summary.typeFilters.join(', ') });
+        meta.createSpan({ cls: 'bob-dashboard-inventory-chip', text: summary.typeFilters.join(', ') });
       }
     }
-    meta.createSpan({ cls: 'cad-dashboard-inventory-chip', text: `${preview.length}${entities.length > preview.length ? ` / ${entities.length}` : ''} rows` });
+    meta.createSpan({ cls: 'bob-dashboard-inventory-chip', text: `${preview.length}${entities.length > preview.length ? ` / ${entities.length}` : ''} rows` });
     if ((entityDef?.externalBaseView as BaseViewRef | undefined)?.basePath) {
-      meta.createSpan({ cls: 'cad-dashboard-inventory-chip', text: 'external view' });
+      meta.createSpan({ cls: 'bob-dashboard-inventory-chip', text: 'external view' });
     }
 
-    const actions = body.createDiv({ cls: 'cad-de-actions' });
-    const openBtn = actions.createEl('button', { cls: 'cad-btn primary', text: 'Open Base' });
+    const actions = body.createDiv({ cls: 'bob-de-actions' });
+    const openBtn = actions.createEl('button', { cls: 'bob-btn primary', text: 'Open Base' });
     openBtn.addEventListener('click', async () => {
       if (entityKey && entityDef?.externalBaseView) {
         this._openEntityBase(entityKey);
@@ -2805,22 +2805,22 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     if (!preview.length) {
-      body.createDiv({ cls: 'cad-empty', text: entitySource ? 'No rows matched this Base/view.' : 'No rows available for preview.' });
+      body.createDiv({ cls: 'bob-empty', text: entitySource ? 'No rows matched this Base/view.' : 'No rows available for preview.' });
       return;
     }
 
-    const list = body.createDiv({ cls: 'cad-home-list cad-base-embed-list' });
+    const list = body.createDiv({ cls: 'bob-home-list bob-base-embed-list' });
     preview.forEach((entity: EntityRecord) => {
-      const row = list.createDiv({ cls: 'cad-home-row cad-base-embed-row' });
+      const row = list.createDiv({ cls: 'bob-home-row bob-base-embed-row' });
       const title = titleFields.map((field: string) => String(entityValue(entity, field, entityDef) || '').trim()).find(Boolean) || entity.basename;
       const metaBits = metaFields
         .map((field: string) => fmtValue(entityValue(entity, field, entityDef), entityDef?.fields?.find((f) => f.key === field)?.type))
         .filter(Boolean);
-      row.createDiv({ cls: 'cad-home-row-date', text: entity.file?.basename || '' });
-      const main = row.createDiv({ cls: 'cad-home-row-main' });
-      main.createDiv({ cls: 'cad-home-row-title', text: title });
+      row.createDiv({ cls: 'bob-home-row-date', text: entity.file?.basename || '' });
+      const main = row.createDiv({ cls: 'bob-home-row-main' });
+      main.createDiv({ cls: 'bob-home-row-title', text: title });
       if (metaBits.length) {
-        main.createDiv({ cls: 'cad-home-row-meta', text: metaBits.join(' · ') });
+        main.createDiv({ cls: 'bob-home-row-meta', text: metaBits.join(' · ') });
       }
       if (entity.file) {
         row.classList.add('clickable');
@@ -2851,13 +2851,13 @@ export class CadenceAppView extends obsidian.ItemView {
       return;
     }
 
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-base-view-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-base-view-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'base-view' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: label || card.title || 'Base view' });
-    if (viewName) head.createSpan({ cls: 'cad-widget-catalog-badge', text: viewName });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: label || card.title || 'Base view' });
+    if (viewName) head.createSpan({ cls: 'bob-widget-catalog-badge', text: viewName });
 
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body cad-base-view-body' });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body bob-base-view-body' });
     const normalizedHeight = this._normalizeBaseViewHeight(card.height);
     if (normalizedHeight) body.style.height = `${normalizedHeight}px`;
 
@@ -2940,21 +2940,21 @@ export class CadenceAppView extends obsidian.ItemView {
       await this._renderBaseLinkWidget(root, card, getWidgetEntities);
       return;
     }
-    const fallbackCard = root.createDiv({ cls: 'cad-dash-card cad-base-view-card cad-base-view-fallback' });
+    const fallbackCard = root.createDiv({ cls: 'bob-dash-card bob-base-view-card bob-base-view-fallback' });
     this._applyCardTone(fallbackCard, Object.assign({ kind: 'base-view' }, card));
-    const head = fallbackCard.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: card.title || 'Base view' });
-    fallbackCard.createDiv({ cls: 'cad-dash-card-body' })
-      .createDiv({ cls: 'cad-soon-desc', text: `Base view unavailable (${reason})` });
+    const head = fallbackCard.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: card.title || 'Base view' });
+    fallbackCard.createDiv({ cls: 'bob-dash-card-body' })
+      .createDiv({ cls: 'bob-soon-desc', text: `Base view unavailable (${reason})` });
   }
 
   async _renderBaseViewFallbackContent(body: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities, reason: string) {
     const mode = String(card.fallback || 'preview').trim().toLowerCase();
     if (mode === 'link') {
       const target = await this._resolveBaseWidgetTarget(card);
-      body.createDiv({ cls: 'cad-soon-desc', text: reason });
+      body.createDiv({ cls: 'bob-soon-desc', text: reason });
       if (target.basePath) {
-        const btn = body.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Open Base' });
+        const btn = body.createEl('button', { cls: 'bob-btn bob-btn-sm', text: 'Open Base' });
         btn.addEventListener('click', () => this.app.workspace.openLinkText(target.basePath, '', false));
       }
       return;
@@ -2966,27 +2966,27 @@ export class CadenceAppView extends obsidian.ItemView {
         : null;
       const entities = Array.isArray(resolved?.entities) ? resolved.entities : [];
       const rows = entities.slice(0, Math.max(1, Number(card.limit || 5) || 5));
-      body.createDiv({ cls: 'cad-soon-desc', text: reason });
+      body.createDiv({ cls: 'bob-soon-desc', text: reason });
       if (rows.length) {
-        const list = body.createDiv({ cls: 'cad-base-embed-list cad-base-view-preview-list' });
+        const list = body.createDiv({ cls: 'bob-base-embed-list bob-base-view-preview-list' });
         rows.forEach((entity: EntityRecord & Frontmatter) => {
-          const row = list.createDiv({ cls: 'cad-base-embed-row' });
-          row.createDiv({ cls: 'cad-home-row-title', text: entity?.title || entity?.name || entity?.file?.basename || entity?.basename || 'Untitled' });
+          const row = list.createDiv({ cls: 'bob-base-embed-row' });
+          row.createDiv({ cls: 'bob-home-row-title', text: entity?.title || entity?.name || entity?.file?.basename || entity?.basename || 'Untitled' });
           if (entity?.file) {
             row.classList.add('clickable');
             row.addEventListener('click', () => this.openEntityDetailFromFile(entity.file));
           }
         });
       } else {
-        body.createDiv({ cls: 'cad-empty', text: 'No rows available for preview.' });
+        body.createDiv({ cls: 'bob-empty', text: 'No rows available for preview.' });
       }
       if (target.basePath) {
-        const btn = body.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Open Base' });
+        const btn = body.createEl('button', { cls: 'bob-btn bob-btn-sm', text: 'Open Base' });
         btn.addEventListener('click', () => this.app.workspace.openLinkText(target.basePath, '', false));
       }
       return;
     }
-    body.createDiv({ cls: 'cad-soon-desc', text: `Base view unavailable (${reason})` });
+    body.createDiv({ cls: 'bob-soon-desc', text: `Base view unavailable (${reason})` });
   }
 
   async _resolveMarkdownWidgetContent(card: CardLike) {
@@ -3018,18 +3018,18 @@ export class CadenceAppView extends obsidian.ItemView {
     const title = String(card.title || 'Note').trim();
     const subtitle = String(card.subtitle || card.description || '').trim();
     const { text, sourcePath } = await this._resolveMarkdownWidgetContent(card);
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-markdown-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-markdown-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'markdown' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: title });
-    if (sourcePath) head.createSpan({ cls: 'cad-widget-catalog-badge', text: sourcePath.split('/').pop().replace(/\.md$/i, '') });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body cad-markdown-body' });
-    if (subtitle) body.createDiv({ cls: 'cad-dash-card-sub', text: subtitle });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: title });
+    if (sourcePath) head.createSpan({ cls: 'bob-widget-catalog-badge', text: sourcePath.split('/').pop().replace(/\.md$/i, '') });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body bob-markdown-body' });
+    if (subtitle) body.createDiv({ cls: 'bob-dash-card-sub', text: subtitle });
     if (!text) {
-      body.createDiv({ cls: 'cad-empty', text: 'No markdown content supplied.' });
+      body.createDiv({ cls: 'bob-empty', text: 'No markdown content supplied.' });
       return;
     }
-    const target = body.createDiv({ cls: 'cad-markdown-render' });
+    const target = body.createDiv({ cls: 'bob-markdown-render' });
     try {
       if (obsidian.MarkdownRenderer?.renderMarkdown) {
         await obsidian.MarkdownRenderer.renderMarkdown(text, target, sourcePath || '', this);
@@ -3108,27 +3108,27 @@ export class CadenceAppView extends obsidian.ItemView {
       : Array.isArray(card.buttons)
         ? card.buttons
         : [];
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-actions-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-actions-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'actions' }, card));
     const title = String(card.title || '').trim();
     if (title) {
-      const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-      head.createDiv({ cls: 'cad-dash-card-title', text: title });
+      const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+      head.createDiv({ cls: 'bob-dash-card-title', text: title });
     }
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+      body.createDiv({ cls: 'bob-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
     }
-    const bar = body.createDiv({ cls: 'cad-actions-bar' });
+    const bar = body.createDiv({ cls: 'bob-actions-bar' });
     if (!actions.length) {
-      bar.createDiv({ cls: 'cad-empty', text: 'No actions configured.' });
+      bar.createDiv({ cls: 'bob-empty', text: 'No actions configured.' });
       return;
     }
     actions.map((action: ActionInput) => this._normalizeActionSpec(action)).filter(Boolean).forEach((action: ActionSpec) => {
       const isCreate = !!action.entityKey;
       const isPrimaryAction = action.type === 'quick-capture' || action.type === 'today-task' || isCreate || !!action.primary;
       const btn = bar.createEl('button', {
-        cls: `cad-btn${(isPrimaryAction ? ' primary' : '')}${action.danger ? ' cad-btn-danger' : ''}`,
+        cls: `bob-btn${(isPrimaryAction ? ' primary' : '')}${action.danger ? ' bob-btn-danger' : ''}`,
         text: action.entityKey
           ? `+ New ${ENTITIES[action.entityKey]?.label || action.entityKey}`
           : (action.type === 'quick-capture' ? '+ Capture' : action.label),
@@ -3146,24 +3146,24 @@ export class CadenceAppView extends obsidian.ItemView {
     const filterKey = `${key}Filter`;
     const dateRangeMode = String(card.mode || card.type || '').trim().toLowerCase() === 'date-range';
     if (!key) {
-      const cardEl = root.createDiv({ cls: 'cad-dash-card cad-selector-card' });
+      const cardEl = root.createDiv({ cls: 'bob-dash-card bob-selector-card' });
       this._applyCardTone(cardEl, Object.assign({ kind: 'selector' }, card));
-      const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
-      body.createDiv({ cls: 'cad-empty', text: 'Selector needs a key.' });
+      const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
+      body.createDiv({ cls: 'bob-empty', text: 'Selector needs a key.' });
       return;
     }
 
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-selector-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-selector-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'selector' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: label });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: label });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+      body.createDiv({ cls: 'bob-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
     }
 
-    const row = body.createDiv({ cls: 'cad-selector-row' });
-    const select = row.createEl('select', { cls: 'dropdown cad-selector-select' });
+    const row = body.createDiv({ cls: 'bob-selector-row' });
+    const select = row.createEl('select', { cls: 'dropdown bob-selector-select' });
 
     const options: SelectorOption[] = [];
     const allLabel = String(card.allLabel || 'All').trim();
@@ -3247,9 +3247,9 @@ export class CadenceAppView extends obsidian.ItemView {
       await this.render();
     });
 
-    const hint = body.createDiv({ cls: 'cad-selector-hint' });
+    const hint = body.createDiv({ cls: 'bob-selector-hint' });
     hint.createSpan({ text: `${key}: ` });
-    hint.createSpan({ cls: 'cad-selector-current', text: select.value || allLabel });
+    hint.createSpan({ cls: 'bob-selector-current', text: select.value || allLabel });
   }
 
   async _renderDateRangeWidget(root: HTMLElement, card: CardLike) {
@@ -3263,13 +3263,13 @@ export class CadenceAppView extends obsidian.ItemView {
     const endKey = `${key}End`;
     const presetKey = `${key}Preset`;
     const current = String(state[presetKey] || card.default || 'this-month').trim() || 'this-month';
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-selector-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-selector-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'date-range' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: label });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: label });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+      body.createDiv({ cls: 'bob-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
     }
 
     const presets = [
@@ -3310,16 +3310,16 @@ export class CadenceAppView extends obsidian.ItemView {
     };
     if (!state[presetKey]) updateFromPreset(current);
 
-    const presetRow = body.createDiv({ cls: 'cad-selector-row' });
-    const presetSelect = presetRow.createEl('select', { cls: 'dropdown cad-selector-select' });
+    const presetRow = body.createDiv({ cls: 'bob-selector-row' });
+    const presetSelect = presetRow.createEl('select', { cls: 'dropdown bob-selector-select' });
     presets.forEach((preset) => {
       const option = presetSelect.createEl('option', { value: preset.value, text: preset.label });
       if ((state[presetKey] || current) === preset.value) option.selected = true;
     });
 
-    const rangeWrap = body.createDiv({ cls: 'cad-date-range' });
-    const startInput = rangeWrap.createEl('input', { type: 'date', cls: 'cad-selector-date' });
-    const endInput = rangeWrap.createEl('input', { type: 'date', cls: 'cad-selector-date' });
+    const rangeWrap = body.createDiv({ cls: 'bob-date-range' });
+    const startInput = rangeWrap.createEl('input', { type: 'date', cls: 'bob-selector-date' });
+    const endInput = rangeWrap.createEl('input', { type: 'date', cls: 'bob-selector-date' });
     startInput.value = state[startKey] || '';
     endInput.value = state[endKey] || '';
     startInput.disabled = (state[presetKey] || current) !== 'custom';
@@ -3348,9 +3348,9 @@ export class CadenceAppView extends obsidian.ItemView {
     startInput.addEventListener('change', commitCustom);
     endInput.addEventListener('change', commitCustom);
 
-    const hint = body.createDiv({ cls: 'cad-selector-hint' });
+    const hint = body.createDiv({ cls: 'bob-selector-hint' });
     hint.createSpan({ text: `${key}: ` });
-    hint.createSpan({ cls: 'cad-selector-current', text: state[presetKey] || current });
+    hint.createSpan({ cls: 'bob-selector-current', text: state[presetKey] || current });
   }
 
   _coerceFiniteNumber(value: unknown, fallback = 0) {
@@ -3451,44 +3451,44 @@ export class CadenceAppView extends obsidian.ItemView {
 
   async _renderGaugeWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const resolved = await this._resolveScalarWidgetValue(card, getWidgetEntities);
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-gauge-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-gauge-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'gauge' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label || 'Gauge').trim() });
-    head.createSpan({ cls: 'cad-widget-catalog-badge', text: `${resolved.percent}%` });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body cad-gauge-body' });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: String(card.title || card.label || 'Gauge').trim() });
+    head.createSpan({ cls: 'bob-widget-catalog-badge', text: `${resolved.percent}%` });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body bob-gauge-body' });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+      body.createDiv({ cls: 'bob-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
     }
-    const gauge = body.createDiv({ cls: 'cad-gauge' });
+    const gauge = body.createDiv({ cls: 'bob-gauge' });
     gauge.dataset.pctBand = pctBand(resolved.percent);
-    gauge.style.setProperty('--cad-gauge-pct', `${resolved.percent}%`);
+    gauge.style.setProperty('--bob-gauge-pct', `${resolved.percent}%`);
     gauge.title = `${resolved.percent}% of ${resolved.max}`;
-    const center = gauge.createDiv({ cls: 'cad-gauge-center' });
-    center.createDiv({ cls: 'cad-gauge-value', text: this._formatScalarValue(resolved, card) });
-    center.createDiv({ cls: 'cad-gauge-label', text: String(card.caption || resolved.label || 'score').trim() });
-    if (resolved.sub) body.createDiv({ cls: 'cad-gauge-sub', text: resolved.sub });
+    const center = gauge.createDiv({ cls: 'bob-gauge-center' });
+    center.createDiv({ cls: 'bob-gauge-value', text: this._formatScalarValue(resolved, card) });
+    center.createDiv({ cls: 'bob-gauge-label', text: String(card.caption || resolved.label || 'score').trim() });
+    if (resolved.sub) body.createDiv({ cls: 'bob-gauge-sub', text: resolved.sub });
   }
 
   async _renderProgressWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const resolved = await this._resolveScalarWidgetValue(card, getWidgetEntities);
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-progress-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-progress-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'progress' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label || 'Progress').trim() });
-    head.createSpan({ cls: 'cad-widget-catalog-badge', text: `${resolved.percent}%` });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body cad-progress-body' });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: String(card.title || card.label || 'Progress').trim() });
+    head.createSpan({ cls: 'bob-widget-catalog-badge', text: `${resolved.percent}%` });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body bob-progress-body' });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+      body.createDiv({ cls: 'bob-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
     }
-    const top = body.createDiv({ cls: 'cad-progress-widget-label' });
+    const top = body.createDiv({ cls: 'bob-progress-widget-label' });
     top.createSpan({ text: String(card.label || resolved.label || 'Built').trim() });
-    top.createSpan({ cls: 'cad-progress-widget-value', text: this._formatScalarValue(resolved, card) });
-    const track = body.createDiv({ cls: 'cad-progress-widget-track' });
+    top.createSpan({ cls: 'bob-progress-widget-value', text: this._formatScalarValue(resolved, card) });
+    const track = body.createDiv({ cls: 'bob-progress-widget-track' });
     track.dataset.pctBand = pctBand(resolved.percent);
-    const fill = track.createDiv({ cls: 'cad-progress-widget-fill' });
+    const fill = track.createDiv({ cls: 'bob-progress-widget-fill' });
     fill.style.width = `${resolved.percent}%`;
-    if (resolved.sub) body.createDiv({ cls: 'cad-progress-widget-sub', text: resolved.sub });
+    if (resolved.sub) body.createDiv({ cls: 'bob-progress-widget-sub', text: resolved.sub });
   }
 
   _heatmapDateFromValue(value: unknown): Date | null {
@@ -3562,28 +3562,28 @@ export class CadenceAppView extends obsidian.ItemView {
     const max = Math.max(1, ...buckets.map((bucket) => bucket.value));
     const total = buckets.reduce((sum, bucket) => sum + bucket.value, 0);
     const columns = Math.max(7, Math.min(53, Number(card.columns || Math.ceil(buckets.length / 7)) || 7));
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-heatmap-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-heatmap-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'heatmap' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label || 'Heatmap').trim() });
-    head.createSpan({ cls: 'cad-widget-catalog-badge', text: `${Math.round(total)} total` });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body cad-heatmap-body' });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: String(card.title || card.label || 'Heatmap').trim() });
+    head.createSpan({ cls: 'bob-widget-catalog-badge', text: `${Math.round(total)} total` });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body bob-heatmap-body' });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+      body.createDiv({ cls: 'bob-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
     }
     if (!buckets.length) {
-      body.createDiv({ cls: 'cad-empty', text: String(card.empty || 'No heatmap buckets').trim() });
+      body.createDiv({ cls: 'bob-empty', text: String(card.empty || 'No heatmap buckets').trim() });
       return;
     }
-    const grid = body.createDiv({ cls: 'cad-heatmap-grid' });
-    grid.style.setProperty('--cad-heatmap-columns', String(columns));
+    const grid = body.createDiv({ cls: 'bob-heatmap-grid' });
+    grid.style.setProperty('--bob-heatmap-columns', String(columns));
     buckets.forEach((bucket) => {
-      const cell = grid.createDiv({ cls: 'cad-heatmap-cell' });
+      const cell = grid.createDiv({ cls: 'bob-heatmap-cell' });
       const ratio = bucket.value / max;
       cell.dataset.level = bucket.value <= 0 ? '0' : ratio < 0.25 ? '1' : ratio < 0.5 ? '2' : ratio < 0.75 ? '3' : '4';
       cell.title = `${fmtValue(bucket.key, 'date')} — ${Math.round(bucket.value * 10) / 10}`;
     });
-    const footer = body.createDiv({ cls: 'cad-heatmap-footer' });
+    const footer = body.createDiv({ cls: 'bob-heatmap-footer' });
     footer.createSpan({ text: `${buckets.length} days` });
     footer.createSpan({ text: `Peak ${Math.round(max * 10) / 10}` });
   }
@@ -3662,7 +3662,7 @@ export class CadenceAppView extends obsidian.ItemView {
       return sorted;
     };
 
-    const board = root.createDiv({ cls: 'cad-kanban-board' });
+    const board = root.createDiv({ cls: 'bob-kanban-board' });
     const isMobile = !!(obsidian.Platform && obsidian.Platform.isMobile);
     let activeDragPath: string | null = null;
     groups.forEach((group) => {
@@ -3671,22 +3671,22 @@ export class CadenceAppView extends obsidian.ItemView {
       const groupLimit = Number(group.limit || group.wipLimit || card.wipLimit || 0);
       const overLimit = groupLimit > 0 && items.length > groupLimit;
 
-      const col = board.createDiv({ cls: 'cad-kanban-col' });
-      if (overLimit) col.addClass('cad-kanban-col-over-limit');
+      const col = board.createDiv({ cls: 'bob-kanban-col' });
+      if (overLimit) col.addClass('bob-kanban-col-over-limit');
       col.dataset.stage = group.value;
-      const head = col.createDiv({ cls: 'cad-kanban-col-head' });
-      head.createDiv({ cls: 'cad-kanban-col-title', text: group.label });
-      const headMeta = head.createDiv({ cls: 'cad-kanban-col-meta' });
+      const head = col.createDiv({ cls: 'bob-kanban-col-head' });
+      head.createDiv({ cls: 'bob-kanban-col-title', text: group.label });
+      const headMeta = head.createDiv({ cls: 'bob-kanban-col-meta' });
       headMeta.setText(`${items.length}${valueField ? ` · ${fmtValue(columnValue, 'currency')}` : ''}`);
       if (groupLimit > 0) {
-        const limitChip = head.createSpan({ cls: 'cad-kanban-col-limit', text: `${items.length}/${groupLimit}` });
+        const limitChip = head.createSpan({ cls: 'bob-kanban-col-limit', text: `${items.length}/${groupLimit}` });
         if (overLimit) limitChip.addClass('is-over-limit');
       }
       if (group.description) {
-        col.createDiv({ cls: 'cad-kanban-col-description', text: group.description });
+        col.createDiv({ cls: 'bob-kanban-col-description', text: group.description });
       }
 
-      const list = col.createDiv({ cls: 'cad-kanban-col-list' });
+      const list = col.createDiv({ cls: 'bob-kanban-col-list' });
       const onDropEntity = async (filePath: string) => {
         if (!filePath || !groupBy) return;
         try {
@@ -3701,7 +3701,7 @@ export class CadenceAppView extends obsidian.ItemView {
         }
       };
       const allowDrop = (event: DragEvent) => {
-        const hasPath = !!event.dataTransfer?.getData('text/cadence-entity') || !!activeDragPath;
+        const hasPath = !!event.dataTransfer?.getData('text/bob-entity') || !!activeDragPath;
         if (!hasPath) return false;
         event.preventDefault();
         event.stopPropagation();
@@ -3714,25 +3714,25 @@ export class CadenceAppView extends obsidian.ItemView {
       col.addEventListener('drop', async (event) => {
         if (!allowDrop(event)) return;
         col.removeClass('drag-over');
-        const filePath = activeDragPath || event.dataTransfer?.getData('text/cadence-entity');
+        const filePath = activeDragPath || event.dataTransfer?.getData('text/bob-entity');
         activeDragPath = null;
         await onDropEntity(filePath);
       });
       if (!items.length) {
-        list.createDiv({ cls: 'cad-empty', text: group.empty || '—' });
+        list.createDiv({ cls: 'bob-empty', text: group.empty || '—' });
         return;
       }
       sortEntities(items)
         .forEach((entity) => {
-          const cardEl = list.createDiv({ cls: 'cad-kanban-card' });
+          const cardEl = list.createDiv({ cls: 'bob-kanban-card' });
           cardEl.dataset.path = entity.file.path;
           const title = titleFields
             .map((field: string) => String(entityValue(entity, field, def) || '').trim())
             .find(Boolean) || entityPrimaryValue(entity, def) || entity.basename;
-          cardEl.createDiv({ cls: 'cad-kanban-card-title', text: title });
-          const meta = cardEl.createDiv({ cls: 'cad-kanban-card-meta' });
+          cardEl.createDiv({ cls: 'bob-kanban-card-title', text: title });
+          const meta = cardEl.createDiv({ cls: 'bob-kanban-card-meta' });
           const value = valueField ? entityValue(entity, valueField, def) : null;
-          if (value != null && value !== '') meta.createSpan({ cls: 'cad-kanban-card-value', text: fmtValue(value, 'currency') });
+          if (value != null && value !== '') meta.createSpan({ cls: 'bob-kanban-card-value', text: fmtValue(value, 'currency') });
           const metaText = metaFields
             .map((field: string) => {
               if (!field) return '';
@@ -3744,8 +3744,8 @@ export class CadenceAppView extends obsidian.ItemView {
             })
             .filter(Boolean)
             .join(' · ');
-          if (metaText) meta.createSpan({ cls: 'cad-kanban-card-company', text: metaText });
-          if (overLimit) cardEl.addClass('cad-kanban-card-over-limit');
+          if (metaText) meta.createSpan({ cls: 'bob-kanban-card-company', text: metaText });
+          if (overLimit) cardEl.addClass('bob-kanban-card-over-limit');
           if (!isMobile) {
             cardEl.draggable = true;
             cardEl.addEventListener('dragstart', (ev) => {
@@ -3753,8 +3753,8 @@ export class CadenceAppView extends obsidian.ItemView {
               cardEl.addClass('dragging');
               try {
                 ev.dataTransfer.effectAllowed = 'move';
-                ev.dataTransfer.setData('text/cadence-entity', entity.file.path);
-                ev.dataTransfer.setData('text/cadence-stage', group.value);
+                ev.dataTransfer.setData('text/bob-entity', entity.file.path);
+                ev.dataTransfer.setData('text/bob-stage', group.value);
                 ev.dataTransfer.setData('text/plain', `[[${entity.file.basename}]]`);
               } catch (_) {}
             });
@@ -3763,7 +3763,7 @@ export class CadenceAppView extends obsidian.ItemView {
               cardEl.removeClass('dragging');
             });
           } else {
-            cardEl.addClass('cad-kanban-card-touch');
+            cardEl.addClass('bob-kanban-card-touch');
           }
           cardEl.addEventListener('click', () => this.openEntityDetail(entityKey, entity.file));
       });
@@ -3772,24 +3772,24 @@ export class CadenceAppView extends obsidian.ItemView {
 
   async _renderListWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const rows = await this._resolveCardRows(card, getWidgetEntities);
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-list-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-list-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'list' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label || 'List').trim() });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: String(card.title || card.label || 'List').trim() });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+      body.createDiv({ cls: 'bob-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
     }
     if (!rows.length) {
-      body.createDiv({ cls: 'cad-empty', text: String(card.empty || 'No rows').trim() });
+      body.createDiv({ cls: 'bob-empty', text: String(card.empty || 'No rows').trim() });
       return;
     }
-    const list = body.createDiv({ cls: 'cad-home-list cad-list-widget' });
+    const list = body.createDiv({ cls: 'bob-home-list bob-list-widget' });
     rows.slice(0, Math.max(1, Number(card.limit || 6) || 6)).forEach((row) => {
-      const item = list.createDiv({ cls: 'cad-home-row cad-list-row' });
-      const main = item.createDiv({ cls: 'cad-home-row-main' });
-      main.createDiv({ cls: 'cad-home-row-title', text: row.title || 'Untitled' });
-      if (row.meta) main.createDiv({ cls: 'cad-home-row-meta', text: row.meta });
+      const item = list.createDiv({ cls: 'bob-home-row bob-list-row' });
+      const main = item.createDiv({ cls: 'bob-home-row-main' });
+      main.createDiv({ cls: 'bob-home-row-title', text: row.title || 'Untitled' });
+      if (row.meta) main.createDiv({ cls: 'bob-home-row-meta', text: row.meta });
       this._renderRowProgress(main, row.progress);
       if (row.file || row.surface || row.command || row.url || row.action) {
         item.classList.add('clickable');
@@ -3828,25 +3828,25 @@ export class CadenceAppView extends obsidian.ItemView {
   // read-only for now (write-back for those is Phase 2).
   async _renderTaskListWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
     const rows = await this._resolveCardRows(card, getWidgetEntities);
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-list-card cad-task-list-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-list-card bob-task-list-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'task-list' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label || 'Tasks').trim() });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: String(card.title || card.label || 'Tasks').trim() });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+      body.createDiv({ cls: 'bob-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
     }
     if (!rows.length) {
-      body.createDiv({ cls: 'cad-empty', text: String(card.empty || 'No tasks').trim() });
+      body.createDiv({ cls: 'bob-empty', text: String(card.empty || 'No tasks').trim() });
       return;
     }
-    const list = body.createDiv({ cls: 'cad-home-list cad-task-list-widget' });
+    const list = body.createDiv({ cls: 'bob-home-list bob-task-list-widget' });
     rows.slice(0, Math.max(1, Number(card.limit || 12) || 12)).forEach((row) => {
       const file = row.file || null;
       const fm = file ? (this.app.metadataCache.getFileCache(file)?.frontmatter || {}) : {};
       const dailyIdx = typeof row.taskIndex === 'number' ? row.taskIndex : null;
       const done = file ? String(fm.status || '').trim().toLowerCase() === 'done' : !!row.done;
-      const item = list.createDiv({ cls: 'cad-task-row cad-dash-task-row' + (done ? ' done' : '') });
+      const item = list.createDiv({ cls: 'bob-task-row bob-dash-task-row' + (done ? ' done' : '') });
       const cb = item.createEl('input', { type: 'checkbox' });
       cb.checked = done;
       if (file) {
@@ -3862,9 +3862,9 @@ export class CadenceAppView extends obsidian.ItemView {
       } else {
         cb.disabled = true;
       }
-      const main = item.createDiv({ cls: 'cad-task-text cad-home-row-main' });
-      main.createDiv({ cls: 'cad-home-row-title', text: row.title || 'Untitled' });
-      if (row.meta) main.createDiv({ cls: 'cad-home-row-meta', text: row.meta });
+      const main = item.createDiv({ cls: 'bob-task-text bob-home-row-main' });
+      main.createDiv({ cls: 'bob-home-row-title', text: row.title || 'Untitled' });
+      if (row.meta) main.createDiv({ cls: 'bob-home-row-meta', text: row.meta });
       if (file) {
         main.classList.add('clickable');
         main.addEventListener('click', () => {
@@ -3903,12 +3903,12 @@ export class CadenceAppView extends obsidian.ItemView {
 
   // Quick-add input: type + Enter appends a task to today's daily note.
   _renderQuickAddWidget(root: HTMLElement, card: CardLike) {
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-quick-add-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-quick-add-card' });
     if (card.title || card.label) {
-      cardEl.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label).trim() });
+      cardEl.createDiv({ cls: 'bob-dash-card-head' }).createDiv({ cls: 'bob-dash-card-title', text: String(card.title || card.label).trim() });
     }
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
-    const input = body.createEl('input', { type: 'text', cls: 'cad-quick-add-input', attr: { placeholder: String(card.placeholder || 'Add a task and press Enter…') } });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
+    const input = body.createEl('input', { type: 'text', cls: 'bob-quick-add-input', attr: { placeholder: String(card.placeholder || 'Add a task and press Enter…') } });
     input.addEventListener('keydown', async (e) => {
       if (e.key !== 'Enter') return;
       const text = input.value.trim();
@@ -3922,13 +3922,13 @@ export class CadenceAppView extends obsidian.ItemView {
   // Read-only date hero (weekday / day / month / year).
   _renderDateHeroWidget(root: HTMLElement, card: CardLike) {
     const info = dateInfo(new Date());
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-date-hero-card' });
-    cardEl.createDiv({ cls: 'cad-eyebrow', text: String(card.eyebrow || info.weekday).toUpperCase() });
-    const hero = cardEl.createDiv({ cls: 'cad-date-hero' });
-    hero.createDiv({ cls: 'cad-date-day', text: String(info.day) });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-date-hero-card' });
+    cardEl.createDiv({ cls: 'bob-eyebrow', text: String(card.eyebrow || info.weekday).toUpperCase() });
+    const hero = cardEl.createDiv({ cls: 'bob-date-hero' });
+    hero.createDiv({ cls: 'bob-date-day', text: String(info.day) });
     const col = hero.createDiv();
-    col.createDiv({ cls: 'cad-month', text: info.month });
-    col.createDiv({ cls: 'cad-year', text: String(info.year) });
+    col.createDiv({ cls: 'bob-month', text: info.month });
+    col.createDiv({ cls: 'bob-year', text: String(info.year) });
   }
 
   // Editable note-body section (e.g. the daily-note Journal), saved on blur.
@@ -3946,14 +3946,14 @@ export class CadenceAppView extends obsidian.ItemView {
       }
       return out.join('\n').replace(/\s+$/, '');
     };
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-note-section-card' });
-    cardEl.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: String(card.title || 'Today’s entry').trim() });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-note-section-card' });
+    cardEl.createDiv({ cls: 'bob-dash-card-head' }).createDiv({ cls: 'bob-dash-card-title', text: String(card.title || 'Today’s entry').trim() });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
     const path = dailyNotePath(this.plugin.settings);
     const existing = this.app.vault.getAbstractFileByPath(path) as obsidian.TFile | null;
     let current = '';
     if (existing) current = readSection(await this.app.vault.read(existing));
-    const ta = body.createEl('textarea', { cls: 'cad-journal cad-note-section-textarea' });
+    const ta = body.createEl('textarea', { cls: 'bob-journal bob-note-section-textarea' });
     ta.value = current;
     ta.spellcheck = false;
     ta.addEventListener('blur', async () => {
@@ -4042,27 +4042,27 @@ export class CadenceAppView extends obsidian.ItemView {
       }).sort((a, b) => b.value - a.value).slice(0, limit);
     const max = Math.max(1, ...chartValues.map((entry) => Number(entry.value) || 0));
 
-    const cardEl = root.createDiv({ cls: 'cad-dash-card cad-bar-chart-card' });
+    const cardEl = root.createDiv({ cls: 'bob-dash-card bob-bar-chart-card' });
     this._applyCardTone(cardEl, Object.assign({ kind: 'bar-chart' }, card));
-    const head = cardEl.createDiv({ cls: 'cad-dash-card-head' });
-    head.createDiv({ cls: 'cad-dash-card-title', text: String(card.title || card.label || 'Bar chart').trim() });
+    const head = cardEl.createDiv({ cls: 'bob-dash-card-head' });
+    head.createDiv({ cls: 'bob-dash-card-title', text: String(card.title || card.label || 'Bar chart').trim() });
     const badge = isProductivityBuiltIn ? (valueField || String(resolved.source?.section || card.section || '').trim()) : groupBy;
-    if (badge) head.createSpan({ cls: 'cad-widget-catalog-badge', text: badge });
-    const body = cardEl.createDiv({ cls: 'cad-dash-card-body' });
+    if (badge) head.createSpan({ cls: 'bob-widget-catalog-badge', text: badge });
+    const body = cardEl.createDiv({ cls: 'bob-dash-card-body' });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: 'cad-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
+      body.createDiv({ cls: 'bob-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
     }
-    const chart = body.createDiv({ cls: 'cad-bar-chart cad-bar-chart-tall' });
+    const chart = body.createDiv({ cls: 'bob-bar-chart bob-bar-chart-tall' });
     chartValues.forEach((entry) => {
       labels.set(entry.group.value, entry.group.label);
-      const col = chart.createDiv({ cls: 'cad-bar-col' });
-      const bar = col.createDiv({ cls: 'cad-bar' });
+      const col = chart.createDiv({ cls: 'bob-bar-col' });
+      const bar = col.createDiv({ cls: 'bob-bar' });
       bar.style.height = `${(Number(entry.value) / max) * 100}%`;
       const ratio = Number(entry.value) / max;
       bar.dataset.band = Number(entry.value) === 0 ? 'empty' : ratio < 0.34 ? 'low' : ratio < 0.67 ? 'mid' : 'high';
       bar.title = `${entry.group.label} — ${fmtValue(entry.value, metric === 'sum' || metric === 'avg' ? 'currency' : 'number')}${entry.meta ? ` · ${entry.meta}` : ''}`;
-      col.createDiv({ cls: 'cad-bar-label', text: entry.group.label });
-      col.createDiv({ cls: 'cad-bar-value', text: String(entry.value) });
+      col.createDiv({ cls: 'bob-bar-label', text: entry.group.label });
+      col.createDiv({ cls: 'bob-bar-value', text: String(entry.value) });
       if (entry.items.length && entry.items[0]?.file) {
         col.addEventListener('click', () => {
           const first = entry.items[0];
@@ -4077,13 +4077,13 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _dashboardStats(root: HTMLElement, stats: CardLike[]) {
-    const grid = root.createDiv({ cls: 'cad-stat-grid' });
+    const grid = root.createDiv({ cls: 'bob-stat-grid' });
     stats.forEach((item) => {
-      const card = grid.createDiv({ cls: 'cad-stat-card' });
+      const card = grid.createDiv({ cls: 'bob-stat-card' });
       if (item.accent) card.dataset.accent = item.accent;
-      card.createDiv({ cls: 'cad-stat-label', text: item.label });
-      card.createDiv({ cls: 'cad-stat-value', text: String(item.value) });
-      if (item.sub) card.createDiv({ cls: 'cad-stat-sub', text: item.sub });
+      card.createDiv({ cls: 'bob-stat-label', text: item.label });
+      card.createDiv({ cls: 'bob-stat-value', text: String(item.value) });
+      if (item.sub) card.createDiv({ cls: 'bob-stat-sub', text: item.sub });
       if (item.mode) {
         card.style.cursor = 'pointer';
         card.addEventListener('click', () => this.setMode(item.mode));
@@ -4092,32 +4092,32 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _renderWidgetCatalog(root: HTMLElement) {
-    const section = root.createDiv({ cls: 'cad-widget-catalog' });
-    section.createDiv({ cls: 'cad-section-label-lg', text: 'Widget catalog' });
+    const section = root.createDiv({ cls: 'bob-widget-catalog' });
+    section.createDiv({ cls: 'bob-section-label-lg', text: 'Widget catalog' });
     section.createEl('p', {
       cls: 'setting-item-description',
       text: 'This catalog shows the dashboard widget shapes that can be expressed in workspace.json today, plus the gaps we still want to close.',
     });
 
-    const grid = section.createDiv({ cls: 'cad-widget-catalog-grid' });
+    const grid = section.createDiv({ cls: 'bob-widget-catalog-grid' });
     DASHBOARD_WIDGET_CATALOG.forEach((entry) => {
-      const card = grid.createDiv({ cls: `cad-widget-catalog-card cad-widget-catalog-${entry.status}` });
-      const head = card.createDiv({ cls: 'cad-widget-catalog-head' });
-      head.createDiv({ cls: 'cad-widget-catalog-title', text: entry.label });
-      head.createSpan({ cls: 'cad-widget-catalog-badge', text: entry.status });
-      card.createDiv({ cls: 'cad-widget-catalog-id', text: entry.id });
-      card.createDiv({ cls: 'cad-widget-catalog-desc', text: entry.description });
-      const chips = card.createDiv({ cls: 'cad-widget-catalog-chips' });
-      entry.config.forEach((key) => chips.createSpan({ cls: 'cad-widget-catalog-chip', text: key }));
+      const card = grid.createDiv({ cls: `bob-widget-catalog-card bob-widget-catalog-${entry.status}` });
+      const head = card.createDiv({ cls: 'bob-widget-catalog-head' });
+      head.createDiv({ cls: 'bob-widget-catalog-title', text: entry.label });
+      head.createSpan({ cls: 'bob-widget-catalog-badge', text: entry.status });
+      card.createDiv({ cls: 'bob-widget-catalog-id', text: entry.id });
+      card.createDiv({ cls: 'bob-widget-catalog-desc', text: entry.description });
+      const chips = card.createDiv({ cls: 'bob-widget-catalog-chips' });
+      entry.config.forEach((key) => chips.createSpan({ cls: 'bob-widget-catalog-chip', text: key }));
       if (entry.examples?.length) {
-        const ex = card.createDiv({ cls: 'cad-widget-catalog-examples' });
-        ex.createSpan({ cls: 'cad-widget-catalog-examples-label', text: 'Examples' });
-        ex.createSpan({ cls: 'cad-widget-catalog-examples-value', text: entry.examples.join(' · ') });
+        const ex = card.createDiv({ cls: 'bob-widget-catalog-examples' });
+        ex.createSpan({ cls: 'bob-widget-catalog-examples-label', text: 'Examples' });
+        ex.createSpan({ cls: 'bob-widget-catalog-examples-value', text: entry.examples.join(' · ') });
       }
     });
 
-    const gap = section.createDiv({ cls: 'cad-widget-gap' });
-    gap.createDiv({ cls: 'cad-widget-gap-title', text: 'Configuration gap snapshot' });
+    const gap = section.createDiv({ cls: 'bob-widget-gap' });
+    gap.createDiv({ cls: 'bob-widget-gap-title', text: 'Configuration gap snapshot' });
     gap.createDiv({
       cls: 'setting-item-description',
       text: 'Metric stats, list, bar chart, card lists, merged sources, kanban, Base links, Base previews, markdown, actions and selectors are already config-driven. The remaining work is mostly about richer report composition, stronger Base integration, and any remaining runtime-snapshot-backed sections.',
@@ -4125,35 +4125,35 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _renderDashboardInventory(root: HTMLElement) {
-    const section = root.createDiv({ cls: 'cad-dashboard-inventory' });
-    section.createDiv({ cls: 'cad-section-label-lg', text: 'Built-in dashboard inventory' });
+    const section = root.createDiv({ cls: 'bob-dashboard-inventory' });
+    section.createDiv({ cls: 'bob-section-label-lg', text: 'Built-in dashboard inventory' });
     section.createEl('p', {
       cls: 'setting-item-description',
       text: 'Use this inventory to compare the shipped dashboards against the widget catalog and see where we still rely on runtime-snapshot-backed sections.',
     });
 
-    const grid = section.createDiv({ cls: 'cad-dashboard-inventory-grid' });
+    const grid = section.createDiv({ cls: 'bob-dashboard-inventory-grid' });
     Object.entries(BUILTIN_DASHBOARD_DEFAULTS).forEach(([id, config]) => {
       const summary = summarizeDashboardBlueprint(id, config as DashboardBlueprint);
-      const card = grid.createDiv({ cls: 'cad-dashboard-inventory-card' });
-      const head = card.createDiv({ cls: 'cad-dashboard-inventory-head' });
-      head.createDiv({ cls: 'cad-dashboard-inventory-title', text: summary.title });
-      head.createSpan({ cls: 'cad-dashboard-inventory-id', text: id });
-      const meta = card.createDiv({ cls: 'cad-dashboard-inventory-meta' });
+      const card = grid.createDiv({ cls: 'bob-dashboard-inventory-card' });
+      const head = card.createDiv({ cls: 'bob-dashboard-inventory-head' });
+      head.createDiv({ cls: 'bob-dashboard-inventory-title', text: summary.title });
+      head.createSpan({ cls: 'bob-dashboard-inventory-id', text: id });
+      const meta = card.createDiv({ cls: 'bob-dashboard-inventory-meta' });
       meta.createSpan({ text: `kind: ${summary.kind}` });
       meta.createSpan({ text: `${summary.statsCount} stats` });
       meta.createSpan({ text: `${summary.cardCount} cards` });
       if (summary.contextFilter) meta.createSpan({ text: `context: ${summary.contextFilter}` });
       if (summary.legend) meta.createSpan({ text: `legend: ${summary.legend}` });
-      const kindRow = card.createDiv({ cls: 'cad-dashboard-inventory-row' });
-      kindRow.createSpan({ cls: 'cad-dashboard-inventory-label', text: 'Widgets' });
+      const kindRow = card.createDiv({ cls: 'bob-dashboard-inventory-row' });
+      kindRow.createSpan({ cls: 'bob-dashboard-inventory-label', text: 'Widgets' });
       (summary.widgetKinds.length ? summary.widgetKinds : ['none']).forEach((kind) => {
-        kindRow.createSpan({ cls: 'cad-dashboard-inventory-chip', text: kind });
+        kindRow.createSpan({ cls: 'bob-dashboard-inventory-chip', text: kind });
       });
-      const sourceRow = card.createDiv({ cls: 'cad-dashboard-inventory-row' });
-      sourceRow.createSpan({ cls: 'cad-dashboard-inventory-label', text: 'Sources' });
+      const sourceRow = card.createDiv({ cls: 'bob-dashboard-inventory-row' });
+      sourceRow.createSpan({ cls: 'bob-dashboard-inventory-label', text: 'Sources' });
       (summary.sourceKinds.length ? summary.sourceKinds : ['n/a']).forEach((kind) => {
-        sourceRow.createSpan({ cls: 'cad-dashboard-inventory-chip', text: kind });
+        sourceRow.createSpan({ cls: 'bob-dashboard-inventory-chip', text: kind });
       });
     });
   }
@@ -4199,9 +4199,9 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _renderFinanceStatementLegend(root: HTMLElement) {
-    const card = root.createDiv({ cls: 'cad-dash-card cad-finance-legend' });
-    card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'FINANCIAL STATEMENT LEGEND' });
-    const body = card.createDiv({ cls: 'cad-dash-card-body cad-finance-legend-grid' });
+    const card = root.createDiv({ cls: 'bob-dash-card bob-finance-legend' });
+    card.createDiv({ cls: 'bob-dash-card-head' }).createDiv({ cls: 'bob-dash-card-title', text: 'FINANCIAL STATEMENT LEGEND' });
+    const body = card.createDiv({ cls: 'bob-dash-card-body bob-finance-legend-grid' });
     [
       ['SOFP', 'Statement of Financial Position', 'Balance sheet: assets, liabilities and equity at a date.'],
       ['SOPL', 'Statement of Profit or Loss', 'Income statement / P&L for the period.'],
@@ -4209,11 +4209,11 @@ export class CadenceAppView extends obsidian.ItemView {
       ['SOCF', 'Statement of Cash Flows', 'Operating, investing and financing cash movements.'],
       ['SOCE', 'Statement of Changes in Equity', 'Opening equity, profit/loss, contributions, distributions and closing equity.'],
     ].forEach(([code, title, desc]) => {
-      const item = body.createDiv({ cls: 'cad-finance-legend-item' });
-      item.createDiv({ cls: 'cad-finance-legend-code', text: code });
-      const text = item.createDiv({ cls: 'cad-finance-legend-text' });
-      text.createDiv({ cls: 'cad-finance-legend-title', text: title });
-      text.createDiv({ cls: 'cad-finance-legend-desc', text: desc });
+      const item = body.createDiv({ cls: 'bob-finance-legend-item' });
+      item.createDiv({ cls: 'bob-finance-legend-code', text: code });
+      const text = item.createDiv({ cls: 'bob-finance-legend-text' });
+      text.createDiv({ cls: 'bob-finance-legend-title', text: title });
+      text.createDiv({ cls: 'bob-finance-legend-desc', text: desc });
     });
   }
 
@@ -4222,9 +4222,9 @@ export class CadenceAppView extends obsidian.ItemView {
     this._renderPageHeader(root, 'Export', 'Export your data to an Excel workbook');
 
     const section = (parent: HTMLElement, title: string, desc: string) => {
-      const s = parent.createDiv({ cls: 'cad-data-section' });
-      s.createDiv({ cls: 'cad-data-section-title', text: title });
-      if (desc) s.createDiv({ cls: 'cad-data-section-desc', text: desc });
+      const s = parent.createDiv({ cls: 'bob-data-section' });
+      s.createDiv({ cls: 'bob-data-section-title', text: title });
+      if (desc) s.createDiv({ cls: 'bob-data-section-desc', text: desc });
       return s;
     };
 
@@ -4234,48 +4234,48 @@ export class CadenceAppView extends obsidian.ItemView {
 
     const checked = new Set(exportGroups.map(g => g.id));
     if (exportGroups.length) {
-      const groupsWrap = exportSec.createDiv({ cls: 'cad-data-group-list' });
+      const groupsWrap = exportSec.createDiv({ cls: 'bob-data-group-list' });
       exportGroups.forEach(g => {
-        const lbl = groupsWrap.createEl('label', { cls: 'cad-data-group-item' });
+        const lbl = groupsWrap.createEl('label', { cls: 'bob-data-group-item' });
         const cb = lbl.createEl('input', { type: 'checkbox' });
         cb.checked = true;
         cb.addEventListener('change', () => { if (cb.checked) checked.add(g.id); else checked.delete(g.id); });
         lbl.createSpan({ text: g.label });
-        lbl.createSpan({ cls: 'cad-data-group-count', text: `${g.entityKeys.length} types` });
+        lbl.createSpan({ cls: 'bob-data-group-count', text: `${g.entityKeys.length} types` });
       });
     }
 
-    const destDesc = exportSec.createDiv({ cls: 'cad-data-section-desc' });
+    const destDesc = exportSec.createDiv({ cls: 'bob-data-section-desc' });
     destDesc.setText('Output folder: ');
     destDesc.createEl('strong', { text: workbookExportFolder(this.plugin.settings) });
 
-    const exportRow = exportSec.createDiv({ cls: 'cad-data-action-row' });
-    const exportBtnRow = exportRow.createDiv({ cls: 'cad-data-btn-row' });
-    const exportBtn = exportBtnRow.createEl('button', { cls: 'cad-btn', text: 'Export workbook' });
-    const exportStatus = exportRow.createDiv({ cls: 'cad-data-status' });
+    const exportRow = exportSec.createDiv({ cls: 'bob-data-action-row' });
+    const exportBtnRow = exportRow.createDiv({ cls: 'bob-data-btn-row' });
+    const exportBtn = exportBtnRow.createEl('button', { cls: 'bob-btn', text: 'Export workbook' });
+    const exportStatus = exportRow.createDiv({ cls: 'bob-data-status' });
     exportBtn.addEventListener('click', async () => {
       const keys = exportGroups.length
         ? selectedWorkbookEntityKeys([...checked])
         : [...workspaceConfiguredEntityKeys(WORKSPACE_CONFIG)];
-      if (!keys.length) { exportStatus.className = 'cad-data-status cad-data-status-error'; exportStatus.setText('Nothing to export.'); return; }
+      if (!keys.length) { exportStatus.className = 'bob-data-status bob-data-status-error'; exportStatus.setText('Nothing to export.'); return; }
       exportBtn.disabled = true;
       exportBtn.setText('Exporting…');
-      exportStatus.className = 'cad-data-status';
+      exportStatus.className = 'bob-data-status';
       exportStatus.setText('');
       try {
         const suffix = exportGroups.length && checked.size < exportGroups.length ? 'selected' : '';
         const path = await exportEntitiesXLSX(this.app, keys, suffix, this.plugin.settings);
-        exportStatus.className = 'cad-data-status cad-data-status-ok';
+        exportStatus.className = 'bob-data-status bob-data-status-ok';
         exportStatus.setText('Saved to ');
         exportStatus.createEl('strong', { text: path });
         exportStatus.createSpan({ text: ' — ' });
-        const openLink = exportStatus.createEl('a', { cls: 'cad-data-open-link', text: 'Open file', href: '#' });
+        const openLink = exportStatus.createEl('a', { cls: 'bob-data-open-link', text: 'Open file', href: '#' });
         openLink.addEventListener('click', (evt) => {
           evt.preventDefault();
           (this.app as AppWithInternals).openWithDefaultApp(path);
         });
       } catch (e) {
-        exportStatus.className = 'cad-data-status cad-data-status-error';
+        exportStatus.className = 'bob-data-status bob-data-status-error';
         exportStatus.setText(`Export failed — ${e.message}`);
       } finally {
         exportBtn.disabled = false;
@@ -4286,24 +4286,24 @@ export class CadenceAppView extends obsidian.ItemView {
     // ── Export import template ───────────────────────────────────────
     const tmplSec = section(root, 'Export import template',
       'Download a pre-filled template file to use as a starting point for importing a specific entity type.');
-    const tmplRow = tmplSec.createDiv({ cls: 'cad-data-btn-row' });
-    const tmplSelect = tmplRow.createEl('select', { cls: 'cad-de-select' });
+    const tmplRow = tmplSec.createDiv({ cls: 'bob-data-btn-row' });
+    const tmplSelect = tmplRow.createEl('select', { cls: 'bob-de-select' });
     workspaceConfiguredEntityEntries(WORKSPACE_CONFIG)
       .forEach(([key, def]) => tmplSelect.createEl('option', { value: key, text: def.plural || def.label || key }));
-    const tmplCsvBtn  = tmplRow.createEl('button', { cls: 'cad-btn', text: 'CSV template' });
-    const tmplXlsxBtn = tmplRow.createEl('button', { cls: 'cad-btn', text: 'XLSX template' });
+    const tmplCsvBtn  = tmplRow.createEl('button', { cls: 'bob-btn', text: 'CSV template' });
+    const tmplXlsxBtn = tmplRow.createEl('button', { cls: 'bob-btn', text: 'XLSX template' });
     tmplCsvBtn.addEventListener('click', async () => {
-      const modal = new CadenceImportModal(this.app, { entityKey: tmplSelect.value });
+      const modal = new BobImportModal(this.app, { entityKey: tmplSelect.value });
       await modal._exportTemplateCSV();
     });
     tmplXlsxBtn.addEventListener('click', async () => {
-      const modal = new CadenceImportModal(this.app, { entityKey: tmplSelect.value });
+      const modal = new BobImportModal(this.app, { entityKey: tmplSelect.value });
       await modal._exportTemplateXLSX();
     });
   }
 
   renderImport(root: HTMLElement) {
-    new CadenceImportModal(this.app, {}).open();
+    new BobImportModal(this.app, {}).open();
   }
 
   // Reusable, toggleable colored help panel. `key` persists open/closed state
@@ -4312,13 +4312,13 @@ export class CadenceAppView extends obsidian.ItemView {
   _helpPanel(parent: HTMLElement, key: string, title: string, build: (body: HTMLElement) => void) {
     if (!this._openHelpPanels) this._openHelpPanels = new Set<string>();
     const open = this._openHelpPanels.has(key);
-    const block = parent.createDiv({ cls: 'cad-help-block' });
-    const toggle = block.createEl('button', { cls: 'cad-help-toggle' + (open ? ' is-open' : ''), attr: { type: 'button' } });
-    const icon = toggle.createSpan({ cls: 'cad-help-toggle-icon' });
+    const block = parent.createDiv({ cls: 'bob-help-block' });
+    const toggle = block.createEl('button', { cls: 'bob-help-toggle' + (open ? ' is-open' : ''), attr: { type: 'button' } });
+    const icon = toggle.createSpan({ cls: 'bob-help-toggle-icon' });
     try { obsidian.setIcon(icon, 'help-circle'); } catch (_) { icon.setText('?'); }
-    toggle.createSpan({ cls: 'cad-help-toggle-label', text: title });
-    const chevron = toggle.createSpan({ cls: 'cad-help-toggle-chevron', text: open ? '▾' : '▸' });
-    const panel = block.createDiv({ cls: 'cad-help-panel' });
+    toggle.createSpan({ cls: 'bob-help-toggle-label', text: title });
+    const chevron = toggle.createSpan({ cls: 'bob-help-toggle-chevron', text: open ? '▾' : '▸' });
+    const panel = block.createDiv({ cls: 'bob-help-panel' });
     if (!open) panel.style.display = 'none';
     build(panel);
     toggle.addEventListener('click', () => {
@@ -4341,14 +4341,14 @@ export class CadenceAppView extends obsidian.ItemView {
 
   // Small helper: render a heading + paragraph/list items into a help panel body.
   _helpBlock(body: HTMLElement, heading: string, lines: (string | [string, string])[]) {
-    body.createDiv({ cls: 'cad-help-heading', text: heading });
+    body.createDiv({ cls: 'bob-help-heading', text: heading });
     lines.forEach((line) => {
-      const row = body.createDiv({ cls: 'cad-help-line' });
+      const row = body.createDiv({ cls: 'bob-help-line' });
       if (Array.isArray(line)) {
-        row.createSpan({ cls: 'cad-help-term', text: line[0] });
-        row.createSpan({ cls: 'cad-help-desc', text: line[1] });
+        row.createSpan({ cls: 'bob-help-term', text: line[0] });
+        row.createSpan({ cls: 'bob-help-desc', text: line[1] });
       } else {
-        row.createSpan({ cls: 'cad-help-desc', text: line });
+        row.createSpan({ cls: 'bob-help-desc', text: line });
       }
     });
   }
@@ -4369,18 +4369,18 @@ export class CadenceAppView extends obsidian.ItemView {
     const customOnlyIds = workspaceDashIds.filter(id => !builtinIds.includes(id) && !builtinPlannerIds.includes(id));
     const allIds = [...builtinIds, ...builtinPlannerIds, ...customOnlyIds];
 
-    const toolbar = root.createDiv({ cls: 'cad-de-toolbar' });
-    toolbar.createDiv({ cls: 'cad-de-toolbar-label', text: 'Dashboard' });
-    const sel = toolbar.createEl('select', { cls: 'cad-de-select' });
+    const toolbar = root.createDiv({ cls: 'bob-de-toolbar' });
+    toolbar.createDiv({ cls: 'bob-de-toolbar-label', text: 'Dashboard' });
+    const sel = toolbar.createEl('select', { cls: 'bob-de-select' });
     allIds.forEach(id => {
       const opt = sel.createEl('option', { text: id, value: id });
       if (id === (this._dashEditorSurfaceId || builtinIds[0])) opt.selected = true;
     });
-    const newSurfaceWrap = toolbar.createDiv({ cls: 'cad-de-toolbar-new-surface' });
-    const newSurfaceInput = newSurfaceWrap.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm', placeholder: 'New route id' });
-    const newSurfaceKind = newSurfaceWrap.createEl('select', { cls: 'cad-de-select' });
+    const newSurfaceWrap = toolbar.createDiv({ cls: 'bob-de-toolbar-new-surface' });
+    const newSurfaceInput = newSurfaceWrap.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm', placeholder: 'New route id' });
+    const newSurfaceKind = newSurfaceWrap.createEl('select', { cls: 'bob-de-select' });
     ['dashboard', 'report', 'planner'].forEach((kind) => newSurfaceKind.createEl('option', { value: kind, text: kind }));
-    const addSurfaceBtn = newSurfaceWrap.createEl('button', { cls: 'cad-btn', text: '+ Add surface' });
+    const addSurfaceBtn = newSurfaceWrap.createEl('button', { cls: 'bob-btn', text: '+ Add surface' });
     addSurfaceBtn.addEventListener('click', async () => {
       const id = String(newSurfaceInput.value || '').trim();
       if (!id) {
@@ -4415,14 +4415,14 @@ export class CadenceAppView extends obsidian.ItemView {
       }
     });
 
-    const modeToggle = toolbar.createDiv({ cls: 'cad-de-mode-toggle' });
+    const modeToggle = toolbar.createDiv({ cls: 'bob-de-mode-toggle' });
     if (!this._dashEditorMode) this._dashEditorMode = 'visual';
-    const visualBtn = modeToggle.createEl('button', { cls: `cad-de-mode-btn${this._dashEditorMode === 'visual' ? ' active' : ''}`, text: 'Visual' });
-    const jsonBtn   = modeToggle.createEl('button', { cls: `cad-de-mode-btn${this._dashEditorMode === 'json'   ? ' active' : ''}`, text: 'JSON' });
+    const visualBtn = modeToggle.createEl('button', { cls: `bob-de-mode-btn${this._dashEditorMode === 'visual' ? ' active' : ''}`, text: 'Visual' });
+    const jsonBtn   = modeToggle.createEl('button', { cls: `bob-de-mode-btn${this._dashEditorMode === 'json'   ? ' active' : ''}`, text: 'JSON' });
 
-    const split       = root.createDiv({ cls: 'cad-de-split' });
-    const editorPane  = split.createDiv({ cls: 'cad-de-editor-pane' });
-    const previewPane = split.createDiv({ cls: 'cad-de-preview-pane' });
+    const split       = root.createDiv({ cls: 'bob-de-split' });
+    const editorPane  = split.createDiv({ cls: 'bob-de-editor-pane' });
+    const previewPane = split.createDiv({ cls: 'bob-de-preview-pane' });
 
     const getConfig = (id: string): DashConfigLike => {
       const plannerConfig = (WORKSPACE_CONFIG.planner || {})[id];
@@ -4465,12 +4465,12 @@ export class CadenceAppView extends obsidian.ItemView {
       const config = this._dashEditorDraft;
 
       editorPane.createDiv({
-        cls: `cad-de-badge ${editable ? 'cad-de-badge-custom' : 'cad-de-badge-builtin'}`,
+        cls: `bob-de-badge ${editable ? 'bob-de-badge-custom' : 'bob-de-badge-builtin'}`,
         text: editable ? 'Custom override' : 'Built-in (read-only)',
       });
 
       const reRender = () => { renderEditorPane(id); triggerPreview(id); };
-      const validationStatus = editorPane.createDiv({ cls: 'cad-de-validation-status' });
+      const validationStatus = editorPane.createDiv({ cls: 'bob-de-validation-status' });
       let validationTimer: ReturnType<typeof setTimeout> | null = null;
       const setValidationStatus = (message: string, ok: boolean) => {
         validationStatus.setText(message);
@@ -4498,7 +4498,7 @@ export class CadenceAppView extends obsidian.ItemView {
           triggerPreview(id);
         });
       } else {
-        const ta = editorPane.createEl('textarea', { cls: 'cad-de-textarea' });
+        const ta = editorPane.createEl('textarea', { cls: 'bob-de-textarea' });
         ta.value = JSON.stringify(config, null, 2);
         ta.readOnly = !editable;
         ta.spellcheck = false;
@@ -4518,9 +4518,9 @@ export class CadenceAppView extends obsidian.ItemView {
         }
       }
 
-      const actions = editorPane.createDiv({ cls: 'cad-de-actions' });
+      const actions = editorPane.createDiv({ cls: 'bob-de-actions' });
       if (!editable) {
-        const customizeBtn = actions.createEl('button', { cls: 'cad-btn primary', text: 'Customize' });
+        const customizeBtn = actions.createEl('button', { cls: 'bob-btn primary', text: 'Customize' });
         customizeBtn.addEventListener('click', () => {
           const targetStore = id.startsWith('planner.') ? 'planner' : 'dashboards';
           if (!WORKSPACE_CONFIG[targetStore]) WORKSPACE_CONFIG[targetStore] = {};
@@ -4530,7 +4530,7 @@ export class CadenceAppView extends obsidian.ItemView {
           renderPreview(id);
         });
       } else {
-        const saveBtn = actions.createEl('button', { cls: 'cad-btn primary', text: 'Save' });
+        const saveBtn = actions.createEl('button', { cls: 'bob-btn primary', text: 'Save' });
         saveBtn.addEventListener('click', async () => {
           try {
             if (!validateDraft()) return;
@@ -4543,7 +4543,7 @@ export class CadenceAppView extends obsidian.ItemView {
           } catch (e) { new obsidian.Notice(`Save failed: ${e.message}`); }
         });
         if (BUILTIN_DASHBOARD_DEFAULTS[id] || id.startsWith('planner.')) {
-          const resetBtn = actions.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Reset to built-in' });
+          const resetBtn = actions.createEl('button', { cls: 'bob-btn bob-btn-danger', text: 'Reset to built-in' });
           resetBtn.addEventListener('click', async () => {
             const stores = id.startsWith('planner.') ? ['planner', 'dashboards'] : ['dashboards'];
             stores.forEach((targetStore: 'planner' | 'dashboards') => {
@@ -4606,17 +4606,17 @@ export class CadenceAppView extends obsidian.ItemView {
     };
 
     // Header fields
-    const metaSection = pane.createDiv({ cls: 'cad-de-section' });
-    metaSection.createDiv({ cls: 'cad-de-section-label', text: 'Header' });
-    const titleInput = metaSection.createEl('input', { type: 'text', cls: 'cad-de-field', value: config.title || '', placeholder: 'Title' });
+    const metaSection = pane.createDiv({ cls: 'bob-de-section' });
+    metaSection.createDiv({ cls: 'bob-de-section-label', text: 'Header' });
+    const titleInput = metaSection.createEl('input', { type: 'text', cls: 'bob-de-field', value: config.title || '', placeholder: 'Title' });
     titleInput.disabled = !editable;
     titleInput.addEventListener('input', () => { config.title = titleInput.value; triggerPreview(); });
-    const subInput = metaSection.createEl('input', { type: 'text', cls: 'cad-de-field', value: config.subtitle || '', placeholder: 'Subtitle' });
+    const subInput = metaSection.createEl('input', { type: 'text', cls: 'bob-de-field', value: config.subtitle || '', placeholder: 'Subtitle' });
     subInput.disabled = !editable;
     subInput.addEventListener('input', () => { config.subtitle = subInput.value; triggerPreview(); });
-    const kindRow = metaSection.createDiv({ cls: 'cad-de-form-row' });
-    kindRow.createDiv({ cls: 'cad-de-form-label', text: 'Kind' });
-    const kindSelect = kindRow.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+    const kindRow = metaSection.createDiv({ cls: 'bob-de-form-row' });
+    kindRow.createDiv({ cls: 'bob-de-form-label', text: 'Kind' });
+    const kindSelect = kindRow.createEl('select', { cls: 'bob-de-field bob-de-field-sm' });
     const defaultKind = String(config.kind || (String(this._dashEditorSurfaceId || '').startsWith('planner.') ? 'planner' : 'dashboard')).trim().toLowerCase() || 'dashboard';
     ['dashboard', 'report', 'planner'].forEach((kind) => {
       const opt = kindSelect.createEl('option', { value: kind, text: kind });
@@ -4624,9 +4624,9 @@ export class CadenceAppView extends obsidian.ItemView {
     });
     kindSelect.disabled = !editable;
     kindSelect.addEventListener('change', () => { config.kind = kindSelect.value; triggerPreview(); });
-    const contextRow = metaSection.createDiv({ cls: 'cad-de-form-row' });
-    contextRow.createDiv({ cls: 'cad-de-form-label', text: 'Context' });
-    const contextSelect = contextRow.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+    const contextRow = metaSection.createDiv({ cls: 'bob-de-form-row' });
+    contextRow.createDiv({ cls: 'bob-de-form-label', text: 'Context' });
+    const contextSelect = contextRow.createEl('select', { cls: 'bob-de-field bob-de-field-sm' });
     [
       { value: '', label: 'none' },
       { value: 'client-work', label: 'selected client/project' },
@@ -4642,22 +4642,22 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     // Stats
-    const statsSection = pane.createDiv({ cls: 'cad-de-section' });
-    const statsHead = statsSection.createDiv({ cls: 'cad-de-section-head' });
-    statsHead.createDiv({ cls: 'cad-de-section-label', text: `Stats (${(config.stats || []).length})` });
+    const statsSection = pane.createDiv({ cls: 'bob-de-section' });
+    const statsHead = statsSection.createDiv({ cls: 'bob-de-section-head' });
+    statsHead.createDiv({ cls: 'bob-de-section-label', text: `Stats (${(config.stats || []).length})` });
     if (editable) {
-      const addBtn = statsHead.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Add stat' });
+      const addBtn = statsHead.createEl('button', { cls: 'bob-btn bob-btn-sm', text: '+ Add stat' });
       addBtn.addEventListener('click', () => {
         (config.stats || (config.stats = [])).push({ label: 'NEW STAT', entity: defaultEntityKey, count: 'all' });
         reRender();
       });
     }
     (config.stats || []).forEach((stat: CardLike, idx: number) => {
-      const chip = statsSection.createDiv({ cls: 'cad-de-stat-chip' });
-      const lbl = chip.createEl('input', { type: 'text', cls: 'cad-de-stat-label' });
+      const chip = statsSection.createDiv({ cls: 'bob-de-stat-chip' });
+      const lbl = chip.createEl('input', { type: 'text', cls: 'bob-de-stat-label' });
       lbl.value = stat.label || ''; lbl.placeholder = 'LABEL'; lbl.disabled = !editable;
       lbl.addEventListener('input', () => { stat.label = lbl.value; triggerPreview(); });
-      const ent = chip.createEl('select', { cls: 'cad-de-stat-select' });
+      const ent = chip.createEl('select', { cls: 'bob-de-stat-select' });
       ent.disabled = !editable;
       if (stat.entity && !entityKeys.includes(stat.entity) && ENTITIES[stat.entity]) {
         const o = ent.createEl('option', { value: stat.entity, text: stat.entity });
@@ -4665,32 +4665,32 @@ export class CadenceAppView extends obsidian.ItemView {
       }
       entityKeys.forEach(k => { const o = ent.createEl('option', { value: k, text: k }); if (k === stat.entity) o.selected = true; });
       ent.addEventListener('change', () => { stat.entity = ent.value; triggerPreview(); });
-      const cnt = chip.createEl('select', { cls: 'cad-de-stat-select' });
+      const cnt = chip.createEl('select', { cls: 'bob-de-stat-select' });
       cnt.disabled = !editable;
       ['all', 'open'].forEach(v => { const o = cnt.createEl('option', { value: v, text: v }); if (v === stat.count) o.selected = true; });
       cnt.addEventListener('change', () => { stat.count = cnt.value; triggerPreview(); });
       if (editable) {
-        const del = chip.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
+        const del = chip.createEl('button', { cls: 'bob-btn bob-btn-sm bob-btn-danger', text: '×' });
         del.addEventListener('click', () => { config.stats.splice(idx, 1); reRender(); });
       }
     });
 
-    const controlsSection = pane.createDiv({ cls: 'cad-de-section' });
-    const controlsHead = controlsSection.createDiv({ cls: 'cad-de-section-head' });
-    controlsHead.createDiv({ cls: 'cad-de-section-label', text: `Controls (${(config.controls || []).length})` });
+    const controlsSection = pane.createDiv({ cls: 'bob-de-section' });
+    const controlsHead = controlsSection.createDiv({ cls: 'bob-de-section-head' });
+    controlsHead.createDiv({ cls: 'bob-de-section-label', text: `Controls (${(config.controls || []).length})` });
     if (editable) {
-      const addBtn = controlsHead.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Add control' });
+      const addBtn = controlsHead.createEl('button', { cls: 'bob-btn bob-btn-sm', text: '+ Add control' });
       addBtn.addEventListener('click', () => {
         (config.controls || (config.controls = [])).push({ kind: 'selector', key: 'filter', label: 'New control', allLabel: 'All' });
         reRender();
       });
     }
     (config.controls || []).forEach((control: CardLike, idx: number) => {
-      const chip = controlsSection.createDiv({ cls: 'cad-de-stat-chip cad-de-control-chip' });
-      const lbl = chip.createEl('input', { type: 'text', cls: 'cad-de-stat-label' });
+      const chip = controlsSection.createDiv({ cls: 'bob-de-stat-chip bob-de-control-chip' });
+      const lbl = chip.createEl('input', { type: 'text', cls: 'bob-de-stat-label' });
       lbl.value = control.title || control.label || ''; lbl.placeholder = 'LABEL'; lbl.disabled = !editable;
       lbl.addEventListener('input', () => { control.label = lbl.value; triggerPreview(); });
-      const typ = chip.createEl('select', { cls: 'cad-de-stat-select' });
+      const typ = chip.createEl('select', { cls: 'bob-de-stat-select' });
       typ.disabled = !editable;
       ['selector', 'date-range', 'markdown', 'actions', 'base-link', 'base-embed', 'base-view'].forEach((type) => {
         const o = typ.createEl('option', { value: type, text: type });
@@ -4698,7 +4698,7 @@ export class CadenceAppView extends obsidian.ItemView {
       });
       typ.addEventListener('change', () => { control.kind = typ.value; triggerPreview(); });
       if (editable) {
-        const del = chip.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
+        const del = chip.createEl('button', { cls: 'bob-btn bob-btn-sm bob-btn-danger', text: '×' });
         del.addEventListener('click', () => { config.controls.splice(idx, 1); reRender(); });
       }
     });
@@ -4708,45 +4708,45 @@ export class CadenceAppView extends obsidian.ItemView {
     config.layout = config.layout.map((row: (CardLike | CardLike[])[]) => row.map(col => Array.isArray(col) ? col : [col]));
 
     // Layout board
-    const layoutSection = pane.createDiv({ cls: 'cad-de-section' });
-    layoutSection.createDiv({ cls: 'cad-de-section-label', text: 'Layout' });
+    const layoutSection = pane.createDiv({ cls: 'bob-de-section' });
+    layoutSection.createDiv({ cls: 'bob-de-section-label', text: 'Layout' });
 
     let activeDrag: DesignerDragPos | null = null;
 
     config.layout.forEach((row: CardLike[][], rowIdx: number) => {
-      const rowEl = layoutSection.createDiv({ cls: 'cad-de-layout-row' });
-      const rowHead = rowEl.createDiv({ cls: 'cad-de-row-head' });
-      rowHead.createDiv({ cls: 'cad-de-row-label', text: `Row ${rowIdx + 1}` });
+      const rowEl = layoutSection.createDiv({ cls: 'bob-de-layout-row' });
+      const rowHead = rowEl.createDiv({ cls: 'bob-de-row-head' });
+      rowHead.createDiv({ cls: 'bob-de-row-label', text: `Row ${rowIdx + 1}` });
       if (editable) {
-        const addCol = rowHead.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Col' });
+        const addCol = rowHead.createEl('button', { cls: 'bob-btn bob-btn-sm', text: '+ Col' });
         addCol.addEventListener('click', () => {
           row.push([{ kind: 'list', title: 'New Card', entity: defaultEntityKey, source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' }]);
           reRender();
         });
-        const delRow = rowHead.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '× Row' });
+        const delRow = rowHead.createEl('button', { cls: 'bob-btn bob-btn-sm bob-btn-danger', text: '× Row' });
         delRow.addEventListener('click', () => { config.layout.splice(rowIdx, 1); reRender(); });
       }
 
-      const cols = rowEl.createDiv({ cls: 'cad-de-row-cols' });
+      const cols = rowEl.createDiv({ cls: 'bob-de-row-cols' });
       row.forEach((col, colIdx) => {
-        const colEl = cols.createDiv({ cls: 'cad-de-layout-col' });
+        const colEl = cols.createDiv({ cls: 'bob-de-layout-col' });
 
         if (editable && row.length > 1) {
-          const delCol = colEl.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger cad-de-del-col', text: '× Col' });
+          const delCol = colEl.createEl('button', { cls: 'bob-btn bob-btn-sm bob-btn-danger bob-de-del-col', text: '× Col' });
           delCol.addEventListener('click', () => { row.splice(colIdx, 1); reRender(); });
         }
 
         col.forEach((card, cardIdx) => {
-          const cardEl = colEl.createDiv({ cls: 'cad-de-card' });
+          const cardEl = colEl.createDiv({ cls: 'bob-de-card' });
           cardEl.draggable = editable;
           if (editable) {
             cardEl.addEventListener('dragstart', (ev) => {
               activeDrag = { rowIdx, colIdx, cardIdx };
               ev.dataTransfer.effectAllowed = 'move';
-              ev.dataTransfer.setData('text/cad-dash', JSON.stringify(activeDrag));
-              setTimeout(() => cardEl.addClass('cad-de-dragging'), 0);
+              ev.dataTransfer.setData('text/bob-dash', JSON.stringify(activeDrag));
+              setTimeout(() => cardEl.addClass('bob-de-dragging'), 0);
             });
-            cardEl.addEventListener('dragend', () => { activeDrag = null; cardEl.removeClass('cad-de-dragging'); });
+            cardEl.addEventListener('dragend', () => { activeDrag = null; cardEl.removeClass('bob-de-dragging'); });
             cardEl.addEventListener('dragover', (ev) => {
               if (!activeDrag) return; ev.preventDefault(); ev.stopPropagation(); cardEl.addClass('drag-over');
             });
@@ -4763,42 +4763,42 @@ export class CadenceAppView extends obsidian.ItemView {
             });
           }
 
-          const cardHead = cardEl.createDiv({ cls: 'cad-de-card-head' });
-          if (editable) cardHead.createSpan({ cls: 'cad-de-drag-handle', text: '⠿' });
-          const titleSpan = cardHead.createSpan({ cls: 'cad-de-card-title-text', text: card.title || '(untitled)' });
-          const badges = cardHead.createDiv({ cls: 'cad-de-card-badges' });
-          badges.createSpan({ cls: 'cad-de-card-badge', text: card.kind || card.entity || '?' });
+          const cardHead = cardEl.createDiv({ cls: 'bob-de-card-head' });
+          if (editable) cardHead.createSpan({ cls: 'bob-de-drag-handle', text: '⠿' });
+          const titleSpan = cardHead.createSpan({ cls: 'bob-de-card-title-text', text: card.title || '(untitled)' });
+          const badges = cardHead.createDiv({ cls: 'bob-de-card-badges' });
+          badges.createSpan({ cls: 'bob-de-card-badge', text: card.kind || card.entity || '?' });
           const sourceLabel = summarizeCardSource(card.source);
-          if (sourceLabel && sourceLabel !== 'recent') badges.createSpan({ cls: 'cad-de-card-badge cad-de-badge-source', text: sourceLabel });
+          if (sourceLabel && sourceLabel !== 'recent') badges.createSpan({ cls: 'bob-de-card-badge bob-de-badge-source', text: sourceLabel });
 
           if (editable) {
-            const acts = cardHead.createDiv({ cls: 'cad-de-card-actions' });
-            const editBtn = acts.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Edit' });
+            const acts = cardHead.createDiv({ cls: 'bob-de-card-actions' });
+            const editBtn = acts.createEl('button', { cls: 'bob-btn bob-btn-sm', text: 'Edit' });
             editBtn.addEventListener('mousedown', ev => ev.stopPropagation());
             editBtn.addEventListener('dragstart', ev => ev.stopPropagation());
             editBtn.addEventListener('click', (ev) => {
               ev.stopPropagation();
-              const existing = cardEl.querySelector('.cad-de-card-form');
+              const existing = cardEl.querySelector('.bob-de-card-form');
               if (existing) { existing.remove(); return; }
               this._renderCardForm(cardEl, card, () => {
                 titleSpan.textContent = card.title || '(untitled)';
                 badges.empty();
-                badges.createSpan({ cls: 'cad-de-card-badge', text: card.kind || card.entity || '?' });
+                badges.createSpan({ cls: 'bob-de-card-badge', text: card.kind || card.entity || '?' });
                 const updatedSourceLabel = summarizeCardSource(card.source);
                 if (updatedSourceLabel && updatedSourceLabel !== 'recent') {
-                  badges.createSpan({ cls: 'cad-de-card-badge cad-de-badge-source', text: updatedSourceLabel });
+                  badges.createSpan({ cls: 'bob-de-card-badge bob-de-badge-source', text: updatedSourceLabel });
                 }
                 triggerPreview();
               });
             });
-            const delBtn = acts.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
+            const delBtn = acts.createEl('button', { cls: 'bob-btn bob-btn-sm bob-btn-danger', text: '×' });
             delBtn.addEventListener('mousedown', ev => ev.stopPropagation());
             delBtn.addEventListener('click', () => { col.splice(cardIdx, 1); reRender(); });
           }
         });
 
         if (editable) {
-          const dropZone = colEl.createDiv({ cls: 'cad-de-col-drop-zone', text: '+ Add card' });
+          const dropZone = colEl.createDiv({ cls: 'bob-de-col-drop-zone', text: '+ Add card' });
           dropZone.addEventListener('dragover', (ev) => {
             if (!activeDrag) return; ev.preventDefault(); ev.stopPropagation(); dropZone.addClass('drag-over');
           });
@@ -4820,7 +4820,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     if (editable) {
-      const addRowBtn = layoutSection.createEl('button', { cls: 'cad-btn cad-btn-sm cad-de-add-row-btn', text: '+ Add row' });
+      const addRowBtn = layoutSection.createEl('button', { cls: 'bob-btn bob-btn-sm bob-de-add-row-btn', text: '+ Add row' });
       addRowBtn.addEventListener('click', () => {
         config.layout.push([[{ title: 'New Card', entity: defaultEntityKey, source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' }]]);
         reRender();
@@ -4829,14 +4829,14 @@ export class CadenceAppView extends obsidian.ItemView {
 
     // Conditional rows — same visual pattern as layout rows; each card in cr.cards = one column
     if ((config.conditionalRows || []).length > 0 || editable) {
-      const crSection = pane.createDiv({ cls: 'cad-de-section' });
-      crSection.createDiv({ cls: 'cad-de-section-label', text: 'Conditional rows' });
+      const crSection = pane.createDiv({ cls: 'bob-de-section' });
+      crSection.createDiv({ cls: 'bob-de-section-label', text: 'Conditional rows' });
       const newCard = () => ({ title: 'New Card', entity: defaultEntityKey, source: 'recent', titleFields: ['title', 'name'], metaFields: ['status'], empty: 'No items.' });
       (config.conditionalRows || []).forEach((cr: Frontmatter, crIdx: number) => {
-        const crEl = crSection.createDiv({ cls: 'cad-de-layout-row' });
-        const crRowHead = crEl.createDiv({ cls: 'cad-de-row-head' });
-        crRowHead.createDiv({ cls: 'cad-de-row-label', text: 'Show when' });
-        const condInp = crRowHead.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm' });
+        const crEl = crSection.createDiv({ cls: 'bob-de-layout-row' });
+        const crRowHead = crEl.createDiv({ cls: 'bob-de-row-head' });
+        crRowHead.createDiv({ cls: 'bob-de-row-label', text: 'Show when' });
+        const condInp = crRowHead.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm' });
         condInp.value = (cr.condition?.entities || []).join(', ');
         condInp.placeholder = 'entities with data (comma-separated)';
         condInp.disabled = !editable;
@@ -4846,51 +4846,51 @@ export class CadenceAppView extends obsidian.ItemView {
           triggerPreview();
         });
         if (editable) {
-          const addCol = crRowHead.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Col' });
+          const addCol = crRowHead.createEl('button', { cls: 'bob-btn bob-btn-sm', text: '+ Col' });
           addCol.addEventListener('click', () => { (cr.cards || (cr.cards = [])).push(newCard()); reRender(); });
-          const delCr = crRowHead.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '× Row' });
+          const delCr = crRowHead.createEl('button', { cls: 'bob-btn bob-btn-sm bob-btn-danger', text: '× Row' });
           delCr.addEventListener('click', () => { config.conditionalRows.splice(crIdx, 1); reRender(); });
         }
-        const crCols = crEl.createDiv({ cls: 'cad-de-row-cols' });
+        const crCols = crEl.createDiv({ cls: 'bob-de-row-cols' });
         (cr.cards || []).forEach((card: CardLike, cardIdx: number) => {
-          const col = crCols.createDiv({ cls: 'cad-de-layout-col' });
+          const col = crCols.createDiv({ cls: 'bob-de-layout-col' });
           if (editable && (cr.cards || []).length > 1) {
-            const delCol = col.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger cad-de-del-col', text: '× Col' });
+            const delCol = col.createEl('button', { cls: 'bob-btn bob-btn-sm bob-btn-danger bob-de-del-col', text: '× Col' });
             delCol.addEventListener('click', () => { cr.cards.splice(cardIdx, 1); reRender(); });
           }
-          const cardEl = col.createDiv({ cls: 'cad-de-card' });
-          const cardHead = cardEl.createDiv({ cls: 'cad-de-card-head' });
-          const titleSpan = cardHead.createSpan({ cls: 'cad-de-card-title-text', text: card.title || '(untitled)' });
-          const badges = cardHead.createDiv({ cls: 'cad-de-card-badges' });
-          badges.createSpan({ cls: 'cad-de-card-badge', text: card.entity || '?' });
+          const cardEl = col.createDiv({ cls: 'bob-de-card' });
+          const cardHead = cardEl.createDiv({ cls: 'bob-de-card-head' });
+          const titleSpan = cardHead.createSpan({ cls: 'bob-de-card-title-text', text: card.title || '(untitled)' });
+          const badges = cardHead.createDiv({ cls: 'bob-de-card-badges' });
+          badges.createSpan({ cls: 'bob-de-card-badge', text: card.entity || '?' });
           const sourceLabel = summarizeCardSource(card.source);
-          if (sourceLabel && sourceLabel !== 'recent') badges.createSpan({ cls: 'cad-de-card-badge cad-de-badge-source', text: sourceLabel });
+          if (sourceLabel && sourceLabel !== 'recent') badges.createSpan({ cls: 'bob-de-card-badge bob-de-badge-source', text: sourceLabel });
           if (editable) {
-            const acts = cardHead.createDiv({ cls: 'cad-de-card-actions' });
-            const editBtn = acts.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Edit' });
+            const acts = cardHead.createDiv({ cls: 'bob-de-card-actions' });
+            const editBtn = acts.createEl('button', { cls: 'bob-btn bob-btn-sm', text: 'Edit' });
             editBtn.addEventListener('mousedown', ev => ev.stopPropagation());
             editBtn.addEventListener('click', (ev) => {
               ev.stopPropagation();
-              const existing = cardEl.querySelector('.cad-de-card-form');
+              const existing = cardEl.querySelector('.bob-de-card-form');
               if (existing) { existing.remove(); return; }
               this._renderCardForm(cardEl, card, () => {
                 titleSpan.textContent = card.title || '(untitled)';
                 badges.empty();
-                badges.createSpan({ cls: 'cad-de-card-badge', text: card.entity || '?' });
+                badges.createSpan({ cls: 'bob-de-card-badge', text: card.entity || '?' });
                 const updatedSourceLabel = summarizeCardSource(card.source);
                 if (updatedSourceLabel && updatedSourceLabel !== 'recent') {
-                  badges.createSpan({ cls: 'cad-de-card-badge cad-de-badge-source', text: updatedSourceLabel });
+                  badges.createSpan({ cls: 'bob-de-card-badge bob-de-badge-source', text: updatedSourceLabel });
                 }
                 triggerPreview();
               });
             });
-            const delBtn = acts.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
+            const delBtn = acts.createEl('button', { cls: 'bob-btn bob-btn-sm bob-btn-danger', text: '×' });
             delBtn.addEventListener('click', () => { cr.cards.splice(cardIdx, 1); reRender(); });
           }
         });
       });
       if (editable) {
-        const addRowBtn = crSection.createEl('button', { cls: 'cad-btn cad-btn-sm cad-de-add-row-btn', text: '+ Add conditional row' });
+        const addRowBtn = crSection.createEl('button', { cls: 'bob-btn bob-btn-sm bob-de-add-row-btn', text: '+ Add conditional row' });
         addRowBtn.addEventListener('click', () => {
           (config.conditionalRows || (config.conditionalRows = [])).push({ condition: { entities: [] }, cards: [newCard()] });
           reRender();
@@ -4907,7 +4907,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const config = card;
     const entityDef = ENTITIES[card.entity];
     const defaultEntityKey = Object.keys(ENTITIES)[0] || '';
-    const form = parent.createDiv({ cls: 'cad-de-card-form' });
+    const form = parent.createDiv({ cls: 'bob-de-card-form' });
     let _dlId = 0;
     const entityFieldKeys = [...new Set((ENTITIES[card.entity]?.fields || []).map((field) => field.key).filter(Boolean))];
     const fieldSuggestions = entityFieldKeys.length ? entityFieldKeys : ['title', 'name', 'status', 'value', 'date'];
@@ -4940,17 +4940,17 @@ export class CadenceAppView extends obsidian.ItemView {
     };
     // Field-level help (FIELD_HELP) lives in help-content.ts — shown on hover.
     const addRow = (label: string, key: string, opts?: string[], combobox = false) => {
-      const r = form.createDiv({ cls: 'cad-de-form-row' });
-      const labelEl = r.createDiv({ cls: 'cad-de-form-label', text: label });
+      const r = form.createDiv({ cls: 'bob-de-form-row' });
+      const labelEl = r.createDiv({ cls: 'bob-de-form-label', text: label });
       const help = FIELD_HELP[key];
       if (help) labelEl.setAttribute('title', help);
       if (opts && !combobox) {
-        const sel = r.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+        const sel = r.createEl('select', { cls: 'bob-de-field bob-de-field-sm' });
         opts.forEach(v => { const o = sel.createEl('option', { value: v, text: v }); if (v === card[key]) o.selected = true; });
         sel.addEventListener('change', () => { card[key] = sel.value; onChange(); });
       } else if (opts && combobox) {
-        const dlId = `cad-de-dl-${++_dlId}`;
-        const inp = r.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm', attr: { list: dlId } });
+        const dlId = `bob-de-dl-${++_dlId}`;
+        const inp = r.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm', attr: { list: dlId } });
         inp.value = formatFieldValue(card[key]);
         const dl = r.createEl('datalist', { attr: { id: dlId } });
         opts.forEach(v => dl.createEl('option', { value: v }));
@@ -4962,7 +4962,7 @@ export class CadenceAppView extends obsidian.ItemView {
       } else {
         const current = card[key];
         if (Array.isArray(current) && !current.every(isScalarValue)) {
-          const ta = r.createEl('textarea', { cls: 'cad-de-textarea cad-de-json-field' });
+          const ta = r.createEl('textarea', { cls: 'bob-de-textarea bob-de-json-field' });
           ta.rows = 4;
           ta.value = formatFieldValue(current);
           ta.spellcheck = false;
@@ -4971,7 +4971,7 @@ export class CadenceAppView extends obsidian.ItemView {
             onChange();
           });
         } else if (current && typeof current === 'object') {
-          const ta = r.createEl('textarea', { cls: 'cad-de-textarea cad-de-json-field' });
+          const ta = r.createEl('textarea', { cls: 'bob-de-textarea bob-de-json-field' });
           ta.rows = 4;
           ta.value = formatFieldValue(current);
           ta.spellcheck = false;
@@ -4981,7 +4981,7 @@ export class CadenceAppView extends obsidian.ItemView {
           });
         } else {
           const val = formatFieldValue(current);
-          const inp = r.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm' });
+          const inp = r.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm' });
           inp.value = val; inp.placeholder = key;
           inp.addEventListener('input', () => {
             card[key] = inp.value;
@@ -5077,8 +5077,8 @@ export class CadenceAppView extends obsidian.ItemView {
       });
     }
 
-    const basicsSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
-    const basicsLabel = basicsSection.createDiv({ cls: 'cad-de-section-label', text: `Settings — ${cardSchema?.label || widgetKind}` });
+    const basicsSection = form.createDiv({ cls: 'bob-de-section bob-de-section-compact' });
+    const basicsLabel = basicsSection.createDiv({ cls: 'bob-de-section-label', text: `Settings — ${cardSchema?.label || widgetKind}` });
     if (WIDGET_INTRO[widgetKind]) basicsLabel.setAttribute('title', WIDGET_INTRO[widgetKind]);
     addRow('Title', 'title');
     if (fieldOn('entity')) addRow('Entity', 'entity', sortedEntityKeys, true);
@@ -5110,9 +5110,9 @@ export class CadenceAppView extends obsidian.ItemView {
     // a free-text row when no base is resolvable.
     if (fieldOn('view', 'base')) {
       if (resolvedBaseFile) {
-        const r = form.createDiv({ cls: 'cad-de-form-row' });
-        r.createDiv({ cls: 'cad-de-form-label', text: 'View', attr: { title: FIELD_HELP.view || '' } });
-        const sel = r.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+        const r = form.createDiv({ cls: 'bob-de-form-row' });
+        r.createDiv({ cls: 'bob-de-form-label', text: 'View', attr: { title: FIELD_HELP.view || '' } });
+        const sel = r.createEl('select', { cls: 'bob-de-field bob-de-field-sm' });
         sel.createEl('option', { value: '', text: '— default view —' });
         const currentView = String((card.view as string) || '').trim();
         if (currentView) { const o = sel.createEl('option', { value: currentView, text: `${currentView} (loading…)` }); o.selected = true; }
@@ -5147,9 +5147,9 @@ export class CadenceAppView extends obsidian.ItemView {
     // Base picker — point this widget's source at an existing .base file. Changing
     // it re-renders the form so the View dropdown repopulates for the new base.
     if (fieldOn('base', 'source')) (() => {
-      const r = form.createDiv({ cls: 'cad-de-form-row' });
-      r.createDiv({ cls: 'cad-de-form-label', text: 'Base' });
-      const sel = r.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+      const r = form.createDiv({ cls: 'bob-de-form-row' });
+      r.createDiv({ cls: 'bob-de-form-label', text: 'Base' });
+      const sel = r.createEl('select', { cls: 'bob-de-field bob-de-field-sm' });
       sel.createEl('option', { value: '', text: '— none (use entity) —' });
       this.app.vault.getFiles().filter((f) => f.extension === 'base').map((f) => f.path).sort()
         .forEach((p) => { const o = sel.createEl('option', { value: p, text: p }); if (p === explicitBaseFile) o.selected = true; });
@@ -5169,9 +5169,9 @@ export class CadenceAppView extends obsidian.ItemView {
     if (fieldOn('height')) addRow('Height', 'height');
     if (fieldOn('fallback')) addRow('Fallback', 'fallback', ['preview', 'link', 'error']);
 
-    const typeRow = form.createDiv({ cls: 'cad-de-form-row' });
-    typeRow.createDiv({ cls: 'cad-de-form-label', text: 'Widget type' });
-    const typeSelect = typeRow.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+    const typeRow = form.createDiv({ cls: 'bob-de-form-row' });
+    typeRow.createDiv({ cls: 'bob-de-form-label', text: 'Widget type' });
+    const typeSelect = typeRow.createEl('select', { cls: 'bob-de-field bob-de-field-sm' });
     const widgetTypes = [...PURE_DASHBOARD_WIDGET_TYPES];
     const currentType = String(card.kind || (Array.isArray(card.merge) ? 'merge' : 'list')).trim() || 'list';
     if (!widgetTypes.includes(currentType)) widgetTypes.push(currentType);
@@ -5205,15 +5205,15 @@ export class CadenceAppView extends obsidian.ItemView {
       card.source = next;
       onChange();
     };
-    const sourceSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
+    const sourceSection = form.createDiv({ cls: 'bob-de-section bob-de-section-compact' });
     // Sourceless widgets (quick-add, date-hero, note-section) don't read data —
     // hide the whole Source details block so their editor stays simple.
     if (!usesSource) sourceSection.style.display = 'none';
-    sourceSection.createDiv({ cls: 'cad-de-section-label', text: 'Where does the data come from?' })
+    sourceSection.createDiv({ cls: 'bob-de-section-label', text: 'Where does the data come from?' })
       .setAttribute('title', SOURCE_SECTION_HELP);
-    const sourceModeRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
-    sourceModeRow.createDiv({ cls: 'cad-de-form-label', text: 'Mode' });
-    const sourceMode = sourceModeRow.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+    const sourceModeRow = sourceSection.createDiv({ cls: 'bob-de-form-row' });
+    sourceModeRow.createDiv({ cls: 'bob-de-form-label', text: 'Mode' });
+    const sourceMode = sourceModeRow.createEl('select', { cls: 'bob-de-field bob-de-field-sm' });
     ['recent', 'recent-open', 'due', 'due-open', 'entity', 'base', 'list', 'table', 'built-in'].forEach((mode) => {
       const opt = sourceMode.createEl('option', { value: mode, text: mode });
       if (sourceModeValue === mode || (!sourceModeValue && mode === 'recent')) opt.selected = true;
@@ -5231,9 +5231,9 @@ export class CadenceAppView extends obsidian.ItemView {
       syncBuiltInControls();
     });
 
-    const sourceProviderRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
-    sourceProviderRow.createDiv({ cls: 'cad-de-form-label', text: 'Built-in source' });
-    const sourceProvider = sourceProviderRow.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+    const sourceProviderRow = sourceSection.createDiv({ cls: 'bob-de-form-row' });
+    sourceProviderRow.createDiv({ cls: 'bob-de-form-label', text: 'Built-in source' });
+    const sourceProvider = sourceProviderRow.createEl('select', { cls: 'bob-de-field bob-de-field-sm' });
     const builtInSourceOptions = [
       { value: 'home', label: 'home' },
       { value: 'planner', label: 'planner' },
@@ -5256,9 +5256,9 @@ export class CadenceAppView extends obsidian.ItemView {
       syncBuiltInControls();
     });
 
-    const sourceEntityRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
-    sourceEntityRow.createDiv({ cls: 'cad-de-form-label', text: 'Source entity' });
-    const sourceEntity = sourceEntityRow.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm' });
+    const sourceEntityRow = sourceSection.createDiv({ cls: 'bob-de-form-row' });
+    sourceEntityRow.createDiv({ cls: 'bob-de-form-label', text: 'Source entity' });
+    const sourceEntity = sourceEntityRow.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm' });
     sourceEntity.value = source.entity || card.entity || '';
     sourceEntity.placeholder = 'entity key';
     sourceEntity.addEventListener('input', () => {
@@ -5266,33 +5266,33 @@ export class CadenceAppView extends obsidian.ItemView {
       setSourceField({ entity: sourceEntity.value || null }, { clearSource: false });
     });
 
-    const sourceFiltersRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
-    sourceFiltersRow.createDiv({ cls: 'cad-de-form-label', text: 'Filters' });
-    const sourceFilters = sourceFiltersRow.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm' });
+    const sourceFiltersRow = sourceSection.createDiv({ cls: 'bob-de-form-row' });
+    sourceFiltersRow.createDiv({ cls: 'bob-de-form-label', text: 'Filters' });
+    const sourceFilters = sourceFiltersRow.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm' });
     sourceFilters.value = source.filters || card.filters || '';
     sourceFilters.placeholder = 'YAML/SQL-like filter expression';
     sourceFilters.addEventListener('input', () => {
       setSourceField({ filters: sourceFilters.value });
     });
 
-    const sourceGroupRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
-    sourceGroupRow.createDiv({ cls: 'cad-de-form-label', text: 'Group by' });
-    const sourceGroup = sourceGroupRow.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm', attr: { list: `cad-de-group-${++_dlId}` } });
+    const sourceGroupRow = sourceSection.createDiv({ cls: 'bob-de-form-row' });
+    sourceGroupRow.createDiv({ cls: 'bob-de-form-label', text: 'Group by' });
+    const sourceGroup = sourceGroupRow.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm', attr: { list: `bob-de-group-${++_dlId}` } });
     sourceGroup.value = source.groupBy || card.groupBy || '';
     sourceGroup.placeholder = 'field key';
-    const sourceGroupList = sourceGroupRow.createEl('datalist', { attr: { id: `cad-de-group-${_dlId}` } });
+    const sourceGroupList = sourceGroupRow.createEl('datalist', { attr: { id: `bob-de-group-${_dlId}` } });
     fieldSuggestions.forEach((field) => sourceGroupList.createEl('option', { value: field }));
     sourceGroup.addEventListener('input', () => {
       card.groupBy = sourceGroup.value || '';
       setSourceField({ groupBy: sourceGroup.value });
     });
 
-    const sourceSortRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
-    sourceSortRow.createDiv({ cls: 'cad-de-form-label', text: 'Sort' });
-    const sourceSort = sourceSortRow.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm', attr: { list: `cad-de-sort-${++_dlId}` } });
+    const sourceSortRow = sourceSection.createDiv({ cls: 'bob-de-form-row' });
+    sourceSortRow.createDiv({ cls: 'bob-de-form-label', text: 'Sort' });
+    const sourceSort = sourceSortRow.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm', attr: { list: `bob-de-sort-${++_dlId}` } });
     sourceSort.value = source.sort || card.sort || '';
     sourceSort.placeholder = 'field ASC';
-    const sourceSortList = sourceSortRow.createEl('datalist', { attr: { id: `cad-de-sort-${_dlId}` } });
+    const sourceSortList = sourceSortRow.createEl('datalist', { attr: { id: `bob-de-sort-${_dlId}` } });
     fieldSuggestions.forEach((field) => {
       sourceSortList.createEl('option', { value: `${field} ASC` });
       sourceSortList.createEl('option', { value: `${field} DESC` });
@@ -5371,10 +5371,10 @@ export class CadenceAppView extends obsidian.ItemView {
       };
       return aliases[builtIn]?.[title] || '';
     };
-    const sourceSectionRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
-    sourceSectionRow.createDiv({ cls: 'cad-de-form-label', text: 'Built-in section' });
-    const sectionWrap = sourceSectionRow.createDiv({ cls: 'cad-de-source-section-wrap' });
-    const sectionSelect = sectionWrap.createEl('select', { cls: 'cad-de-field cad-de-field-sm' });
+    const sourceSectionRow = sourceSection.createDiv({ cls: 'bob-de-form-row' });
+    sourceSectionRow.createDiv({ cls: 'bob-de-form-label', text: 'Built-in section' });
+    const sectionWrap = sourceSectionRow.createDiv({ cls: 'bob-de-source-section-wrap' });
+    const sectionSelect = sectionWrap.createEl('select', { cls: 'bob-de-field bob-de-field-sm' });
     const syncBuiltInControls = () => {
       const isBuiltIn = sourceMode.value === 'built-in';
       const builtInName = String(sourceProvider.value || 'home').trim().toLowerCase() || 'home';
@@ -5404,9 +5404,9 @@ export class CadenceAppView extends obsidian.ItemView {
     });
     syncBuiltInControls();
 
-    const sourceLabelsRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
-    sourceLabelsRow.createDiv({ cls: 'cad-de-form-label', text: 'Labels' });
-    const sourceLabels = sourceLabelsRow.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm' });
+    const sourceLabelsRow = sourceSection.createDiv({ cls: 'bob-de-form-row' });
+    sourceLabelsRow.createDiv({ cls: 'bob-de-form-label', text: 'Labels' });
+    const sourceLabels = sourceLabelsRow.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm' });
     sourceLabels.value = Array.isArray(source.labels) ? source.labels.join(', ') : '';
     sourceLabels.placeholder = 'Comma-separated labels';
     sourceLabels.addEventListener('input', () => {
@@ -5465,9 +5465,9 @@ export class CadenceAppView extends obsidian.ItemView {
       });
     })();
 
-    const sourceLimitRow = sourceSection.createDiv({ cls: 'cad-de-form-row' });
-    sourceLimitRow.createDiv({ cls: 'cad-de-form-label', text: 'Limit' });
-    const sourceLimit = sourceLimitRow.createEl('input', { type: 'number', cls: 'cad-de-field cad-de-field-sm' });
+    const sourceLimitRow = sourceSection.createDiv({ cls: 'bob-de-form-row' });
+    sourceLimitRow.createDiv({ cls: 'bob-de-form-label', text: 'Limit' });
+    const sourceLimit = sourceLimitRow.createEl('input', { type: 'number', cls: 'bob-de-field bob-de-field-sm' });
     sourceLimit.value = source.limit != null ? String(source.limit) : (card.limit != null ? String(card.limit) : '');
     sourceLimit.placeholder = 'rows';
     sourceLimit.addEventListener('input', () => {
@@ -5476,27 +5476,27 @@ export class CadenceAppView extends obsidian.ItemView {
       setObjectField('source', { limit: limitValue });
     });
 
-    const baseSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
-    baseSection.createDiv({ cls: 'cad-de-section-label', text: 'Base target' });
-    const baseFileRow = baseSection.createDiv({ cls: 'cad-de-form-row' });
-    baseFileRow.createDiv({ cls: 'cad-de-form-label', text: 'Base file' });
-    const baseFile = baseFileRow.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm' });
+    const baseSection = form.createDiv({ cls: 'bob-de-section bob-de-section-compact' });
+    baseSection.createDiv({ cls: 'bob-de-section-label', text: 'Base target' });
+    const baseFileRow = baseSection.createDiv({ cls: 'bob-de-form-row' });
+    baseFileRow.createDiv({ cls: 'bob-de-form-label', text: 'Base file' });
+    const baseFile = baseFileRow.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm' });
     baseFile.value = baseObj.file || '';
     baseFile.placeholder = '00-CORE/Bases/... .base';
     baseFile.addEventListener('input', () => {
       setObjectField('base', { file: baseFile.value });
     });
-    const baseViewRow = baseSection.createDiv({ cls: 'cad-de-form-row' });
-    baseViewRow.createDiv({ cls: 'cad-de-form-label', text: 'Base view' });
-    const baseView = baseViewRow.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm' });
+    const baseViewRow = baseSection.createDiv({ cls: 'bob-de-form-row' });
+    baseViewRow.createDiv({ cls: 'bob-de-form-label', text: 'Base view' });
+    const baseView = baseViewRow.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm' });
     baseView.value = baseObj.view || '';
     baseView.placeholder = 'View name';
     baseView.addEventListener('input', () => {
       setObjectField('base', { view: baseView.value });
     });
-    const baseEntityRow = baseSection.createDiv({ cls: 'cad-de-form-row' });
-    baseEntityRow.createDiv({ cls: 'cad-de-form-label', text: 'Base entity' });
-    const baseEntity = baseEntityRow.createEl('input', { type: 'text', cls: 'cad-de-field cad-de-field-sm' });
+    const baseEntityRow = baseSection.createDiv({ cls: 'bob-de-form-row' });
+    baseEntityRow.createDiv({ cls: 'bob-de-form-label', text: 'Base entity' });
+    const baseEntity = baseEntityRow.createEl('input', { type: 'text', cls: 'bob-de-field bob-de-field-sm' });
     baseEntity.value = baseObj.entity || '';
     baseEntity.placeholder = 'entity key';
     baseEntity.addEventListener('input', () => {
@@ -5504,8 +5504,8 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     if (String(card.kind || '').trim() === 'selector') {
-      const selectorSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
-      selectorSection.createDiv({ cls: 'cad-de-section-label', text: 'Selector details' });
+      const selectorSection = form.createDiv({ cls: 'bob-de-section bob-de-section-compact' });
+      selectorSection.createDiv({ cls: 'bob-de-section-label', text: 'Selector details' });
       addRow('Key', 'key');
       addRow('Label', 'label');
       addRow('Field', 'field');
@@ -5515,8 +5515,8 @@ export class CadenceAppView extends obsidian.ItemView {
     }
 
     if (['gauge', 'score-gauge', 'dial', 'progress', 'progress-bar'].includes(String(card.kind || '').trim().toLowerCase())) {
-      const scalarSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
-      scalarSection.createDiv({ cls: 'cad-de-section-label', text: String(card.kind || '').trim().toLowerCase() === 'progress' ? 'Progress details' : 'Gauge details' });
+      const scalarSection = form.createDiv({ cls: 'bob-de-section bob-de-section-compact' });
+      scalarSection.createDiv({ cls: 'bob-de-section-label', text: String(card.kind || '').trim().toLowerCase() === 'progress' ? 'Progress details' : 'Gauge details' });
       addRow('Value', 'value');
       addRow('Field', 'field', fieldSuggestions, true);
       addRow('Metric', 'metric', ['count', 'sum', 'avg', 'min', 'max', 'filled', 'empty', 'open', 'uniqueCount', 'ratio'], true);
@@ -5528,8 +5528,8 @@ export class CadenceAppView extends obsidian.ItemView {
     }
 
     if (['heatmap', 'streak-heatmap'].includes(String(card.kind || '').trim().toLowerCase())) {
-      const heatmapSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
-      heatmapSection.createDiv({ cls: 'cad-de-section-label', text: 'Heatmap details' });
+      const heatmapSection = form.createDiv({ cls: 'bob-de-section bob-de-section-compact' });
+      heatmapSection.createDiv({ cls: 'bob-de-section-label', text: 'Heatmap details' });
       addRow('Date field', 'dateField', ['date', 'day', 'created', 'createdAt', 'updated', 'modified', 'start', 'scheduled', 'due'], true);
       addRow('Value field', 'field', fieldSuggestions, true);
       addRow('Days', 'days');
@@ -5538,8 +5538,8 @@ export class CadenceAppView extends obsidian.ItemView {
     }
 
     if (String(card.kind || '').trim() === 'kanban') {
-      const kanbanSection = form.createDiv({ cls: 'cad-de-section cad-de-section-compact' });
-      kanbanSection.createDiv({ cls: 'cad-de-section-label', text: 'Kanban details' });
+      const kanbanSection = form.createDiv({ cls: 'bob-de-section bob-de-section-compact' });
+      kanbanSection.createDiv({ cls: 'bob-de-section-label', text: 'Kanban details' });
       addRow('Group by', 'groupBy');
       addRow('Columns', 'columns');
       addRow('Groups', 'groups');
@@ -5552,7 +5552,7 @@ export class CadenceAppView extends obsidian.ItemView {
 
   /* ── Generic entity LIST view ───────────── */
   async renderEntityList(root: HTMLElement, entityKey: string, opts: EntityListOptions = {}) {
-    root.addClass('cadence-list');
+    root.addClass('bob-list');
     const def = ENTITIES[entityKey];
     if (!def) { this.renderComingSoon(root, SURFACE_BY_ID[this.mode]); return; }
 
@@ -5568,15 +5568,15 @@ export class CadenceAppView extends obsidian.ItemView {
       if (opts.renderHeaderControls) opts.renderHeaderControls(right, entityKey);
       this._renderEntityViewSelect(right, entityKey);
       if (def.externalBaseView) {
-        const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
+        const openBaseBtn = right.createEl('button', { cls: 'bob-btn', text: 'Open Base' });
         openBaseBtn.addEventListener('click', () => this._openEntityBase(entityKey));
       }
       if (entityLifecycle(def)) {
-        const procBtn = right.createEl('button', { cls: 'cad-btn', text: 'Process canvas' });
+        const procBtn = right.createEl('button', { cls: 'bob-btn', text: 'Process canvas' });
         procBtn.addEventListener('click', () => void this._generateProcessCanvas(entityKey));
       }
       if (!ctx.hasConfiguredActions) {
-        const btn = right.createEl('button', { cls: 'cad-btn primary', text: `+ New ${def.label}` });
+        const btn = right.createEl('button', { cls: 'bob-btn primary', text: `+ New ${def.label}` });
         btn.addEventListener('click', () => this._createEntityFromPrompt(entityKey));
       }
     });
@@ -5585,9 +5585,9 @@ export class CadenceAppView extends obsidian.ItemView {
     this._renderUnsupportedBaseFilters(root, def);
 
     if (!filtered.length) {
-      const empty = root.createDiv({ cls: 'cad-empty-state' });
-      empty.createDiv({ cls: 'cad-empty-state-title', text: `No ${def.plural.toLowerCase()} yet` });
-      empty.createDiv({ cls: 'cad-empty-state-desc', text: opts.emptyDescription || `Drop a markdown note in ${entityFolder(entityKey)}/ with frontmatter, or hit "+ New" above.` });
+      const empty = root.createDiv({ cls: 'bob-empty-state' });
+      empty.createDiv({ cls: 'bob-empty-state-title', text: `No ${def.plural.toLowerCase()} yet` });
+      empty.createDiv({ cls: 'bob-empty-state-desc', text: opts.emptyDescription || `Drop a markdown note in ${entityFolder(entityKey)}/ with frontmatter, or hit "+ New" above.` });
       return;
     }
 
@@ -5597,7 +5597,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const groups = this._groupEntitiesForView(filtered, def);
     if (groups) {
       groups.forEach(([label, items]) => {
-        root.createDiv({ cls: 'cad-section-label-lg', text: `${label} · ${items.length}` });
+        root.createDiv({ cls: 'bob-section-label-lg', text: `${label} · ${items.length}` });
         this._renderEntityTable(root, items, entityKey, cols);
       });
     } else {
@@ -5610,7 +5610,7 @@ export class CadenceAppView extends obsidian.ItemView {
     // Projects get a richer PM-style detail view
     if (entityKey === 'project') return this.renderProjectDetail(root, file);
 
-    root.addClass('cadence-detail');
+    root.addClass('bob-detail');
     const def = ENTITIES[entityKey];
     if (!def || !file) { this.closeEntityDetail(); return; }
 
@@ -5621,24 +5621,24 @@ export class CadenceAppView extends obsidian.ItemView {
     const titleVal = primaryKey ? entityValue({ file, frontmatter: fm, basename: file.basename }, primaryKey, def) : file.basename;
 
     // Header: back / breadcrumb / title / actions
-    const head = root.createDiv({ cls: 'cad-detail-header' });
-    const headLeft = head.createDiv({ cls: 'cad-detail-header-left' });
+    const head = root.createDiv({ cls: 'bob-detail-header' });
+    const headLeft = head.createDiv({ cls: 'bob-detail-header-left' });
 
-    const back = headLeft.createEl('button', { cls: 'cad-btn cad-detail-back', text: '← ' + def.plural });
+    const back = headLeft.createEl('button', { cls: 'bob-btn bob-detail-back', text: '← ' + def.plural });
     back.addEventListener('click', () => this.closeEntityDetail());
 
-    const breadcrumb = headLeft.createDiv({ cls: 'cad-detail-breadcrumb' });
-    breadcrumb.createSpan({ cls: 'cad-eyebrow', text: def.plural.toUpperCase() });
-    breadcrumb.createSpan({ cls: 'cad-detail-title', text: String(titleVal) });
-    breadcrumb.createDiv({ cls: 'cad-detail-path', text: file.path });
+    const breadcrumb = headLeft.createDiv({ cls: 'bob-detail-breadcrumb' });
+    breadcrumb.createSpan({ cls: 'bob-eyebrow', text: def.plural.toUpperCase() });
+    breadcrumb.createSpan({ cls: 'bob-detail-title', text: String(titleVal) });
+    breadcrumb.createDiv({ cls: 'bob-detail-path', text: file.path });
 
-    const headRight = head.createDiv({ cls: 'cad-detail-header-right' });
-    const savedBadge: SavedBadgeEl = headRight.createSpan({ cls: 'cad-detail-saved', text: '' });
-    const openNote = headRight.createEl('button', { cls: 'cad-btn', text: 'Open as note' });
+    const headRight = head.createDiv({ cls: 'bob-detail-header-right' });
+    const savedBadge: SavedBadgeEl = headRight.createSpan({ cls: 'bob-detail-saved', text: '' });
+    const openNote = headRight.createEl('button', { cls: 'bob-btn', text: 'Open as note' });
     openNote.addEventListener('click', () => this.app.workspace.openLinkText(file.path, '', false));
-    const ctxCanvas = headRight.createEl('button', { cls: 'cad-btn', text: 'Context canvas' });
+    const ctxCanvas = headRight.createEl('button', { cls: 'bob-btn', text: 'Context canvas' });
     ctxCanvas.addEventListener('click', () => void this._generateContextCanvas(file));
-    const deleteBtn = headRight.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Delete' });
+    const deleteBtn = headRight.createEl('button', { cls: 'bob-btn bob-btn-danger', text: 'Delete' });
     deleteBtn.addEventListener('click', async () => {
       if (!(await confirmModal(this.app, `Delete this ${def.label.toLowerCase()}? This moves the file to trash.`, { title: 'Delete', cta: 'Delete' }))) return;
       try {
@@ -5651,7 +5651,7 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     // Form
-    const form = root.createDiv({ cls: 'cad-detail-form' });
+    const form = root.createDiv({ cls: 'bob-detail-form' });
     let saveTimer: ReturnType<typeof setTimeout> | null = null;
     const flashSaved = () => {
       savedBadge.setText('Saved');
@@ -5693,14 +5693,14 @@ export class CadenceAppView extends obsidian.ItemView {
 
     // Render each field as a labelled row
     def.fields.forEach((f) => {
-      const row = form.createDiv({ cls: 'cad-form-row' });
-      row.createDiv({ cls: 'cad-form-label', text: f.label.toUpperCase() });
+      const row = form.createDiv({ cls: 'bob-form-row' });
+      row.createDiv({ cls: 'bob-form-label', text: f.label.toUpperCase() });
 
       const current = fm[f.key];
       const fieldType = f.type || 'text';
 
       if (fieldType === 'enum') {
-        const sel = row.createEl('select', { cls: 'cad-form-input' });
+        const sel = row.createEl('select', { cls: 'bob-form-input' });
         // Allow empty
         sel.createEl('option', { value: '', text: '—' });
         (f.options || []).forEach((opt) => {
@@ -5709,7 +5709,7 @@ export class CadenceAppView extends obsidian.ItemView {
         });
         sel.addEventListener('change', () => writeField(f.key, sel.value));
       } else if (fieldType === 'date') {
-        const inp = row.createEl('input', { type: 'date', cls: 'cad-form-input' });
+        const inp = row.createEl('input', { type: 'date', cls: 'bob-form-input' });
         inp.lang = navigator.language || '';
         if (current) {
           const d = new Date(current);
@@ -5717,24 +5717,24 @@ export class CadenceAppView extends obsidian.ItemView {
         }
         inp.addEventListener('change', () => writeField(f.key, inp.value));
       } else if (fieldType === 'number' || fieldType === 'currency') {
-        const inp = row.createEl('input', { type: 'number', cls: 'cad-form-input' });
+        const inp = row.createEl('input', { type: 'number', cls: 'bob-form-input' });
         if (current != null) inp.value = String(current);
         if (fieldType === 'currency') inp.placeholder = `${this.plugin.settings.currency || 'USD'} amount`;
         inp.addEventListener('input', () => debouncedWrite(f.key, inp.value));
         inp.addEventListener('blur', () => writeField(f.key, inp.value));
       } else if (fieldType === 'email') {
-        const inp = row.createEl('input', { type: 'email', cls: 'cad-form-input' });
+        const inp = row.createEl('input', { type: 'email', cls: 'bob-form-input' });
         if (current) inp.value = String(current);
         inp.addEventListener('input', () => debouncedWrite(f.key, inp.value));
         inp.addEventListener('blur', () => writeField(f.key, inp.value));
       } else if (fieldType === 'tags') {
-        const inp = row.createEl('input', { type: 'text', cls: 'cad-form-input', placeholder: 'tag1, tag2, tag3' });
+        const inp = row.createEl('input', { type: 'text', cls: 'bob-form-input', placeholder: 'tag1, tag2, tag3' });
         if (Array.isArray(current)) inp.value = current.join(', ');
         else if (current) inp.value = String(current);
         inp.addEventListener('input', () => debouncedWrite(f.key, inp.value));
         inp.addEventListener('blur', () => writeField(f.key, inp.value));
       } else {
-        const inp = row.createEl('input', { type: 'text', cls: 'cad-form-input' });
+        const inp = row.createEl('input', { type: 'text', cls: 'bob-form-input' });
         if (current) inp.value = String(current);
         if (def.typeFilter === 'project') {
           if (f.key === 'project_id') inp.placeholder = 'Project ID';
@@ -5748,16 +5748,16 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     // Body section — link out for full editing
-    const bodyHint = root.createDiv({ cls: 'cad-detail-body-hint' });
-    bodyHint.createDiv({ cls: 'cad-eyebrow', text: 'NOTE BODY' });
-    bodyHint.createDiv({ cls: 'cad-detail-body-desc', text: 'Brief, milestones, notes and any other markdown lives in the note body.' });
-    const openBody = bodyHint.createEl('button', { cls: 'cad-btn primary', text: 'Open as note for full editing' });
+    const bodyHint = root.createDiv({ cls: 'bob-detail-body-hint' });
+    bodyHint.createDiv({ cls: 'bob-eyebrow', text: 'NOTE BODY' });
+    bodyHint.createDiv({ cls: 'bob-detail-body-desc', text: 'Brief, milestones, notes and any other markdown lives in the note body.' });
+    const openBody = bodyHint.createEl('button', { cls: 'bob-btn primary', text: 'Open as note for full editing' });
     openBody.addEventListener('click', () => this.app.workspace.openLinkText(file.path, '', false));
   }
 
   /* ── Project DETAIL view (real PM surface) ─────── */
   async renderProjectDetail(root: HTMLElement, file: obsidian.TFile) {
-    root.addClass('cadence-project-detail');
+    root.addClass('bob-project-detail');
     const def = ENTITIES.project;
     const cache = this.app.metadataCache.getFileCache(file) || {} as obsidian.CachedMetadata;
     const fm = Object.assign({}, cache.frontmatter || {});
@@ -5769,26 +5769,26 @@ export class CadenceAppView extends obsidian.ItemView {
     const priority = String(fm.priority || '');
 
     /* Header */
-    const head = root.createDiv({ cls: 'cad-detail-header' });
-    const headLeft = head.createDiv({ cls: 'cad-detail-header-left' });
-    const back = headLeft.createEl('button', { cls: 'cad-btn cad-detail-back', text: '← Projects' });
+    const head = root.createDiv({ cls: 'bob-detail-header' });
+    const headLeft = head.createDiv({ cls: 'bob-detail-header-left' });
+    const back = headLeft.createEl('button', { cls: 'bob-btn bob-detail-back', text: '← Projects' });
     back.addEventListener('click', () => this.closeEntityDetail());
-    const breadcrumb = headLeft.createDiv({ cls: 'cad-detail-breadcrumb' });
-    breadcrumb.createSpan({ cls: 'cad-eyebrow', text: 'PROJECT' });
-    breadcrumb.createSpan({ cls: 'cad-detail-title', text: String(titleVal) });
-    breadcrumb.createDiv({ cls: 'cad-detail-path', text: file.path });
+    const breadcrumb = headLeft.createDiv({ cls: 'bob-detail-breadcrumb' });
+    breadcrumb.createSpan({ cls: 'bob-eyebrow', text: 'PROJECT' });
+    breadcrumb.createSpan({ cls: 'bob-detail-title', text: String(titleVal) });
+    breadcrumb.createDiv({ cls: 'bob-detail-path', text: file.path });
 
-    const headRight = head.createDiv({ cls: 'cad-detail-header-right' });
-    const savedBadge: SavedBadgeEl = headRight.createSpan({ cls: 'cad-detail-saved', text: '' });
+    const headRight = head.createDiv({ cls: 'bob-detail-header-right' });
+    const savedBadge: SavedBadgeEl = headRight.createSpan({ cls: 'bob-detail-saved', text: '' });
     const flashSaved = () => {
       savedBadge.setText('Saved');
       savedBadge.addClass('show');
       clearTimeout(savedBadge._t);
       savedBadge._t = setTimeout(() => savedBadge.removeClass('show'), 1400);
     };
-    const openNote = headRight.createEl('button', { cls: 'cad-btn', text: 'Open as note' });
+    const openNote = headRight.createEl('button', { cls: 'bob-btn', text: 'Open as note' });
     openNote.addEventListener('click', () => this.app.workspace.openLinkText(file.path, '', false));
-    const deleteBtn = headRight.createEl('button', { cls: 'cad-btn cad-btn-danger', text: 'Delete' });
+    const deleteBtn = headRight.createEl('button', { cls: 'bob-btn bob-btn-danger', text: 'Delete' });
     deleteBtn.addEventListener('click', async () => {
       if (!(await confirmModal(this.app, `Delete this project? This moves the file to trash.`, { title: 'Delete project', cta: 'Delete' }))) return;
       try {
@@ -5801,11 +5801,11 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     /* Hero — name (already in breadcrumb), pills, meta, progress */
-    const hero = root.createDiv({ cls: 'cad-pd-hero' });
-    const pillRow = hero.createDiv({ cls: 'cad-pd-pills' });
+    const hero = root.createDiv({ cls: 'bob-pd-hero' });
+    const pillRow = hero.createDiv({ cls: 'bob-pd-pills' });
     const mkSelect = (cls: string, options: string[], current: string, onChange: (value: string) => void) => {
-      const wrap = pillRow.createDiv({ cls: `cad-pd-select-wrap ${cls}` });
-      const sel = wrap.createEl('select', { cls: 'cad-pd-select' });
+      const wrap = pillRow.createDiv({ cls: `bob-pd-select-wrap ${cls}` });
+      const sel = wrap.createEl('select', { cls: 'bob-pd-select' });
       options.forEach((opt) => {
         const o = sel.createEl('option', { value: opt, text: opt });
         if (String(current) === opt) o.selected = true;
@@ -5815,18 +5815,18 @@ export class CadenceAppView extends obsidian.ItemView {
     };
     const statusOptions   = def.fields?.find((f) => f.key === 'status')?.options   || ['active', 'on_hold', 'backlog', 'done', 'cancelled'];
     const priorityOptions = def.fields?.find((f) => f.key === 'priority')?.options || ['low', 'medium', 'high'];
-    mkSelect('cad-pill cad-pill-' + status.toLowerCase().replace(/\s+/g, '-'),
+    mkSelect('bob-pill bob-pill-' + status.toLowerCase().replace(/\s+/g, '-'),
       statusOptions, status,
       (v) => this._writeProjectFrontmatter(file, { status: v }, flashSaved));
-    mkSelect('cad-pill cad-pill-prio-' + (priority || priorityOptions[1] || 'medium').toLowerCase(),
+    mkSelect('bob-pill bob-pill-prio-' + (priority || priorityOptions[1] || 'medium').toLowerCase(),
       priorityOptions, priority || priorityOptions[1] || 'medium',
       (v) => this._writeProjectFrontmatter(file, { priority: v }, flashSaved));
 
-    const metaRow = hero.createDiv({ cls: 'cad-pd-meta' });
+    const metaRow = hero.createDiv({ cls: 'bob-pd-meta' });
     const mkMeta = (label: string, key: string, type?: string) => {
-      const cell = metaRow.createDiv({ cls: 'cad-pd-meta-cell' });
-      cell.createDiv({ cls: 'cad-pd-meta-label', text: label });
-      const inp = cell.createEl('input', { type: type || 'text', cls: 'cad-pd-meta-input' });
+      const cell = metaRow.createDiv({ cls: 'bob-pd-meta-cell' });
+      cell.createDiv({ cls: 'bob-pd-meta-label', text: label });
+      const inp = cell.createEl('input', { type: type || 'text', cls: 'bob-pd-meta-input' });
       const cur = fm[key];
       if (type === 'date' && cur) {
         const d = new Date(cur);
@@ -5846,19 +5846,19 @@ export class CadenceAppView extends obsidian.ItemView {
     ];
     ((def.detailMetaFields || defaultMetaFields) as { key: string; label: string; type?: string }[]).forEach((mf) => mkMeta(mf.label, mf.key, mf.type));
 
-    const progWrap = hero.createDiv({ cls: 'cad-proj-progress-wrap cad-pd-progress' });
+    const progWrap = hero.createDiv({ cls: 'bob-proj-progress-wrap bob-pd-progress' });
     progWrap.dataset.pctBand = pctBand(meta.percent);
-    const progLabel = progWrap.createDiv({ cls: 'cad-proj-progress-label' });
+    const progLabel = progWrap.createDiv({ cls: 'bob-proj-progress-label' });
     progLabel.createSpan({ text: `${meta.done}/${meta.total} milestones complete` });
-    progLabel.createSpan({ cls: 'cad-proj-progress-pct', text: `${meta.percent}%` });
-    const bar = progWrap.createDiv({ cls: 'cad-proj-progress-bar' });
-    const fill = bar.createDiv({ cls: 'cad-proj-progress-fill' });
+    progLabel.createSpan({ cls: 'bob-proj-progress-pct', text: `${meta.percent}%` });
+    const bar = progWrap.createDiv({ cls: 'bob-proj-progress-bar' });
+    const fill = bar.createDiv({ cls: 'bob-proj-progress-fill' });
     fill.style.width = `${meta.percent}%`;
 
     /* Two-column body */
-    const cols = root.createDiv({ cls: 'cad-pd-cols' });
-    const left = cols.createDiv({ cls: 'cad-pd-col' });
-    const right = cols.createDiv({ cls: 'cad-pd-col' });
+    const cols = root.createDiv({ cls: 'bob-pd-cols' });
+    const left = cols.createDiv({ cls: 'bob-pd-col' });
+    const right = cols.createDiv({ cls: 'bob-pd-col' });
 
     /* ── Milestones ── */
     this._renderMilestoneSection(left, file, meta.milestones, flashSaved);
@@ -5880,28 +5880,28 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _renderMilestoneSection(parent: HTMLElement, file: obsidian.TFile, milestones: MilestoneItem[], flashSaved: () => void) {
-    const card = parent.createDiv({ cls: 'cad-pd-card' });
-    const head = card.createDiv({ cls: 'cad-pd-card-head' });
-    head.createDiv({ cls: 'cad-pd-card-title', text: `MILESTONES · ${milestones.filter((m) => m.done).length}/${milestones.length}` });
-    const addBtn = head.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Add' });
+    const card = parent.createDiv({ cls: 'bob-pd-card' });
+    const head = card.createDiv({ cls: 'bob-pd-card-head' });
+    head.createDiv({ cls: 'bob-pd-card-title', text: `MILESTONES · ${milestones.filter((m) => m.done).length}/${milestones.length}` });
+    const addBtn = head.createEl('button', { cls: 'bob-btn bob-btn-sm', text: '+ Add' });
 
-    const list = card.createDiv({ cls: 'cad-pd-checklist' });
+    const list = card.createDiv({ cls: 'bob-pd-checklist' });
     const renderRows = (items: MilestoneItem[]) => {
       list.empty();
       if (!items.length) {
-        list.createDiv({ cls: 'cad-empty', text: 'No milestones yet — add the first one.' });
+        list.createDiv({ cls: 'bob-empty', text: 'No milestones yet — add the first one.' });
         return;
       }
       items.forEach((m, idx) => {
-        const wrapper = list.createDiv({ cls: 'cad-mile-wrapper' });
-        const row = wrapper.createDiv({ cls: 'cad-pd-mile-row' + (m.done ? ' done' : '') });
+        const wrapper = list.createDiv({ cls: 'bob-mile-wrapper' });
+        const row = wrapper.createDiv({ cls: 'bob-pd-mile-row' + (m.done ? ' done' : '') });
         const cb = row.createEl('input', { type: 'checkbox' });
         cb.checked = !!m.done;
         cb.addEventListener('change', async () => {
           items[idx].done = cb.checked;
           await this._commitMilestones(file, items, flashSaved);
         });
-        const dateInp = row.createEl('input', { type: 'date', cls: 'cad-pd-mile-date' });
+        const dateInp = row.createEl('input', { type: 'date', cls: 'bob-pd-mile-date' });
         dateInp.lang = navigator.language || '';
         if (m.date instanceof Date && !isNaN(m.date.getTime())) {
           dateInp.value = m.date.toISOString().slice(0, 10);
@@ -5914,7 +5914,7 @@ export class CadenceAppView extends obsidian.ItemView {
             await this._commitMilestones(file, items, flashSaved, true);
           }, 350);
         });
-        const titleInp = row.createEl('input', { type: 'text', cls: 'cad-pd-mile-title' });
+        const titleInp = row.createEl('input', { type: 'text', cls: 'bob-pd-mile-title' });
         titleInp.value = m.title || '';
         titleInp.placeholder = 'Milestone title';
         let tt: ReturnType<typeof setTimeout> | undefined;
@@ -5925,7 +5925,7 @@ export class CadenceAppView extends obsidian.ItemView {
             await this._commitMilestones(file, items, flashSaved, true);
           }, 400);
         });
-        const del = row.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
+        const del = row.createEl('button', { cls: 'bob-btn bob-btn-sm bob-btn-danger', text: '×' });
         del.title = 'Delete milestone';
         del.addEventListener('click', async () => {
           items.splice(idx, 1);
@@ -5933,23 +5933,23 @@ export class CadenceAppView extends obsidian.ItemView {
         });
 
         // Notes section — preview ⇄ textarea, indented under the milestone in markdown
-        const notesEl = wrapper.createDiv({ cls: 'cad-mile-notes-section' });
+        const notesEl = wrapper.createDiv({ cls: 'bob-mile-notes-section' });
         const renderNotesIdle = () => {
           notesEl.empty();
           const hasNotes = (items[idx].notes || '').trim().length > 0;
           if (hasNotes) {
-            const preview = notesEl.createDiv({ cls: 'cad-mile-notes-preview' });
+            const preview = notesEl.createDiv({ cls: 'bob-mile-notes-preview' });
             preview.setText(items[idx].notes);
             preview.title = 'Click to edit notes';
             preview.addEventListener('click', openNotesEditor);
           } else {
-            const addBtn = notesEl.createEl('a', { cls: 'cad-mile-notes-add', text: '+ Add notes' });
+            const addBtn = notesEl.createEl('a', { cls: 'bob-mile-notes-add', text: '+ Add notes' });
             addBtn.addEventListener('click', (e) => { e.preventDefault(); openNotesEditor(); });
           }
         };
         const openNotesEditor = () => {
           notesEl.empty();
-          const ta = notesEl.createEl('textarea', { cls: 'cad-mile-notes-textarea' });
+          const ta = notesEl.createEl('textarea', { cls: 'bob-mile-notes-textarea' });
           ta.value = items[idx].notes || '';
           ta.placeholder = 'Notes — context, follow-ups, what happened…';
           const autosize = () => {
@@ -5997,21 +5997,21 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _renderTaskSection(parent: HTMLElement, file: obsidian.TFile, tasks: ProjectTaskItem[], flashSaved: () => void) {
-    const card = parent.createDiv({ cls: 'cad-pd-card' });
-    const head = card.createDiv({ cls: 'cad-pd-card-head' });
+    const card = parent.createDiv({ cls: 'bob-pd-card' });
+    const head = card.createDiv({ cls: 'bob-pd-card-head' });
     const open = tasks.filter((t) => !t.done).length;
-    head.createDiv({ cls: 'cad-pd-card-title', text: `TASKS · ${open} open · ${tasks.length - open} done` });
-    const addBtn = head.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Add' });
+    head.createDiv({ cls: 'bob-pd-card-title', text: `TASKS · ${open} open · ${tasks.length - open} done` });
+    const addBtn = head.createEl('button', { cls: 'bob-btn bob-btn-sm', text: '+ Add' });
 
-    const list = card.createDiv({ cls: 'cad-pd-checklist' });
+    const list = card.createDiv({ cls: 'bob-pd-checklist' });
     const renderRows = (items: ProjectTaskItem[]) => {
       list.empty();
       if (!items.length) {
-        list.createDiv({ cls: 'cad-empty', text: 'No tasks yet.' });
+        list.createDiv({ cls: 'bob-empty', text: 'No tasks yet.' });
         return;
       }
       items.forEach((t, idx) => {
-        const row = list.createDiv({ cls: 'cad-pd-task-row' + (t.done ? ' done' : '') });
+        const row = list.createDiv({ cls: 'bob-pd-task-row' + (t.done ? ' done' : '') });
         const cb = row.createEl('input', { type: 'checkbox' });
         cb.checked = !!t.done;
         cb.addEventListener('change', async () => {
@@ -6020,7 +6020,7 @@ export class CadenceAppView extends obsidian.ItemView {
           const txt = (items[idx].title || '').trim();
           if (txt) await this._propagateTaskComplete(txt, cb.checked, { kind: 'project', file });
         });
-        const titleInp = row.createEl('input', { type: 'text', cls: 'cad-pd-task-title' });
+        const titleInp = row.createEl('input', { type: 'text', cls: 'bob-pd-task-title' });
         titleInp.value = t.title || '';
         titleInp.placeholder = 'Task description';
         let tt: ReturnType<typeof setTimeout> | undefined;
@@ -6035,7 +6035,7 @@ export class CadenceAppView extends obsidian.ItemView {
         /* Bell — set or edit a reminder linked to this task. */
         const linked = findProjectTaskReminder(this.plugin, file.path, t.title || '');
         const bell = row.createEl('button', {
-          cls: 'cad-btn cad-btn-sm cad-pd-task-bell' + (linked ? ' linked' : ''),
+          cls: 'bob-btn bob-btn-sm bob-pd-task-bell' + (linked ? ' linked' : ''),
           text: linked ? '🔔' : '🔕',
         });
         bell.title = linked
@@ -6054,9 +6054,9 @@ export class CadenceAppView extends obsidian.ItemView {
           }
           const existing = findProjectTaskReminder(this.plugin, file.path, taskText);
           if (existing) {
-            new CadenceReminderEditModal(this.app, this.plugin, existing).open();
+            new BobReminderEditModal(this.app, this.plugin, existing).open();
           } else {
-            new CadenceReminderEditModal(this.app, this.plugin, {
+            new BobReminderEditModal(this.app, this.plugin, {
               text: taskText,
               when: null,
               repeat: 'none',
@@ -6066,7 +6066,7 @@ export class CadenceAppView extends obsidian.ItemView {
           }
         });
 
-        const del = row.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
+        const del = row.createEl('button', { cls: 'bob-btn bob-btn-sm bob-btn-danger', text: '×' });
         del.addEventListener('click', async () => {
           items.splice(idx, 1);
           await this._commitTasks(file, items, flashSaved);
@@ -6092,9 +6092,9 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _renderProjectTextSection(parent: HTMLElement, file: obsidian.TFile, sections: Record<string, string>, def: ProjectTextSectionDef, flashSaved: () => void) {
-    const card = parent.createDiv({ cls: 'cad-pd-card' });
-    card.createDiv({ cls: 'cad-pd-card-head' }).createDiv({ cls: 'cad-pd-card-title', text: def.label });
-    const ta = card.createEl('textarea', { cls: 'cad-pd-textarea' });
+    const card = parent.createDiv({ cls: 'bob-pd-card' });
+    card.createDiv({ cls: 'bob-pd-card-head' }).createDiv({ cls: 'bob-pd-card-title', text: def.label });
+    const ta = card.createEl('textarea', { cls: 'bob-pd-textarea' });
     ta.placeholder = def.placeholder || '';
     ta.rows = def.rows || 4;
     const initial = (sections[def.key] || '').replace(/^\s+|\s+$/g, '');
@@ -6127,7 +6127,7 @@ export class CadenceAppView extends obsidian.ItemView {
 
   /* ── Projects: rich card grid with milestone progress ─ */
   async renderProjectsView(root: HTMLElement) {
-    root.addClass('cadence-projects');
+    root.addClass('bob-projects');
     const def = ENTITIES.project;
     const files = listEntityFiles(this.app, 'project');
 
@@ -6139,11 +6139,11 @@ export class CadenceAppView extends obsidian.ItemView {
     this._renderPageHeader(root, 'Projects', `${files.length} ${files.length === 1 ? 'project' : 'projects'} in ${projectFolderLabel}${unsupportedText}`, (right, ctx) => {
       this._renderEntityViewSelect(right, 'project');
       if (def.externalBaseView) {
-        const openBaseBtn = right.createEl('button', { cls: 'cad-btn', text: 'Open Base' });
+        const openBaseBtn = right.createEl('button', { cls: 'bob-btn', text: 'Open Base' });
         openBaseBtn.addEventListener('click', () => this._openEntityBase('project'));
       }
       if (!ctx.hasConfiguredActions) {
-        const btn = right.createEl('button', { cls: 'cad-btn primary', text: '+ New Project' });
+        const btn = right.createEl('button', { cls: 'bob-btn primary', text: '+ New Project' });
         btn.addEventListener('click', () => this._createEntityFromPrompt('project'));
       }
     });
@@ -6152,9 +6152,9 @@ export class CadenceAppView extends obsidian.ItemView {
     this._renderUnsupportedBaseFilters(root, def);
 
     if (!files.length) {
-      const empty = root.createDiv({ cls: 'cad-empty-state' });
-      empty.createDiv({ cls: 'cad-empty-state-title', text: 'No projects yet' });
-      empty.createDiv({ cls: 'cad-empty-state-desc', text: 'Hit "+ New Project" — you\'ll get a templated note with Brief, Scope, Milestones, Tasks, Risks and Stakeholders sections ready to fill in.' });
+      const empty = root.createDiv({ cls: 'bob-empty-state' });
+      empty.createDiv({ cls: 'bob-empty-state-title', text: 'No projects yet' });
+      empty.createDiv({ cls: 'bob-empty-state-desc', text: 'Hit "+ New Project" — you\'ll get a templated note with Brief, Scope, Milestones, Tasks, Risks and Stakeholders sections ready to fill in.' });
       return;
     }
 
@@ -6174,48 +6174,48 @@ export class CadenceAppView extends obsidian.ItemView {
       groups[key].push(p);
     });
 
-    const grid = root.createDiv({ cls: 'cad-proj-grid' });
+    const grid = root.createDiv({ cls: 'bob-proj-grid' });
     const renderCard = (p: typeof projects[number]) => {
-      const card = grid.createDiv({ cls: 'cad-proj-card' });
-      const head = card.createDiv({ cls: 'cad-proj-card-head' });
-      const title = head.createEl('a', { cls: 'cad-proj-title', text: entityValue(p.entity, 'name', def) || p.entity.basename });
+      const card = grid.createDiv({ cls: 'bob-proj-card' });
+      const head = card.createDiv({ cls: 'bob-proj-card-head' });
+      const title = head.createEl('a', { cls: 'bob-proj-title', text: entityValue(p.entity, 'name', def) || p.entity.basename });
       title.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); this.openEntityDetailFromFile(p.entity.file); });
       card.classList.add('clickable');
       card.addEventListener('click', () => this.openEntityDetailFromFile(p.entity.file));
       const status = String(entityValue(p.entity, 'status', def) || 'active');
       const priority = String(entityValue(p.entity, 'priority', def) || '');
-      const pillRow = head.createDiv({ cls: 'cad-proj-pills' });
-      pillRow.createSpan({ cls: `cad-pill cad-pill-${status.toLowerCase().replace(/\s+/g, '-')}`, text: status });
-      if (priority) pillRow.createSpan({ cls: `cad-pill cad-pill-prio-${priority.toLowerCase()}`, text: priority });
+      const pillRow = head.createDiv({ cls: 'bob-proj-pills' });
+      pillRow.createSpan({ cls: `bob-pill bob-pill-${status.toLowerCase().replace(/\s+/g, '-')}`, text: status });
+      if (priority) pillRow.createSpan({ cls: `bob-pill bob-pill-prio-${priority.toLowerCase()}`, text: priority });
 
-      const metaRow = card.createDiv({ cls: 'cad-proj-meta' });
+      const metaRow = card.createDiv({ cls: 'bob-proj-meta' });
       const owner = entityValue(p.entity, 'owner', def);
       const due = entityValue(p.entity, 'due', def);
       if (owner) metaRow.createSpan({ text: `Owner: ${owner}` });
       if (due) metaRow.createSpan({ text: `Due: ${fmtValue(due, 'date')}` });
 
       // Progress
-      const progWrap = card.createDiv({ cls: 'cad-proj-progress-wrap' });
+      const progWrap = card.createDiv({ cls: 'bob-proj-progress-wrap' });
       progWrap.dataset.pctBand = pctBand(p.meta.percent);
-      const progLabel = progWrap.createDiv({ cls: 'cad-proj-progress-label' });
+      const progLabel = progWrap.createDiv({ cls: 'bob-proj-progress-label' });
       progLabel.createSpan({ text: `${p.meta.done}/${p.meta.total} milestones` });
-      progLabel.createSpan({ cls: 'cad-proj-progress-pct', text: `${p.meta.percent}%` });
-      const bar = progWrap.createDiv({ cls: 'cad-proj-progress-bar' });
-      const fill = bar.createDiv({ cls: 'cad-proj-progress-fill' });
+      progLabel.createSpan({ cls: 'bob-proj-progress-pct', text: `${p.meta.percent}%` });
+      const bar = progWrap.createDiv({ cls: 'bob-proj-progress-bar' });
+      const fill = bar.createDiv({ cls: 'bob-proj-progress-fill' });
       fill.style.width = `${p.meta.percent}%`;
 
       // Next milestone
       if (p.meta.next) {
-        const nextRow = card.createDiv({ cls: 'cad-proj-next' });
-        nextRow.createSpan({ cls: 'cad-proj-next-label', text: 'NEXT · ' });
-        nextRow.createSpan({ cls: 'cad-proj-next-date', text: fmtValue(p.meta.next.date, 'date') });
+        const nextRow = card.createDiv({ cls: 'bob-proj-next' });
+        nextRow.createSpan({ cls: 'bob-proj-next-label', text: 'NEXT · ' });
+        nextRow.createSpan({ cls: 'bob-proj-next-date', text: fmtValue(p.meta.next.date, 'date') });
         if (p.meta.next.title) nextRow.createSpan({ text: ` — ${p.meta.next.title}` });
       }
     };
 
     const renderSection = (label: string, list: typeof projects) => {
       if (!list.length) return;
-      root.createDiv({ cls: 'cad-section-label-lg', text: label });
+      root.createDiv({ cls: 'bob-section-label-lg', text: label });
       list.forEach(renderCard);
     };
 
@@ -6227,39 +6227,39 @@ export class CadenceAppView extends obsidian.ItemView {
     order.forEach((key) => {
       const list = groups[key];
       if (!list.length) return;
-      root.createDiv({ cls: 'cad-section-label-lg', text: sectionLabels[key] });
-      const section = root.createDiv({ cls: 'cad-proj-grid' });
+      root.createDiv({ cls: 'bob-section-label-lg', text: sectionLabels[key] });
+      const section = root.createDiv({ cls: 'bob-proj-grid' });
       list.forEach((p) => {
-        const card = section.createDiv({ cls: 'cad-proj-card' });
-        const head = card.createDiv({ cls: 'cad-proj-card-head' });
-        const title = head.createEl('a', { cls: 'cad-proj-title', text: entityValue(p.entity, 'name', def) || p.entity.basename });
+        const card = section.createDiv({ cls: 'bob-proj-card' });
+        const head = card.createDiv({ cls: 'bob-proj-card-head' });
+        const title = head.createEl('a', { cls: 'bob-proj-title', text: entityValue(p.entity, 'name', def) || p.entity.basename });
         title.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); this.openEntityDetailFromFile(p.entity.file); });
         card.classList.add('clickable');
         card.addEventListener('click', () => this.openEntityDetailFromFile(p.entity.file));
         const status = String(entityValue(p.entity, 'status', def) || 'active');
         const priority = String(entityValue(p.entity, 'priority', def) || '');
-        const pillRow = head.createDiv({ cls: 'cad-proj-pills' });
-        pillRow.createSpan({ cls: `cad-pill cad-pill-${status.toLowerCase().replace(/\s+/g, '-')}`, text: status });
-        if (priority) pillRow.createSpan({ cls: `cad-pill cad-pill-prio-${priority.toLowerCase()}`, text: priority });
+        const pillRow = head.createDiv({ cls: 'bob-proj-pills' });
+        pillRow.createSpan({ cls: `bob-pill bob-pill-${status.toLowerCase().replace(/\s+/g, '-')}`, text: status });
+        if (priority) pillRow.createSpan({ cls: `bob-pill bob-pill-prio-${priority.toLowerCase()}`, text: priority });
 
-        const metaRow = card.createDiv({ cls: 'cad-proj-meta' });
+        const metaRow = card.createDiv({ cls: 'bob-proj-meta' });
         const owner = entityValue(p.entity, 'owner', def);
         const due = entityValue(p.entity, 'due', def);
         if (owner) metaRow.createSpan({ text: `Owner: ${owner}` });
         if (due) metaRow.createSpan({ text: `Due: ${fmtValue(due, 'date')}` });
 
-        const progWrap = card.createDiv({ cls: 'cad-proj-progress-wrap' });
-        const progLabel = progWrap.createDiv({ cls: 'cad-proj-progress-label' });
+        const progWrap = card.createDiv({ cls: 'bob-proj-progress-wrap' });
+        const progLabel = progWrap.createDiv({ cls: 'bob-proj-progress-label' });
         progLabel.createSpan({ text: `${p.meta.done}/${p.meta.total} milestones` });
-        progLabel.createSpan({ cls: 'cad-proj-progress-pct', text: `${p.meta.percent}%` });
-        const bar = progWrap.createDiv({ cls: 'cad-proj-progress-bar' });
-        const fill = bar.createDiv({ cls: 'cad-proj-progress-fill' });
+        progLabel.createSpan({ cls: 'bob-proj-progress-pct', text: `${p.meta.percent}%` });
+        const bar = progWrap.createDiv({ cls: 'bob-proj-progress-bar' });
+        const fill = bar.createDiv({ cls: 'bob-proj-progress-fill' });
         fill.style.width = `${p.meta.percent}%`;
 
         if (p.meta.next) {
-          const nextRow = card.createDiv({ cls: 'cad-proj-next' });
-          nextRow.createSpan({ cls: 'cad-proj-next-label', text: 'NEXT · ' });
-          nextRow.createSpan({ cls: 'cad-proj-next-date', text: fmtValue(p.meta.next.date, 'date') });
+          const nextRow = card.createDiv({ cls: 'bob-proj-next' });
+          nextRow.createSpan({ cls: 'bob-proj-next-label', text: 'NEXT · ' });
+          nextRow.createSpan({ cls: 'bob-proj-next-date', text: fmtValue(p.meta.next.date, 'date') });
           if (p.meta.next.title) nextRow.createSpan({ text: ` — ${p.meta.next.title}` });
         }
       });
@@ -6268,7 +6268,7 @@ export class CadenceAppView extends obsidian.ItemView {
 
   /* ── Home / Command Centre ───────────────── */
   async renderHome(root: HTMLElement) {
-    root.addClass('cadence-home');
+    root.addClass('bob-home');
     const today = new Date();
     const dateStr = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     this._renderPageHeader(root, `${greeting()}.`, dateStr);
@@ -6277,7 +6277,7 @@ export class CadenceAppView extends obsidian.ItemView {
 
   /* ── Inbox (Planner reminders + captures) ── */
   async renderInbox(root: HTMLElement) {
-    root.addClass('cadence-inbox');
+    root.addClass('bob-inbox');
     const all = (this.plugin.settings.reminders || []).filter((r) => !r.done);
 
     // Sort: scheduled by when, captures by createdAt
@@ -6296,15 +6296,15 @@ export class CadenceAppView extends obsidian.ItemView {
 
     this._renderPageHeader(root, 'Inbox', `${all.length} ${all.length === 1 ? 'item' : 'items'} · capture once, surface at the right time`, (right, ctx) => {
       if (!ctx.hasConfiguredActions) {
-        const captureBtn = right.createEl('button', { cls: 'cad-btn primary', text: '+ Quick capture' });
+        const captureBtn = right.createEl('button', { cls: 'bob-btn primary', text: '+ Quick capture' });
         captureBtn.addEventListener('click', () => this.plugin.openQuickCapture());
       }
     });
 
     if (!all.length) {
-      const empty = root.createDiv({ cls: 'cad-empty-state' });
-      empty.createDiv({ cls: 'cad-empty-state-title', text: 'Inbox zero' });
-      empty.createDiv({ cls: 'cad-empty-state-desc', text: 'Capture anything with + Quick capture above (or Cmd+Shift+I). Add a time and BOB Workspace will remind you.' });
+      const empty = root.createDiv({ cls: 'bob-empty-state' });
+      empty.createDiv({ cls: 'bob-empty-state-title', text: 'Inbox zero' });
+      empty.createDiv({ cls: 'bob-empty-state-desc', text: 'Capture anything with + Quick capture above (or Cmd+Shift+I). Add a time and BOB Workspace will remind you.' });
       return;
     }
 
@@ -6312,8 +6312,8 @@ export class CadenceAppView extends obsidian.ItemView {
     ['now', 'today', 'week', 'later'].forEach((key) => {
       const items = buckets[key];
       if (!items.length) return;
-      root.createDiv({ cls: 'cad-section-label-lg', text: `${sectionLabels[key]} · ${items.length}` });
-      const list = root.createDiv({ cls: 'cad-inbox-list' });
+      root.createDiv({ cls: 'bob-section-label-lg', text: `${sectionLabels[key]} · ${items.length}` });
+      const list = root.createDiv({ cls: 'bob-inbox-list' });
       items.forEach((r) => this._renderInboxRow(list, r, key));
     });
 
@@ -6348,28 +6348,28 @@ export class CadenceAppView extends obsidian.ItemView {
 
     if (!totalOpen) return;
 
-    root.createDiv({ cls: 'cad-section-label-lg', text: `PROJECT TASKS · ${totalOpen} open across ${groups.length} ${groups.length === 1 ? 'project' : 'projects'}` });
-    const wrap = root.createDiv({ cls: 'cad-pt-wrap' });
+    root.createDiv({ cls: 'bob-section-label-lg', text: `PROJECT TASKS · ${totalOpen} open across ${groups.length} ${groups.length === 1 ? 'project' : 'projects'}` });
+    const wrap = root.createDiv({ cls: 'bob-pt-wrap' });
 
     groups.forEach((g) => {
-      const card = wrap.createDiv({ cls: 'cad-pt-group' });
-      const head = card.createDiv({ cls: 'cad-pt-group-head' });
-      const link = head.createEl('a', { cls: 'cad-pt-group-link', text: '📁 ' + g.name });
+      const card = wrap.createDiv({ cls: 'bob-pt-group' });
+      const head = card.createDiv({ cls: 'bob-pt-group-head' });
+      const link = head.createEl('a', { cls: 'bob-pt-group-link', text: '📁 ' + g.name });
       link.addEventListener('click', (e) => { e.preventDefault(); this.openEntityDetailFromFile(g.file); });
-      head.createSpan({ cls: 'cad-pt-group-meta', text: `${g.tasks.length} open` });
+      head.createSpan({ cls: 'bob-pt-group-meta', text: `${g.tasks.length} open` });
 
-      const list = card.createDiv({ cls: 'cad-pt-list' });
+      const list = card.createDiv({ cls: 'bob-pt-list' });
       g.tasks.forEach((t) => {
         const linked = findProjectTaskReminder(this.plugin, g.file.path, t.title);
-        const row = list.createDiv({ cls: 'cad-pt-row' });
-        row.createSpan({ cls: 'cad-pt-bullet', text: '•' });
-        const txt = row.createSpan({ cls: 'cad-pt-text', text: t.title });
+        const row = list.createDiv({ cls: 'bob-pt-row' });
+        row.createSpan({ cls: 'bob-pt-bullet', text: '•' });
+        const txt = row.createSpan({ cls: 'bob-pt-text', text: t.title });
         void txt;
         if (linked && linked.when) {
-          row.createSpan({ cls: 'cad-pt-when', text: reminderTimeStr(linked.when) });
+          row.createSpan({ cls: 'bob-pt-when', text: reminderTimeStr(linked.when) });
         }
         const bell = row.createEl('button', {
-          cls: 'cad-btn cad-btn-sm cad-pt-bell' + (linked ? ' linked' : ''),
+          cls: 'bob-btn bob-btn-sm bob-pt-bell' + (linked ? ' linked' : ''),
           text: linked ? '🔔' : '🔕',
         });
         bell.title = linked ? 'Edit reminder' : 'Set a reminder';
@@ -6377,9 +6377,9 @@ export class CadenceAppView extends obsidian.ItemView {
           ev.stopPropagation();
           const existing = findProjectTaskReminder(this.plugin, g.file.path, t.title);
           if (existing) {
-            new CadenceReminderEditModal(this.app, this.plugin, existing).open();
+            new BobReminderEditModal(this.app, this.plugin, existing).open();
           } else {
-            new CadenceReminderEditModal(this.app, this.plugin, {
+            new BobReminderEditModal(this.app, this.plugin, {
               text: t.title,
               when: null,
               repeat: 'none',
@@ -6394,25 +6394,25 @@ export class CadenceAppView extends obsidian.ItemView {
   }
 
   _renderInboxRow(parent: HTMLElement, r: ReminderLike, bucket: string) {
-    const row = parent.createDiv({ cls: 'cad-inbox-row' + (bucket === 'now' ? ' overdue' : '') });
+    const row = parent.createDiv({ cls: 'bob-inbox-row' + (bucket === 'now' ? ' overdue' : '') });
 
-    const left = row.createDiv({ cls: 'cad-inbox-row-left' });
-    const tWrap = left.createDiv({ cls: 'cad-inbox-time' });
+    const left = row.createDiv({ cls: 'bob-inbox-row-left' });
+    const tWrap = left.createDiv({ cls: 'bob-inbox-time' });
     if (r.when) {
-      tWrap.createSpan({ cls: 'cad-inbox-time-text', text: reminderTimeStr(r.when) });
+      tWrap.createSpan({ cls: 'bob-inbox-time-text', text: reminderTimeStr(r.when) });
       if (r.repeat && r.repeat !== 'none') {
-        tWrap.createSpan({ cls: 'cad-inbox-repeat', text: r.repeat === 'daily' ? '↻ daily' : '↻ weekly' });
+        tWrap.createSpan({ cls: 'bob-inbox-repeat', text: r.repeat === 'daily' ? '↻ daily' : '↻ weekly' });
       }
     } else {
-      tWrap.createSpan({ cls: 'cad-inbox-time-text muted', text: 'unscheduled' });
+      tWrap.createSpan({ cls: 'bob-inbox-time-text muted', text: 'unscheduled' });
     }
 
-    const main = row.createDiv({ cls: 'cad-inbox-row-main' });
-    main.createDiv({ cls: 'cad-inbox-row-text', text: r.text });
+    const main = row.createDiv({ cls: 'bob-inbox-row-main' });
+    main.createDiv({ cls: 'bob-inbox-row-text', text: r.text });
 
     if (r.project) {
-      const chipRow = main.createDiv({ cls: 'cad-inbox-row-meta-row' });
-      const chip = chipRow.createEl('a', { cls: 'cad-rem-project-chip', text: '📁 ' + (projectNameFromPath(this.app, r.project) || 'Project') });
+      const chipRow = main.createDiv({ cls: 'bob-inbox-row-meta-row' });
+      const chip = chipRow.createEl('a', { cls: 'bob-rem-project-chip', text: '📁 ' + (projectNameFromPath(this.app, r.project) || 'Project') });
       chip.title = 'Open project';
       chip.addEventListener('click', (ev) => {
         ev.preventDefault();
@@ -6425,22 +6425,22 @@ export class CadenceAppView extends obsidian.ItemView {
     if (r.notes) {
       const previewLine = String(r.notes).split('\n').find((l) => l.trim()) || '';
       if (previewLine) {
-        const note = main.createDiv({ cls: 'cad-inbox-row-notes' });
-        note.createSpan({ cls: 'cad-inbox-row-notes-icon', text: '📝 ' });
+        const note = main.createDiv({ cls: 'bob-inbox-row-notes' });
+        note.createSpan({ cls: 'bob-inbox-row-notes-icon', text: '📝 ' });
         note.appendText(previewLine.length > 120 ? previewLine.slice(0, 117) + '…' : previewLine);
       }
     }
 
     // Row body click → open edit modal
-    const openEdit = () => new CadenceReminderEditModal(this.app, this.plugin, r).open();
+    const openEdit = () => new BobReminderEditModal(this.app, this.plugin, r).open();
     left.addEventListener('click', openEdit);
     main.addEventListener('click', openEdit);
     left.style.cursor = 'pointer';
     main.style.cursor = 'pointer';
 
-    const actions = row.createDiv({ cls: 'cad-inbox-actions' });
+    const actions = row.createDiv({ cls: 'bob-inbox-actions' });
     const mk = (label: string, title: string, fn: () => void) => {
-      const b = actions.createEl('button', { cls: 'cad-btn cad-btn-sm', text: label });
+      const b = actions.createEl('button', { cls: 'bob-btn bob-btn-sm', text: label });
       b.title = title;
       b.addEventListener('click', (ev) => { ev.stopPropagation(); fn(); });
       return b;
@@ -6464,7 +6464,7 @@ export class CadenceAppView extends obsidian.ItemView {
     const delBtn = mk('×', 'Delete', async () => {
       if (await confirmModal(this.app, 'Delete this reminder?', { title: 'Delete reminder', cta: 'Delete' })) this.plugin.deleteReminder(r.id);
     });
-    delBtn.classList.add('cad-btn-danger');
+    delBtn.classList.add('bob-btn-danger');
   }
 
   async _quickAddTodayTask() {
@@ -6492,17 +6492,17 @@ export class CadenceAppView extends obsidian.ItemView {
   /* ── CRM Dashboard ──────────────────────── */
   /* Reusable list card on the dashboard. */
   _dashCardSection(parent: HTMLElement, title: string, rows: ProviderRow[], emptyMsg: string) {
-    const card = parent.createDiv({ cls: 'cad-dash-card' });
-    card.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: title });
-    const body = card.createDiv({ cls: 'cad-dash-card-body' });
+    const card = parent.createDiv({ cls: 'bob-dash-card' });
+    card.createDiv({ cls: 'bob-dash-card-head' }).createDiv({ cls: 'bob-dash-card-title', text: title });
+    const body = card.createDiv({ cls: 'bob-dash-card-body' });
     if (!rows || !rows.length) {
-      body.createDiv({ cls: 'cad-empty', text: emptyMsg || 'Nothing here yet.' });
+      body.createDiv({ cls: 'bob-empty', text: emptyMsg || 'Nothing here yet.' });
       return;
     }
     rows.forEach((r) => {
-      const row = body.createDiv({ cls: 'cad-dash-row' });
-      row.createDiv({ cls: 'cad-dash-row-title', text: r.title });
-      row.createDiv({ cls: 'cad-dash-row-meta', text: r.meta });
+      const row = body.createDiv({ cls: 'bob-dash-row' });
+      row.createDiv({ cls: 'bob-dash-row-title', text: r.title });
+      row.createDiv({ cls: 'bob-dash-row-meta', text: r.meta });
       if (r.file) row.addEventListener('click', () => {
         if (r.entityKey) {
           this.openEntityDetail(r.entityKey, r.file);
@@ -6516,7 +6516,7 @@ export class CadenceAppView extends obsidian.ItemView {
   /* ── Reports: Productivity (over daily notes) ── */
   /* ── PRM Analytics ──────────────────────── */
   async renderPRMAnalytics(root: HTMLElement) {
-    root.addClass('cadence-report');
+    root.addClass('bob-report');
     const partnerDef = ENTITIES.partner;
     const dealDef = ENTITIES.deal;
     const partners = listEntities(this.app, 'partner');
@@ -6528,13 +6528,13 @@ export class CadenceAppView extends obsidian.ItemView {
 
     this._renderPageHeader(root, 'PRM analytics', 'Partner programme health, tier mix and revenue contribution');
 
-    const grid = root.createDiv({ cls: 'cad-stat-grid' });
+    const grid = root.createDiv({ cls: 'bob-stat-grid' });
     const stat = (label: string, value: string | number, sub: string, accent: string) => {
-      const c = grid.createDiv({ cls: 'cad-stat-card' });
+      const c = grid.createDiv({ cls: 'bob-stat-card' });
       if (accent) c.dataset.accent = accent;
-      c.createDiv({ cls: 'cad-stat-label', text: label });
-      c.createDiv({ cls: 'cad-stat-value', text: String(value) });
-      if (sub) c.createDiv({ cls: 'cad-stat-sub', text: sub });
+      c.createDiv({ cls: 'bob-stat-label', text: label });
+      c.createDiv({ cls: 'bob-stat-value', text: String(value) });
+      if (sub) c.createDiv({ cls: 'bob-stat-sub', text: sub });
     };
     stat('PARTNERS',         partners.length,                            'on the books',                              'sky');
     stat('SOURCED DEALS',    partnerSourced.length,                      fmtValue(sumVal(partnerSourced), 'currency'),'mint');
@@ -6564,27 +6564,27 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     if (tierMap.size) {
-      root.createDiv({ cls: 'cad-section-label-lg', text: 'PARTNERS BY TIER' });
-      const tierCard = root.createDiv({ cls: 'cad-dash-card' });
+      root.createDiv({ cls: 'bob-section-label-lg', text: 'PARTNERS BY TIER' });
+      const tierCard = root.createDiv({ cls: 'bob-dash-card' });
       tierCard.style.margin = '0 36px 18px 36px';
-      const tierBody = tierCard.createDiv({ cls: 'cad-dash-card-body cad-mini-stat-row' });
+      const tierBody = tierCard.createDiv({ cls: 'bob-dash-card-body bob-mini-stat-row' });
       const tierAccent: Record<string, string> = { 'Gold': 'warn', 'Silver': 'sky', 'Bronze': 'rose', 'Standard': 'mint', 'Untiered': 'mint' };
       [...tierMap.entries()].sort((a, b) => b[1] - a[1]).forEach(([tier, count]) => {
         const value = tierValueMap.get(tier) || 0;
-        const mini = tierBody.createDiv({ cls: 'cad-mini-stat' });
+        const mini = tierBody.createDiv({ cls: 'bob-mini-stat' });
         mini.dataset.accent = tierAccent[tier] || 'sky';
-        mini.createDiv({ cls: 'cad-mini-stat-value', text: String(count) });
-        mini.createDiv({ cls: 'cad-mini-stat-label', text: tier.toUpperCase() });
-        const sub = mini.createDiv({ cls: 'cad-stat-sub' });
+        mini.createDiv({ cls: 'bob-mini-stat-value', text: String(count) });
+        mini.createDiv({ cls: 'bob-mini-stat-label', text: tier.toUpperCase() });
+        const sub = mini.createDiv({ cls: 'bob-stat-sub' });
         sub.style.marginTop = '4px';
         sub.setText(value > 0 ? fmtValue(value, 'currency') : '—');
       });
     }
 
     /* Two-col: top partners by revenue + funnel */
-    const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    const left  = cols.createDiv({ cls: 'cad-dash-col' });
-    const right = cols.createDiv({ cls: 'cad-dash-col' });
+    const cols = root.createDiv({ cls: 'bob-dash-cols' });
+    const left  = cols.createDiv({ cls: 'bob-dash-col' });
+    const right = cols.createDiv({ cls: 'bob-dash-col' });
 
     // Top partners by won revenue
     const partnerRevenue = new Map();
@@ -6610,15 +6610,15 @@ export class CadenceAppView extends obsidian.ItemView {
     const sourcedOpen = partnerSourced.filter((e) => !dealTerminalStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
     const sourcedLost = partnerSourced.filter((e) => dealLostStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
     const conv = partnerSourced.length === 0 ? 0 : Math.round((partnerWon.length / partnerSourced.length) * 100);
-    const funnelCard = right.createDiv({ cls: 'cad-dash-card' });
-    funnelCard.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: 'PARTNER FUNNEL' });
-    const funnelBody = funnelCard.createDiv({ cls: 'cad-dash-card-body cad-mini-stat-row' });
+    const funnelCard = right.createDiv({ cls: 'bob-dash-card' });
+    funnelCard.createDiv({ cls: 'bob-dash-card-head' }).createDiv({ cls: 'bob-dash-card-title', text: 'PARTNER FUNNEL' });
+    const funnelBody = funnelCard.createDiv({ cls: 'bob-dash-card-body bob-mini-stat-row' });
     const mkF = (label: string, val: string | number, sub: string, accent: string) => {
-      const m = funnelBody.createDiv({ cls: 'cad-mini-stat' });
+      const m = funnelBody.createDiv({ cls: 'bob-mini-stat' });
       m.dataset.accent = accent;
-      m.createDiv({ cls: 'cad-mini-stat-value', text: String(val) });
-      m.createDiv({ cls: 'cad-mini-stat-label', text: label });
-      const s = m.createDiv({ cls: 'cad-stat-sub' });
+      m.createDiv({ cls: 'bob-mini-stat-value', text: String(val) });
+      m.createDiv({ cls: 'bob-mini-stat-label', text: label });
+      const s = m.createDiv({ cls: 'bob-stat-sub' });
       s.style.marginTop = '4px';
       s.setText(sub);
     };
@@ -6627,17 +6627,17 @@ export class CadenceAppView extends obsidian.ItemView {
     mkF('WON',     partnerWon.length,     fmtValue(sumVal(partnerWon),     'currency'), 'emerald');
     mkF('LOST',    sourcedLost.length,    fmtValue(sumVal(sourcedLost),    'currency'), 'rose');
 
-    const convCard = right.createDiv({ cls: 'cad-dash-card' });
-    convCard.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: `CONVERSION · sourced → won` });
-    const convBody = convCard.createDiv({ cls: 'cad-dash-card-body' });
+    const convCard = right.createDiv({ cls: 'bob-dash-card' });
+    convCard.createDiv({ cls: 'bob-dash-card-head' }).createDiv({ cls: 'bob-dash-card-title', text: `CONVERSION · sourced → won` });
+    const convBody = convCard.createDiv({ cls: 'bob-dash-card-body' });
     convBody.style.padding = '20px 16px';
-    const convWrap = convBody.createDiv({ cls: 'cad-proj-progress-wrap' });
+    const convWrap = convBody.createDiv({ cls: 'bob-proj-progress-wrap' });
     convWrap.dataset.pctBand = pctBand(conv);
-    const convLabel = convWrap.createDiv({ cls: 'cad-proj-progress-label' });
+    const convLabel = convWrap.createDiv({ cls: 'bob-proj-progress-label' });
     convLabel.createSpan({ text: `${partnerWon.length}/${partnerSourced.length} sourced deals won` });
-    convLabel.createSpan({ cls: 'cad-proj-progress-pct', text: `${conv}%` });
-    const convBar = convWrap.createDiv({ cls: 'cad-proj-progress-bar' });
-    const convFill = convBar.createDiv({ cls: 'cad-proj-progress-fill' });
+    convLabel.createSpan({ cls: 'bob-proj-progress-pct', text: `${conv}%` });
+    const convBar = convWrap.createDiv({ cls: 'bob-proj-progress-bar' });
+    const convFill = convBar.createDiv({ cls: 'bob-proj-progress-fill' });
     convFill.style.width = `${conv}%`;
   }
 
@@ -6659,14 +6659,14 @@ export class CadenceAppView extends obsidian.ItemView {
 
   /* ── Settings (opens Obsidian settings → BOB Workspace) ─ */
   async openSettingsTab(root: HTMLElement) {
-    root.addClass('cadence-soon');
-    const wrap = root.createDiv({ cls: 'cad-soon-wrap' });
-    const ic = wrap.createDiv({ cls: 'cad-soon-icon' });
+    root.addClass('bob-soon');
+    const wrap = root.createDiv({ cls: 'bob-soon-wrap' });
+    const ic = wrap.createDiv({ cls: 'bob-soon-icon' });
     try { obsidian.setIcon(ic, 'settings-2'); } catch (_) {}
-    wrap.createDiv({ cls: 'cad-eyebrow', text: 'BOB WORKSPACE' });
-    wrap.createDiv({ cls: 'cad-soon-title', text: 'Settings' });
-    wrap.createDiv({ cls: 'cad-soon-desc', text: 'Configure folders, headings, week start, default tab, and the future BOB Workspace backend connection.' });
-    const btn = wrap.createEl('button', { cls: 'cad-btn primary', text: 'Open BOB Workspace settings' });
+    wrap.createDiv({ cls: 'bob-eyebrow', text: 'BOB WORKSPACE' });
+    wrap.createDiv({ cls: 'bob-soon-title', text: 'Settings' });
+    wrap.createDiv({ cls: 'bob-soon-desc', text: 'Configure folders, headings, week start, default tab, and the future BOB Workspace backend connection.' });
+    const btn = wrap.createEl('button', { cls: 'bob-btn primary', text: 'Open BOB Workspace settings' });
     btn.style.marginTop = '12px';
     btn.addEventListener('click', () => {
       (this.app as AppWithInternals).setting.open();
@@ -6771,10 +6771,10 @@ export class CadenceAppView extends obsidian.ItemView {
     await this.app.vault.modify(file, next);
   }
 
-  /* ── Cadence-styled prompt modal ─ */
+  /* ── BOB Workspace prompt modal ─ */
   _prompt(opts: { title?: string; placeholder?: string; defaultValue?: string; cta?: string }) {
     return new Promise((resolve) => {
-      new CadencePromptModal(this.app, {
+      new BobPromptModal(this.app, {
         title: opts.title || 'Enter a name',
         placeholder: opts.placeholder || '',
         defaultValue: opts.defaultValue || '',
@@ -6786,7 +6786,7 @@ export class CadenceAppView extends obsidian.ItemView {
 
   async _createEntityFromPrompt(entityKey: string) {
     const def = ENTITIES[entityKey];
-    new CadenceEntityCreateModal(this.app, entityKey, {
+    new BobEntityCreateModal(this.app, entityKey, {
       onSubmit: async (result) => {
         if (!result) return;
         try {
@@ -6814,22 +6814,22 @@ export class CadenceAppView extends obsidian.ItemView {
 
   /* ── Today pane ─────────────────────────── */
   async renderTodayPane(root: HTMLElement) {
-    root.addClass('cadence-today');
+    root.addClass('bob-today');
     this.todayFile = await ensureDailyNote(this.app, this.plugin.settings) as obsidian.TFile;
     const fileContent = await this.app.vault.read(this.todayFile);
     this.todayParsed = parseSections(fileContent, this.plugin.settings);
 
     const info = dateInfo();
-    root.createDiv({ cls: 'cad-eyebrow', text: info.weekday.toUpperCase() });
-    const hero = root.createDiv({ cls: 'cad-date-hero' });
-    hero.createSpan({ cls: 'cad-day', text: String(info.day) });
+    root.createDiv({ cls: 'bob-eyebrow', text: info.weekday.toUpperCase() });
+    const hero = root.createDiv({ cls: 'bob-date-hero' });
+    hero.createSpan({ cls: 'bob-day', text: String(info.day) });
     const monthCol = hero.createDiv();
-    monthCol.createDiv({ cls: 'cad-month', text: info.month });
-    monthCol.createDiv({ cls: 'cad-year',  text: String(info.year) });
+    monthCol.createDiv({ cls: 'bob-month', text: info.month });
+    monthCol.createDiv({ cls: 'bob-year',  text: String(info.year) });
 
     const taskCount = this.todayParsed.tasks.filter((l) => / \[ \] /.test(l)).length;
     root.createDiv({
-      cls: 'cad-greet',
+      cls: 'bob-greet',
       text: taskCount === 0
         ? `${greeting()}. Nothing on the books — your day is clear.`
         : `${greeting()}. You have ${taskCount} ${taskCount === 1 ? 'thing' : 'things'} to handle.`,
@@ -6837,33 +6837,33 @@ export class CadenceAppView extends obsidian.ItemView {
 
     /* Tasks */
     const taskMode = this.plugin.settings.taskMode || 'checkbox';
-    const taskSection = root.createDiv({ cls: 'cad-section' });
-    const taskLabel = taskSection.createDiv({ cls: 'cad-section-label' });
+    const taskSection = root.createDiv({ cls: 'bob-section' });
+    const taskLabel = taskSection.createDiv({ cls: 'bob-section-label' });
     taskLabel.createSpan({ text: 'TODAY' });
 
     /* ── Checkbox tasks (checkbox + hybrid) ── */
     if (taskMode === 'checkbox' || taskMode === 'hybrid') {
       const total = this.todayParsed.tasks.length;
       const open  = this.todayParsed.tasks.filter((l) => / \[ \] /.test(l)).length;
-      taskLabel.createSpan({ cls: 'cad-count', text: `${open} open · ${total - open} done` });
+      taskLabel.createSpan({ cls: 'bob-count', text: `${open} open · ${total - open} done` });
 
       if (!this.todayParsed.tasks.length) {
-        taskSection.createDiv({ cls: 'cad-empty', text: 'No tasks in today\'s note yet.' });
+        taskSection.createDiv({ cls: 'bob-empty', text: 'No tasks in today\'s note yet.' });
       } else {
         const dailyPath = this.todayFile.path;
         this.todayParsed.tasks.forEach((rawLine, idx) => {
           const checked = / \[(x|X)\] /.test(rawLine);
           const text    = rawLine.replace(/^\s*-\s\[(x|X| )\]\s/, '');
-          const row = taskSection.createDiv({ cls: 'cad-task-row' + (checked ? ' done' : '') });
+          const row = taskSection.createDiv({ cls: 'bob-task-row' + (checked ? ' done' : '') });
           const cb = row.createEl('input', { type: 'checkbox' });
           cb.checked = checked;
           cb.addEventListener('change', () => this.toggleTodayTask(idx, cb.checked));
-          row.createSpan({ cls: 'cad-task-text', text });
+          row.createSpan({ cls: 'bob-task-text', text });
 
           /* Project link */
           const linkedProject = this._getTaskProjectLink(dailyPath, text);
           if (linkedProject) {
-            const chip = row.createEl('a', { cls: 'cad-task-proj-chip', text: '📁 ' + (projectNameFromPath(this.app, linkedProject) || 'Project') });
+            const chip = row.createEl('a', { cls: 'bob-task-proj-chip', text: '📁 ' + (projectNameFromPath(this.app, linkedProject) || 'Project') });
             chip.title = 'Open linked project';
             chip.addEventListener('click', (ev) => {
               ev.preventDefault(); ev.stopPropagation();
@@ -6871,13 +6871,13 @@ export class CadenceAppView extends obsidian.ItemView {
               if (f instanceof obsidian.TFile) this.openEntityDetailFromFile(f);
             });
           }
-          const linkBtn = row.createEl('button', { cls: 'cad-task-link-btn' + (linkedProject ? ' linked' : ''), text: linkedProject ? '✎' : '📁' });
+          const linkBtn = row.createEl('button', { cls: 'bob-task-link-btn' + (linkedProject ? ' linked' : ''), text: linkedProject ? '✎' : '📁' });
           linkBtn.title = linkedProject ? 'Change linked project' : 'Link to a project';
           linkBtn.addEventListener('click', (ev) => { ev.stopPropagation(); this._openTaskProjectPicker(dailyPath, text, linkedProject); });
 
           /* Promote button (hybrid only) */
           if (taskMode === 'hybrid') {
-            const promBtn = row.createEl('button', { cls: 'cad-task-link-btn', text: '↑', title: 'Promote to TaskNote' });
+            const promBtn = row.createEl('button', { cls: 'bob-task-link-btn', text: '↑', title: 'Promote to TaskNote' });
             promBtn.addEventListener('click', async (ev) => {
               ev.stopPropagation();
               await createTaskNote(this.app, this.plugin.settings, text);
@@ -6890,28 +6890,28 @@ export class CadenceAppView extends obsidian.ItemView {
 
     /* ── TaskNotes (tasknotes + hybrid) ── */
     if (taskMode === 'tasknotes' || taskMode === 'hybrid') {
-      if (taskMode === 'hybrid') taskSection.createDiv({ cls: 'cad-section-label', text: 'TASKNOTES TODAY' });
+      if (taskMode === 'hybrid') taskSection.createDiv({ cls: 'bob-section-label', text: 'TASKNOTES TODAY' });
       const notes = listTodayTaskNotes(this.app, this.plugin.settings);
       if (!notes.length) {
-        taskSection.createDiv({ cls: 'cad-empty', text: 'No TaskNotes due today.' });
+        taskSection.createDiv({ cls: 'bob-empty', text: 'No TaskNotes due today.' });
       } else {
         if (taskMode === 'tasknotes') {
-          taskLabel.createSpan({ cls: 'cad-count', text: `${notes.length} due today` });
+          taskLabel.createSpan({ cls: 'bob-count', text: `${notes.length} due today` });
         }
         notes.forEach(({ file, fm }) => {
           const done = fm.status === 'done';
-          const row  = taskSection.createDiv({ cls: 'cad-task-row' + (done ? ' done' : '') });
+          const row  = taskSection.createDiv({ cls: 'bob-task-row' + (done ? ' done' : '') });
           const cb   = row.createEl('input', { type: 'checkbox' });
           cb.checked = done;
           cb.addEventListener('change', async () => {
             await toggleTaskNoteStatus(this.app, file, cb.checked);
             this.render();
           });
-          const lbl = row.createEl('a', { cls: 'cad-task-text', text: fm.title || file.basename });
+          const lbl = row.createEl('a', { cls: 'bob-task-text', text: fm.title || file.basename });
           lbl.title = 'Open TaskNote';
           lbl.addEventListener('click', (ev) => { ev.preventDefault(); this.app.workspace.openLinkText(file.path, '', false); });
           if (fm.priority && fm.priority !== 'normal') {
-            row.createSpan({ cls: 'cad-count', text: fm.priority });
+            row.createSpan({ cls: 'bob-count', text: fm.priority });
           }
         });
       }
@@ -6939,9 +6939,9 @@ export class CadenceAppView extends obsidian.ItemView {
     });
 
     /* Journal */
-    const journalSection = root.createDiv({ cls: 'cad-section' });
-    journalSection.createDiv({ cls: 'cad-section-label' }).setText('TODAY’S ENTRY');
-    const ta = journalSection.createEl('textarea', { cls: 'cad-journal' });
+    const journalSection = root.createDiv({ cls: 'bob-section' });
+    journalSection.createDiv({ cls: 'bob-section-label' }).setText('TODAY’S ENTRY');
+    const ta = journalSection.createEl('textarea', { cls: 'bob-journal' });
     ta.value = this.todayParsed.journal;
     ta.placeholder = 'Write what’s on your mind…';
     ta.rows = Math.max(8, ta.value.split('\n').length + 2);
@@ -6958,9 +6958,9 @@ export class CadenceAppView extends obsidian.ItemView {
     const footer = root.createDiv();
     footer.style.marginTop = '24px';
     footer.style.fontSize = '12px';
-    footer.style.color = 'var(--cad-ink-4)';
+    footer.style.color = 'var(--bob-ink-4)';
     const link = footer.createEl('a', { text: 'Open today\'s daily note →' });
-    link.style.color = 'var(--cad-emerald-deep)';
+    link.style.color = 'var(--bob-emerald-deep)';
     link.style.cursor = 'pointer';
     link.addEventListener('click', () => {
       this.app.workspace.openLinkText(this.todayFile.path, '', false);
@@ -7003,21 +7003,21 @@ export class CadenceAppView extends obsidian.ItemView {
 
   /* ── Planner pane ───────────────────────── */
   async renderPlannerPane(root: HTMLElement) {
-    root.addClass('cadence-planner');
+    root.addClass('bob-planner');
     const settings = this.plugin.settings;
     const days = weekDates(this.plannerAnchor, settings.weekStartsOn);
     const today = startOfDay(new Date());
 
-    const header = root.createDiv({ cls: 'cad-pl-header' });
-    const titleWrap = header.createDiv({ cls: 'cad-pl-title-wrap' });
-    titleWrap.createDiv({ cls: 'cad-eyebrow', text: 'WEEK OF' });
+    const header = root.createDiv({ cls: 'bob-pl-header' });
+    const titleWrap = header.createDiv({ cls: 'bob-pl-title-wrap' });
+    titleWrap.createDiv({ cls: 'bob-eyebrow', text: 'WEEK OF' });
     const startStr = days[0].toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
     const endStr   = days[6].toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
-    titleWrap.createDiv({ cls: 'cad-pl-title', text: `${startStr} – ${endStr}` });
+    titleWrap.createDiv({ cls: 'bob-pl-title', text: `${startStr} – ${endStr}` });
 
-    const nav = header.createDiv({ cls: 'cad-pl-nav' });
+    const nav = header.createDiv({ cls: 'bob-pl-nav' });
     const mkBtn = (label: string, fn: () => void, cls = '') => {
-      const b = nav.createEl('button', { text: label, cls: 'cad-pl-btn ' + cls });
+      const b = nav.createEl('button', { text: label, cls: 'bob-pl-btn ' + cls });
       b.addEventListener('click', fn);
     };
     mkBtn('◀',     () => { this.plannerAnchor = addDays(this.plannerAnchor, -7); this.render(); });
@@ -7042,31 +7042,31 @@ export class CadenceAppView extends obsidian.ItemView {
       });
     });
 
-    const stats = root.createDiv({ cls: 'cad-pl-stats' });
+    const stats = root.createDiv({ cls: 'bob-pl-stats' });
     const mkStat = (label: string, value: string | number) => {
-      const c = stats.createDiv({ cls: 'cad-pl-stat' });
-      c.createDiv({ cls: 'cad-pl-stat-label', text: label });
-      c.createDiv({ cls: 'cad-pl-stat-value', text: String(value) });
+      const c = stats.createDiv({ cls: 'bob-pl-stat' });
+      c.createDiv({ cls: 'bob-pl-stat-label', text: label });
+      c.createDiv({ cls: 'bob-pl-stat-value', text: String(value) });
     };
     mkStat('OPEN', totalOpen);
     mkStat('DONE', totalDone);
     mkStat('TOTAL', totalOpen + totalDone);
 
-    const grid = root.createDiv({ cls: 'cad-pl-grid' });
+    const grid = root.createDiv({ cls: 'bob-pl-grid' });
     dayData.forEach((d) => {
       const isToday = sameDay(d.date, today);
-      const col = grid.createDiv({ cls: 'cad-pl-day' + (isToday ? ' today' : '') });
+      const col = grid.createDiv({ cls: 'bob-pl-day' + (isToday ? ' today' : '') });
 
-      const colHead = col.createDiv({ cls: 'cad-pl-day-head' });
+      const colHead = col.createDiv({ cls: 'bob-pl-day-head' });
       colHead.createDiv({
-        cls: 'cad-pl-weekday',
+        cls: 'bob-pl-weekday',
         text: d.date.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase(),
       });
-      colHead.createDiv({ cls: 'cad-pl-daynum', text: String(d.date.getDate()) });
+      colHead.createDiv({ cls: 'bob-pl-daynum', text: String(d.date.getDate()) });
       const open = d.tasks.filter((l) => / \[ \] /.test(l)).length;
       const done = d.tasks.filter((l) => / \[(x|X)\] /.test(l)).length;
       colHead.createDiv({
-        cls: 'cad-pl-meta',
+        cls: 'bob-pl-meta',
         text: d.exists ? `${open} open · ${done} done` : 'no note',
       });
       colHead.addEventListener('click', async () => {
@@ -7076,14 +7076,14 @@ export class CadenceAppView extends obsidian.ItemView {
         this.app.workspace.openLinkText(d.path, '', false);
       });
 
-      const list = col.createDiv({ cls: 'cad-pl-tasks' });
+      const list = col.createDiv({ cls: 'bob-pl-tasks' });
       if (!d.tasks.length) {
-        list.createDiv({ cls: 'cad-empty', text: d.exists ? '—' : '' });
+        list.createDiv({ cls: 'bob-empty', text: d.exists ? '—' : '' });
       } else {
         d.tasks.forEach((rawLine, idx) => {
           const checked = / \[(x|X)\] /.test(rawLine);
           const text = rawLine.replace(/^\s*-\s\[(x|X| )\]\s/, '');
-          const row = list.createDiv({ cls: 'cad-pl-task' + (checked ? ' done' : '') });
+          const row = list.createDiv({ cls: 'bob-pl-task' + (checked ? ' done' : '') });
           const cb = row.createEl('input', { type: 'checkbox' });
           cb.checked = checked;
           cb.addEventListener('change', () => this.togglePlannerTask(d, idx, cb.checked));

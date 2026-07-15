@@ -185,7 +185,7 @@ export interface BobSettings {
   pinnedSurfaces: string[];
   dashboardState: Record<string, Record<string, JsonValue>>;
   currency: string;
-  cadenceAppDark: boolean;
+  bobAppDark: boolean;
   taskProjectLinks: Record<string, string>;
   modules: Record<string, boolean>;
   disabledSurfaces: string[];

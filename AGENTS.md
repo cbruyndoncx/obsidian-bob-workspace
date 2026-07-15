@@ -34,7 +34,7 @@ The plugin is written in **TypeScript** under `src/` and bundled by **esbuild** 
 
 Preserve the current BOB Workspace direction unless the user explicitly asks to change product identity or remove functionality.
 
-- User-facing branding is BOB Workspace, while internal compatibility names such as `CadencePlugin`, `CadenceAppView`, `cad-` CSS classes, command IDs, and `VIEW_TYPE_CADENCE_APP` intentionally remain.
+- Internal identifiers are now BOB-branded: `BobPlugin`, `BobAppView`, `Bob*` classes, `bob-`/`bob-workspace-*` CSS classes and command IDs, and `VIEW_TYPE_BOB_APP` (value `bob-workspace-app`). The only retained "Cadence" references are deliberate compatibility/attribution: the **legacy `Cadence/…` fallback paths** (`WORKSPACE_CONFIG_PATH`, the schema-entity default-folder fallback), the shipped **Cadence Classic** template (`workspace-cadence.json`), and the **upstream credit** link to the original Cadence Planner plugin — do not rename these.
 - Markdown files and frontmatter remain the source of truth. The plugin is a workspace UI over vault data, not a parallel database.
 - Built-in entity definitions are fallbacks. For BOB vaults, canonical schema YAML describes record types and `.base` files describe display behavior.
 - Prefer extending schemas, Bases, or plugin-folder `workspace.json` when a requested change is data-model/navigation configuration rather than application logic.
@@ -70,11 +70,11 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 ### File Organization
 
 - **`src/`** — all plugin logic, one concern per module (originally migrated mechanically from the monolithic `main.js`; runtime behavior preserved):
-  - `src/main.ts` — entry point; default-exports `CadencePlugin`
-  - `src/plugin.ts` — `CadencePlugin`: registers views, commands, hotkeys, settings, reminders, workbook commands
+  - `src/main.ts` — entry point; default-exports `BobPlugin`
+  - `src/plugin.ts` — `BobPlugin`: registers views, commands, hotkeys, settings, reminders, workbook commands
   - `src/bundled/templates.ts` — `BUNDLED_WORKSPACE_TEMPLATES` via explicit JSON imports of `templates/workspace-*.json` (a new shipped template must be added here; the template-bundle test enforces coverage)
   - `src/bundled/xlsx.ts` — `loadBundledXLSX()`: lazy `require()` of `vendor/xlsx.mini.min.js`, inlined by esbuild (no eval; compiled on first `getXLSX()` use)
-  - `src/nav.ts` — `VIEW_TYPE_CADENCE_APP`, `BUILTIN_NAV_GROUPS`, runtime registries (`NAV_GROUPS`, `ALL_SURFACES`, `SURFACE_BY_ID`, `SECONDARY_TABS`, `WORKBOOK_EXPORT_GROUPS`), `resetWorkspaceRegistries()`, `applyWorkspaceRegistries()`
+  - `src/nav.ts` — `VIEW_TYPE_BOB_APP`, `BUILTIN_NAV_GROUPS`, runtime registries (`NAV_GROUPS`, `ALL_SURFACES`, `SURFACE_BY_ID`, `SECONDARY_TABS`, `WORKBOOK_EXPORT_GROUPS`), `resetWorkspaceRegistries()`, `applyWorkspaceRegistries()`
   - `src/entities.ts` — `ENTITIES`, `BUILTIN_ENTITY_DEFAULTS`, `DEAL_STAGES`, deal/activity field accessors, `BUILT_SURFACES`
   - `src/settings.ts` — `DEFAULT_SETTINGS`, `CURRENT_CURRENCY` (+`setCurrentCurrency()`), `ENTITY_FOLDERS`, `syncEntityFolders()`, `entityFolder()`, create-folder/template helpers
   - `src/workspace-config.ts` — plugin paths, `WORKSPACE_CONFIG` (+`setWorkspaceConfig()`), load/save/validate, `WORKSPACE_OWNED_SETTING_KEYS`, dashboard config validation/resolution
@@ -86,8 +86,8 @@ Some supporting documents can lag the implementation. Verify navigation and rele
   - `src/project-notes.ts`, `src/task-notes.ts`, `src/notes.ts`, `src/reminders.ts` — H2 sections/milestones, TaskNotes, entity/daily-note creation, reminder helpers
   - `src/canvas.ts` — JSON Canvas render layer: node taxonomy, semantic palette, stable IDs, layout engines (board / context-explosion / runway), generators (pipeline / entity-context / agent-audit / process), and manual-edit merge — see "Canvas surfaces"
   - `src/modals/` — `capture.ts`, `import.ts`, `entity-create.ts`, `common.ts` (prompt/confirm/icon picker), `workspace-setup.ts`
-  - `src/views/app-view.ts` — `CadenceAppView` (largest module; renders all surfaces)
-  - `src/settings-tab.ts` — `CadenceSettingTab`
+  - `src/views/app-view.ts` — `BobAppView` (largest module; renders all surfaces)
+  - `src/settings-tab.ts` — `BobSettingTab`
   - `src/views/playbook-runner.ts` — optional Bases custom view
   - `src/workspace-templates.ts` — template seeding/loading/applying, `_assets`, archive-on-switch
 
@@ -102,16 +102,16 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 
 | Class | Responsibility |
 |-------|----------------|
-| `CadencePlugin` | Plugin entry point; registers views, commands, hotkeys, settings, reminders, reload behavior, workbook commands, and the optional Bases custom view |
-| `CadenceAppView` | Main view rendering the app shell, responsive nav, all internal surfaces, generic tables, detail forms, dashboards, reports, and kanban |
-| `CadenceSettingTab` | Settings UI: modules, surfaces, folders, Bases, schemas (Data model), tasks, reminders, export/import, currency, and `workspace.json` |
-| `CadenceCaptureModal` | Quick-capture modal (text + optional reminder, datetime, repeat) |
-| `CadenceReminderEditModal` | Reminder editor for inbox items |
-| `CadenceImportModal` | CSV import with column mapping |
-| `CadenceEntityCreateModal` | Generic create modal for any entity type |
-| `CadencePromptModal` / `CadenceConfirmModal` | Prompt / yes-no confirmation modals (use instead of `window.confirm()`) |
-| `CadenceWorkspaceSetupModal` | First-run / "Apply workspace template…" picker |
-| `CadencePlaybookRunnerView` | Registers `agent-client-playbook-runner` as an Obsidian Bases custom view when that API exists |
+| `BobPlugin` | Plugin entry point; registers views, commands, hotkeys, settings, reminders, reload behavior, workbook commands, and the optional Bases custom view |
+| `BobAppView` | Main view rendering the app shell, responsive nav, all internal surfaces, generic tables, detail forms, dashboards, reports, and kanban |
+| `BobSettingTab` | Settings UI: modules, surfaces, folders, Bases, schemas (Data model), tasks, reminders, export/import, currency, and `workspace.json` |
+| `BobCaptureModal` | Quick-capture modal (text + optional reminder, datetime, repeat) |
+| `BobReminderEditModal` | Reminder editor for inbox items |
+| `BobImportModal` | CSV import with column mapping |
+| `BobEntityCreateModal` | Generic create modal for any entity type |
+| `BobPromptModal` / `BobConfirmModal` | Prompt / yes-no confirmation modals (use instead of `window.confirm()`) |
+| `BobWorkspaceSetupModal` | First-run / "Apply workspace template…" picker |
+| `BobPlaybookRunnerView` | Registers `agent-client-playbook-runner` as an Obsidian Bases custom view when that API exists |
 
 ### Nav Structure
 
@@ -124,9 +124,9 @@ Some supporting documents can lag the implementation. Verify navigation and rele
 - `navLevel` — `'secondary'` (shown only when parent is active) or `'setup'` (shown only when Setup nav is enabled)
 - `parent` — surface ID of the parent when `navLevel` is set
 
-**Built-in vs configured nav.** The hardcoded `BUILTIN_NAV_GROUPS` ships only two groups — **`home_group`** (Home) and **`misc`** (Team, Settings, Surface Designer, Export, Import) — and both have an **empty `label`**. The renderer draws a group header only when `group.label` is truthy (`if (group.label)` in `CadenceAppView.render()`), so a label-less group's items render directly with no section heading — which is why `misc` shows no label. The rich groups (Planner, CRM, Marketing, PRM, Client Work, Finance, Procurement, HR & People, Reports, AI Workspace, Research & Knowledge, Audit) are **not hardcoded**; they come from the active `workspace.json` `navigation.groups`, applied at runtime by `applyWorkspaceRegistries()`. `BUILTIN_SECONDARY_TABS` and `BUILTIN_WORKBOOK_EXPORT_GROUPS` are likewise empty and populated from `workspace.json`. Navigation is module-driven; `showSecondaryNav` and `showSetupNav` control whether lower-frequency children appear in the left rail (still reachable via parent tabs).
+**Built-in vs configured nav.** The hardcoded `BUILTIN_NAV_GROUPS` ships only two groups — **`home_group`** (Home) and **`misc`** (Team, Settings, Surface Designer, Export, Import) — and both have an **empty `label`**. The renderer draws a group header only when `group.label` is truthy (`if (group.label)` in `BobAppView.render()`), so a label-less group's items render directly with no section heading — which is why `misc` shows no label. The rich groups (Planner, CRM, Marketing, PRM, Client Work, Finance, Procurement, HR & People, Reports, AI Workspace, Research & Knowledge, Audit) are **not hardcoded**; they come from the active `workspace.json` `navigation.groups`, applied at runtime by `applyWorkspaceRegistries()`. `BUILTIN_SECONDARY_TABS` and `BUILTIN_WORKBOOK_EXPORT_GROUPS` are likewise empty and populated from `workspace.json`. Navigation is module-driven; `showSecondaryNav` and `showSetupNav` control whether lower-frequency children appear in the left rail (still reachable via parent tabs).
 
-**`SECONDARY_TABS`** — runtime object (built from `workspace.json` `navigation.secondaryTabs`) mapping parent surface IDs to arrays of sub-tab definitions, used by workspace surfaces (e.g. `client-work.overview`, `finance.gl`, `prm.partners`) to render an inner tab bar. A surface with `SECONDARY_TABS` entries renders its first sub-tab automatically (see `CadenceAppView.render()`), which is how custom parent surfaces work without a hardcoded renderer.
+**`SECONDARY_TABS`** — runtime object (built from `workspace.json` `navigation.secondaryTabs`) mapping parent surface IDs to arrays of sub-tab definitions, used by workspace surfaces (e.g. `client-work.overview`, `finance.gl`, `prm.partners`) to render an inner tab bar. A surface with `SECONDARY_TABS` entries renders its first sub-tab automatically (see `BobAppView.render()`), which is how custom parent surfaces work without a hardcoded renderer.
 
 **`WORKBOOK_EXPORT_GROUPS`** — runtime object (from `workspace.json` `workbookGroups`) grouping entities into sheets for XLSX export. The shipped templates define groups such as Planner, CRM, Client Work, PRM, Finance, Suppliers & Procurement, and AI Workspace.
 
@@ -235,7 +235,7 @@ The active workspace definition is always read from the installed plugin folder:
 
 `initPluginPaths(plugin)` derives this from `plugin.manifest.dir`; the pre-init fallback is legacy `Cadence/workspace.json` and should not be used for current installs. A repo-root `workspace.json` is not read by the running plugin.
 
-`data.json` is no longer the source for portable workspace-owned settings. `CadencePlugin.loadSettings()` reads plugin data, then loads `workspace.json`, then overlays `workspace.json.settings` for keys in `WORKSPACE_OWNED_SETTING_KEYS`. `saveSettings()` removes owned keys from plugin data and writes them back to `workspace.json` whenever a workspace file exists or an owned setting is non-default (a `workspace.backup.json` is written first) — **except when the on-disk `workspace.json` failed to load** (`WORKSPACE_LOAD_FAILED`), in which case incidental saves are skipped so the unparseable file is preserved. Personal/non-workspace settings stay in plugin data.
+`data.json` is no longer the source for portable workspace-owned settings. `BobPlugin.loadSettings()` reads plugin data, then loads `workspace.json`, then overlays `workspace.json.settings` for keys in `WORKSPACE_OWNED_SETTING_KEYS`. `saveSettings()` removes owned keys from plugin data and writes them back to `workspace.json` whenever a workspace file exists or an owned setting is non-default (a `workspace.backup.json` is written first) — **except when the on-disk `workspace.json` failed to load** (`WORKSPACE_LOAD_FAILED`), in which case incidental saves are skipped so the unparseable file is preserved. Personal/non-workspace settings stay in plugin data.
 
 When hand-authoring `workspace.json`, prefer these top-level blocks:
 - `schemas` — schema enablement and schema source folder
@@ -275,7 +275,7 @@ If the schema source folder is empty, the bootstrap path (`bootstrapCanonicalSch
 
 ### Surfaces (Views)
 
-Tab-based internal nav, dispatched in `CadenceAppView.render()` via a route map (then `SECONDARY_TABS` parents, then entity lists, then "coming soon"):
+Tab-based internal nav, dispatched in `BobAppView.render()` via a route map (then `SECONDARY_TABS` parents, then entity lists, then "coming soon"):
 
 | Surface ID | Renderer |
 |---|---|
@@ -379,8 +379,8 @@ Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it
 
 - TypeScript in `src/`, bundled by esbuild (cjs, target es2021) into the committed `main.js`. The codebase is fully annotated: `noImplicitAny`, `noImplicitThis`, and `strictBindCallApply` are enforced; the shared domain model lives in `src/types.ts`. Explicit `any` is reserved for documented dynamic boundaries (frontmatter values, user-authored dashboard JSON, the untyped Bases API) — do not add new ones. `strictNullChecks` is the remaining gap (enable module-by-module). Type-only changes must never alter runtime behavior. Prefer small, scoped edits in `src/`/`styles.css`.
 - Frontmatter I/O via `processFrontMatter()` only; vault body writes only for markdown sections/tasks outside frontmatter.
-- DOM: `createDiv()`, `createEl()`, `appendChild()`/`setText()`; keep BEM-style class names prefixed `cad-`/`cadence-`; verify light and dark.
-- Events: `registerEvent()` for vault/metadata; standard `addEventListener` for DOM. Use `CadenceConfirmModal`/`confirmModal()` instead of `window.confirm()`.
+- DOM: `createDiv()`, `createEl()`, `appendChild()`/`setText()`; keep BEM-style class names prefixed `bob-`/`bob-`; verify light and dark.
+- Events: `registerEvent()` for vault/metadata; standard `addEventListener` for DOM. Use `BobConfirmModal`/`confirmModal()` instead of `window.confirm()`.
 - No `console.log` in shipping code; no unsafe raw `innerHTML` for untrusted vault content.
 - Respect responsive/mobile behavior for interactive changes.
 - Preserve BOB Workspace branding and compatibility names unless deliberately changing public identity.
@@ -392,7 +392,7 @@ Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it
 2. Add a folder setting key to `DEFAULT_SETTINGS` and handle it in `syncEntityFolders()` (`src/settings.ts`) + the Folders settings UI (`src/settings-tab.ts`).
 3. Add a nav item to the navigation groups (workspace.json `navigation.groups`, or `BUILTIN_NAV_GROUPS` in `src/nav.ts` for built-ins) — include `entityKey`, `folderKey`, `module`.
 4. Add to the `BUILT_SURFACES` set (`src/entities.ts`).
-5. Add a route entry in `CadenceAppView.render()` (`src/views/app-view.ts`) pointing to `renderEntityList()`.
+5. Add a route entry in `BobAppView.render()` (`src/views/app-view.ts`) pointing to `renderEntityList()`.
 6. Add a `baseFiles` entry in `DEFAULT_SETTINGS` — the **filename** is what matters (e.g. `'People.base'`; see Bases). Both `entityBasePath` and the runtime Base-override merge (`applyBaseOverrides`/`applyConfiguredBaseOverrides`) resolve through `entityBasePath`, so a filename-only path composes with `basesFolder` in every path.
 7. Add inner tabs in `SECONDARY_TABS` if it belongs under a workspace.
 8. Add to `WORKBOOK_EXPORT_GROUPS` in the appropriate group's `entityKeys`.
@@ -412,8 +412,8 @@ A Base mapping is optional for simple lists (which render from folder/type), but
 
 1. Add a nav item to the navigation groups (`{ id: 'group.surface', label, icon, module }`).
 2. Add to `BUILT_SURFACES` in `src/entities.ts` (prevents the "soon" badge).
-3. Add a route in `CadenceAppView.render()` (`src/views/app-view.ts`): `'group.surface': () => this.renderMySurface(content)`.
-4. Implement `renderMySurface(root)` on `CadenceAppView`, preserving mobile/theme behavior.
+3. Add a route in `BobAppView.render()` (`src/views/app-view.ts`): `'group.surface': () => this.renderMySurface(content)`.
+4. Implement `renderMySurface(root)` on `BobAppView`, preserving mobile/theme behavior.
 
 For inner tabs, add an entry to `SECONDARY_TABS` mapping the parent surface ID to `{ label, entityKey? | route? }` definitions.
 

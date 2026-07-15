@@ -9,7 +9,7 @@ import { ensureFolderSync, ymd } from './utils';
 import { PLUGIN_DIR, WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, applyWorkspaceOwnedSettings, resetWorkspaceOwnedSettings, saveWorkspaceConfig, validateWorkspaceConfig } from './workspace-config';
 import * as obsidian from 'obsidian';
 import type { App } from 'obsidian';
-import type { CadencePlugin } from './plugin';
+import type { BobPlugin } from './plugin';
 import type { BobSettings, PartialSettings, WorkspaceConfig } from './types';
 
 /** A loaded workspace template: full config plus its non-enumerable source path. */
@@ -137,7 +137,7 @@ export async function archiveTemplateAssets(app: App, schemaFolder: string, base
   return { schemas: schemas.count, fileClasses: fileClasses.count, jsonSchemas: jsonSchemas.count, bases: bases.count, stamp };
 }
 
-export async function applyWorkspaceTemplate(app: App, plugin: CadencePlugin, template: WorkspaceTemplate): Promise<WorkspaceConfig['_template']> {
+export async function applyWorkspaceTemplate(app: App, plugin: BobPlugin, template: WorkspaceTemplate): Promise<WorkspaceConfig['_template']> {
   if (!template?._template) throw new Error('Invalid workspace template');
   const { _template, _assets, ...config } = template;
   const newKey = workspaceTemplateKey(template);

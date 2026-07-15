@@ -308,4 +308,4 @@ export function dashboardProviderRowValue(row: ProviderRow, field = ''): number 
   return 0;
 }
 
-/* ─────────── The unified Cadence app view ─────────── */
+/* ─────────── The unified BOB Workspace app view ─────────── */

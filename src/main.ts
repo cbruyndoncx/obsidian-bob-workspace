@@ -3,6 +3,6 @@
  * Obsidian loads the compiled main.js (built by esbuild from this tree) and
  * instantiates the default export.
  */
-import { CadencePlugin } from './plugin';
+import { BobPlugin } from './plugin';
 
-export default CadencePlugin;
+export default BobPlugin;

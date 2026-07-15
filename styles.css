@@ -3,18 +3,18 @@
    still renders correctly under any other theme. */
 
 /* ─────────── Unified app shell ─────────── */
-.workspace-leaf-content[data-type="cadence-app"] {
+.workspace-leaf-content[data-type="bob-app"] {
   background: var(--background-primary);
   padding: 0;
 }
 
-.cadence-app {
+.bob-app {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-.cad-app-topbar {
+.bob-app-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -24,17 +24,17 @@
   background: var(--background-primary);
   flex-shrink: 0;
 }
-.cad-app-brand { display: flex; align-items: center; gap: 8px; }
-.cad-app-brand-mark { font-size: 18px; color: var(--interactive-accent); line-height: 1; }
-.cad-app-brand-text {
+.bob-app-brand { display: flex; align-items: center; gap: 8px; }
+.bob-app-brand-mark { font-size: 18px; color: var(--interactive-accent); line-height: 1; }
+.bob-app-brand-text {
   font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-normal);
 }
-.cad-app-topbar-meta {
+.bob-app-topbar-meta {
   font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--text-muted);
 }
-.cad-app-topbar-right { display: flex; align-items: center; gap: 12px; }
-.cad-topbar-icon-btn {
+.bob-app-topbar-right { display: flex; align-items: center; gap: 12px; }
+.bob-topbar-icon-btn {
   background: transparent; border: 0;
   padding: 6px;
   cursor: pointer;
@@ -43,277 +43,277 @@
   display: inline-flex; align-items: center; justify-content: center;
   transition: background-color 120ms ease, color 120ms ease;
 }
-.cad-topbar-icon-btn:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
-.cad-topbar-icon-btn svg { width: 16px; height: 16px; }
+.bob-topbar-icon-btn:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.bob-topbar-icon-btn svg { width: 16px; height: 16px; }
 
-/* ─────────── Cadence-app dark mode (fallback, theme-agnostic) ─────────── */
-.cadence-app.cad-dark {
+/* ─────────── BOB app dark mode (fallback, theme-agnostic) ─────────── */
+.bob-app.bob-dark {
   background: #1e1e1e; color: #b3b3b3;
 }
-.cadence-app.cad-dark .cad-app-content { background: #1e1e1e; }
-.cadence-app.cad-dark .cad-app-topbar  { background: #161616; border-bottom-color: #303030; }
-.cadence-app.cad-dark .cad-app-nav     { background: #161616; border-right-color: #303030; }
-.cadence-app.cad-dark .cad-app-brand-text { color: #dcddde; }
-.cadence-app.cad-dark .cad-app-topbar-meta { color: #6f6f6f; }
-.cadence-app.cad-dark .cad-app-nav-item        { color: #b3b3b3; }
-.cadence-app.cad-dark .cad-app-nav-item:hover  { background: #2a2a2a; }
-.cadence-app.cad-dark .cad-app-nav-item.active {
+.bob-app.bob-dark .bob-app-content { background: #1e1e1e; }
+.bob-app.bob-dark .bob-app-topbar  { background: #161616; border-bottom-color: #303030; }
+.bob-app.bob-dark .bob-app-nav     { background: #161616; border-right-color: #303030; }
+.bob-app.bob-dark .bob-app-brand-text { color: #dcddde; }
+.bob-app.bob-dark .bob-app-topbar-meta { color: #6f6f6f; }
+.bob-app.bob-dark .bob-app-nav-item        { color: #b3b3b3; }
+.bob-app.bob-dark .bob-app-nav-item:hover  { background: #2a2a2a; }
+.bob-app.bob-dark .bob-app-nav-item.active {
   background: oklch(0.24 0.055 155);
   color: #dcddde;
   box-shadow: inset 3px 0 0 oklch(0.78 0.13 155);
 }
-.cadence-app.cad-dark .cad-app-nav-item.active-parent {
+.bob-app.bob-dark .bob-app-nav-item.active-parent {
   background: oklch(0.20 0.035 155);
 }
-.cadence-app.cad-dark .cad-app-nav-item.active-parent::before {
+.bob-app.bob-dark .bob-app-nav-item.active-parent::before {
   background: oklch(0.70 0.10 155);
 }
-.cadence-app.cad-dark .cad-app-nav-icon        { color: #999999; }
-.cadence-app.cad-dark .cad-app-nav-item.active .cad-app-nav-icon,
-.cadence-app.cad-dark .cad-app-nav-item.active .cad-app-nav-label { color: oklch(0.78 0.13 155); }
-.cadence-app.cad-dark .cad-nav-group-head      { color: #6f6f6f; }
+.bob-app.bob-dark .bob-app-nav-icon        { color: #999999; }
+.bob-app.bob-dark .bob-app-nav-item.active .bob-app-nav-icon,
+.bob-app.bob-dark .bob-app-nav-item.active .bob-app-nav-label { color: oklch(0.78 0.13 155); }
+.bob-app.bob-dark .bob-nav-group-head      { color: #6f6f6f; }
 
 /* Page header + section labels */
-.cadence-app.cad-dark .cad-page-header     { background: #161616; border-bottom-color: #303030; }
-.cadence-app.cad-dark .cad-page-title      { color: #dcddde; }
-.cadence-app.cad-dark .cad-page-subtitle   { color: #999999; }
-.cadence-app.cad-dark .cad-eyebrow         { color: #6f6f6f; }
-.cadence-app.cad-dark .cad-section-label-lg { color: #6f6f6f; }
+.bob-app.bob-dark .bob-page-header     { background: #161616; border-bottom-color: #303030; }
+.bob-app.bob-dark .bob-page-title      { color: #dcddde; }
+.bob-app.bob-dark .bob-page-subtitle   { color: #999999; }
+.bob-app.bob-dark .bob-eyebrow         { color: #6f6f6f; }
+.bob-app.bob-dark .bob-section-label-lg { color: #6f6f6f; }
 
 /* Cards / surfaces */
-.cadence-app.cad-dark .cad-stat-card,
-.cadence-app.cad-dark .cad-pd-card,
-.cadence-app.cad-dark .cad-dash-card,
-.cadence-app.cad-dark .cad-pt-group,
-.cadence-app.cad-dark .cad-proj-card,
-.cadence-app.cad-dark .cad-table-wrap,
-.cadence-app.cad-dark .cad-dash-row,
-.cadence-app.cad-dark .cad-kanban-card,
-.cadence-app.cad-dark .cad-inbox-row { background: #262626; border-color: #303030; }
+.bob-app.bob-dark .bob-stat-card,
+.bob-app.bob-dark .bob-pd-card,
+.bob-app.bob-dark .bob-dash-card,
+.bob-app.bob-dark .bob-pt-group,
+.bob-app.bob-dark .bob-proj-card,
+.bob-app.bob-dark .bob-table-wrap,
+.bob-app.bob-dark .bob-dash-row,
+.bob-app.bob-dark .bob-kanban-card,
+.bob-app.bob-dark .bob-inbox-row { background: #262626; border-color: #303030; }
 
-.cadence-app.cad-dark .cad-stat-value,
-.cadence-app.cad-dark .cad-stat-label,
-.cadence-app.cad-dark .cad-stat-sub,
-.cadence-app.cad-dark .cad-home-row-title,
-.cadence-app.cad-dark .cad-pt-text,
-.cadence-app.cad-dark .cad-dash-row-title,
-.cadence-app.cad-dark .cad-inbox-row-text,
-.cadence-app.cad-dark .cad-table tbody td,
-.cadence-app.cad-dark .cad-row-primary,
-.cadence-app.cad-dark .cad-proj-title { color: #dcddde; }
-.cadence-app.cad-dark .cad-stat-label { color: #6f6f6f; }
-.cadence-app.cad-dark .cad-stat-sub   { color: #6f6f6f; }
-.cadence-app.cad-dark .cad-home-row-meta,
-.cadence-app.cad-dark .cad-pt-group-meta,
-.cadence-app.cad-dark .cad-dash-row-meta,
-.cadence-app.cad-dark .cad-inbox-row-notes { color: #999999; }
+.bob-app.bob-dark .bob-stat-value,
+.bob-app.bob-dark .bob-stat-label,
+.bob-app.bob-dark .bob-stat-sub,
+.bob-app.bob-dark .bob-home-row-title,
+.bob-app.bob-dark .bob-pt-text,
+.bob-app.bob-dark .bob-dash-row-title,
+.bob-app.bob-dark .bob-inbox-row-text,
+.bob-app.bob-dark .bob-table tbody td,
+.bob-app.bob-dark .bob-row-primary,
+.bob-app.bob-dark .bob-proj-title { color: #dcddde; }
+.bob-app.bob-dark .bob-stat-label { color: #6f6f6f; }
+.bob-app.bob-dark .bob-stat-sub   { color: #6f6f6f; }
+.bob-app.bob-dark .bob-home-row-meta,
+.bob-app.bob-dark .bob-pt-group-meta,
+.bob-app.bob-dark .bob-dash-row-meta,
+.bob-app.bob-dark .bob-inbox-row-notes { color: #999999; }
 
 /* Card heads recess */
-.cadence-app.cad-dark .cad-pd-card-head,
-.cadence-app.cad-dark .cad-dash-card-head,
-.cadence-app.cad-dark .cad-pt-group-head,
-.cadence-app.cad-dark .cad-table thead th { background: #161616; border-bottom-color: #303030; color: #6f6f6f; }
-.cadence-app.cad-dark .cad-table thead th.cad-th-sortable:hover { background: #2a2a2a; color: #dcddde; }
+.bob-app.bob-dark .bob-pd-card-head,
+.bob-app.bob-dark .bob-dash-card-head,
+.bob-app.bob-dark .bob-pt-group-head,
+.bob-app.bob-dark .bob-table thead th { background: #161616; border-bottom-color: #303030; color: #6f6f6f; }
+.bob-app.bob-dark .bob-table thead th.bob-th-sortable:hover { background: #2a2a2a; color: #dcddde; }
 
 /* Kanban */
-.cadence-app.cad-dark .cad-kanban-col { background: #161616; border-color: #303030; }
-.cadence-app.cad-dark .cad-kanban-card { background: #2a2a2a; border-color: #303030; }
-.cadence-app.cad-dark .cad-kanban-col-title { color: #dcddde; }
-.cadence-app.cad-dark .cad-kanban-col-meta  { color: #6f6f6f; }
-.cadence-app.cad-dark .cad-kanban-col-limit,
-.cadence-app.cad-dark .cad-kanban-col-description { color: #999999; }
-.cadence-app.cad-dark .cad-kanban-col-over-limit { border-color: oklch(0.65 0.14 25); }
-.cadence-app.cad-dark .cad-kanban-card-title { color: #dcddde; }
-.cadence-app.cad-dark .cad-kanban-card-meta  { color: #999999; }
-.cadence-app.cad-dark .cad-kanban-col-list .cad-empty { color: #6f6f6f; }
+.bob-app.bob-dark .bob-kanban-col { background: #161616; border-color: #303030; }
+.bob-app.bob-dark .bob-kanban-card { background: #2a2a2a; border-color: #303030; }
+.bob-app.bob-dark .bob-kanban-col-title { color: #dcddde; }
+.bob-app.bob-dark .bob-kanban-col-meta  { color: #6f6f6f; }
+.bob-app.bob-dark .bob-kanban-col-limit,
+.bob-app.bob-dark .bob-kanban-col-description { color: #999999; }
+.bob-app.bob-dark .bob-kanban-col-over-limit { border-color: oklch(0.65 0.14 25); }
+.bob-app.bob-dark .bob-kanban-card-title { color: #dcddde; }
+.bob-app.bob-dark .bob-kanban-card-meta  { color: #999999; }
+.bob-app.bob-dark .bob-kanban-col-list .bob-empty { color: #6f6f6f; }
 
 /* Inputs */
-.cadence-app.cad-dark .cad-pd-meta-input,
-.cadence-app.cad-dark .cad-pd-textarea,
-.cadence-app.cad-dark .cad-mile-notes-textarea,
-.cadence-app.cad-dark .cad-create-input,
-.cadence-app.cad-dark .cad-cell-input { background: #1e1e1e; color: #dcddde; border-color: #3a8ef6; }
-.cadence-app.cad-dark .cad-pd-meta-input::placeholder,
-.cadence-app.cad-dark .cad-pd-textarea::placeholder,
-.cadence-app.cad-dark .cad-mile-notes-textarea::placeholder,
-.cadence-app.cad-dark .cad-create-input::placeholder,
-.cadence-app.cad-dark .cad-pd-mile-title::placeholder,
-.cadence-app.cad-dark .cad-pd-task-title::placeholder { color: #6f6f6f; }
+.bob-app.bob-dark .bob-pd-meta-input,
+.bob-app.bob-dark .bob-pd-textarea,
+.bob-app.bob-dark .bob-mile-notes-textarea,
+.bob-app.bob-dark .bob-create-input,
+.bob-app.bob-dark .bob-cell-input { background: #1e1e1e; color: #dcddde; border-color: #3a8ef6; }
+.bob-app.bob-dark .bob-pd-meta-input::placeholder,
+.bob-app.bob-dark .bob-pd-textarea::placeholder,
+.bob-app.bob-dark .bob-mile-notes-textarea::placeholder,
+.bob-app.bob-dark .bob-create-input::placeholder,
+.bob-app.bob-dark .bob-pd-mile-title::placeholder,
+.bob-app.bob-dark .bob-pd-task-title::placeholder { color: #6f6f6f; }
 
 /* Milestone + task inline inputs — explicit dark backgrounds for every state.
    Selector specificity (3 classes + pseudo) already outranks the base rules
    (1 class + pseudo), so no !important is needed. */
-.cadence-app.cad-dark .cad-pd-mile-date,
-.cadence-app.cad-dark .cad-pd-mile-title,
-.cadence-app.cad-dark .cad-pd-task-title {
+.bob-app.bob-dark .bob-pd-mile-date,
+.bob-app.bob-dark .bob-pd-mile-title,
+.bob-app.bob-dark .bob-pd-task-title {
   background: #1e1e1e;
   color: #dcddde;
   border-color: #303030;
 }
-.cadence-app.cad-dark .cad-pd-mile-date:hover,
-.cadence-app.cad-dark .cad-pd-mile-title:hover,
-.cadence-app.cad-dark .cad-pd-task-title:hover {
+.bob-app.bob-dark .bob-pd-mile-date:hover,
+.bob-app.bob-dark .bob-pd-mile-title:hover,
+.bob-app.bob-dark .bob-pd-task-title:hover {
   background: #262626; border-color: #3a3a3a; color: #dcddde;
 }
-.cadence-app.cad-dark .cad-pd-mile-date:focus,
-.cadence-app.cad-dark .cad-pd-mile-title:focus,
-.cadence-app.cad-dark .cad-pd-task-title:focus {
+.bob-app.bob-dark .bob-pd-mile-date:focus,
+.bob-app.bob-dark .bob-pd-mile-title:focus,
+.bob-app.bob-dark .bob-pd-task-title:focus {
   background: #262626;
   border-color: var(--interactive-accent, #5cb85c);
   color: #dcddde;
 }
 
 /* Buttons (default) */
-.cadence-app.cad-dark .cad-btn { background: #303030; color: #dcddde; border-color: #3a3a3a; }
-.cadence-app.cad-dark .cad-btn:hover { background: #3a3a3a; }
+.bob-app.bob-dark .bob-btn { background: #303030; color: #dcddde; border-color: #3a3a3a; }
+.bob-app.bob-dark .bob-btn:hover { background: #3a3a3a; }
 
 /* Hover row backgrounds */
-.cadence-app.cad-dark .cad-table tbody tr:hover,
-.cadence-app.cad-dark .cad-stage-bar-row:hover,
-.cadence-app.cad-dark .cad-home-row:hover,
-.cadence-app.cad-dark .cad-pt-row:hover,
-.cadence-app.cad-dark .cad-pd-mile-row:hover,
-.cadence-app.cad-dark .cad-pd-task-row:hover,
-.cadence-app.cad-dark .cad-mile-notes-preview:hover { background: #2a2a2a; }
+.bob-app.bob-dark .bob-table tbody tr:hover,
+.bob-app.bob-dark .bob-stage-bar-row:hover,
+.bob-app.bob-dark .bob-home-row:hover,
+.bob-app.bob-dark .bob-pt-row:hover,
+.bob-app.bob-dark .bob-pd-mile-row:hover,
+.bob-app.bob-dark .bob-pd-task-row:hover,
+.bob-app.bob-dark .bob-mile-notes-preview:hover { background: #2a2a2a; }
 
 /* Mini-stats */
-.cadence-app.cad-dark .cad-mini-stat + .cad-mini-stat { border-left-color: #303030; }
-.cadence-app.cad-dark .cad-mini-stat-value { color: #dcddde; }
-.cadence-app.cad-dark .cad-mini-stat-label { color: #6f6f6f; }
-.cadence-app.cad-dark .cad-mini-stat:hover { background: #2a2a2a; }
+.bob-app.bob-dark .bob-mini-stat + .bob-mini-stat { border-left-color: #303030; }
+.bob-app.bob-dark .bob-mini-stat-value { color: #dcddde; }
+.bob-app.bob-dark .bob-mini-stat-label { color: #6f6f6f; }
+.bob-app.bob-dark .bob-mini-stat:hover { background: #2a2a2a; }
 
 /* Stage bars + progress bar tracks */
-.cadence-app.cad-dark .cad-stage-bar { background: #303030; }
-.cadence-app.cad-dark .cad-stage-bar-name  { color: #dcddde; }
-.cadence-app.cad-dark .cad-stage-bar-count,
-.cadence-app.cad-dark .cad-stage-bar-value { color: #999999; }
-.cadence-app.cad-dark .cad-proj-progress-bar { background: #303030; }
-.cadence-app.cad-dark .cad-proj-progress-label { color: #6f6f6f; }
-.cadence-app.cad-dark .cad-proj-progress-pct { color: #dcddde; }
-.cadence-app.cad-dark .cad-bar[data-band="empty"] { background: #303030; }
+.bob-app.bob-dark .bob-stage-bar { background: #303030; }
+.bob-app.bob-dark .bob-stage-bar-name  { color: #dcddde; }
+.bob-app.bob-dark .bob-stage-bar-count,
+.bob-app.bob-dark .bob-stage-bar-value { color: #999999; }
+.bob-app.bob-dark .bob-proj-progress-bar { background: #303030; }
+.bob-app.bob-dark .bob-proj-progress-label { color: #6f6f6f; }
+.bob-app.bob-dark .bob-proj-progress-pct { color: #dcddde; }
+.bob-app.bob-dark .bob-bar[data-band="empty"] { background: #303030; }
 
 /* Inbox overdue */
-.cadence-app.cad-dark .cad-inbox-row.overdue {
+.bob-app.bob-dark .bob-inbox-row.overdue {
   background: color-mix(in oklch, oklch(0.65 0.14 25) 12%, #262626);
   border-color: oklch(0.65 0.14 25);
 }
-.cadence-app.cad-dark .cad-inbox-time-text         { color: #dcddde; }
-.cadence-app.cad-dark .cad-inbox-time-text.muted   { color: #6f6f6f; }
-.cadence-app.cad-dark .cad-inbox-row.overdue .cad-inbox-time-text { color: oklch(0.75 0.16 25); }
+.bob-app.bob-dark .bob-inbox-time-text         { color: #dcddde; }
+.bob-app.bob-dark .bob-inbox-time-text.muted   { color: #6f6f6f; }
+.bob-app.bob-dark .bob-inbox-row.overdue .bob-inbox-time-text { color: oklch(0.75 0.16 25); }
 
 /* Project chip */
-.cadence-app.cad-dark .cad-rem-project-chip {
+.bob-app.bob-dark .bob-rem-project-chip {
   background: oklch(0.22 0.05 155);
   color: oklch(0.78 0.13 155);
   border-color: oklch(0.40 0.08 155);
 }
 
 /* Empty state copy */
-.cadence-app.cad-dark .cad-empty-state-title { color: #b3b3b3; }
-.cadence-app.cad-dark .cad-empty-state-desc,
-.cadence-app.cad-dark .cad-empty { color: #6f6f6f; }
+.bob-app.bob-dark .bob-empty-state-title { color: #b3b3b3; }
+.bob-app.bob-dark .bob-empty-state-desc,
+.bob-app.bob-dark .bob-empty { color: #6f6f6f; }
 
 /* Topbar icon button hover */
-.cadence-app.cad-dark .cad-topbar-icon-btn { color: #999999; }
-.cadence-app.cad-dark .cad-topbar-icon-btn:hover { background: #2a2a2a; color: #dcddde; }
+.bob-app.bob-dark .bob-topbar-icon-btn { color: #999999; }
+.bob-app.bob-dark .bob-topbar-icon-btn:hover { background: #2a2a2a; color: #dcddde; }
 
-/* When Obsidian is *also* in dark mode, sit Cadence on the same main-pane
+/* When Obsidian is *also* in dark mode, sit BOB on the same main-pane
    surface — body, nav, topbar all on --background-primary (the darkest). */
 
 @media print {
-  .workspace-leaf-content[data-type="cadence-app"] {
+  .workspace-leaf-content[data-type="bob-app"] {
     background: white !important;
   }
-  .workspace-leaf-content[data-type="cadence-app"] .cad-app-topbar,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-app-nav,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-page-header-right,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-dash-controls,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-widget-error-details,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-de-actions,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-actions-bar {
+  .workspace-leaf-content[data-type="bob-app"] .bob-app-topbar,
+  .workspace-leaf-content[data-type="bob-app"] .bob-app-nav,
+  .workspace-leaf-content[data-type="bob-app"] .bob-page-header-right,
+  .workspace-leaf-content[data-type="bob-app"] .bob-dash-controls,
+  .workspace-leaf-content[data-type="bob-app"] .bob-widget-error-details,
+  .workspace-leaf-content[data-type="bob-app"] .bob-de-actions,
+  .workspace-leaf-content[data-type="bob-app"] .bob-actions-bar {
     display: none !important;
   }
-  .workspace-leaf-content[data-type="cadence-app"] .cad-app-content {
+  .workspace-leaf-content[data-type="bob-app"] .bob-app-content {
     padding: 0 !important;
     overflow: visible !important;
   }
-  .workspace-leaf-content[data-type="cadence-app"] .cadence-app,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-app-content,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-page,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-page-header,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-dash-card,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-stat-card,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-kanban-col,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-kanban-card,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-table-wrap {
+  .workspace-leaf-content[data-type="bob-app"] .bob-app,
+  .workspace-leaf-content[data-type="bob-app"] .bob-app-content,
+  .workspace-leaf-content[data-type="bob-app"] .bob-page,
+  .workspace-leaf-content[data-type="bob-app"] .bob-page-header,
+  .workspace-leaf-content[data-type="bob-app"] .bob-dash-card,
+  .workspace-leaf-content[data-type="bob-app"] .bob-stat-card,
+  .workspace-leaf-content[data-type="bob-app"] .bob-kanban-col,
+  .workspace-leaf-content[data-type="bob-app"] .bob-kanban-card,
+  .workspace-leaf-content[data-type="bob-app"] .bob-table-wrap {
     background: white !important;
     color: black !important;
     box-shadow: none !important;
   }
-  .workspace-leaf-content[data-type="cadence-app"] .cad-page-header,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-dash-card,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-stat-card,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-kanban-col,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-kanban-card,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-table-wrap {
+  .workspace-leaf-content[data-type="bob-app"] .bob-page-header,
+  .workspace-leaf-content[data-type="bob-app"] .bob-dash-card,
+  .workspace-leaf-content[data-type="bob-app"] .bob-stat-card,
+  .workspace-leaf-content[data-type="bob-app"] .bob-kanban-col,
+  .workspace-leaf-content[data-type="bob-app"] .bob-kanban-card,
+  .workspace-leaf-content[data-type="bob-app"] .bob-table-wrap {
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  .workspace-leaf-content[data-type="cadence-app"] .cad-dash-cols,
-  .workspace-leaf-content[data-type="cadence-app"] .cad-stat-grid {
+  .workspace-leaf-content[data-type="bob-app"] .bob-dash-cols,
+  .workspace-leaf-content[data-type="bob-app"] .bob-stat-grid {
     gap: 10px;
   }
-  .workspace-leaf-content[data-type="cadence-app"] .cad-page {
+  .workspace-leaf-content[data-type="bob-app"] .bob-page {
     overflow: visible !important;
   }
 }
-body.theme-dark .cadence-app.cad-dark,
-body.theme-dark .cadence-app.cad-dark .cad-app-content,
-body.theme-dark .cadence-app.cad-dark .cad-app-topbar,
-body.theme-dark .cadence-app.cad-dark .cad-app-nav,
-body.theme-dark .cadence-app.cad-dark .cad-page-header,
-body.theme-dark .cadence-app.cad-dark .cad-pd-card-head,
-body.theme-dark .cadence-app.cad-dark .cad-dash-card-head,
-body.theme-dark .cadence-app.cad-dark .cad-pt-group-head,
-body.theme-dark .cadence-app.cad-dark .cad-table thead th,
-body.theme-dark .cadence-app.cad-dark .cad-kanban-col {
+body.theme-dark .bob-app.bob-dark,
+body.theme-dark .bob-app.bob-dark .bob-app-content,
+body.theme-dark .bob-app.bob-dark .bob-app-topbar,
+body.theme-dark .bob-app.bob-dark .bob-app-nav,
+body.theme-dark .bob-app.bob-dark .bob-page-header,
+body.theme-dark .bob-app.bob-dark .bob-pd-card-head,
+body.theme-dark .bob-app.bob-dark .bob-dash-card-head,
+body.theme-dark .bob-app.bob-dark .bob-pt-group-head,
+body.theme-dark .bob-app.bob-dark .bob-table thead th,
+body.theme-dark .bob-app.bob-dark .bob-kanban-col {
   background: var(--background-primary);
   border-color: var(--background-modifier-border);
 }
-body.theme-dark .cadence-app.cad-dark .cad-stat-card,
-body.theme-dark .cadence-app.cad-dark .cad-pd-card,
-body.theme-dark .cadence-app.cad-dark .cad-dash-card,
-body.theme-dark .cadence-app.cad-dark .cad-pt-group,
-body.theme-dark .cadence-app.cad-dark .cad-proj-card,
-body.theme-dark .cadence-app.cad-dark .cad-table-wrap,
-body.theme-dark .cadence-app.cad-dark .cad-dash-row,
-body.theme-dark .cadence-app.cad-dark .cad-kanban-card,
-body.theme-dark .cadence-app.cad-dark .cad-inbox-row {
+body.theme-dark .bob-app.bob-dark .bob-stat-card,
+body.theme-dark .bob-app.bob-dark .bob-pd-card,
+body.theme-dark .bob-app.bob-dark .bob-dash-card,
+body.theme-dark .bob-app.bob-dark .bob-pt-group,
+body.theme-dark .bob-app.bob-dark .bob-proj-card,
+body.theme-dark .bob-app.bob-dark .bob-table-wrap,
+body.theme-dark .bob-app.bob-dark .bob-dash-row,
+body.theme-dark .bob-app.bob-dark .bob-kanban-card,
+body.theme-dark .bob-app.bob-dark .bob-inbox-row {
   background: var(--background-primary-alt);
   border-color: var(--background-modifier-border);
 }
-body.theme-dark .cadence-app.cad-dark .cad-pd-meta-input,
-body.theme-dark .cadence-app.cad-dark .cad-pd-textarea,
-body.theme-dark .cadence-app.cad-dark .cad-mile-notes-textarea,
-body.theme-dark .cadence-app.cad-dark .cad-create-input {
+body.theme-dark .bob-app.bob-dark .bob-pd-meta-input,
+body.theme-dark .bob-app.bob-dark .bob-pd-textarea,
+body.theme-dark .bob-app.bob-dark .bob-mile-notes-textarea,
+body.theme-dark .bob-app.bob-dark .bob-create-input {
   background: var(--background-primary);
   border-color: var(--background-modifier-border);
 }
-body.theme-dark .cadence-app.cad-dark .cad-btn {
+body.theme-dark .bob-app.bob-dark .bob-btn {
   background: var(--background-primary-alt);
   border-color: var(--background-modifier-border);
 }
-body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
+body.theme-dark .bob-app.bob-dark .bob-btn:hover {
   background: var(--background-modifier-hover);
 }
 
-.cad-app-body {
+.bob-app-body {
   display: flex;
   flex: 1;
   min-height: 0;
 }
 
-.cad-app-nav {
+.bob-app-nav {
   width: 220px;
   flex-shrink: 0;
   padding: 0 10px 12px;
@@ -322,7 +322,7 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   overflow-y: auto;
 }
 
-.cad-nav-pinned {
+.bob-nav-pinned {
   position: sticky;
   top: 0;
   z-index: 5;
@@ -332,26 +332,26 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   border-bottom: 1px solid var(--background-modifier-border);
   box-shadow: 0 1px 0 color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
 }
-.cad-nav-pinned-row {
+.bob-nav-pinned-row {
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
   padding: 0;
 }
-.cad-nav-pinned-item-wrap {
+.bob-nav-pinned-item-wrap {
   position: relative;
   width: 30px;
   height: 30px;
   cursor: grab;
 }
-.cad-nav-pinned-item-wrap.dragging {
+.bob-nav-pinned-item-wrap.dragging {
   opacity: 0.4;
   cursor: grabbing;
 }
-.cad-nav-pinned-item-wrap.drag-over {
+.bob-nav-pinned-item-wrap.drag-over {
   box-shadow: -2px 0 0 0 var(--interactive-accent);
 }
-.cad-nav-pinned-item {
+.bob-nav-pinned-item {
   width: 100%;
   height: 100%;
   display: inline-flex;
@@ -365,15 +365,15 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   cursor: pointer;
   position: relative;
 }
-.cad-nav-pinned-item:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
-.cad-nav-pinned-item.active {
+.bob-nav-pinned-item:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.bob-nav-pinned-item.active {
   background: color-mix(in srgb, var(--interactive-accent) 14%, var(--background-primary));
   border-color: color-mix(in srgb, var(--interactive-accent) 35%, var(--background-modifier-border));
   color: var(--interactive-accent);
 }
-.cad-nav-pinned-icon { display: inline-flex; align-items: center; }
-.cad-nav-pinned-icon svg { width: 14px; height: 14px; }
-.cad-nav-pinned-remove {
+.bob-nav-pinned-icon { display: inline-flex; align-items: center; }
+.bob-nav-pinned-icon svg { width: 14px; height: 14px; }
+.bob-nav-pinned-remove {
   position: absolute;
   top: -4px;
   right: -4px;
@@ -392,20 +392,20 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   transform: scale(0.92);
   transition: opacity 120ms ease, color 120ms ease, background-color 120ms ease, transform 120ms ease;
 }
-.cad-nav-pinned-item-wrap:hover .cad-nav-pinned-remove,
-.cad-nav-pinned-item-wrap:focus-within .cad-nav-pinned-remove {
+.bob-nav-pinned-item-wrap:hover .bob-nav-pinned-remove,
+.bob-nav-pinned-item-wrap:focus-within .bob-nav-pinned-remove {
   opacity: 1;
   transform: scale(1);
 }
-.cad-nav-pinned-remove:hover {
+.bob-nav-pinned-remove:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
-.cad-nav-pinned-remove svg { width: 10px; height: 10px; }
+.bob-nav-pinned-remove svg { width: 10px; height: 10px; }
 
-.cad-nav-group { margin-bottom: 12px; }
-.cad-nav-separator { border: none; border-top: 2px solid var(--background-modifier-border); margin: 10px 8px 8px; opacity: 0.8; }
-.cad-nav-group-head {
+.bob-nav-group { margin-bottom: 12px; }
+.bob-nav-separator { border: none; border-top: 2px solid var(--background-modifier-border); margin: 10px 8px 8px; opacity: 0.8; }
+.bob-nav-group-head {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -418,13 +418,13 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   user-select: none;
   border-radius: 6px;
 }
-.cad-nav-group-head:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
-.cad-nav-group-chev { display: inline-flex; align-items: center; }
-.cad-nav-group-chev svg { width: 12px; height: 12px; }
-.cad-nav-group-icon { display: inline-flex; align-items: center; margin-right: 2px; }
-.cad-nav-group-icon svg { width: 12px; height: 12px; }
-.cad-nav-group-items { display: flex; flex-direction: column; gap: 1px; padding-top: 2px; }
-.cad-app-nav-item {
+.bob-nav-group-head:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.bob-nav-group-chev { display: inline-flex; align-items: center; }
+.bob-nav-group-chev svg { width: 12px; height: 12px; }
+.bob-nav-group-icon { display: inline-flex; align-items: center; margin-right: 2px; }
+.bob-nav-group-icon svg { width: 12px; height: 12px; }
+.bob-nav-group-items { display: flex; flex-direction: column; gap: 1px; padding-top: 2px; }
+.bob-app-nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -437,22 +437,22 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   user-select: none;
   position: relative;
 }
-.cad-app-nav-item:hover { background: var(--background-modifier-hover); }
-.cad-app-nav-item.active {
+.bob-app-nav-item:hover { background: var(--background-modifier-hover); }
+.bob-app-nav-item.active {
   background: color-mix(in srgb, var(--interactive-accent) 14%, var(--background-primary));
   color: var(--text-normal);
   font-weight: 700;
   box-shadow: inset 3px 0 0 var(--interactive-accent);
 }
-.cad-app-nav-item.active .cad-app-nav-icon,
-.cad-app-nav-item.active .cad-app-nav-label {
+.bob-app-nav-item.active .bob-app-nav-icon,
+.bob-app-nav-item.active .bob-app-nav-label {
   color: var(--interactive-accent);
 }
-.cad-app-nav-item.active-parent {
+.bob-app-nav-item.active-parent {
   background: color-mix(in srgb, var(--interactive-accent) 7%, var(--background-secondary));
   color: var(--text-normal);
 }
-.cad-app-nav-item.active-parent::before {
+.bob-app-nav-item.active-parent::before {
   content: "";
   position: absolute;
   left: 4px;
@@ -462,10 +462,10 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   border-radius: 3px;
   background: color-mix(in srgb, var(--interactive-accent) 70%, transparent);
 }
-.cad-app-nav-icon { display: inline-flex; align-items: center; flex-shrink: 0; }
-.cad-app-nav-icon svg { width: 16px; height: 16px; }
-.cad-app-nav-label { flex: 1; }
-.cad-nav-pin-toggle {
+.bob-app-nav-icon { display: inline-flex; align-items: center; flex-shrink: 0; }
+.bob-app-nav-icon svg { width: 16px; height: 16px; }
+.bob-app-nav-label { flex: 1; }
+.bob-nav-pin-toggle {
   position: absolute;
   right: 8px;
   top: 50%;
@@ -484,16 +484,16 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   opacity: 0;
   transition: opacity 120ms ease, color 120ms ease, background-color 120ms ease;
 }
-.cad-app-nav-item:hover .cad-nav-pin-toggle,
-.cad-app-nav-item:focus-within .cad-nav-pin-toggle {
+.bob-app-nav-item:hover .bob-nav-pin-toggle,
+.bob-app-nav-item:focus-within .bob-nav-pin-toggle {
   opacity: 1;
 }
-.cad-nav-pin-toggle:hover {
+.bob-nav-pin-toggle:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
-.cad-nav-pin-toggle svg { width: 14px; height: 14px; }
-.cad-app-nav-badge {
+.bob-nav-pin-toggle svg { width: 14px; height: 14px; }
+.bob-app-nav-badge {
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -505,16 +505,16 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   border: 1px solid var(--background-modifier-border);
 }
 
-.cad-app-content {
+.bob-app-content {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
 }
 
 /* ─────────── Coming soon placeholder ─────────── */
-.cadence-soon { padding: 60px 40px; max-width: 600px; margin: 0 auto; text-align: center; }
-.cad-soon-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.cad-soon-icon {
+.bob-soon { padding: 60px 40px; max-width: 600px; margin: 0 auto; text-align: center; }
+.bob-soon-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.bob-soon-icon {
   width: 56px; height: 56px;
   display: flex; align-items: center; justify-content: center;
   border: 1px solid var(--background-modifier-border);
@@ -523,61 +523,61 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   margin-bottom: 8px;
   order: -1;
 }
-.cad-soon-icon svg { width: 28px; height: 28px; }
-.cad-soon-title {
+.bob-soon-icon svg { width: 28px; height: 28px; }
+.bob-soon-title {
   font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
   color: var(--text-normal);
 }
-.cad-soon-desc {
+.bob-soon-desc {
   font-size: 14px; line-height: 1.55; color: var(--text-muted); max-width: 440px;
 }
-.cad-soon-meta {
+.bob-soon-meta {
   font-size: 11px; color: var(--text-faint);
   margin-top: 12px; font-style: italic;
 }
 
 /* ─────────── Page header (used by every built surface) ─────────── */
-.cad-page-header {
+.bob-page-header {
   display: flex; justify-content: space-between; align-items: flex-end;
   gap: 24px;
   padding: 28px 32px 16px 32px;
   border-bottom: 1px solid var(--background-modifier-border);
 }
-.cad-page-header-left .cad-eyebrow {
+.bob-page-header-left .bob-eyebrow {
   font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;
 }
-.cad-page-title {
+.bob-page-title {
   font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
   color: var(--text-normal);
 }
-.cad-page-subtitle {
+.bob-page-subtitle {
   font-size: 13px; color: var(--text-muted); margin-top: 4px;
 }
-.cad-page-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.cad-page-view-select { min-width: 180px; }
-.cad-client-work-filter { display: flex; gap: 8px; flex-wrap: wrap; }
-.cad-client-work-client-select,
-.cad-client-work-project-select { min-width: 240px; }
+.bob-page-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bob-page-view-select { min-width: 180px; }
+.bob-client-work-filter { display: flex; gap: 8px; flex-wrap: wrap; }
+.bob-client-work-client-select,
+.bob-client-work-project-select { min-width: 240px; }
 
 /* ─────────── Buttons ─────────── */
-.cad-btn {
+.bob-btn {
   background: var(--background-secondary); color: var(--text-normal);
   border: 1px solid var(--background-modifier-border);
   border-radius: 7px; padding: 7px 14px;
   font-size: 13px; font-weight: 500; cursor: pointer;
   font-family: inherit;
 }
-.cad-btn:hover { background: var(--background-modifier-hover); }
-.cad-btn.primary {
+.bob-btn:hover { background: var(--background-modifier-hover); }
+.bob-btn.primary {
   background: var(--text-normal); color: var(--background-primary);
   border-color: var(--text-normal);
 }
 
 /* ─────────── Table (entity list) ─────────── */
-.cad-table-wrap { padding: 0 32px 16px; overflow: auto; max-height: calc(100vh - 160px); }
-.cad-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.cad-table thead th {
+.bob-table-wrap { padding: 0 32px 16px; overflow: auto; max-height: calc(100vh - 160px); }
+.bob-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.bob-table thead th {
   text-align: left; font-size: 10px; font-weight: 700;
   letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--text-muted); padding: 10px 12px;
@@ -588,29 +588,29 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   background: var(--background-secondary);
   white-space: nowrap;
 }
-.cad-table thead th.cad-th-sortable { cursor: pointer; user-select: none; }
-.cad-table thead th.cad-th-sortable:hover { background-image: linear-gradient(var(--background-modifier-hover), var(--background-modifier-hover)); background-color: var(--background-secondary); color: var(--text-normal); }
-.cad-table thead th.cad-th-sorted { color: var(--text-normal); }
-.cad-table thead th .cad-th-label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.cad-table thead th .cad-th-indicator {
+.bob-table thead th.bob-th-sortable { cursor: pointer; user-select: none; }
+.bob-table thead th.bob-th-sortable:hover { background-image: linear-gradient(var(--background-modifier-hover), var(--background-modifier-hover)); background-color: var(--background-secondary); color: var(--text-normal); }
+.bob-table thead th.bob-th-sorted { color: var(--text-normal); }
+.bob-table thead th .bob-th-label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.bob-table thead th .bob-th-indicator {
   font-size: 10px;
   letter-spacing: 0;
   opacity: 0.75;
 }
-.cad-table tbody td {
+.bob-table tbody td {
   padding: 10px 12px; border-bottom: 1px solid var(--background-modifier-border);
   color: var(--text-normal); vertical-align: top;
 }
-.cad-table tbody tr:hover { background: var(--background-modifier-hover); }
+.bob-table tbody tr:hover { background: var(--background-modifier-hover); }
 
-.cad-secondary-tabs {
+.bob-secondary-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   padding: 14px 32px 0;
   border-bottom: 1px solid var(--background-modifier-border);
 }
-.cad-secondary-tab {
+.bob-secondary-tab {
   border: 1px solid var(--background-modifier-border);
   background: var(--background-secondary);
   color: var(--text-muted);
@@ -620,11 +620,11 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   font-size: 12px;
   line-height: 1.2;
 }
-.cad-secondary-tab:hover {
+.bob-secondary-tab:hover {
   color: var(--text-normal);
   background: var(--background-modifier-hover);
 }
-.cad-secondary-tab.active {
+.bob-secondary-tab.active {
   color: var(--text-normal);
   background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-primary));
   border-color: var(--interactive-accent);
@@ -632,19 +632,19 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   box-shadow: inset 0 -2px 0 var(--interactive-accent);
   font-weight: 700;
 }
-.cad-row-primary {
+.bob-row-primary {
   color: var(--text-normal); cursor: pointer; text-decoration: none; font-weight: 500;
 }
-.cad-row-primary:hover { color: var(--interactive-accent); }
+.bob-row-primary:hover { color: var(--interactive-accent); }
 
 /* Column filters */
-.cad-filter-btn {
+.bob-filter-btn {
   margin-left: 4px; padding: 0 3px; font-size: 10px;
   background: none; border: none; cursor: pointer;
   color: var(--text-faint); vertical-align: middle; line-height: 1;
 }
-.cad-filter-btn:hover, .cad-filter-btn-active { color: var(--interactive-accent); }
-.cad-filter-dropdown {
+.bob-filter-btn:hover, .bob-filter-btn-active { color: var(--interactive-accent); }
+.bob-filter-dropdown {
   position: fixed; z-index: 9999;
   min-width: 160px;
   background: var(--background-primary);
@@ -653,28 +653,28 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   padding: 4px 0;
 }
-.cad-filter-header {
+.bob-filter-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 10px 4px;
   font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--text-muted); border-bottom: 1px solid var(--background-modifier-border);
 }
-.cad-filter-clear {
+.bob-filter-clear {
   font-size: 10px; padding: 1px 6px; background: none;
   border: 1px solid var(--background-modifier-border); border-radius: 3px;
   cursor: pointer; color: var(--text-muted);
 }
-.cad-filter-clear:hover { color: var(--text-normal); border-color: var(--text-muted); }
-.cad-filter-option {
+.bob-filter-clear:hover { color: var(--text-normal); border-color: var(--text-muted); }
+.bob-filter-option {
   display: flex; align-items: center; gap: 7px;
   padding: 5px 10px; font-size: 13px; cursor: pointer;
   color: var(--text-normal);
 }
-.cad-filter-option:hover { background: var(--background-modifier-hover); }
-.cad-filter-option input { cursor: pointer; accent-color: var(--interactive-accent); }
+.bob-filter-option:hover { background: var(--background-modifier-hover); }
+.bob-filter-option input { cursor: pointer; accent-color: var(--interactive-accent); }
 
 /* Bulk action bar */
-.cad-bulk-bar {
+.bob-bulk-bar {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -682,23 +682,23 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-secondary));
   border-bottom: 1px solid color-mix(in srgb, var(--interactive-accent) 30%, transparent);
 }
-.cad-bulk-bar-hidden { display: none; }
-.cad-bulk-count { font-size: 13px; font-weight: 600; color: var(--text-normal); flex: 1; }
+.bob-bulk-bar-hidden { display: none; }
+.bob-bulk-count { font-size: 13px; font-weight: 600; color: var(--text-normal); flex: 1; }
 
 /* Checkbox column */
-.cad-col-cb { width: 36px; padding: 0 8px !important; text-align: center; vertical-align: middle; }
-.cad-row-cb { cursor: pointer; accent-color: var(--interactive-accent); }
-.cad-row-selected { background: color-mix(in srgb, var(--interactive-accent) 8%, transparent) !important; }
+.bob-col-cb { width: 36px; padding: 0 8px !important; text-align: center; vertical-align: middle; }
+.bob-row-cb { cursor: pointer; accent-color: var(--interactive-accent); }
+.bob-row-selected { background: color-mix(in srgb, var(--interactive-accent) 8%, transparent) !important; }
 
 /* Inline cell editing */
-.cad-cell-editable { cursor: pointer; }
-.cad-cell-editable:hover {
+.bob-cell-editable { cursor: pointer; }
+.bob-cell-editable:hover {
   background: color-mix(in srgb, var(--interactive-accent) 8%, transparent);
   outline: 1px dashed var(--background-modifier-border);
   outline-offset: -2px;
 }
-.cad-cell-editing { padding: 2px !important; vertical-align: middle !important; }
-.cad-cell-input {
+.bob-cell-editing { padding: 2px !important; vertical-align: middle !important; }
+.bob-cell-input {
   width: 100%;
   min-width: 80px;
   padding: 6px 8px;
@@ -711,9 +711,9 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 20%, transparent);
 }
-.cad-cell-input:focus { border-color: var(--interactive-accent); }
-select.cad-cell-input { padding: 5px 8px; }
-.cad-base-filter-warnings {
+.bob-cell-input:focus { border-color: var(--interactive-accent); }
+select.bob-cell-input { padding: 5px 8px; }
+.bob-base-filter-warnings {
   margin: 12px 32px 0 32px;
   padding: 10px 12px;
   border: 1px solid var(--background-modifier-border);
@@ -722,27 +722,27 @@ select.cad-cell-input { padding: 5px 8px; }
   color: var(--text-muted);
   font-size: 12px;
 }
-.cad-base-filter-warnings summary {
+.bob-base-filter-warnings summary {
   cursor: pointer;
   font-weight: 600;
   color: var(--text-normal);
 }
-.cad-base-filter-warnings ul {
+.bob-base-filter-warnings ul {
   margin: 8px 0 0 18px;
   padding: 0;
 }
-.cad-base-filter-warnings li + li { margin-top: 4px; }
-.cad-base-filter-warnings code {
+.bob-base-filter-warnings li + li { margin-top: 4px; }
+.bob-base-filter-warnings code {
   white-space: normal;
   overflow-wrap: anywhere;
 }
 
 /* ─────────── Stat grid (dashboard / reports) ─────────── */
-.cad-stat-grid {
+.bob-stat-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px; padding: 20px 32px;
 }
-.cad-stat-card {
+.bob-stat-card {
   position: relative;
   border: 1px solid var(--background-modifier-border);
   border-radius: 10px; padding: 16px 16px 16px 20px;
@@ -750,53 +750,53 @@ select.cad-cell-input { padding: 5px 8px; }
   overflow: hidden;
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
-.cad-stat-card::before {
+.bob-stat-card::before {
   content: '';
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 4px;
   background: var(--background-modifier-border);
 }
-.cad-stat-card[data-accent="emerald"]::before { background: oklch(0.55 0.13 155); }
-.cad-stat-card[data-accent="mint"]::before    { background: oklch(0.78 0.12 155); }
-.cad-stat-card[data-accent="sky"]::before     { background: oklch(0.65 0.10 230); }
-.cad-stat-card[data-accent="warn"]::before    { background: oklch(0.72 0.14 70); }
-.cad-stat-card[data-accent="rose"]::before    { background: oklch(0.65 0.14 25); }
-.cad-stat-label {
+.bob-stat-card[data-accent="emerald"]::before { background: oklch(0.55 0.13 155); }
+.bob-stat-card[data-accent="mint"]::before    { background: oklch(0.78 0.12 155); }
+.bob-stat-card[data-accent="sky"]::before     { background: oklch(0.65 0.10 230); }
+.bob-stat-card[data-accent="warn"]::before    { background: oklch(0.72 0.14 70); }
+.bob-stat-card[data-accent="rose"]::before    { background: oklch(0.65 0.14 25); }
+.bob-stat-label {
   font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--text-muted);
 }
-.cad-stat-value {
+.bob-stat-value {
   font-size: 28px; font-weight: 700; letter-spacing: -0.03em;
   color: var(--text-normal); font-variant-numeric: tabular-nums;
   margin-top: 4px; line-height: 1.1;
 }
-.cad-stat-sub { font-size: 11px; color: var(--text-faint); margin-top: 4px; font-family: var(--font-monospace); }
+.bob-stat-sub { font-size: 11px; color: var(--text-faint); margin-top: 4px; font-family: var(--font-monospace); }
 
 /* ─────────── Section labels (within report pages) ─────────── */
-.cad-section-label-lg {
+.bob-section-label-lg {
   font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--text-muted);
   padding: 24px 32px 8px 32px;
 }
 
 /* ─────────── Dashboard / report list rows ─────────── */
-.cad-dash-row {
+.bob-dash-row {
   display: flex; justify-content: space-between; align-items: center;
   padding: 10px 12px; border-radius: 7px; cursor: pointer;
   border: 1px solid var(--background-modifier-border);
 }
-.cad-dash-row:hover { background: var(--background-modifier-hover); }
-.cad-dash-row-title { font-size: 13px; color: var(--text-normal); font-weight: 500; }
-.cad-dash-row-meta {
+.bob-dash-row:hover { background: var(--background-modifier-hover); }
+.bob-dash-row-title { font-size: 13px; color: var(--text-normal); font-weight: 500; }
+.bob-dash-row-meta {
   font-size: 11px; color: var(--text-muted); font-family: var(--font-monospace);
 }
 
 /* ─────────── Pipeline kanban ─────────── */
-.cad-kanban-board {
+.bob-kanban-board {
   display: flex; gap: 12px; padding: 16px 32px 24px 32px; overflow-x: auto;
 }
-.cad-kanban-col {
+.bob-kanban-col {
   flex: 0 0 240px; max-width: 280px;
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
@@ -805,155 +805,155 @@ select.cad-cell-input { padding: 5px 8px; }
   max-height: calc(100vh - 250px);
   transition: background 90ms ease, border-color 90ms ease;
 }
-.cad-kanban-col-head {
+.bob-kanban-col-head {
   padding: 12px; border-bottom: 1px solid var(--background-modifier-border);
 }
-.cad-kanban-col-title {
+.bob-kanban-col-title {
   font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--text-normal);
 }
-.cad-kanban-col-meta {
+.bob-kanban-col-meta {
   font-size: 11px; color: var(--text-muted); margin-top: 2px;
   font-family: var(--font-monospace);
 }
-.cad-kanban-col-list {
+.bob-kanban-col-list {
   padding: 8px; display: flex; flex-direction: column; gap: 6px;
   overflow-y: auto;
   min-height: 60px;
 }
-.cad-kanban-card {
+.bob-kanban-card {
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 7px; padding: 10px 12px;
   cursor: grab;
   transition: transform 90ms ease, box-shadow 90ms ease, border-color 90ms ease, opacity 90ms ease;
 }
-.cad-kanban-card:hover {
+.bob-kanban-card:hover {
   border-color: var(--interactive-accent);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
-.cad-kanban-card:active { cursor: grabbing; }
-.cad-kanban-card.dragging { opacity: 0.4; transform: rotate(-1deg); }
-.cad-kanban-card.cad-kanban-card-touch,
-.cad-kanban-card.cad-kanban-card-touch:active { cursor: pointer; }
-.cad-kanban-card.cad-kanban-card-touch:hover { transform: none; }
-.cad-kanban-col.drag-over {
+.bob-kanban-card:active { cursor: grabbing; }
+.bob-kanban-card.dragging { opacity: 0.4; transform: rotate(-1deg); }
+.bob-kanban-card.bob-kanban-card-touch,
+.bob-kanban-card.bob-kanban-card-touch:active { cursor: pointer; }
+.bob-kanban-card.bob-kanban-card-touch:hover { transform: none; }
+.bob-kanban-col.drag-over {
   background: var(--background-modifier-active-hover, var(--background-modifier-hover));
   border-color: var(--interactive-accent);
 }
-.cad-kanban-card-title {
+.bob-kanban-card-title {
   font-size: 13px; font-weight: 500; color: var(--text-normal);
   margin-bottom: 4px; line-height: 1.3;
 }
-.cad-kanban-card-meta {
+.bob-kanban-card-meta {
   font-size: 11px; color: var(--text-muted);
   font-family: var(--font-monospace);
 }
-.cad-kanban-card-value { color: var(--text-normal); font-weight: 600; }
+.bob-kanban-card-value { color: var(--text-normal); font-weight: 600; }
 
 /* ─────────── Empty state ─────────── */
-.cad-empty-state {
+.bob-empty-state {
   padding: 48px 32px; text-align: center;
 }
-.cad-empty-state-title {
+.bob-empty-state-title {
   font-size: 16px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;
 }
-.cad-empty-state-desc {
+.bob-empty-state-desc {
   font-size: 13px; color: var(--text-faint); max-width: 480px; margin: 0 auto;
 }
 
 
 /* ─────────── Home / Command Centre ─────────── */
-.cad-home-row {
+.bob-home-row {
   display: flex; gap: 10px; align-items: flex-start;
   padding: 8px 10px; border-radius: 6px; cursor: pointer;
 }
-.cad-home-row:hover { background: var(--background-modifier-hover); }
-.cad-home-row-date {
+.bob-home-row:hover { background: var(--background-modifier-hover); }
+.bob-home-row-date {
   flex-shrink: 0; min-width: 90px;
   font-size: 11px; color: var(--text-muted); font-family: var(--font-monospace);
 }
-.cad-home-row-main { flex: 1; min-width: 0; }
-.cad-home-row-title {
+.bob-home-row-main { flex: 1; min-width: 0; }
+.bob-home-row-title {
   font-size: 13px; color: var(--text-normal); line-height: 1.3;
   overflow: hidden; text-overflow: ellipsis;
 }
-.cad-home-row-meta {
+.bob-home-row-meta {
   font-size: 11px; color: var(--text-muted); margin-top: 2px;
   font-family: var(--font-monospace);
 }
-.cad-row-progress {
+.bob-row-progress {
   margin-top: 7px;
 }
-.cad-home-row.overdue .cad-home-row-date { color: var(--text-error, #c0392b); font-weight: 700; }
+.bob-home-row.overdue .bob-home-row-date { color: var(--text-error, #c0392b); font-weight: 700; }
 
-.cad-proj-card {
+.bob-proj-card {
   cursor: pointer;
 }
 
 /* ─────────── Progress bar (shared) ─────────── */
-.cad-proj-progress-wrap { display: flex; flex-direction: column; gap: 4px; }
-.cad-proj-progress-label {
+.bob-proj-progress-wrap { display: flex; flex-direction: column; gap: 4px; }
+.bob-proj-progress-label {
   display: flex; justify-content: space-between; align-items: baseline;
   font-size: 11px; color: var(--text-muted); font-family: var(--font-monospace);
 }
-.cad-proj-progress-pct {
+.bob-proj-progress-pct {
   font-weight: 700; color: var(--text-normal);
   font-variant-numeric: tabular-nums;
 }
-.cad-proj-progress-bar {
+.bob-proj-progress-bar {
   height: 6px; border-radius: 3px;
   background: var(--background-modifier-border);
   overflow: hidden;
 }
-.cad-proj-progress-fill {
+.bob-proj-progress-fill {
   height: 100%; background: var(--interactive-accent);
   border-radius: 3px; transition: width 200ms ease, background 200ms ease;
 }
-[data-pct-band="rose"]    .cad-proj-progress-fill { background: oklch(0.65 0.14 25); }
-[data-pct-band="warn"]    .cad-proj-progress-fill { background: oklch(0.72 0.14 70); }
-[data-pct-band="mint"]    .cad-proj-progress-fill { background: oklch(0.78 0.12 155); }
-[data-pct-band="emerald"] .cad-proj-progress-fill { background: oklch(0.55 0.13 155); }
+[data-pct-band="rose"]    .bob-proj-progress-fill { background: oklch(0.65 0.14 25); }
+[data-pct-band="warn"]    .bob-proj-progress-fill { background: oklch(0.72 0.14 70); }
+[data-pct-band="mint"]    .bob-proj-progress-fill { background: oklch(0.78 0.12 155); }
+[data-pct-band="emerald"] .bob-proj-progress-fill { background: oklch(0.55 0.13 155); }
 
 /* ─────────── Project cards (Projects surface) ─────────── */
-.cad-proj-grid {
+.bob-proj-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px; padding: 12px 32px;
 }
-.cad-proj-card {
+.bob-proj-card {
   border: 1px solid var(--background-modifier-border);
   border-radius: 10px; padding: 14px 16px;
   background: var(--background-primary);
   display: flex; flex-direction: column; gap: 10px;
   transition: border-color 90ms ease, box-shadow 90ms ease, transform 90ms ease;
 }
-.cad-proj-card:hover {
+.bob-proj-card:hover {
   border-color: var(--interactive-accent);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
-.cad-proj-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-.cad-proj-title {
+.bob-proj-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.bob-proj-title {
   font-size: 14px; font-weight: 600; color: var(--text-normal);
   cursor: pointer; text-decoration: none;
 }
-.cad-proj-title:hover { color: var(--interactive-accent); }
-.cad-proj-pills { display: flex; gap: 4px; flex-wrap: wrap; }
-.cad-proj-meta {
+.bob-proj-title:hover { color: var(--interactive-accent); }
+.bob-proj-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+.bob-proj-meta {
   font-size: 11px; color: var(--text-muted);
   font-family: var(--font-monospace);
   display: flex; gap: 12px; flex-wrap: wrap;
 }
-.cad-proj-next {
+.bob-proj-next {
   font-size: 11px; color: var(--text-muted);
   padding-top: 4px; border-top: 1px dashed var(--background-modifier-border);
 }
-.cad-proj-next-label { font-weight: 700; letter-spacing: 0.1em; font-family: var(--font-monospace); }
-.cad-proj-next-date { color: var(--text-normal); font-family: var(--font-monospace); }
+.bob-proj-next-label { font-weight: 700; letter-spacing: 0.1em; font-family: var(--font-monospace); }
+.bob-proj-next-date { color: var(--text-normal); font-family: var(--font-monospace); }
 
 /* ─────────── Pills (status / priority) ─────────── */
-.cad-pill {
+.bob-pill {
   display: inline-block;
   padding: 2px 8px;
   font-size: 10px;
@@ -966,56 +966,56 @@ select.cad-cell-input { padding: 5px 8px; }
   border: 1px solid var(--background-modifier-border);
   font-family: var(--font-monospace);
 }
-.cad-pill-active     { background: var(--interactive-accent); color: var(--background-primary); border-color: var(--interactive-accent); }
-.cad-pill-on_hold    { background: var(--background-modifier-border); color: var(--text-muted); }
-.cad-pill-on-hold    { background: var(--background-modifier-border); color: var(--text-muted); }
-.cad-pill-backlog    { background: var(--background-modifier-border); color: var(--text-muted); }
-.cad-pill-done       { color: var(--text-faint); text-decoration: line-through; }
-.cad-pill-cancelled  { color: var(--text-faint); text-decoration: line-through; }
-.cad-pill-prio-high   { background: #f5c2c7; color: #842029; border-color: #f1aeb5; }
-.cad-pill-prio-medium { background: #ffe69c; color: #7d5c00; border-color: #ffd76d; }
-.cad-pill-prio-low    { background: #cfe2ff; color: #084298; border-color: #9ec5fe; }
+.bob-pill-active     { background: var(--interactive-accent); color: var(--background-primary); border-color: var(--interactive-accent); }
+.bob-pill-on_hold    { background: var(--background-modifier-border); color: var(--text-muted); }
+.bob-pill-on-hold    { background: var(--background-modifier-border); color: var(--text-muted); }
+.bob-pill-backlog    { background: var(--background-modifier-border); color: var(--text-muted); }
+.bob-pill-done       { color: var(--text-faint); text-decoration: line-through; }
+.bob-pill-cancelled  { color: var(--text-faint); text-decoration: line-through; }
+.bob-pill-prio-high   { background: #f5c2c7; color: #842029; border-color: #f1aeb5; }
+.bob-pill-prio-medium { background: #ffe69c; color: #7d5c00; border-color: #ffd76d; }
+.bob-pill-prio-low    { background: #cfe2ff; color: #084298; border-color: #9ec5fe; }
 
 /* ─────────── Inbox — fallback ─────────── */
-.cadence-inbox .cad-inbox-list {
+.bob-inbox .bob-inbox-list {
   display: flex; flex-direction: column; gap: 8px;
   padding: 8px 32px;
   max-width: 1000px;
 }
-.cad-inbox-row {
+.bob-inbox-row {
   display: flex; align-items: center; gap: 14px;
   padding: 12px 14px;
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
 }
-.cad-inbox-row:hover { border-color: var(--text-muted); }
-.cad-inbox-row.overdue { border-color: var(--text-error, #c0392b); }
-.cad-inbox-row-left { flex-shrink: 0; min-width: 130px; }
-.cad-inbox-time { display: flex; flex-direction: column; gap: 2px; }
-.cad-inbox-time-text {
+.bob-inbox-row:hover { border-color: var(--text-muted); }
+.bob-inbox-row.overdue { border-color: var(--text-error, #c0392b); }
+.bob-inbox-row-left { flex-shrink: 0; min-width: 130px; }
+.bob-inbox-time { display: flex; flex-direction: column; gap: 2px; }
+.bob-inbox-time-text {
   font-size: 13px; font-weight: 600; color: var(--text-normal);
   font-family: var(--font-monospace);
 }
-.cad-inbox-time-text.muted { color: var(--text-faint); font-weight: 400; }
-.cad-inbox-row.overdue .cad-inbox-time-text { color: var(--text-error, #c0392b); }
-.cad-inbox-repeat {
+.bob-inbox-time-text.muted { color: var(--text-faint); font-weight: 400; }
+.bob-inbox-row.overdue .bob-inbox-time-text { color: var(--text-error, #c0392b); }
+.bob-inbox-repeat {
   font-size: 10px; color: var(--text-faint);
   font-family: var(--font-monospace);
 }
-.cad-inbox-row-main { flex: 1; min-width: 0; }
-.cad-inbox-row-text {
+.bob-inbox-row-main { flex: 1; min-width: 0; }
+.bob-inbox-row-text {
   font-size: 14px; color: var(--text-normal); line-height: 1.4;
   word-break: break-word;
 }
-.cad-inbox-row-notes {
+.bob-inbox-row-notes {
   font-size: 12px; color: var(--text-muted);
   margin-top: 4px; line-height: 1.4;
 }
-.cad-inbox-row-notes-icon { opacity: 0.7; margin-right: 2px; }
+.bob-inbox-row-notes-icon { opacity: 0.7; margin-right: 2px; }
 
 /* Project chip — fallback */
-.cad-rem-project-chip {
+.bob-rem-project-chip {
   display: inline-flex; align-items: center;
   font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
   color: var(--interactive-accent);
@@ -1025,74 +1025,74 @@ select.cad-cell-input { padding: 5px 8px; }
   padding: 2px 8px;
   text-decoration: none; cursor: pointer;
 }
-.cad-rem-project-chip:hover { background: var(--background-modifier-hover); }
-.cad-inbox-row-meta-row { margin-top: 4px; }
+.bob-rem-project-chip:hover { background: var(--background-modifier-hover); }
+.bob-inbox-row-meta-row { margin-top: 4px; }
 
 /* Bell button on project tasks */
-.cad-pd-task-bell {
+.bob-pd-task-bell {
   padding: 2px 8px; min-width: 0;
   background: transparent; border-color: transparent;
   font-size: 13px; line-height: 1; opacity: 0.4;
 }
-.cad-pd-task-row:hover .cad-pd-task-bell { opacity: 1; }
-.cad-pd-task-bell.linked { opacity: 1; color: var(--interactive-accent); }
+.bob-pd-task-row:hover .bob-pd-task-bell { opacity: 1; }
+.bob-pd-task-bell.linked { opacity: 1; color: var(--interactive-accent); }
 
 /* Project tasks section in inbox */
-.cad-pt-wrap {
+.bob-pt-wrap {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px; padding: 8px 32px 24px 32px;
 }
-.cad-pt-group {
+.bob-pt-group {
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px; overflow: hidden;
 }
-.cad-pt-group-head {
+.bob-pt-group-head {
   display: flex; justify-content: space-between; align-items: center;
   padding: 10px 14px; background: var(--background-secondary);
   border-bottom: 1px solid var(--background-modifier-border);
 }
-.cad-pt-group-link {
+.bob-pt-group-link {
   font-size: 13px; font-weight: 600; color: var(--text-normal);
   text-decoration: none; cursor: pointer;
 }
-.cad-pt-group-link:hover { color: var(--interactive-accent); }
-.cad-pt-group-meta {
+.bob-pt-group-link:hover { color: var(--interactive-accent); }
+.bob-pt-group-meta {
   font-size: 11px; color: var(--text-muted);
   font-family: var(--font-monospace);
 }
-.cad-pt-list { padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
-.cad-pt-row {
+.bob-pt-list { padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
+.bob-pt-row {
   display: flex; align-items: center; gap: 8px;
   padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 13px;
 }
-.cad-pt-row:hover { background: var(--background-modifier-hover); }
-.cad-pt-bullet { color: var(--text-faint); font-weight: 700; flex-shrink: 0; }
-.cad-pt-text { flex: 1; min-width: 0; color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cad-pt-when {
+.bob-pt-row:hover { background: var(--background-modifier-hover); }
+.bob-pt-bullet { color: var(--text-faint); font-weight: 700; flex-shrink: 0; }
+.bob-pt-text { flex: 1; min-width: 0; color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bob-pt-when {
   font-size: 11px; color: var(--interactive-accent);
   font-family: var(--font-monospace); flex-shrink: 0;
 }
-.cad-pt-bell {
+.bob-pt-bell {
   padding: 2px 6px; min-width: 0;
   background: transparent; border-color: transparent;
   font-size: 12px; opacity: 0.4;
 }
-.cad-pt-row:hover .cad-pt-bell { opacity: 1; }
-.cad-pt-bell.linked { opacity: 1; color: var(--interactive-accent); }
-.cad-inbox-actions {
+.bob-pt-row:hover .bob-pt-bell { opacity: 1; }
+.bob-pt-bell.linked { opacity: 1; color: var(--interactive-accent); }
+.bob-inbox-actions {
   display: flex; gap: 4px; flex-shrink: 0; align-items: center;
 }
-.cad-btn.cad-btn-sm { padding: 5px 10px; font-size: 12px; }
-.cad-app-nav-badge.cad-nav-badge-alert {
+.bob-btn.bob-btn-sm { padding: 5px 10px; font-size: 12px; }
+.bob-app-nav-badge.bob-nav-badge-alert {
   background: var(--text-error, #c0392b); color: white;
   border-radius: 10px; padding: 1px 7px;
   font-size: 10px; font-weight: 700; letter-spacing: 0;
 }
-.cad-capture-modal h3 { margin-top: 0; margin-bottom: 16px; font-weight: 600; }
+.bob-capture-modal h3 { margin-top: 0; margin-bottom: 16px; font-weight: 600; }
 
 /* ─────────── Entity create modal — fallback ─────────── */
-.cad-create-modal {
+.bob-create-modal {
   padding: 16px 24px 0 24px;
   min-width: 520px;
   max-width: 640px;
@@ -1100,25 +1100,25 @@ select.cad-cell-input { padding: 5px 8px; }
   display: flex;
   flex-direction: column;
 }
-.cad-create-title {
+.bob-create-title {
   margin: 0 0 14px 0;
   font-size: 18px; font-weight: 700; letter-spacing: -0.01em;
   color: var(--text-normal);
 }
-.cad-create-form {
+.bob-create-form {
   display: flex; flex-direction: column; gap: 12px;
   overflow-y: auto;
   flex: 1;
   padding-bottom: 8px;
 }
-.cad-create-row {
+.bob-create-row {
   display: grid; grid-template-columns: 130px 1fr; gap: 16px; align-items: center;
 }
-.cad-create-label {
+.bob-create-label {
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--text-muted);
 }
-.cad-create-input {
+.bob-create-input {
   width: 100%;
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
@@ -1129,16 +1129,16 @@ select.cad-cell-input { padding: 5px 8px; }
   font-family: inherit;
   transition: border-color 120ms ease;
 }
-.cad-create-input::placeholder { color: var(--text-faint); }
-.cad-create-input:focus { outline: none; border-color: var(--interactive-accent); }
-select.cad-create-input {
+.bob-create-input::placeholder { color: var(--text-faint); }
+.bob-create-input:focus { outline: none; border-color: var(--interactive-accent); }
+select.bob-create-input {
   appearance: auto;
   box-sizing: border-box;
   min-height: 36px;
   line-height: 1.35;
   padding: 7px 28px 7px 12px;
 }
-.cad-create-actions {
+.bob-create-actions {
   display: flex; justify-content: flex-end; gap: 8px;
   padding: 12px 0 16px 0;
   border-top: 1px solid var(--background-modifier-border);
@@ -1146,26 +1146,26 @@ select.cad-create-input {
   position: sticky;
   bottom: 0;
 }
-.cad-confirm-modal p { margin: 4px 0; color: var(--text-normal); white-space: pre-wrap; }
-.cad-confirm-actions {
+.bob-confirm-modal p { margin: 4px 0; color: var(--text-normal); white-space: pre-wrap; }
+.bob-confirm-actions {
   display: flex; justify-content: flex-end; gap: 8px;
   margin-top: 14px;
 }
-.cad-btn-disabled,
-.cad-btn:disabled {
+.bob-btn-disabled,
+.bob-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
 }
-.cad-setting-disabled {
+.bob-setting-disabled {
   opacity: 0.5;
 }
-.cad-setting-disabled .setting-item-name,
-.cad-setting-disabled .setting-item-description {
+.bob-setting-disabled .setting-item-name,
+.bob-setting-disabled .setting-item-description {
   color: var(--text-faint);
 }
 /* Settings tab bar */
-.cad-settings-tabs {
+.bob-settings-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
@@ -1173,7 +1173,7 @@ select.cad-create-input {
   border-bottom: 1px solid var(--background-modifier-border);
   padding-bottom: 6px;
 }
-.cad-settings-tab {
+.bob-settings-tab {
   padding: 5px 14px;
   border-radius: 6px 6px 0 0;
   border: 1px solid transparent;
@@ -1185,29 +1185,29 @@ select.cad-create-input {
   transition: background 0.12s, color 0.12s;
   margin-bottom: -1px;
 }
-.cad-settings-tab:hover {
+.bob-settings-tab:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
-.cad-settings-tab.is-active {
+.bob-settings-tab.is-active {
   background: var(--background-primary);
   color: var(--text-normal);
   border-color: var(--background-modifier-border);
   border-bottom-color: var(--background-primary);
   font-weight: 600;
 }
-.cad-settings-tab-panel {
+.bob-settings-tab-panel {
   padding-top: 4px;
 }
 /* Module collapsible cards */
-.cad-module-card {
+.bob-module-card {
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
   margin-bottom: 10px;
   overflow: hidden;
   background: var(--background-secondary);
 }
-.cad-module-card-head {
+.bob-module-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1218,65 +1218,65 @@ select.cad-create-input {
   border-bottom: 1px solid var(--background-modifier-border);
   transition: background 0.1s;
 }
-.cad-module-card-head:hover {
+.bob-module-card-head:hover {
   background: var(--background-modifier-hover);
 }
-.cad-module-card-label {
+.bob-module-card-label {
   font-weight: 600;
   font-size: 13px;
 }
-.cad-module-card-head-right {
+.bob-module-card-head-right {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.cad-module-card-toggle {
+.bob-module-card-toggle {
   display: flex;
   align-items: center;
 }
-.cad-module-card-desc {
+.bob-module-card-desc {
   padding: 8px 16px 4px;
 }
-.cad-module-card-chevron {
+.bob-module-card-chevron {
   font-size: 16px;
   color: var(--text-muted);
   line-height: 1;
   transition: transform 0.15s;
 }
 /* Secondary-tab rows: indent + tree connector so the parent→tab hierarchy reads. */
-.setting-item.cad-setting-nested {
+.setting-item.bob-setting-nested {
   margin-left: 20px;
   padding-left: 16px;
   border-left: 2px solid var(--background-modifier-border);
 }
-.setting-item.cad-setting-nested .setting-item-name {
+.setting-item.bob-setting-nested .setting-item-name {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-muted);
 }
-.cad-module-card.is-collapsed .cad-module-card-body {
+.bob-module-card.is-collapsed .bob-module-card-body {
   display: none;
 }
-.cad-module-card.is-off .cad-module-card-head {
+.bob-module-card.is-off .bob-module-card-head {
   opacity: 0.65;
 }
-.cad-module-card-body .setting-group {
+.bob-module-card-body .setting-group {
   background: var(--background-primary);
 }
-.cad-settings-panel-off { opacity: 0.6; }
-.cad-settings-section {
+.bob-settings-panel-off { opacity: 0.6; }
+.bob-settings-section {
   margin-bottom: 18px;
 }
-.cad-settings-section > .setting-items > .setting-item:first-child {
+.bob-settings-section > .setting-items > .setting-item:first-child {
   border-top: 0;
 }
-.cad-settings-checkboxes {
+.bob-settings-checkboxes {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 12px;
   justify-content: flex-end;
 }
-.cad-settings-checkbox {
+.bob-settings-checkbox {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1284,42 +1284,42 @@ select.cad-create-input {
   color: var(--text-muted);
   white-space: nowrap;
 }
-.cad-settings-checkbox input {
+.bob-settings-checkbox input {
   margin: 0;
 }
-.cad-nav-designer {
+.bob-nav-designer {
   margin: 18px 0 24px;
   padding: 14px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
   background: var(--background-secondary);
 }
-.cad-workbook-designer {
+.bob-workbook-designer {
   margin: 18px 0 24px;
   padding: 14px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
   background: var(--background-secondary);
 }
-.cad-workbook-designer-board {
+.bob-workbook-designer-board {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 10px;
 }
-.cad-workbook-designer-group {
+.bob-workbook-designer-group {
   border: 1px solid var(--background-modifier-border);
   border-radius: 7px;
   background: var(--background-primary);
   overflow: hidden;
 }
-.cad-workbook-designer-group-head {
+.bob-workbook-designer-group-head {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px;
   border-bottom: 1px solid var(--background-modifier-border);
 }
-.cad-workbook-designer-title {
+.bob-workbook-designer-title {
   flex: 1;
   min-width: 80px;
   padding: 5px 7px;
@@ -1328,7 +1328,7 @@ select.cad-create-input {
   background: var(--background-secondary);
   color: var(--text-normal);
 }
-.cad-workbook-designer-choices {
+.bob-workbook-designer-choices {
   max-height: 290px;
   overflow: auto;
   display: flex;
@@ -1336,7 +1336,7 @@ select.cad-create-input {
   gap: 3px;
   padding: 8px;
 }
-.cad-workbook-designer-choice {
+.bob-workbook-designer-choice {
   display: flex;
   gap: 7px;
   align-items: center;
@@ -1345,27 +1345,27 @@ select.cad-create-input {
   color: var(--text-normal);
   font-size: 12px;
 }
-.cad-workbook-designer-choice:hover {
+.bob-workbook-designer-choice:hover {
   background: var(--background-modifier-hover);
 }
-.cad-nav-designer-head h4 {
+.bob-nav-designer-head h4 {
   margin: 0 0 5px;
   font-size: 15px;
 }
-.cad-nav-designer-tabs {
+.bob-nav-designer-tabs {
   margin: 12px 0;
   padding: 10px;
   border: 1px dashed var(--background-modifier-border);
   border-radius: 7px;
   background: var(--background-primary);
 }
-.cad-nav-designer-add-group {
+.bob-nav-designer-add-group {
   display: flex;
   gap: 8px;
   align-items: center;
   margin: 12px 0;
 }
-.cad-nav-designer-add-group input {
+.bob-nav-designer-add-group input {
   flex: 1;
   max-width: 280px;
   padding: 6px 8px;
@@ -1374,7 +1374,7 @@ select.cad-create-input {
   background: var(--background-primary);
   color: var(--text-normal);
 }
-.cad-nav-designer-add-group button {
+.bob-nav-designer-add-group button {
   padding: 6px 10px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
@@ -1382,35 +1382,35 @@ select.cad-create-input {
   color: var(--text-normal);
   cursor: pointer;
 }
-.cad-nav-designer-add-group button:hover {
+.bob-nav-designer-add-group button:hover {
   background: var(--background-modifier-hover);
 }
-.cad-nav-designer-label {
+.bob-nav-designer-label {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
   margin-bottom: 8px;
 }
-.cad-nav-designer-tab-chips {
+.bob-nav-designer-tab-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
-.cad-nav-designer-tab-parents {
+.bob-nav-designer-tab-parents {
   display: flex;
   flex-direction: column;
   gap: 7px;
 }
-.cad-nav-designer-tab-parent {
+.bob-nav-designer-tab-parent {
   padding: 7px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
 }
-.cad-nav-designer-tab-parent.drag-over {
+.bob-nav-designer-tab-parent.drag-over {
   outline: 2px solid var(--interactive-accent);
   outline-offset: -2px;
 }
-.cad-nav-designer-tab-parent-head {
+.bob-nav-designer-tab-parent-head {
   display: flex;
   gap: 8px;
   align-items: center;
@@ -1420,7 +1420,7 @@ select.cad-create-input {
   font-size: 12px;
   font-weight: 600;
 }
-.cad-nav-designer-tab {
+.bob-nav-designer-tab {
   display: inline-flex;
   gap: 6px;
   align-items: center;
@@ -1432,7 +1432,7 @@ select.cad-create-input {
   cursor: grab;
   font-size: 12px;
 }
-.cad-nav-designer-tab-remove {
+.bob-nav-designer-tab-remove {
   display: inline-flex;
   justify-content: center;
   align-items: center;
@@ -1447,26 +1447,26 @@ select.cad-create-input {
   line-height: 1;
   cursor: pointer;
 }
-.cad-nav-designer-tab-remove:hover {
+.bob-nav-designer-tab-remove:hover {
   background: var(--background-modifier-hover);
   color: var(--text-error);
 }
-.cad-nav-designer-tab.exposed {
+.bob-nav-designer-tab.exposed {
   border-color: var(--interactive-accent);
 }
-.cad-nav-designer-empty {
+.bob-nav-designer-empty {
   font-size: 12px;
   color: var(--text-faint);
   padding: 5px 0;
 }
-.cad-nav-designer-level {
+.bob-nav-designer-level {
   padding: 1px 5px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
   color: var(--interactive-accent);
   font-size: 10px;
 }
-.cad-nav-designer-remove {
+.bob-nav-designer-remove {
   margin: 12px 0;
   padding: 10px;
   border: 1px dashed var(--text-error);
@@ -1476,30 +1476,30 @@ select.cad-create-input {
   font-size: 12px;
   text-align: center;
 }
-.cad-nav-designer-remove.drag-over {
+.bob-nav-designer-remove.drag-over {
   color: var(--text-error);
   outline: 2px solid var(--text-error);
   outline-offset: -2px;
 }
-.cad-nav-designer-board {
+.bob-nav-designer-board {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 10px;
 }
-.cad-nav-designer-group {
+.bob-nav-designer-group {
   min-height: 100px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 7px;
   background: var(--background-primary);
   overflow: hidden;
 }
-.cad-nav-designer-group.drag-over,
-.cad-nav-designer-item.drag-over,
-.cad-nav-designer-dropzone.drag-over {
+.bob-nav-designer-group.drag-over,
+.bob-nav-designer-item.drag-over,
+.bob-nav-designer-dropzone.drag-over {
   outline: 2px solid var(--interactive-accent);
   outline-offset: -2px;
 }
-.cad-nav-designer-group-head {
+.bob-nav-designer-group-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1510,18 +1510,18 @@ select.cad-create-input {
   font-weight: 600;
   cursor: grab;
 }
-.cad-nav-designer-handle {
+.bob-nav-designer-handle {
   color: var(--text-faint);
   font-family: var(--font-monospace);
   cursor: grab;
 }
-.cad-nav-designer-group-title {
+.bob-nav-designer-group-title {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.cad-nav-designer-group-title-input {
+.bob-nav-designer-group-title-input {
   flex: 1;
   min-width: 0;
   font: inherit;
@@ -1532,24 +1532,24 @@ select.cad-create-input {
   padding: 2px 6px;
   color: var(--text-normal);
 }
-.cad-nav-designer-group-title-input:hover {
+.bob-nav-designer-group-title-input:hover {
   border-color: var(--background-modifier-border);
 }
-.cad-nav-designer-group-title-input:focus {
+.bob-nav-designer-group-title-input:focus {
   border-color: var(--interactive-accent);
   background: var(--background-primary);
   outline: none;
 }
-.cad-nav-designer-icon-preview {
+.bob-nav-designer-icon-preview {
   display: inline-flex;
   align-items: center;
   color: var(--text-muted);
 }
-.cad-nav-designer-icon-preview svg {
+.bob-nav-designer-icon-preview svg {
   width: 14px;
   height: 14px;
 }
-.cad-nav-designer-icon-button {
+.bob-nav-designer-icon-button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1562,64 +1562,64 @@ select.cad-create-input {
   font-size: 10px;
   cursor: pointer;
 }
-.cad-nav-designer-icon-button:hover {
+.bob-nav-designer-icon-button:hover {
   background: var(--background-modifier-hover);
 }
-.cad-nav-designer-icon-name {
+.bob-nav-designer-icon-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.cad-icon-picker-result {
+.bob-icon-picker-result {
   display: flex;
   gap: 10px;
   align-items: center;
 }
-.cad-icon-picker-preview {
+.bob-icon-picker-preview {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
 }
-.cad-icon-picker-preview svg {
+.bob-icon-picker-preview svg {
   width: 18px;
   height: 18px;
 }
-.cad-icon-picker-name {
+.bob-icon-picker-name {
   flex: 1;
   font-family: var(--font-monospace);
 }
-.cad-icon-picker-current {
+.bob-icon-picker-current {
   border-radius: 999px;
   padding: 1px 6px;
   color: var(--interactive-accent);
   background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
   font-size: 10px;
 }
-.cad-schema-designer {
+.bob-schema-designer {
   margin: 12px 14px 16px;
   padding: 14px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
   background: var(--background-primary);
 }
-.cad-schema-designer-head h4 {
+.bob-schema-designer-head h4 {
   margin: 0 0 5px;
   font-size: 15px;
 }
-.cad-schema-designer-toolbar {
+.bob-schema-designer-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin: 12px 0 8px;
 }
-.cad-schema-designer-toolbar select {
+.bob-schema-designer-toolbar select {
   min-width: 200px;
   flex: 1;
 }
-.cad-schema-designer-toolbar button,
-.cad-schema-designer-fields-head button {
+.bob-schema-designer-toolbar button,
+.bob-schema-designer-fields-head button {
   padding: 5px 9px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 5px;
@@ -1627,55 +1627,55 @@ select.cad-create-input {
   color: var(--text-normal);
   cursor: pointer;
 }
-.cad-schema-designer-toolbar button:hover,
-.cad-schema-designer-fields-head button:hover {
+.bob-schema-designer-toolbar button:hover,
+.bob-schema-designer-fields-head button:hover {
   background: var(--background-modifier-hover);
 }
-.cad-schema-designer-status {
+.bob-schema-designer-status {
   min-height: 17px;
   margin-bottom: 9px;
 }
-.cad-schema-designer-status.cad-status-ok {
+.bob-schema-designer-status.bob-status-ok {
   color: var(--text-muted);
 }
-.cad-schema-designer-status.cad-status-err {
+.bob-schema-designer-status.bob-status-err {
   color: var(--text-error);
 }
-.cad-schema-save-needed {
+.bob-schema-save-needed {
   box-shadow: 0 0 0 2px var(--color-accent);
-  animation: cad-save-pulse 1.6s ease-in-out infinite;
+  animation: bob-save-pulse 1.6s ease-in-out infinite;
 }
-@keyframes cad-save-pulse {
+@keyframes bob-save-pulse {
   0%, 100% { box-shadow: 0 0 0 2px var(--color-accent); }
   50%       { box-shadow: 0 0 0 4px var(--color-accent); }
 }
-.cad-schema-designer-section {
+.bob-schema-designer-section {
   margin-top: 10px;
   padding: 10px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 7px;
   background: var(--background-secondary);
 }
-.cad-schema-designer-section h5 {
+.bob-schema-designer-section h5 {
   margin: 0 0 9px;
   font-size: 13px;
 }
-.cad-schema-designer-row {
+.bob-schema-designer-row {
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   margin: 6px 0;
 }
-.cad-schema-designer-label {
+.bob-schema-designer-label {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
 }
-.cad-schema-designer-control {
+.bob-schema-designer-control {
   min-width: 0;
 }
-.cad-schema-designer-input {
+.bob-schema-designer-input {
   width: 100%;
   box-sizing: border-box;
   padding: 5px 7px;
@@ -1685,36 +1685,36 @@ select.cad-create-input {
   color: var(--text-normal);
   font-size: 12px;
 }
-textarea.cad-schema-designer-input {
+textarea.bob-schema-designer-input {
   resize: vertical;
   font-family: inherit;
 }
-.cad-schema-designer-fields-head {
+.bob-schema-designer-fields-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 6px;
 }
-.cad-schema-designer-fields-head h5 {
+.bob-schema-designer-fields-head h5 {
   margin: 0;
 }
-.cad-schema-field {
+.bob-schema-field {
   padding: 7px;
   margin: 6px 0;
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
   background: var(--background-primary);
 }
-.cad-schema-field-main {
+.bob-schema-field-main {
   display: grid;
   grid-template-columns: minmax(100px, 1fr) 94px auto auto auto auto;
   align-items: center;
   gap: 6px;
 }
-.cad-schema-field-type {
+.bob-schema-field-type {
   width: 94px;
 }
-.cad-schema-required {
+.bob-schema-required {
   display: inline-flex;
   gap: 4px;
   align-items: center;
@@ -1722,13 +1722,13 @@ textarea.cad-schema-designer-input {
   font-size: 11px;
   white-space: nowrap;
 }
-.cad-schema-field-detail {
+.bob-schema-field-detail {
   margin-top: 6px;
 }
-.cad-nav-designer-items {
+.bob-nav-designer-items {
   padding: 5px;
 }
-.cad-nav-designer-item {
+.bob-nav-designer-item {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1741,14 +1741,14 @@ textarea.cad-schema-designer-input {
   font-size: 12px;
   cursor: grab;
 }
-.cad-nav-designer-item-text {
+.bob-nav-designer-item-text {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.cad-nav-designer-action {
+.bob-nav-designer-action {
   border: 1px solid var(--background-modifier-border);
   border-radius: 4px;
   background: transparent;
@@ -1757,14 +1757,14 @@ textarea.cad-schema-designer-input {
   padding: 2px 5px;
   cursor: pointer;
 }
-.cad-nav-designer-action:hover {
+.bob-nav-designer-action:hover {
   color: var(--text-normal);
   background: var(--background-modifier-hover);
 }
-.cad-nav-designer-action.danger:hover {
+.bob-nav-designer-action.danger:hover {
   color: var(--text-error);
 }
-.cad-nav-designer-dropzone {
+.bob-nav-designer-dropzone {
   padding: 8px 6px;
   border: 1px dashed var(--background-modifier-border);
   border-radius: 5px;
@@ -1772,105 +1772,105 @@ textarea.cad-schema-designer-input {
   font-size: 11px;
   text-align: center;
 }
-.cad-workbook-export-control {
+.bob-workbook-export-control {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
-.cad-workspace-template-row {
+.bob-workspace-template-row {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
-.cad-workspace-template-row select {
+.bob-workspace-template-row select {
   min-width: min(360px, 100%);
 }
-.cad-workbook-group-select {
+.bob-workbook-group-select {
   min-width: 220px;
   max-width: 280px;
   min-height: 168px;
 }
 
-.cad-rem-project-field { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bob-rem-project-field { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 /* Import modal — fallback */
-.modal.cad-import-modal-shell {
+.modal.bob-import-modal-shell {
   width: min(1100px, 92vw);
   max-width: 92vw;
 }
-.cad-import-modal {
+.bob-import-modal {
   min-width: 0;
   max-width: none;
 }
-.cad-import-modal .cad-create-row { grid-template-columns: 110px 1fr; }
-.cad-import-modal .cad-create-title { margin-bottom: 18px; }
-.cad-import-modal textarea.cad-create-input { min-height: 180px; }
-.cad-import-field-ref {
+.bob-import-modal .bob-create-row { grid-template-columns: 110px 1fr; }
+.bob-import-modal .bob-create-title { margin-bottom: 18px; }
+.bob-import-modal textarea.bob-create-input { min-height: 180px; }
+.bob-import-field-ref {
   margin: 12px 0 16px 0;
   padding: 12px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 7px;
   background: var(--background-secondary);
 }
-.cad-import-field-ref-head {
+.bob-import-field-ref-head {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 10px;
 }
-.cad-import-field-hint {
+.bob-import-field-hint {
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.4;
 }
-.cad-import-field-hint code {
+.bob-import-field-hint code {
   color: var(--text-normal);
   font-size: 11px;
   white-space: normal;
 }
-.cad-import-field-list {
+.bob-import-field-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 8px;
 }
-.cad-import-field-item {
+.bob-import-field-item {
   min-width: 0;
   padding: 8px 10px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
   background: var(--background-primary);
 }
-.cad-import-field-item.required {
+.bob-import-field-item.required {
   border-color: var(--interactive-accent);
 }
-.cad-import-field-key {
+.bob-import-field-key {
   font-family: var(--font-monospace);
   font-size: 12px;
   font-weight: 700;
   color: var(--text-normal);
   overflow-wrap: anywhere;
 }
-.cad-import-field-label {
+.bob-import-field-label {
   margin-top: 2px;
   color: var(--text-muted);
   font-size: 12px;
 }
-.cad-import-field-meta {
+.bob-import-field-meta {
   margin-top: 5px;
   color: var(--text-faint);
   font-size: 11px;
   line-height: 1.3;
 }
-.cad-import-table-wrap {
+.bob-import-table-wrap {
   margin-top: 8px; max-height: 320px; overflow: auto;
   border: 1px solid var(--background-modifier-border);
   border-radius: 7px;
 }
-.cad-import-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.cad-import-table thead th {
+.bob-import-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.bob-import-table thead th {
   position: sticky; top: 0;
   text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--text-muted);
@@ -1878,88 +1878,88 @@ textarea.cad-schema-designer-input {
   background: var(--background-secondary);
   border-bottom: 1px solid var(--background-modifier-border);
 }
-.cad-import-table tbody td {
+.bob-import-table tbody td {
   padding: 6px 10px;
   border-bottom: 1px solid var(--background-modifier-border);
   color: var(--text-normal);
 }
-.cad-import-table tbody td:first-child {
+.bob-import-table tbody td:first-child {
   font-weight: 600; font-family: var(--font-monospace);
   white-space: nowrap;
 }
-.cad-import-table tbody td:last-child {
+.bob-import-table tbody td:last-child {
   color: var(--text-muted); font-size: 11px;
   font-family: var(--font-monospace);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 200px;
 }
 /* Higher specificity (two classes on the same element) so we override
-   .cad-create-input padding without !important. */
-.cad-create-input.cad-import-select { padding: 4px 26px 4px 8px; font-size: 12px; }
-.cad-import-summary {
+   .bob-create-input padding without !important. */
+.bob-create-input.bob-import-select { padding: 4px 26px 4px 8px; font-size: 12px; }
+.bob-import-summary {
   margin-top: 14px; padding: 10px 12px; font-size: 13px;
   background: var(--background-secondary); color: var(--text-muted);
   border: 1px solid var(--background-modifier-border); border-radius: 7px;
 }
-.cad-import-summary-warn {
+.bob-import-summary-warn {
   background: var(--background-modifier-error, var(--background-secondary));
   color: var(--text-error, #c0392b);
 }
-.cad-import-preview .cad-empty {
+.bob-import-preview .bob-empty {
   padding: 32px 16px; text-align: center;
   color: var(--text-faint); font-size: 13px;
 }
 
 /* ─────────── Entity detail (in-app form) — fallback ─────────── */
-.cadence-detail { padding: 0; }
-.cad-detail-header {
+.bob-detail { padding: 0; }
+.bob-detail-header {
   display: flex; justify-content: space-between; align-items: flex-start;
   gap: 24px; padding: 20px 32px 14px 32px;
   border-bottom: 1px solid var(--background-modifier-border);
 }
-.cad-detail-header-left { display: flex; flex-direction: column; gap: 10px; min-width: 0; flex: 1; }
-.cad-detail-back { align-self: flex-start; }
-.cad-detail-breadcrumb { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.cad-detail-breadcrumb .cad-eyebrow {
+.bob-detail-header-left { display: flex; flex-direction: column; gap: 10px; min-width: 0; flex: 1; }
+.bob-detail-back { align-self: flex-start; }
+.bob-detail-breadcrumb { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bob-detail-breadcrumb .bob-eyebrow {
   font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--text-muted);
 }
-.cad-detail-title {
+.bob-detail-title {
   font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
   color: var(--text-normal); overflow: hidden; text-overflow: ellipsis;
 }
-.cad-detail-path {
+.bob-detail-path {
   font-size: 11px; color: var(--text-faint);
   font-family: var(--font-monospace); margin-top: 2px;
 }
-.cad-detail-header-right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.bob-detail-header-right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
-.cad-detail-saved {
+.bob-detail-saved {
   font-size: 11px; color: var(--interactive-accent);
   font-family: var(--font-monospace);
   text-transform: uppercase; letter-spacing: 0.08em;
   opacity: 0; transition: opacity 200ms ease;
 }
-.cad-detail-saved.show { opacity: 1; }
+.bob-detail-saved.show { opacity: 1; }
 
-.cad-btn-danger {
+.bob-btn-danger {
   background: transparent; border-color: var(--background-modifier-border);
   color: var(--text-error, #c0392b);
 }
-.cad-btn-danger:hover { background: var(--text-error, #c0392b); color: white; }
+.bob-btn-danger:hover { background: var(--text-error, #c0392b); color: white; }
 
-.cad-detail-form {
+.bob-detail-form {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 14px 22px;
   padding: 20px 32px;
   max-width: 900px;
 }
-.cad-form-row { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.cad-form-label {
+.bob-form-row { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.bob-form-label {
   font-size: 11px; font-weight: 600; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.06em;
 }
-.cad-form-input {
+.bob-form-input {
   display: block; width: 100%;
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
@@ -1970,12 +1970,12 @@ textarea.cad-schema-designer-input {
   font-family: inherit;
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
-.cad-form-input::placeholder { color: var(--text-faint); }
-.cad-form-input:focus {
+.bob-form-input::placeholder { color: var(--text-faint); }
+.bob-form-input:focus {
   outline: none;
   border-color: var(--interactive-accent);
 }
-select.cad-form-input {
+select.bob-form-input {
   appearance: auto;
   box-sizing: border-box;
   min-height: 34px;
@@ -1983,7 +1983,7 @@ select.cad-form-input {
   padding: 6px 28px 6px 11px;
 }
 
-.cad-detail-body-hint {
+.bob-detail-body-hint {
   margin: 12px 32px 28px 32px;
   padding: 16px;
   border: 1px dashed var(--background-modifier-border);
@@ -1993,55 +1993,55 @@ select.cad-form-input {
   align-items: flex-start;
   max-width: 900px;
 }
-.cad-detail-body-desc { font-size: 13px; color: var(--text-muted); }
+.bob-detail-body-desc { font-size: 13px; color: var(--text-muted); }
 
 /* ─────────── CRM Dashboard — fallback ─────────── */
-.cad-stage-bars { display: flex; flex-direction: column; gap: 2px; padding: 4px 32px 22px 32px; }
-.cad-stage-bar-row {
+.bob-stage-bars { display: flex; flex-direction: column; gap: 2px; padding: 4px 32px 22px 32px; }
+.bob-stage-bar-row {
   display: grid; grid-template-columns: 110px 32px 1fr 110px;
   align-items: center; gap: 14px;
   padding: 8px 12px; border-radius: 7px; cursor: pointer;
 }
-.cad-stage-bar-row:hover { background: var(--background-modifier-hover); }
-.cad-stage-bar-name {
+.bob-stage-bar-row:hover { background: var(--background-modifier-hover); }
+.bob-stage-bar-name {
   font-size: 12px; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.06em; color: var(--text-normal);
 }
-.cad-stage-bar-count {
+.bob-stage-bar-count {
   font-size: 11px; font-family: var(--font-monospace);
   color: var(--text-muted); text-align: right;
 }
-.cad-stage-bar {
+.bob-stage-bar {
   height: 8px; border-radius: 4px;
   background: var(--background-modifier-border); overflow: hidden;
 }
-.cad-stage-bar-fill {
+.bob-stage-bar-fill {
   height: 100%; background: var(--interactive-accent);
   border-radius: 4px; transition: width 280ms ease;
 }
-.cad-stage-bar-row[data-stage="Won"]  .cad-stage-bar-fill { background: oklch(0.55 0.13 155); }
-.cad-stage-bar-row[data-stage="Lost"] .cad-stage-bar-fill { background: oklch(0.65 0.14 25); opacity: 0.7; }
-.cad-stage-bar-value {
+.bob-stage-bar-row[data-stage="Won"]  .bob-stage-bar-fill { background: oklch(0.55 0.13 155); }
+.bob-stage-bar-row[data-stage="Lost"] .bob-stage-bar-fill { background: oklch(0.65 0.14 25); opacity: 0.7; }
+.bob-stage-bar-value {
   font-size: 12px; font-weight: 600;
   font-family: var(--font-monospace);
   color: var(--text-normal); text-align: right;
 }
 
-.cad-dash-cols {
+.bob-dash-cols {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;
   padding: 16px 32px 32px 32px;
 }
-@media (max-width: 1100px) { .cad-dash-cols { grid-template-columns: 1fr; } }
-.cad-dash-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (max-width: 1100px) { .bob-dash-cols { grid-template-columns: 1fr; } }
+.bob-dash-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
-.cad-dash-controls {
+.bob-dash-controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   padding: 0;
 }
 
-.cad-dash-filter-group {
+.bob-dash-filter-group {
   margin: 0 32px 16px 32px;
   padding: 12px 12px 14px 12px;
   border: 1px solid var(--background-modifier-border);
@@ -2051,25 +2051,25 @@ select.cad-form-input {
   flex-direction: column;
   gap: 12px;
 }
-.cad-dash-filter-group-head {
+.bob-dash-filter-group-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
 }
-.cad-dash-filter-group-note {
+.bob-dash-filter-group-note {
   font-size: 11px;
   color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
-.cad-dash-card {
+.bob-dash-card {
   position: relative;
   border: 1px solid var(--background-modifier-border);
   border-radius: 10px; background: var(--background-primary); overflow: hidden;
 }
-.cad-dash-card::before {
+.bob-dash-card::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
@@ -2077,12 +2077,12 @@ select.cad-form-input {
   background: var(--background-modifier-border);
   z-index: 1;
 }
-.cad-dash-card[data-tone="emerald"]::before { background: oklch(0.55 0.13 155); }
-.cad-dash-card[data-tone="mint"]::before    { background: oklch(0.78 0.12 155); }
-.cad-dash-card[data-tone="sky"]::before     { background: oklch(0.65 0.10 230); }
-.cad-dash-card[data-tone="warn"]::before    { background: oklch(0.72 0.14 70); }
-.cad-dash-card[data-tone="rose"]::before    { background: oklch(0.65 0.14 25); }
-.cad-dash-card-head {
+.bob-dash-card[data-tone="emerald"]::before { background: oklch(0.55 0.13 155); }
+.bob-dash-card[data-tone="mint"]::before    { background: oklch(0.78 0.12 155); }
+.bob-dash-card[data-tone="sky"]::before     { background: oklch(0.65 0.10 230); }
+.bob-dash-card[data-tone="warn"]::before    { background: oklch(0.72 0.14 70); }
+.bob-dash-card[data-tone="rose"]::before    { background: oklch(0.65 0.14 25); }
+.bob-dash-card-head {
   position: relative;
   z-index: 0;
   display: flex; justify-content: space-between; align-items: center;
@@ -2090,85 +2090,85 @@ select.cad-form-input {
   border-bottom: 1px solid var(--background-modifier-border);
   background: var(--background-secondary);
 }
-.cad-dash-card-title {
+.bob-dash-card-title {
   font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--text-muted);
 }
-.cad-dash-card-body { padding: 8px 12px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
-.cad-dash-card-body .cad-empty {
+.bob-dash-card-body { padding: 8px 12px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
+.bob-dash-card-body .bob-empty {
   padding: 18px 12px; font-size: 13px; color: var(--text-faint); text-align: center;
 }
 
 /* Quick-add input widget */
-.cad-quick-add-card .cad-quick-add-input {
+.bob-quick-add-card .bob-quick-add-input {
   width: 100%; box-sizing: border-box;
   padding: 8px 12px; border-radius: 8px;
   border: 1px solid var(--background-modifier-border);
   background: var(--background-primary); color: var(--text-normal);
   font-size: 14px;
 }
-.cad-quick-add-card .cad-quick-add-input:focus {
+.bob-quick-add-card .bob-quick-add-input:focus {
   outline: none; border-color: var(--interactive-accent);
 }
 
 /* Date-hero widget (dashboard-scoped copy of the diary hero) */
-.cad-date-hero-card .cad-eyebrow {
+.bob-date-hero-card .bob-eyebrow {
   font-size: 12px; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 8px;
 }
-.cad-date-hero-card .cad-date-hero { display: flex; align-items: baseline; gap: 12px; }
-.cad-date-hero-card .cad-date-day {
+.bob-date-hero-card .bob-date-hero { display: flex; align-items: baseline; gap: 12px; }
+.bob-date-hero-card .bob-date-day {
   font-size: 64px; line-height: 0.9; font-weight: 700;
   letter-spacing: -0.045em; color: var(--text-normal); font-variant-numeric: tabular-nums;
 }
-.cad-date-hero-card .cad-month { font-size: 16px; font-weight: 600; color: var(--text-normal); }
-.cad-date-hero-card .cad-year { font-size: 13px; color: var(--text-muted); }
+.bob-date-hero-card .bob-month { font-size: 16px; font-weight: 600; color: var(--text-normal); }
+.bob-date-hero-card .bob-year { font-size: 13px; color: var(--text-muted); }
 
 /* Note-section editor widget (editable body section, e.g. Journal) */
-.cad-note-section-card .cad-note-section-textarea {
+.bob-note-section-card .bob-note-section-textarea {
   width: 100%; box-sizing: border-box; min-height: 120px; resize: vertical;
   padding: 10px 12px; border-radius: 8px;
   border: 1px solid var(--background-modifier-border);
   background: var(--background-primary); color: var(--text-normal);
   font-size: 14px; line-height: 1.5; font-family: inherit;
 }
-.cad-note-section-card .cad-note-section-textarea:focus {
+.bob-note-section-card .bob-note-section-textarea:focus {
   outline: none; border-color: var(--interactive-accent);
 }
 
 /* Interactive task-list widget (checkbox rows inside a dashboard card) */
-.cad-task-list-widget .cad-dash-task-row {
+.bob-task-list-widget .bob-dash-task-row {
   display: flex; align-items: flex-start; gap: 8px; padding: 5px 2px;
 }
-.cad-task-list-widget .cad-dash-task-row input[type="checkbox"] {
+.bob-task-list-widget .bob-dash-task-row input[type="checkbox"] {
   margin: 3px 0 0 0; cursor: pointer; flex-shrink: 0;
 }
-.cad-task-list-widget .cad-dash-task-row input[type="checkbox"]:disabled { cursor: default; opacity: 0.6; }
-.cad-task-list-widget .cad-task-text { flex: 1; min-width: 0; }
-.cad-task-list-widget .cad-task-text.clickable { cursor: pointer; }
-.cad-task-list-widget .cad-task-text.clickable:hover .cad-home-row-title { color: var(--interactive-accent); }
-.cad-task-list-widget .cad-dash-task-row.done .cad-home-row-title {
+.bob-task-list-widget .bob-dash-task-row input[type="checkbox"]:disabled { cursor: default; opacity: 0.6; }
+.bob-task-list-widget .bob-task-text { flex: 1; min-width: 0; }
+.bob-task-list-widget .bob-task-text.clickable { cursor: pointer; }
+.bob-task-list-widget .bob-task-text.clickable:hover .bob-home-row-title { color: var(--interactive-accent); }
+.bob-task-list-widget .bob-dash-task-row.done .bob-home-row-title {
   color: var(--text-faint); text-decoration: line-through;
 }
 
-.cad-selector-card {
+.bob-selector-card {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--interactive-accent) 4%, var(--background-primary)), var(--background-primary));
 }
-.cad-selector-card .cad-dash-card-head {
+.bob-selector-card .bob-dash-card-head {
   padding: 10px 12px;
 }
-.cad-selector-card .cad-dash-card-body {
+.bob-selector-card .bob-dash-card-body {
   gap: 8px;
 }
-.cad-selector-row {
+.bob-selector-row {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
 }
-.cad-selector-select,
-.cad-selector-date {
+.bob-selector-select,
+.bob-selector-date {
   width: 100%;
   min-width: 0;
   min-height: 34px;
@@ -2183,22 +2183,22 @@ select.cad-form-input {
   padding: 6px 10px;
   box-shadow: none;
 }
-.cad-selector-select:hover,
-.cad-selector-date:hover {
+.bob-selector-select:hover,
+.bob-selector-date:hover {
   border-color: color-mix(in srgb, var(--interactive-accent) 45%, var(--background-modifier-border));
 }
-.cad-selector-select:focus,
-.cad-selector-date:focus {
+.bob-selector-select:focus,
+.bob-selector-date:focus {
   outline: none;
   border-color: var(--interactive-accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 18%, transparent);
 }
-.cad-selector-date:disabled {
+.bob-selector-date:disabled {
   opacity: 0.58;
   cursor: default;
   background: var(--background-secondary);
 }
-.cad-selector-hint {
+.bob-selector-hint {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
@@ -2206,37 +2206,37 @@ select.cad-form-input {
   color: var(--text-faint);
   font-family: var(--font-monospace);
 }
-.cad-selector-current {
+.bob-selector-current {
   color: var(--text-muted);
 }
 
-/* Chained class to outrank .cad-dash-card-body padding without !important. */
-.cad-dash-card-body.cad-mini-stat-row {
+/* Chained class to outrank .bob-dash-card-body padding without !important. */
+.bob-dash-card-body.bob-mini-stat-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 0; padding: 14px 0;
 }
-.cad-mini-stat { text-align: center; padding: 6px 12px; cursor: pointer; }
-.cad-mini-stat + .cad-mini-stat { border-left: 1px solid var(--background-modifier-border); }
-.cad-mini-stat:hover { background: var(--background-modifier-hover); }
-.cad-mini-stat-value {
+.bob-mini-stat { text-align: center; padding: 6px 12px; cursor: pointer; }
+.bob-mini-stat + .bob-mini-stat { border-left: 1px solid var(--background-modifier-border); }
+.bob-mini-stat:hover { background: var(--background-modifier-hover); }
+.bob-mini-stat-value {
   font-size: 24px; font-weight: 700; letter-spacing: -0.025em;
   color: var(--text-normal);
 }
-.cad-mini-stat-label {
+.bob-mini-stat-label {
   font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--text-muted);
   margin-top: 4px;
 }
-.cad-finance-legend {
+.bob-finance-legend {
   margin: 0 36px 24px 36px;
 }
-.cad-finance-legend-grid {
+.bob-finance-legend-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
 }
-.cad-finance-legend-item {
+.bob-finance-legend-item {
   display: grid;
   grid-template-columns: 48px 1fr;
   gap: 10px;
@@ -2246,18 +2246,18 @@ select.cad-form-input {
   border-radius: 6px;
   background: var(--background-primary);
 }
-.cad-finance-legend-code {
+.bob-finance-legend-code {
   font-family: var(--font-monospace);
   font-size: 12px;
   font-weight: 800;
   color: var(--interactive-accent);
 }
-.cad-finance-legend-title {
+.bob-finance-legend-title {
   font-size: 12px;
   font-weight: 700;
   color: var(--text-normal);
 }
-.cad-finance-legend-desc {
+.bob-finance-legend-desc {
   margin-top: 2px;
   font-size: 11px;
   line-height: 1.35;
@@ -2265,15 +2265,15 @@ select.cad-form-input {
 }
 
 /* ─────────── Project Detail (PM surface) — fallback ─────────── */
-.cadence-project-detail { padding: 0; }
-.cadence-project-detail .cad-pd-hero {
+.bob-project-detail { padding: 0; }
+.bob-project-detail .bob-pd-hero {
   padding: 16px 32px 22px 32px;
   border-bottom: 1px solid var(--background-modifier-border);
   display: flex; flex-direction: column; gap: 14px;
 }
-.cad-pd-pills { display: flex; gap: 8px; }
-.cad-pd-select-wrap { position: relative; display: inline-flex; align-items: center; }
-.cad-pd-select {
+.bob-pd-pills { display: flex; gap: 8px; }
+.bob-pd-select-wrap { position: relative; display: inline-flex; align-items: center; }
+.bob-pd-select {
   appearance: none; background: transparent; border: 0;
   font: inherit; color: inherit;
   padding: 0 18px 0 0; margin: 0;
@@ -2281,7 +2281,7 @@ select.cad-form-input {
   font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.cad-pd-select-wrap::after {
+.bob-pd-select-wrap::after {
   content: ''; position: absolute; right: 4px; top: 50%;
   width: 7px; height: 7px;
   border-right: 1.5px solid currentColor;
@@ -2290,58 +2290,58 @@ select.cad-form-input {
   pointer-events: none; opacity: 0.6;
 }
 
-.cad-pd-meta {
+.bob-pd-meta {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;
 }
-.cad-pd-meta-cell { display: flex; flex-direction: column; gap: 4px; }
-.cad-pd-meta-label {
+.bob-pd-meta-cell { display: flex; flex-direction: column; gap: 4px; }
+.bob-pd-meta-label {
   font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
   color: var(--text-muted);
 }
-.cad-pd-meta-input {
+.bob-pd-meta-input {
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 7px;
   padding: 7px 10px; font-size: 13px;
   color: var(--text-normal); width: 100%;
 }
-.cad-pd-meta-input:focus { outline: none; border-color: var(--interactive-accent); }
-.cad-pd-progress { max-width: 720px; }
+.bob-pd-meta-input:focus { outline: none; border-color: var(--interactive-accent); }
+.bob-pd-progress { max-width: 720px; }
 
-.cad-pd-cols {
+.bob-pd-cols {
   display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
   padding: 18px 32px 32px 32px;
 }
-@media (max-width: 1100px) { .cad-pd-cols { grid-template-columns: 1fr; } }
-.cad-pd-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (max-width: 1100px) { .bob-pd-cols { grid-template-columns: 1fr; } }
+.bob-pd-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
-.cad-pd-card {
+.bob-pd-card {
   border: 1px solid var(--background-modifier-border);
   border-radius: 10px; background: var(--background-primary); overflow: hidden;
 }
-.cad-pd-card-head {
+.bob-pd-card-head {
   display: flex; justify-content: space-between; align-items: center;
   padding: 12px 14px;
   border-bottom: 1px solid var(--background-modifier-border);
   background: var(--background-secondary);
 }
-.cad-pd-card-title {
+.bob-pd-card-title {
   font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--text-muted);
 }
 
-.cad-pd-checklist { padding: 8px 12px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
-.cad-pd-mile-row, .cad-pd-task-row {
+.bob-pd-checklist { padding: 8px 12px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
+.bob-pd-mile-row, .bob-pd-task-row {
   display: flex; align-items: center; gap: 8px;
   padding: 6px 8px; border-radius: 6px;
 }
-.cad-pd-mile-row:hover, .cad-pd-task-row:hover { background: var(--background-modifier-hover); }
-.cad-pd-mile-row.done .cad-pd-mile-title,
-.cad-pd-task-row.done .cad-pd-task-title { color: var(--text-faint); text-decoration: line-through; }
-.cad-pd-mile-row input[type="checkbox"],
-.cad-pd-task-row input[type="checkbox"] { margin: 0; cursor: pointer; flex-shrink: 0; }
+.bob-pd-mile-row:hover, .bob-pd-task-row:hover { background: var(--background-modifier-hover); }
+.bob-pd-mile-row.done .bob-pd-mile-title,
+.bob-pd-task-row.done .bob-pd-task-title { color: var(--text-faint); text-decoration: line-through; }
+.bob-pd-mile-row input[type="checkbox"],
+.bob-pd-task-row input[type="checkbox"] { margin: 0; cursor: pointer; flex-shrink: 0; }
 
-.cad-pd-mile-date {
+.bob-pd-mile-date {
   flex-shrink: 0;
   background: transparent;
   border: 1px solid transparent;
@@ -2352,10 +2352,10 @@ select.cad-form-input {
   color: var(--text-muted);
   width: 130px;
 }
-.cad-pd-mile-date:hover { background: var(--background-primary); border-color: var(--background-modifier-border); }
-.cad-pd-mile-date:focus { outline: none; background: var(--background-primary); border-color: var(--interactive-accent); }
+.bob-pd-mile-date:hover { background: var(--background-primary); border-color: var(--background-modifier-border); }
+.bob-pd-mile-date:focus { outline: none; background: var(--background-primary); border-color: var(--interactive-accent); }
 
-.cad-pd-mile-title, .cad-pd-task-title {
+.bob-pd-mile-title, .bob-pd-task-title {
   flex: 1; min-width: 0;
   background: transparent;
   border: 1px solid transparent;
@@ -2365,15 +2365,15 @@ select.cad-form-input {
   color: var(--text-normal);
   font-family: inherit;
 }
-.cad-pd-mile-title:hover, .cad-pd-task-title:hover { background: var(--background-primary); border-color: var(--background-modifier-border); }
-.cad-pd-mile-title:focus, .cad-pd-task-title:focus { outline: none; background: var(--background-primary); border-color: var(--interactive-accent); }
+.bob-pd-mile-title:hover, .bob-pd-task-title:hover { background: var(--background-primary); border-color: var(--background-modifier-border); }
+.bob-pd-mile-title:focus, .bob-pd-task-title:focus { outline: none; background: var(--background-primary); border-color: var(--interactive-accent); }
 
-.cad-pd-mile-row .cad-btn-danger,
-.cad-pd-task-row .cad-btn-danger { opacity: 0; padding: 2px 8px; min-width: 0; }
-.cad-pd-mile-row:hover .cad-btn-danger,
-.cad-pd-task-row:hover .cad-btn-danger { opacity: 1; }
+.bob-pd-mile-row .bob-btn-danger,
+.bob-pd-task-row .bob-btn-danger { opacity: 0; padding: 2px 8px; min-width: 0; }
+.bob-pd-mile-row:hover .bob-btn-danger,
+.bob-pd-task-row:hover .bob-btn-danger { opacity: 1; }
 
-.cad-pd-textarea {
+.bob-pd-textarea {
   width: 100%; min-height: 80px;
   padding: 12px 14px;
   border: 0; outline: 0;
@@ -2383,32 +2383,32 @@ select.cad-form-input {
 }
 
 /* Milestone notes — fallback */
-.cad-mile-wrapper { display: flex; flex-direction: column; }
-.cad-mile-notes-section {
+.bob-mile-wrapper { display: flex; flex-direction: column; }
+.bob-mile-notes-section {
   padding: 2px 32px 6px 32px;
   font-family: inherit;
 }
-.cad-mile-notes-add {
+.bob-mile-notes-add {
   font-size: 11px; color: var(--text-muted);
   cursor: pointer; text-decoration: none;
   padding: 2px 4px; border-radius: 4px;
 }
-.cad-mile-notes-add:hover {
+.bob-mile-notes-add:hover {
   color: var(--interactive-accent);
   background: var(--background-modifier-hover);
 }
-.cad-mile-notes-preview {
+.bob-mile-notes-preview {
   font-size: 12px; color: var(--text-muted);
   line-height: 1.5; white-space: pre-wrap;
   cursor: text;
   padding: 4px 6px; border-radius: 4px;
   border-left: 2px solid var(--background-modifier-border);
 }
-.cad-mile-notes-preview:hover {
+.bob-mile-notes-preview:hover {
   background: var(--background-modifier-hover);
   border-left-color: var(--interactive-accent);
 }
-.cad-mile-notes-textarea {
+.bob-mile-notes-textarea {
   width: 100%; min-height: 60px;
   padding: 6px 8px;
   background: var(--background-primary);
@@ -2418,47 +2418,47 @@ select.cad-form-input {
   font-family: inherit; font-size: 12px; line-height: 1.5;
   resize: vertical; outline: none;
 }
-.cad-mile-notes-textarea::placeholder { color: var(--text-faint); }
-.cad-pd-textarea::placeholder { color: var(--text-faint); }
+.bob-mile-notes-textarea::placeholder { color: var(--text-faint); }
+.bob-pd-textarea::placeholder { color: var(--text-faint); }
 
 /* ─────────── Bar chart (productivity) ─────────── */
-.cad-bar-chart {
+.bob-bar-chart {
   display: flex; align-items: flex-end;
   gap: 6px; padding: 16px 32px 24px 32px;
   height: 160px;
 }
-.cad-bar-chart.cad-bar-chart-tall { height: 200px; }
-.cad-bar-col {
+.bob-bar-chart.bob-bar-chart-tall { height: 200px; }
+.bob-bar-col {
   flex: 1; display: flex; flex-direction: column; align-items: center;
   height: 100%; justify-content: flex-end; gap: 4px;
 }
-.cad-bar {
+.bob-bar {
   width: 100%; min-height: 2px;
   background: oklch(0.78 0.12 155);
   border-radius: 3px 3px 0 0;
   transition: opacity 100ms ease, background 100ms ease;
 }
-.cad-bar[data-band="empty"] { background: var(--background-modifier-border); min-height: 4px; opacity: 0.5; }
-.cad-bar[data-band="low"]   { background: oklch(0.85 0.07 155); }
-.cad-bar[data-band="mid"]   { background: oklch(0.78 0.12 155); }
-.cad-bar[data-band="high"]  { background: oklch(0.55 0.13 155); }
-.cad-bar-label {
+.bob-bar[data-band="empty"] { background: var(--background-modifier-border); min-height: 4px; opacity: 0.5; }
+.bob-bar[data-band="low"]   { background: oklch(0.85 0.07 155); }
+.bob-bar[data-band="mid"]   { background: oklch(0.78 0.12 155); }
+.bob-bar[data-band="high"]  { background: oklch(0.55 0.13 155); }
+.bob-bar-label {
   font-size: 10px; color: var(--text-faint);
   font-family: var(--font-monospace);
 }
 
 /* ─────────── Dashboard gamification widgets ─────────── */
-.cad-gauge-body,
-.cad-progress-body,
-.cad-heatmap-body {
+.bob-gauge-body,
+.bob-progress-body,
+.bob-heatmap-body {
   gap: 10px;
 }
-.cad-gauge-body {
+.bob-gauge-body {
   align-items: center;
   padding-top: 14px;
 }
-.cad-gauge {
-  --cad-gauge-pct: 0%;
+.bob-gauge {
+  --bob-gauge-pct: 0%;
   width: min(168px, 62%);
   aspect-ratio: 1;
   border-radius: 50%;
@@ -2466,25 +2466,25 @@ select.cad-form-input {
   place-items: center;
   background:
     radial-gradient(circle at center, var(--background-primary) 0 57%, transparent 58%),
-    conic-gradient(oklch(0.55 0.13 155) var(--cad-gauge-pct), var(--background-modifier-border) 0);
+    conic-gradient(oklch(0.55 0.13 155) var(--bob-gauge-pct), var(--background-modifier-border) 0);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
 }
-.cad-gauge[data-pct-band="rose"] {
+.bob-gauge[data-pct-band="rose"] {
   background:
     radial-gradient(circle at center, var(--background-primary) 0 57%, transparent 58%),
-    conic-gradient(oklch(0.65 0.14 25) var(--cad-gauge-pct), var(--background-modifier-border) 0);
+    conic-gradient(oklch(0.65 0.14 25) var(--bob-gauge-pct), var(--background-modifier-border) 0);
 }
-.cad-gauge[data-pct-band="warn"] {
+.bob-gauge[data-pct-band="warn"] {
   background:
     radial-gradient(circle at center, var(--background-primary) 0 57%, transparent 58%),
-    conic-gradient(oklch(0.72 0.14 70) var(--cad-gauge-pct), var(--background-modifier-border) 0);
+    conic-gradient(oklch(0.72 0.14 70) var(--bob-gauge-pct), var(--background-modifier-border) 0);
 }
-.cad-gauge[data-pct-band="mint"] {
+.bob-gauge[data-pct-band="mint"] {
   background:
     radial-gradient(circle at center, var(--background-primary) 0 57%, transparent 58%),
-    conic-gradient(oklch(0.78 0.12 155) var(--cad-gauge-pct), var(--background-modifier-border) 0);
+    conic-gradient(oklch(0.78 0.12 155) var(--bob-gauge-pct), var(--background-modifier-border) 0);
 }
-.cad-gauge-center {
+.bob-gauge-center {
   width: 70%;
   aspect-ratio: 1;
   border-radius: 50%;
@@ -2495,92 +2495,92 @@ select.cad-form-input {
   background: color-mix(in srgb, var(--background-primary) 92%, var(--background-secondary));
   border: 1px solid var(--background-modifier-border);
 }
-.cad-gauge-value {
+.bob-gauge-value {
   font-size: 30px;
   line-height: 1;
   font-weight: 750;
   color: var(--text-normal);
   font-variant-numeric: tabular-nums;
 }
-.cad-gauge-label,
-.cad-gauge-sub,
-.cad-progress-widget-sub,
-.cad-heatmap-footer {
+.bob-gauge-label,
+.bob-gauge-sub,
+.bob-progress-widget-sub,
+.bob-heatmap-footer {
   font-size: 11px;
   color: var(--text-faint);
   font-family: var(--font-monospace);
 }
-.cad-gauge-label {
+.bob-gauge-label {
   margin-top: 5px;
   text-transform: uppercase;
 }
-.cad-gauge-sub {
+.bob-gauge-sub {
   text-align: center;
 }
-.cad-progress-widget-label {
+.bob-progress-widget-label {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   font-size: 12px;
   color: var(--text-muted);
 }
-.cad-progress-widget-value {
+.bob-progress-widget-value {
   color: var(--text-normal);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.cad-progress-widget-track {
+.bob-progress-widget-track {
   height: 12px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--background-modifier-border);
 }
-.cad-progress-widget-fill {
+.bob-progress-widget-fill {
   height: 100%;
   min-width: 2px;
   border-radius: inherit;
   background: oklch(0.55 0.13 155);
   transition: width 140ms ease;
 }
-.cad-progress-widget-track[data-pct-band="rose"] .cad-progress-widget-fill { background: oklch(0.65 0.14 25); }
-.cad-progress-widget-track[data-pct-band="warn"] .cad-progress-widget-fill { background: oklch(0.72 0.14 70); }
-.cad-progress-widget-track[data-pct-band="mint"] .cad-progress-widget-fill { background: oklch(0.78 0.12 155); }
-.cad-progress-widget-track[data-pct-band="emerald"] .cad-progress-widget-fill { background: oklch(0.55 0.13 155); }
-.cad-heatmap-grid {
-  --cad-heatmap-columns: 7;
+.bob-progress-widget-track[data-pct-band="rose"] .bob-progress-widget-fill { background: oklch(0.65 0.14 25); }
+.bob-progress-widget-track[data-pct-band="warn"] .bob-progress-widget-fill { background: oklch(0.72 0.14 70); }
+.bob-progress-widget-track[data-pct-band="mint"] .bob-progress-widget-fill { background: oklch(0.78 0.12 155); }
+.bob-progress-widget-track[data-pct-band="emerald"] .bob-progress-widget-fill { background: oklch(0.55 0.13 155); }
+.bob-heatmap-grid {
+  --bob-heatmap-columns: 7;
   display: grid;
-  grid-template-columns: repeat(var(--cad-heatmap-columns), minmax(8px, 1fr));
+  grid-template-columns: repeat(var(--bob-heatmap-columns), minmax(8px, 1fr));
   gap: 4px;
   align-items: center;
 }
-.cad-heatmap-cell {
+.bob-heatmap-cell {
   aspect-ratio: 1;
   min-width: 8px;
   border-radius: 3px;
   background: var(--background-modifier-border);
 }
-.cad-heatmap-cell[data-level="0"] { opacity: 0.55; }
-.cad-heatmap-cell[data-level="1"] { background: oklch(0.88 0.06 155); }
-.cad-heatmap-cell[data-level="2"] { background: oklch(0.78 0.12 155); }
-.cad-heatmap-cell[data-level="3"] { background: oklch(0.65 0.14 155); }
-.cad-heatmap-cell[data-level="4"] { background: oklch(0.50 0.13 155); }
-.cad-heatmap-footer {
+.bob-heatmap-cell[data-level="0"] { opacity: 0.55; }
+.bob-heatmap-cell[data-level="1"] { background: oklch(0.88 0.06 155); }
+.bob-heatmap-cell[data-level="2"] { background: oklch(0.78 0.12 155); }
+.bob-heatmap-cell[data-level="3"] { background: oklch(0.65 0.14 155); }
+.bob-heatmap-cell[data-level="4"] { background: oklch(0.50 0.13 155); }
+.bob-heatmap-footer {
   display: flex;
   justify-content: space-between;
   gap: 12px;
 }
 
-.workspace-leaf-content[data-type="cadence-today"] {
+.workspace-leaf-content[data-type="bob-today"] {
   background: var(--background-primary);
 }
 
-.cadence-today {
+.bob-today {
   padding: 32px 40px;
   max-width: 760px;
   margin: 0 auto;
 }
 
-.cadence-today .cad-eyebrow {
+.bob-today .bob-eyebrow {
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -2589,14 +2589,14 @@ select.cad-form-input {
   margin-bottom: 12px;
 }
 
-.cadence-today .cad-date-hero {
+.bob-today .bob-date-hero {
   display: flex;
   align-items: baseline;
   gap: 14px;
   margin-bottom: 6px;
 }
 
-.cadence-today .cad-day {
+.bob-today .bob-day {
   font-size: 96px;
   line-height: 0.9;
   font-weight: 700;
@@ -2605,30 +2605,30 @@ select.cad-form-input {
   font-variant-numeric: tabular-nums;
 }
 
-.cadence-today .cad-month {
+.bob-today .bob-month {
   font-size: 18px;
   font-weight: 600;
   color: var(--text-normal);
 }
 
-.cadence-today .cad-year {
+.bob-today .bob-year {
   font-family: var(--font-monospace);
   font-size: 13px;
   color: var(--text-faint);
   margin-top: 6px;
 }
 
-.cadence-today .cad-greet {
+.bob-today .bob-greet {
   font-size: 15px;
   color: var(--text-muted);
   margin-bottom: 32px;
 }
 
-.cadence-today .cad-section {
+.bob-today .bob-section {
   margin-bottom: 28px;
 }
 
-.cadence-today .cad-section-label {
+.bob-today .bob-section-label {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -2640,12 +2640,12 @@ select.cad-form-input {
   align-items: baseline;
 }
 
-.cadence-today .cad-count {
+.bob-today .bob-count {
   font-family: var(--font-monospace);
   font-variant-numeric: tabular-nums;
 }
 
-.cadence-today .cad-task-row {
+.bob-today .bob-task-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2654,31 +2654,31 @@ select.cad-form-input {
   font-size: 14px;
   color: var(--text-normal);
 }
-.cadence-today .cad-task-row:hover {
+.bob-today .bob-task-row:hover {
   background: var(--background-modifier-hover);
 }
-.cadence-today .cad-task-row.done {
+.bob-today .bob-task-row.done {
   color: var(--text-faint);
   text-decoration: line-through;
 }
 
 /* Task → project link (fallback) */
-.cad-task-text { flex: 1; min-width: 0; }
-.cad-task-row { gap: 8px; }
-.cad-task-row .cad-task-link-btn {
+.bob-task-text { flex: 1; min-width: 0; }
+.bob-task-row { gap: 8px; }
+.bob-task-row .bob-task-link-btn {
   background: transparent; border: 0;
   padding: 2px 6px; margin-left: auto;
   cursor: pointer; color: var(--text-faint);
   font-size: 12px; line-height: 1; border-radius: 4px;
   opacity: 0; transition: opacity 100ms ease, color 100ms ease, background 100ms ease;
 }
-.cad-task-row:hover .cad-task-link-btn { opacity: 1; }
-.cad-task-row .cad-task-link-btn.linked { opacity: 1; color: var(--interactive-accent); }
-.cad-task-row .cad-task-link-btn:hover {
+.bob-task-row:hover .bob-task-link-btn { opacity: 1; }
+.bob-task-row .bob-task-link-btn.linked { opacity: 1; color: var(--interactive-accent); }
+.bob-task-row .bob-task-link-btn:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
-.cad-task-proj-chip {
+.bob-task-proj-chip {
   display: inline-flex; align-items: center;
   font-size: 10px; font-weight: 600;
   letter-spacing: 0.04em;
@@ -2690,13 +2690,13 @@ select.cad-form-input {
   text-decoration: none; cursor: pointer;
   flex-shrink: 0;
 }
-.cad-task-proj-chip:hover { background: var(--background-modifier-hover); }
-.cadence-today .cad-task-row input[type="checkbox"] {
+.bob-task-proj-chip:hover { background: var(--background-modifier-hover); }
+.bob-today .bob-task-row input[type="checkbox"] {
   margin: 0;
   cursor: pointer;
 }
 
-.cadence-today .cad-journal {
+.bob-today .bob-journal {
   border: 0;
   outline: 0;
   resize: none;
@@ -2710,24 +2710,24 @@ select.cad-form-input {
   min-height: 200px;
 }
 
-.cadence-today .cad-empty {
+.bob-today .bob-empty {
   color: var(--text-faint);
   font-style: italic;
   padding: 8px;
 }
 
 /* ─────────── Planner (week) — fallback ─────────── */
-.workspace-leaf-content[data-type="cadence-planner"] {
+.workspace-leaf-content[data-type="bob-planner"] {
   background: var(--background-primary);
 }
 
-.cadence-planner {
+.bob-planner {
   padding: 28px 32px;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.cadence-planner .cad-pl-header {
+.bob-planner .bob-pl-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -2735,7 +2735,7 @@ select.cad-form-input {
   margin-bottom: 20px;
 }
 
-.cadence-planner .cad-pl-title-wrap .cad-eyebrow {
+.bob-planner .bob-pl-title-wrap .bob-eyebrow {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -2744,19 +2744,19 @@ select.cad-form-input {
   margin-bottom: 6px;
 }
 
-.cadence-planner .cad-pl-title {
+.bob-planner .bob-pl-title {
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text-normal);
 }
 
-.cadence-planner .cad-pl-nav {
+.bob-planner .bob-pl-nav {
   display: flex;
   gap: 6px;
 }
 
-.cadence-planner .cad-pl-btn {
+.bob-planner .bob-pl-btn {
   background: var(--background-secondary);
   color: var(--text-normal);
   border: 1px solid var(--background-modifier-border);
@@ -2767,16 +2767,16 @@ select.cad-form-input {
   cursor: pointer;
   font-family: inherit;
 }
-.cadence-planner .cad-pl-btn:hover {
+.bob-planner .bob-pl-btn:hover {
   background: var(--background-modifier-hover);
 }
-.cadence-planner .cad-pl-btn.primary {
+.bob-planner .bob-pl-btn.primary {
   background: var(--text-normal);
   color: var(--background-primary);
   border-color: var(--text-normal);
 }
 
-.cadence-planner .cad-pl-stats {
+.bob-planner .bob-pl-stats {
   display: flex;
   gap: 24px;
   padding: 16px 0;
@@ -2785,7 +2785,7 @@ select.cad-form-input {
   margin-bottom: 20px;
 }
 
-.cadence-planner .cad-pl-stat-label {
+.bob-planner .bob-pl-stat-label {
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -2793,7 +2793,7 @@ select.cad-form-input {
   color: var(--text-muted);
 }
 
-.cadence-planner .cad-pl-stat-value {
+.bob-planner .bob-pl-stat-value {
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -2802,13 +2802,13 @@ select.cad-form-input {
   margin-top: 2px;
 }
 
-.cadence-planner .cad-pl-grid {
+.bob-planner .bob-pl-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
 }
 
-.cadence-planner .cad-pl-day {
+.bob-planner .bob-pl-day {
   border: 1px solid var(--background-modifier-border);
   border-radius: 10px;
   padding: 12px;
@@ -2818,25 +2818,25 @@ select.cad-form-input {
   flex-direction: column;
 }
 
-.cadence-planner .cad-pl-day.today {
+.bob-planner .bob-pl-day.today {
   border-color: var(--text-normal);
   background: var(--background-secondary);
 }
 
-.cadence-planner .cad-pl-day-head {
+.bob-planner .bob-pl-day-head {
   border-bottom: 1px solid var(--background-modifier-border);
   padding-bottom: 8px;
   margin-bottom: 8px;
   cursor: pointer;
 }
-.cadence-planner .cad-pl-day-head:hover {
+.bob-planner .bob-pl-day-head:hover {
   background: var(--background-modifier-hover);
   border-radius: 6px;
   padding: 4px 6px 8px 6px;
   margin: -4px -6px 4px -6px;
 }
 
-.cadence-planner .cad-pl-weekday {
+.bob-planner .bob-pl-weekday {
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -2844,7 +2844,7 @@ select.cad-form-input {
   color: var(--text-muted);
 }
 
-.cadence-planner .cad-pl-daynum {
+.bob-planner .bob-pl-daynum {
   font-size: 24px;
   font-weight: 700;
   line-height: 1.1;
@@ -2853,14 +2853,14 @@ select.cad-form-input {
   font-variant-numeric: tabular-nums;
 }
 
-.cadence-planner .cad-pl-meta {
+.bob-planner .bob-pl-meta {
   font-size: 10px;
   color: var(--text-faint);
   font-family: var(--font-monospace);
   margin-top: 2px;
 }
 
-.cadence-planner .cad-pl-tasks {
+.bob-planner .bob-pl-tasks {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -2868,7 +2868,7 @@ select.cad-form-input {
   overflow: hidden;
 }
 
-.cadence-planner .cad-pl-task {
+.bob-planner .bob-pl-task {
   display: flex;
   align-items: flex-start;
   gap: 6px;
@@ -2878,20 +2878,20 @@ select.cad-form-input {
   padding: 3px 4px;
   border-radius: 4px;
 }
-.cadence-planner .cad-pl-task:hover {
+.bob-planner .bob-pl-task:hover {
   background: var(--background-modifier-hover);
 }
-.cadence-planner .cad-pl-task.done {
+.bob-planner .bob-pl-task.done {
   color: var(--text-faint);
   text-decoration: line-through;
 }
-.cadence-planner .cad-pl-task input[type="checkbox"] {
+.bob-planner .bob-pl-task input[type="checkbox"] {
   margin: 2px 0 0 0;
   flex-shrink: 0;
   cursor: pointer;
 }
 
-.cadence-planner .cad-empty {
+.bob-planner .bob-empty {
   color: var(--text-faint);
   font-size: 12px;
   padding: 4px;
@@ -2899,7 +2899,7 @@ select.cad-form-input {
 
 /* ─────────── Mobile optimisation (fallback) ─────────── */
 
-.cad-mobile-burger {
+.bob-mobile-burger {
   display: none;
   background: transparent;
   border: 0;
@@ -2911,10 +2911,10 @@ select.cad-form-input {
   align-items: center;
   justify-content: center;
 }
-.cad-mobile-burger:hover { background: var(--background-modifier-hover); }
-.cad-mobile-burger svg { width: 20px; height: 20px; }
+.bob-mobile-burger:hover { background: var(--background-modifier-hover); }
+.bob-mobile-burger svg { width: 20px; height: 20px; }
 
-.cad-mobile-backdrop {
+.bob-mobile-backdrop {
   display: none;
   position: absolute;
   inset: 0;
@@ -2926,195 +2926,195 @@ select.cad-form-input {
 }
 
 @media (max-width: 760px) {
-  .cad-mobile-burger { display: inline-flex; }
-  .cad-app-topbar { padding: 12px 16px; gap: 10px; }
-  .cad-app-brand-text { font-size: 17px; }
-  .cad-app-topbar-meta { display: none; }
+  .bob-mobile-burger { display: inline-flex; }
+  .bob-app-topbar { padding: 12px 16px; gap: 10px; }
+  .bob-app-brand-text { font-size: 17px; }
+  .bob-app-topbar-meta { display: none; }
 
-  .cad-app-body { position: relative; }
-  .cad-app-nav {
+  .bob-app-body { position: relative; }
+  .bob-app-nav {
     position: absolute; top: 0; left: 0; bottom: 0;
     width: 260px; z-index: 10;
     transform: translateX(-100%);
     transition: transform 220ms ease;
     box-shadow: 4px 0 24px -6px rgba(0, 0, 0, 0.35);
   }
-  .cad-nav-pinned-item { width: 34px; height: 34px; }
-  .cad-nav-pin-toggle { opacity: 0; }
-  .cad-mobile-nav-open .cad-app-nav { transform: translateX(0); }
-  .cad-mobile-backdrop { display: block; }
-  .cad-mobile-nav-open .cad-mobile-backdrop { opacity: 1; pointer-events: auto; }
+  .bob-nav-pinned-item { width: 34px; height: 34px; }
+  .bob-nav-pin-toggle { opacity: 0; }
+  .bob-mobile-nav-open .bob-app-nav { transform: translateX(0); }
+  .bob-mobile-backdrop { display: block; }
+  .bob-mobile-nav-open .bob-mobile-backdrop { opacity: 1; pointer-events: auto; }
 
-  /* Specificity bump via `.cadence-app` prefix instead of !important.
+  /* Specificity bump via `.bob-app` prefix instead of !important.
      The original rules elsewhere in this file are at (0,2,0) — e.g.
-     `.cadence-app .cad-dash-cols`. Prefixing with `.cadence-app` makes
+     `.bob-app .bob-dash-cols`. Prefixing with `.bob-app` makes
      our mobile overrides (0,2,0) AND they come later in source order,
      so they win cleanly. */
-  .cadence-app .cad-pd-cols,
-  .cadence-app .cad-dash-cols {
+  .bob-app .bob-pd-cols,
+  .bob-app .bob-dash-cols {
     grid-template-columns: 1fr;
     padding-left: 16px;
     padding-right: 16px;
   }
-  .cadence-app .cad-pd-meta { grid-template-columns: 1fr; }
+  .bob-app .bob-pd-meta { grid-template-columns: 1fr; }
 
-  .cadence-app .cad-page-header { padding: 18px 16px 12px 16px; flex-direction: column; align-items: flex-start; }
-  .cadence-app .cad-page-title  { font-size: 22px; line-height: 28px; }
-  .cadence-app .cad-page-header-right { width: 100%; flex-wrap: wrap; margin-top: 8px; }
+  .bob-app .bob-page-header { padding: 18px 16px 12px 16px; flex-direction: column; align-items: flex-start; }
+  .bob-app .bob-page-title  { font-size: 22px; line-height: 28px; }
+  .bob-app .bob-page-header-right { width: 100%; flex-wrap: wrap; margin-top: 8px; }
 
-  .cadence-app .cad-section-label-lg { padding-left: 16px; padding-right: 16px; }
-  .cadence-app .cad-stat-grid { padding: 16px; gap: 8px; grid-template-columns: 1fr 1fr; }
-  .cadence-app .cad-stat-value { font-size: 24px; }
-  .cadence-app .cad-dash-controls {
+  .bob-app .bob-section-label-lg { padding-left: 16px; padding-right: 16px; }
+  .bob-app .bob-stat-grid { padding: 16px; gap: 8px; grid-template-columns: 1fr 1fr; }
+  .bob-app .bob-stat-value { font-size: 24px; }
+  .bob-app .bob-dash-controls {
     grid-template-columns: 1fr;
     padding-left: 16px;
     padding-right: 16px;
   }
-  .cadence-app .cad-date-range {
+  .bob-app .bob-date-range {
     flex-direction: column;
   }
-  .cadence-app .cad-table-wrap { padding-left: 16px; padding-right: 16px; }
-  .cadence-app .cad-kanban-board { padding-left: 16px; padding-right: 16px; }
-  .cadence-app .cad-pt-wrap { padding-left: 16px; padding-right: 16px; grid-template-columns: 1fr; }
-  .cadence-app .cad-bar-chart { padding-left: 16px; padding-right: 16px; }
-  .cadence-app .cad-stage-bars { padding-left: 16px; padding-right: 16px; }
-  .cadence-app .cad-stage-bar-row { grid-template-columns: 90px 28px 1fr 80px; gap: 8px; }
+  .bob-app .bob-table-wrap { padding-left: 16px; padding-right: 16px; }
+  .bob-app .bob-kanban-board { padding-left: 16px; padding-right: 16px; }
+  .bob-app .bob-pt-wrap { padding-left: 16px; padding-right: 16px; grid-template-columns: 1fr; }
+  .bob-app .bob-bar-chart { padding-left: 16px; padding-right: 16px; }
+  .bob-app .bob-stage-bars { padding-left: 16px; padding-right: 16px; }
+  .bob-app .bob-stage-bar-row { grid-template-columns: 90px 28px 1fr 80px; gap: 8px; }
 
-  .cadence-app .cadence-today { padding: 22px 16px; }
-  .cadence-app .cadence-today .cad-day { font-size: 72px; }
-  .cadence-app .cadence-today .cad-month { font-size: 16px; }
+  .bob-app .bob-today { padding: 22px 16px; }
+  .bob-app .bob-today .bob-day { font-size: 72px; }
+  .bob-app .bob-today .bob-month { font-size: 16px; }
 
-  .cadence-app .cad-inbox-row { flex-wrap: wrap; gap: 10px; padding: 12px 14px; }
-  .cadence-app .cad-inbox-actions { width: 100%; justify-content: flex-end; }
+  .bob-app .bob-inbox-row { flex-wrap: wrap; gap: 10px; padding: 12px 14px; }
+  .bob-app .bob-inbox-actions { width: 100%; justify-content: flex-end; }
 
-  .cadence-app .cad-btn { padding: 9px 14px; font-size: 14px; min-height: 36px; }
-  .cadence-app .cad-btn.cad-btn-sm { padding: 7px 12px; font-size: 13px; }
+  .bob-app .bob-btn { padding: 9px 14px; font-size: 14px; min-height: 36px; }
+  .bob-app .bob-btn.bob-btn-sm { padding: 7px 12px; font-size: 13px; }
 
-  /* Modals are rendered outside `.cadence-app` (Obsidian's modal container),
+  /* Modals are rendered outside `.bob-app` (Obsidian's modal container),
      so we can't reach them by prefix. Chain the class to itself to bump
      specificity from (0,1,0) to (0,2,0) without !important. */
-  .cad-create-modal.cad-create-modal,
-  .cad-import-modal.cad-import-modal,
-  .cad-capture-modal.cad-capture-modal {
+  .bob-create-modal.bob-create-modal,
+  .bob-import-modal.bob-import-modal,
+  .bob-capture-modal.bob-capture-modal {
     min-width: 0;
     width: 100%;
     max-width: 100%;
     padding: 20px 18px 14px 18px;
   }
-  .cad-create-modal.cad-create-modal .cad-create-row,
-  .cad-import-modal.cad-import-modal .cad-create-row {
+  .bob-create-modal.bob-create-modal .bob-create-row,
+  .bob-import-modal.bob-import-modal .bob-create-row {
     grid-template-columns: 1fr;
     gap: 6px;
     align-items: stretch;
   }
-  .cad-import-modal .cad-import-table-wrap { max-height: 240px; }
-  .cad-capture-modal.cad-capture-modal .cad-form-row { flex-direction: column; align-items: stretch; }
+  .bob-import-modal .bob-import-table-wrap { max-height: 240px; }
+  .bob-capture-modal.bob-capture-modal .bob-form-row { flex-direction: column; align-items: stretch; }
 }
 
 @media (max-width: 380px) {
-  .cadence-app .cad-stat-grid { grid-template-columns: 1fr; }
-  .cadence-app .cad-page-title { font-size: 20px; }
+  .bob-app .bob-stat-grid { grid-template-columns: 1fr; }
+  .bob-app .bob-page-title { font-size: 20px; }
 }
 
 @media (hover: none) {
-  /* `.cadence-app` prefix bumps these to (0,2,0) so they outrank the
+  /* `.bob-app` prefix bumps these to (0,2,0) so they outrank the
      base 1-class hover rules without needing !important. */
-  .cadence-app .cad-pd-mile-row .cad-btn-danger,
-  .cadence-app .cad-pd-task-row .cad-btn-danger,
-  .cadence-app .cad-pd-task-bell,
-  .cadence-app .cad-pt-bell,
-  .cadence-app .cad-task-link-btn { opacity: 1; }
+  .bob-app .bob-pd-mile-row .bob-btn-danger,
+  .bob-app .bob-pd-task-row .bob-btn-danger,
+  .bob-app .bob-pd-task-bell,
+  .bob-app .bob-pt-bell,
+  .bob-app .bob-task-link-btn { opacity: 1; }
 }
 
 /* iOS safe-area insets — horizontal + bottom only (Obsidian handles top) */
 @media (max-width: 760px) {
-  .cad-app-topbar {
+  .bob-app-topbar {
     padding: 10px 14px;
     padding-left: max(14px, env(safe-area-inset-left));
     padding-right: max(14px, env(safe-area-inset-right));
   }
-  .cad-app-content { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
-  .cad-app-nav { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  .bob-app-content { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  .bob-app-nav { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 }
 
 /* ─────────── Managed-by-workspace banner ─────────── */
-.cad-managed-banner {
+.bob-managed-banner {
   display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
   padding: 8px 12px; margin-bottom: 4px; border-radius: 6px;
   background: var(--background-modifier-form-field);
   border: 1px solid var(--background-modifier-border);
   font-size: 13px; color: var(--text-muted);
 }
-.cad-managed-banner-icon {
+.bob-managed-banner-icon {
   display: flex; align-items: center;
   color: var(--color-yellow); flex-shrink: 0;
 }
-.cad-managed-banner code {
+.bob-managed-banner code {
   font-size: 12px; padding: 1px 4px; border-radius: 3px;
   background: var(--background-modifier-border);
   color: var(--text-normal);
 }
-.cad-managed-banner-link { color: var(--link-color); cursor: pointer; text-decoration: underline; }
-.cad-managed-banner-link:hover { color: var(--link-color-hover); }
+.bob-managed-banner-link { color: var(--link-color); cursor: pointer; text-decoration: underline; }
+.bob-managed-banner-link:hover { color: var(--link-color-hover); }
 
 /* ─────────── Playbook Runner Bases view ─────────── */
-.cad-pb-runner { display: flex; flex-direction: column; gap: 6px; padding: 8px; }
-.cad-pb-card {
+.bob-pb-runner { display: flex; flex-direction: column; gap: 6px; padding: 8px; }
+.bob-pb-card {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 10px; border-radius: 6px;
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
 }
-.cad-pb-card:hover { background: var(--background-modifier-hover); }
-.cad-pb-pin {
+.bob-pb-card:hover { background: var(--background-modifier-hover); }
+.bob-pb-pin {
   flex-shrink: 0; background: none; border: none; cursor: pointer;
   font-size: 14px; color: var(--text-muted); padding: 0 2px;
 }
-.cad-pb-pin--active { color: var(--color-yellow); }
-.cad-pb-card-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.cad-pb-card-title { font-weight: 600; font-size: 13px; color: var(--text-normal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cad-pb-card-trigger { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cad-pb-run { flex-shrink: 0; font-size: 12px; }
+.bob-pb-pin--active { color: var(--color-yellow); }
+.bob-pb-card-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bob-pb-card-title { font-weight: 600; font-size: 13px; color: var(--text-normal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bob-pb-card-trigger { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bob-pb-run { flex-shrink: 0; font-size: 12px; }
 
 /* ─────────── Workspace setup / template picker modal ─────────── */
-.cad-setup-modal .modal-content { max-width: 560px; }
-.cad-setup-modal h2 { margin-bottom: 6px; }
-.cad-setup-subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; }
-.cad-template-grid {
+.bob-setup-modal .modal-content { max-width: 560px; }
+.bob-setup-modal h2 { margin-bottom: 6px; }
+.bob-setup-subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; }
+.bob-template-grid {
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 10px; margin-bottom: 20px;
 }
-.cad-template-card {
+.bob-template-card {
   padding: 14px 16px; border-radius: 8px; cursor: pointer;
   border: 2px solid var(--background-modifier-border);
   background: var(--background-secondary);
   transition: border-color 0.1s;
 }
-.cad-template-card:hover { border-color: var(--interactive-accent); background: var(--background-modifier-hover); }
-.cad-template-card.is-selected { border-color: var(--interactive-accent); background: var(--background-modifier-active-hover); }
-.cad-template-card strong { display: block; font-size: 14px; margin-bottom: 4px; color: var(--text-normal); }
-.cad-template-card p { font-size: 12px; color: var(--text-muted); margin: 0; line-height: 1.4; }
-.cad-setup-footer { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
-.cad-setup-footer .mod-cta:disabled { opacity: 0.4; cursor: not-allowed; }
-.cad-setup-skip { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; }
-.cad-setup-skip:hover { color: var(--text-normal); }
+.bob-template-card:hover { border-color: var(--interactive-accent); background: var(--background-modifier-hover); }
+.bob-template-card.is-selected { border-color: var(--interactive-accent); background: var(--background-modifier-active-hover); }
+.bob-template-card strong { display: block; font-size: 14px; margin-bottom: 4px; color: var(--text-normal); }
+.bob-template-card p { font-size: 12px; color: var(--text-muted); margin: 0; line-height: 1.4; }
+.bob-setup-footer { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.bob-setup-footer .mod-cta:disabled { opacity: 0.4; cursor: not-allowed; }
+.bob-setup-skip { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; }
+.bob-setup-skip:hover { color: var(--text-normal); }
 
 /* ── Dashboard Editor ───────────────────── */
-.cad-de-toolbar {
+.bob-de-toolbar {
   display: flex; align-items: center; gap: 10px;
   padding: 0 32px 16px;
 }
-.cad-de-toolbar-label {
+.bob-de-toolbar-label {
   font-size: 11px; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.06em; color: var(--text-muted);
 }
-.cad-de-select {
+.bob-de-select {
   padding: 5px 10px; border-radius: 6px; font-size: 13px;
   border: 1px solid var(--background-modifier-border);
   background: var(--background-secondary); color: var(--text-normal);
   min-width: 240px; cursor: pointer;
 }
-.cad-de-split {
+.bob-de-split {
   display: grid;
   grid-template-columns: minmax(640px, 1.25fr) minmax(420px, 0.75fr);
   gap: 0;
@@ -3122,23 +3122,23 @@ select.cad-form-input {
   min-height: 0; overflow: hidden;
   padding: 0 32px 32px;
 }
-.cad-de-editor-pane {
+.bob-de-editor-pane {
   width: auto; min-width: 0; max-width: none;
   display: flex; flex-direction: column; gap: 8px;
   overflow: auto; padding-right: 16px;
   border-right: 1px solid var(--background-modifier-border);
 }
-.cad-de-preview-pane {
+.bob-de-preview-pane {
   flex: 1; overflow: auto; min-width: 0; padding-left: 20px;
 }
-.cad-de-badge {
+.bob-de-badge {
   font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
   padding: 2px 10px; border-radius: 10px;
   text-transform: uppercase;
 }
-.cad-de-badge-builtin { background: var(--background-modifier-border); color: var(--text-muted); }
-.cad-de-badge-custom  { background: var(--interactive-accent); color: white; }
-.cad-de-validation-status {
+.bob-de-badge-builtin { background: var(--background-modifier-border); color: var(--text-muted); }
+.bob-de-badge-custom  { background: var(--interactive-accent); color: white; }
+.bob-de-validation-status {
   font-size: 12px;
   line-height: 1.4;
   padding: 8px 10px;
@@ -3147,22 +3147,22 @@ select.cad-form-input {
   background: var(--background-secondary);
   color: var(--text-muted);
 }
-.cad-de-validation-status.is-valid {
+.bob-de-validation-status.is-valid {
   border-color: color-mix(in srgb, var(--interactive-accent) 35%, var(--background-modifier-border));
   background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-secondary));
   color: var(--text-normal);
 }
-.cad-de-validation-status.is-invalid {
+.bob-de-validation-status.is-invalid {
   border-color: color-mix(in srgb, var(--text-error) 45%, var(--background-modifier-border));
   background: color-mix(in srgb, var(--text-error) 8%, var(--background-secondary));
   color: var(--text-normal);
 }
-.cad-date-range {
+.bob-date-range {
   display: flex;
   gap: 8px;
   margin-top: 8px;
 }
-.cad-de-textarea {
+.bob-de-textarea {
   flex: 1; font-family: var(--font-monospace, monospace);
   font-size: 12px; line-height: 1.5;
   min-height: 420px; resize: vertical;
@@ -3171,49 +3171,49 @@ select.cad-form-input {
   background: var(--background-primary-alt); color: var(--text-normal);
   width: 100%; box-sizing: border-box;
 }
-.cad-de-textarea:read-only { opacity: 0.7; cursor: default; }
-.cad-de-textarea:focus { outline: 1px solid var(--interactive-accent); }
-.cad-de-actions { display: flex; gap: 8px; padding: 4px 0 8px; flex-wrap: wrap; }
-.cad-base-view-body {
+.bob-de-textarea:read-only { opacity: 0.7; cursor: default; }
+.bob-de-textarea:focus { outline: 1px solid var(--interactive-accent); }
+.bob-de-actions { display: flex; gap: 8px; padding: 4px 0 8px; flex-wrap: wrap; }
+.bob-base-view-body {
   min-height: 220px;
   overflow: auto;
 }
-.cad-base-view-fallback .cad-soon-desc {
+.bob-base-view-fallback .bob-soon-desc {
   margin-top: 0.5rem;
 }
-.cad-widget-catalog,
-.cad-dashboard-inventory {
+.bob-widget-catalog,
+.bob-dashboard-inventory {
   padding: 0 32px 24px;
 }
-.cad-widget-catalog-grid,
-.cad-dashboard-inventory-grid {
+.bob-widget-catalog-grid,
+.bob-dashboard-inventory-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 12px;
   margin-top: 12px;
 }
-.cad-widget-catalog-card,
-.cad-dashboard-inventory-card {
+.bob-widget-catalog-card,
+.bob-dashboard-inventory-card {
   border: 1px solid var(--background-modifier-border);
   border-radius: 10px;
   background: var(--background-secondary);
   padding: 12px;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
 }
-.cad-widget-catalog-head,
-.cad-dashboard-inventory-head {
+.bob-widget-catalog-head,
+.bob-dashboard-inventory-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
-.cad-widget-catalog-title,
-.cad-dashboard-inventory-title {
+.bob-widget-catalog-title,
+.bob-dashboard-inventory-title {
   font-size: 13px;
   font-weight: 700;
   color: var(--text-normal);
 }
-.cad-widget-catalog-badge {
+.bob-widget-catalog-badge {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -3222,31 +3222,31 @@ select.cad-form-input {
   background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
   color: var(--interactive-accent);
 }
-.cad-widget-catalog-id,
-.cad-dashboard-inventory-id {
+.bob-widget-catalog-id,
+.bob-dashboard-inventory-id {
   margin-top: 4px;
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-faint);
 }
-.cad-widget-catalog-desc {
+.bob-widget-catalog-desc {
   margin-top: 8px;
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-muted);
 }
-.cad-widget-catalog-chips,
-.cad-widget-catalog-examples,
-.cad-dashboard-inventory-row,
-.cad-dashboard-inventory-meta {
+.bob-widget-catalog-chips,
+.bob-widget-catalog-examples,
+.bob-dashboard-inventory-row,
+.bob-dashboard-inventory-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 10px;
 }
-.cad-widget-catalog-chip,
-.cad-dashboard-inventory-chip {
+.bob-widget-catalog-chip,
+.bob-dashboard-inventory-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -3257,8 +3257,8 @@ select.cad-form-input {
   color: var(--text-muted);
   font-size: 11px;
 }
-.cad-widget-catalog-examples-label,
-.cad-dashboard-inventory-label {
+.bob-widget-catalog-examples-label,
+.bob-dashboard-inventory-label {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -3266,7 +3266,7 @@ select.cad-form-input {
   color: var(--text-faint);
   margin-right: 2px;
 }
-.cad-widget-gap {
+.bob-widget-gap {
   margin-top: 14px;
   padding: 12px;
   border-left: 3px solid var(--interactive-accent);
@@ -3274,29 +3274,29 @@ select.cad-form-input {
   border-radius: 8px;
 }
 
-.cad-review-summary,
-.cad-review-section {
+.bob-review-summary,
+.bob-review-section {
   padding: 0 32px 20px;
 }
-.cad-review-summary {
+.bob-review-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
   margin-bottom: 4px;
 }
-.cad-review-summary-card {
+.bob-review-summary-card {
   border: 1px solid var(--background-modifier-border);
   border-radius: 10px;
   background: var(--background-secondary);
   padding: 12px;
 }
-.cad-review-summary-value {
+.bob-review-summary-value {
   font-size: 22px;
   font-weight: 700;
   line-height: 1;
   color: var(--text-normal);
 }
-.cad-review-summary-label {
+.bob-review-summary-label {
   margin-top: 8px;
   font-size: 10px;
   font-weight: 700;
@@ -3304,22 +3304,22 @@ select.cad-form-input {
   text-transform: uppercase;
   color: var(--text-muted);
 }
-.cad-review-section { margin-top: 18px; }
-.cad-review-table-wrap {
+.bob-review-section { margin-top: 18px; }
+.bob-review-table-wrap {
   margin-top: 12px;
   overflow: hidden;
   border: 1px solid var(--background-modifier-border);
   border-radius: 10px;
   background: var(--background-primary);
 }
-.cad-review-table {
+.bob-review-table {
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
   min-width: 0;
 }
-.cad-review-table th,
-.cad-review-table td {
+.bob-review-table th,
+.bob-review-table td {
   padding: 6px 8px;
   border-bottom: 1px solid var(--background-modifier-border);
   vertical-align: top;
@@ -3329,7 +3329,7 @@ select.cad-form-input {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-.cad-review-table th {
+.bob-review-table th {
   position: sticky;
   top: 0;
   z-index: 1;
@@ -3340,8 +3340,8 @@ select.cad-form-input {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.cad-review-table tbody tr:hover { background: var(--background-modifier-hover); }
-.cad-widget-gap-title {
+.bob-review-table tbody tr:hover { background: var(--background-modifier-hover); }
+.bob-widget-gap-title {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -3351,43 +3351,43 @@ select.cad-form-input {
 }
 
 /* mode toggle */
-.cad-de-mode-toggle { display: flex; gap: 0; border-radius: 6px; overflow: hidden; border: 1px solid var(--background-modifier-border); margin-left: auto; }
-.cad-de-mode-btn { padding: 4px 12px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: var(--background-secondary); color: var(--text-muted); transition: background 0.1s, color 0.1s; }
-.cad-de-mode-btn.active { background: var(--interactive-accent); color: white; }
+.bob-de-mode-toggle { display: flex; gap: 0; border-radius: 6px; overflow: hidden; border: 1px solid var(--background-modifier-border); margin-left: auto; }
+.bob-de-mode-btn { padding: 4px 12px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: var(--background-secondary); color: var(--text-muted); transition: background 0.1s, color 0.1s; }
+.bob-de-mode-btn.active { background: var(--interactive-accent); color: white; }
 
 /* designer sections */
-.cad-de-section { display: flex; flex-direction: column; gap: 6px; padding: 0 0 12px; border-bottom: 1px solid var(--background-modifier-border); margin-bottom: 12px; }
-.cad-de-section-head { display: flex; align-items: center; gap: 8px; }
-.cad-de-section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); flex: 1; }
-.cad-de-field { display: block; width: 100%; padding: 5px 8px; font-size: 13px; border-radius: 5px; border: 1px solid var(--background-modifier-border); background: var(--background-primary-alt); color: var(--text-normal); box-sizing: border-box; }
-.cad-de-field:disabled { opacity: 0.6; cursor: default; }
-.cad-de-field-sm { font-size: 12px; padding: 3px 6px; width: auto; }
+.bob-de-section { display: flex; flex-direction: column; gap: 6px; padding: 0 0 12px; border-bottom: 1px solid var(--background-modifier-border); margin-bottom: 12px; }
+.bob-de-section-head { display: flex; align-items: center; gap: 8px; }
+.bob-de-section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); flex: 1; }
+.bob-de-field { display: block; width: 100%; padding: 5px 8px; font-size: 13px; border-radius: 5px; border: 1px solid var(--background-modifier-border); background: var(--background-primary-alt); color: var(--text-normal); box-sizing: border-box; }
+.bob-de-field:disabled { opacity: 0.6; cursor: default; }
+.bob-de-field-sm { font-size: 12px; padding: 3px 6px; width: auto; }
 
 /* stats chips */
-.cad-de-stat-chip { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--background-secondary); border-radius: 6px; border: 1px solid var(--background-modifier-border); flex-wrap: wrap; }
-.cad-de-stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; width: 120px; }
-.cad-de-stat-select { font-size: 12px; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--background-modifier-border); background: var(--background-primary); color: var(--text-normal); }
+.bob-de-stat-chip { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--background-secondary); border-radius: 6px; border: 1px solid var(--background-modifier-border); flex-wrap: wrap; }
+.bob-de-stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; width: 120px; }
+.bob-de-stat-select { font-size: 12px; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--background-modifier-border); background: var(--background-primary); color: var(--text-normal); }
 
 /* layout board */
-.cad-de-layout-row { border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 8px; margin-bottom: 8px; background: var(--background-secondary); }
-.cad-de-row-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
-.cad-de-row-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; flex: 1; }
-.cad-de-row-cols { display: flex; gap: 8px; align-items: flex-start; }
-.cad-de-layout-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.cad-de-del-col { align-self: flex-end; font-size: 11px; padding: 2px 6px; }
+.bob-de-layout-row { border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 8px; margin-bottom: 8px; background: var(--background-secondary); }
+.bob-de-row-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.bob-de-row-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; flex: 1; }
+.bob-de-row-cols { display: flex; gap: 8px; align-items: flex-start; }
+.bob-de-layout-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.bob-de-del-col { align-self: flex-end; font-size: 11px; padding: 2px 6px; }
 
 /* card widgets */
-.cad-de-card { border: 1px solid var(--background-modifier-border); border-radius: 6px; background: var(--background-primary); padding: 6px 8px; cursor: grab; transition: box-shadow 0.1s; }
-.cad-de-card:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-.cad-de-card.cad-de-dragging { opacity: 0.4; }
-.cad-de-card.drag-over { outline: 2px solid var(--interactive-accent); }
-.cad-de-card-head { display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap; }
-.cad-de-drag-handle { cursor: grab; color: var(--text-faint); font-size: 14px; user-select: none; flex-shrink: 0; }
-.cad-de-card-title-text { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cad-de-card-badges { display: flex; gap: 4px; flex-shrink: 0; }
-.cad-de-card-badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--background-modifier-border); color: var(--text-muted); }
-.cad-de-badge-source { background: color-mix(in srgb, var(--interactive-accent) 18%, transparent); color: var(--interactive-accent); }
-.cad-de-card-actions {
+.bob-de-card { border: 1px solid var(--background-modifier-border); border-radius: 6px; background: var(--background-primary); padding: 6px 8px; cursor: grab; transition: box-shadow 0.1s; }
+.bob-de-card:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.bob-de-card.bob-de-dragging { opacity: 0.4; }
+.bob-de-card.drag-over { outline: 2px solid var(--interactive-accent); }
+.bob-de-card-head { display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap; }
+.bob-de-drag-handle { cursor: grab; color: var(--text-faint); font-size: 14px; user-select: none; flex-shrink: 0; }
+.bob-de-card-title-text { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bob-de-card-badges { display: flex; gap: 4px; flex-shrink: 0; }
+.bob-de-card-badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--background-modifier-border); color: var(--text-muted); }
+.bob-de-badge-source { background: color-mix(in srgb, var(--interactive-accent) 18%, transparent); color: var(--interactive-accent); }
+.bob-de-card-actions {
   display: flex;
   gap: 3px;
   flex-shrink: 0;
@@ -3395,14 +3395,14 @@ select.cad-form-input {
   margin-left: auto;
   transition: opacity 0.1s;
 }
-.cad-de-card:hover .cad-de-card-actions { opacity: 1; }
+.bob-de-card:hover .bob-de-card-actions { opacity: 1; }
 
 /* column drop zone */
-.cad-de-col-drop-zone { border: 1px dashed var(--background-modifier-border); border-radius: 5px; padding: 6px; text-align: center; font-size: 11px; color: var(--text-faint); cursor: pointer; transition: background 0.1s, border-color 0.1s; }
-.cad-de-col-drop-zone:hover, .cad-de-col-drop-zone.drag-over { background: var(--background-modifier-hover); border-color: var(--interactive-accent); color: var(--interactive-accent); }
+.bob-de-col-drop-zone { border: 1px dashed var(--background-modifier-border); border-radius: 5px; padding: 6px; text-align: center; font-size: 11px; color: var(--text-faint); cursor: pointer; transition: background 0.1s, border-color 0.1s; }
+.bob-de-col-drop-zone:hover, .bob-de-col-drop-zone.drag-over { background: var(--background-modifier-hover); border-color: var(--interactive-accent); color: var(--interactive-accent); }
 
 /* card inline edit form */
-.cad-de-card-form {
+.bob-de-card-form {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--background-modifier-border);
@@ -3410,7 +3410,7 @@ select.cad-form-input {
   flex-direction: column;
   gap: 8px;
 }
-.cad-de-form-row {
+.bob-de-form-row {
   display: grid;
   grid-template-columns: minmax(92px, 120px) minmax(0, 1fr);
   align-items: center;
@@ -3419,54 +3419,54 @@ select.cad-form-input {
 /* Field and section labels carry their explanation on hover; hint that with a
    help cursor + faint dotted underline so it's discoverable without cluttering
    the form with permanent help text. */
-.cad-de-form-label[title],
-.cad-de-section-label[title] {
+.bob-de-form-label[title],
+.bob-de-section-label[title] {
   cursor: help;
   text-decoration: underline dotted var(--background-modifier-border);
   text-underline-offset: 3px;
 }
 
 /* Inline live Base embed for non-table entity surfaces */
-.cad-external-base-view { padding: 0 16px 16px; }
-.cad-external-base-view-body { min-height: 120px; }
-.cad-external-base-view-body .bases-embed,
-.cad-external-base-view-body .block-language-base { width: 100%; }
+.bob-external-base-view { padding: 0 16px 16px; }
+.bob-external-base-view-body { min-height: 120px; }
+.bob-external-base-view-body .bases-embed,
+.bob-external-base-view-body .block-language-base { width: 100%; }
 
 /* Toggleable colored help panel (reusable) */
-.cad-help-block { margin: 0 0 12px; }
-.cad-help-toggle {
+.bob-help-block { margin: 0 0 12px; }
+.bob-help-toggle {
   display: flex; align-items: center; gap: 6px; width: 100%;
   padding: 7px 10px; cursor: pointer;
   background: var(--background-secondary); color: var(--text-muted);
   border: 1px solid var(--background-modifier-border); border-radius: 8px;
   font-size: 12px; font-weight: 600; text-align: left;
 }
-.cad-help-toggle:hover { color: var(--text-normal); border-color: var(--interactive-accent); }
-.cad-help-toggle.is-open {
+.bob-help-toggle:hover { color: var(--text-normal); border-color: var(--interactive-accent); }
+.bob-help-toggle.is-open {
   border-bottom-left-radius: 0; border-bottom-right-radius: 0;
   border-bottom-color: transparent;
 }
-.cad-help-toggle-icon { display: inline-flex; color: var(--interactive-accent); }
-.cad-help-toggle-icon svg { width: 15px; height: 15px; }
-.cad-help-toggle-label { flex: 1; }
-.cad-help-toggle-chevron { color: var(--text-faint); font-size: 11px; }
-.cad-help-panel {
+.bob-help-toggle-icon { display: inline-flex; color: var(--interactive-accent); }
+.bob-help-toggle-icon svg { width: 15px; height: 15px; }
+.bob-help-toggle-label { flex: 1; }
+.bob-help-toggle-chevron { color: var(--text-faint); font-size: 11px; }
+.bob-help-panel {
   padding: 10px 12px 12px;
   border: 1px solid var(--interactive-accent);
   border-top: 0;
   border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;
   background: color-mix(in oklab, var(--interactive-accent) 8%, var(--background-primary));
 }
-.cad-help-heading {
+.bob-help-heading {
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--interactive-accent); margin: 8px 0 4px;
 }
-.cad-help-heading:first-child { margin-top: 0; }
-.cad-help-line { font-size: 12.5px; line-height: 1.45; color: var(--text-normal); margin: 2px 0; }
-.cad-help-term { font-weight: 600; margin-right: 6px; }
-.cad-help-term::after { content: '—'; margin-left: 6px; color: var(--text-faint); font-weight: 400; }
-.cad-help-desc { color: var(--text-muted); }
-.cad-de-form-label {
+.bob-help-heading:first-child { margin-top: 0; }
+.bob-help-line { font-size: 12.5px; line-height: 1.45; color: var(--text-normal); margin: 2px 0; }
+.bob-help-term { font-weight: 600; margin-right: 6px; }
+.bob-help-term::after { content: '—'; margin-left: 6px; color: var(--text-faint); font-weight: 400; }
+.bob-help-desc { color: var(--text-muted); }
+.bob-de-form-label {
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -3475,59 +3475,59 @@ select.cad-form-input {
   width: auto;
   flex-shrink: 0;
 }
-.cad-de-card-form .cad-de-field-sm {
+.bob-de-card-form .bob-de-field-sm {
   width: 100%;
   min-width: 0;
 }
-.cad-de-card-form .cad-de-textarea {
+.bob-de-card-form .bob-de-textarea {
   min-height: 180px;
 }
-.cad-de-source-section-wrap {
+.bob-de-source-section-wrap {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(180px, 1fr);
   gap: 8px;
 }
-.cad-de-add-row-btn { margin-top: 6px; width: 100%; }
+.bob-de-add-row-btn { margin-top: 6px; width: 100%; }
 
 @media (max-width: 1200px) {
-  .cad-de-split {
+  .bob-de-split {
     grid-template-columns: 1fr;
   }
-  .cad-de-editor-pane {
+  .bob-de-editor-pane {
     border-right: none;
     border-bottom: 1px solid var(--background-modifier-border);
     padding-right: 0;
     padding-bottom: 16px;
   }
-  .cad-de-preview-pane {
+  .bob-de-preview-pane {
     padding-left: 0;
     padding-top: 16px;
   }
 }
 
 @media (max-width: 760px) {
-  .cad-de-form-row {
+  .bob-de-form-row {
     grid-template-columns: 1fr;
     align-items: start;
   }
-  .cad-de-source-section-wrap {
+  .bob-de-source-section-wrap {
     grid-template-columns: 1fr;
   }
-  .cad-de-card-head {
+  .bob-de-card-head {
     flex-direction: column;
     align-items: stretch;
   }
-  .cad-de-card-actions {
+  .bob-de-card-actions {
     margin-left: 0;
   }
 }
 
-.cad-kanban-col-description {
+.bob-kanban-col-description {
   font-size: 12px;
   color: var(--text-muted);
   padding: 0 12px 8px;
 }
-.cad-kanban-col-limit {
+.bob-kanban-col-limit {
   margin-left: 8px;
   font-size: 11px;
   padding: 1px 6px;
@@ -3535,71 +3535,71 @@ select.cad-form-input {
   background: var(--background-modifier-border);
   color: var(--text-muted);
 }
-.cad-kanban-col-limit.is-over-limit {
+.bob-kanban-col-limit.is-over-limit {
   background: color-mix(in srgb, var(--text-error) 12%, var(--background-modifier-border));
   color: var(--text-error);
 }
-.cad-kanban-col-over-limit {
+.bob-kanban-col-over-limit {
   border-color: color-mix(in srgb, var(--text-error) 35%, var(--background-modifier-border));
 }
-.cad-kanban-card-over-limit {
+.bob-kanban-card-over-limit {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-error) 35%, transparent);
 }
 
 /* ── Import / Export surface ─────────────────────── */
-.cad-data-section { padding: 24px 32px; border-bottom: 1px solid var(--background-modifier-border); display: flex; flex-direction: column; gap: 12px; max-width: 640px; }
-.cad-data-section-title { font-size: 14px; font-weight: 700; color: var(--text-normal); }
-.cad-data-section-desc { font-size: 13px; color: var(--text-muted); }
-.cad-data-group-list { display: flex; flex-direction: column; gap: 6px; }
-.cad-data-group-item { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; }
-.cad-data-group-item input[type="checkbox"] { cursor: pointer; }
-.cad-data-group-count { font-size: 11px; color: var(--text-faint); margin-left: auto; }
-.cad-import-src-row { margin-bottom: 12px; }
-.cad-data-action-row { display: flex; flex-direction: column; gap: 8px; }
-.cad-data-btn-row { display: flex; flex-direction: row; gap: 8px; align-items: center; flex-wrap: wrap; }
-.cad-data-status { font-size: 12px; color: var(--text-muted); min-height: 18px; }
-.cad-data-status-ok { color: var(--color-green, #4caf50); }
-.cad-data-status-error { color: var(--color-red, #e53935); }
-.cad-data-open-link { color: var(--interactive-accent); cursor: pointer; text-decoration: underline; }
+.bob-data-section { padding: 24px 32px; border-bottom: 1px solid var(--background-modifier-border); display: flex; flex-direction: column; gap: 12px; max-width: 640px; }
+.bob-data-section-title { font-size: 14px; font-weight: 700; color: var(--text-normal); }
+.bob-data-section-desc { font-size: 13px; color: var(--text-muted); }
+.bob-data-group-list { display: flex; flex-direction: column; gap: 6px; }
+.bob-data-group-item { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; }
+.bob-data-group-item input[type="checkbox"] { cursor: pointer; }
+.bob-data-group-count { font-size: 11px; color: var(--text-faint); margin-left: auto; }
+.bob-import-src-row { margin-bottom: 12px; }
+.bob-data-action-row { display: flex; flex-direction: column; gap: 8px; }
+.bob-data-btn-row { display: flex; flex-direction: row; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bob-data-status { font-size: 12px; color: var(--text-muted); min-height: 18px; }
+.bob-data-status-ok { color: var(--color-green, #4caf50); }
+.bob-data-status-error { color: var(--color-red, #e53935); }
+.bob-data-open-link { color: var(--interactive-accent); cursor: pointer; text-decoration: underline; }
 
 /* ── Canvas library + full-page canvas surface ────────────────── */
-.cad-canvas-library { display: flex; flex-direction: column; gap: 12px; }
-.cad-canvas-search {
+.bob-canvas-library { display: flex; flex-direction: column; gap: 12px; }
+.bob-canvas-search {
   width: 100%; max-width: 420px; padding: 8px 12px; border-radius: 8px;
   border: 1px solid var(--background-modifier-border); background: var(--background-primary);
   color: var(--text-normal); font-size: 14px;
 }
-.cad-canvas-list { display: flex; flex-direction: column; gap: 6px; }
-.cad-canvas-row {
+.bob-canvas-list { display: flex; flex-direction: column; gap: 6px; }
+.bob-canvas-row {
   display: flex; align-items: center; gap: 12px; padding: 10px 12px; cursor: pointer;
   border: 1px solid var(--background-modifier-border); border-radius: 10px;
   background: var(--background-secondary);
 }
-.cad-canvas-row:hover { background: var(--background-modifier-hover); }
-.cad-canvas-row-icon { display: flex; align-items: center; color: var(--text-muted); flex: 0 0 auto; }
-.cad-canvas-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
-.cad-canvas-row-name { font-weight: 600; color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cad-canvas-row-meta { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cad-canvas-row-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+.bob-canvas-row:hover { background: var(--background-modifier-hover); }
+.bob-canvas-row-icon { display: flex; align-items: center; color: var(--text-muted); flex: 0 0 auto; }
+.bob-canvas-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.bob-canvas-row-name { font-weight: 600; color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bob-canvas-row-meta { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bob-canvas-row-actions { display: flex; gap: 6px; flex: 0 0 auto; }
 
-.cad-canvas-stage {
+.bob-canvas-stage {
   position: relative; height: calc(100vh - 190px); min-height: 460px;
   border: 1px solid var(--background-modifier-border); border-radius: 10px; overflow: hidden;
   background: var(--background-secondary);
 }
 /* the embedded canvas is height-collapsed by default — force it to fill the stage */
-.cad-canvas-stage > .internal-embed,
-.cad-canvas-stage .markdown-embed,
-.cad-canvas-stage .canvas-wrapper,
-.cad-canvas-stage .canvas { height: 100% !important; width: 100% !important; }
+.bob-canvas-stage > .internal-embed,
+.bob-canvas-stage .markdown-embed,
+.bob-canvas-stage .canvas-wrapper,
+.bob-canvas-stage .canvas { height: 100% !important; width: 100% !important; }
 /* Reparented live CanvasView leaf: make its content chain fill the stage */
-.cad-canvas-stage-live > .workspace-leaf-content,
-.cad-canvas-stage-live .view-content,
-.cad-canvas-stage-live .canvas-wrapper,
-.cad-canvas-stage-live .canvas { height: 100% !important; width: 100% !important; }
-.cad-canvas-fallback { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; }
+.bob-canvas-stage-live > .workspace-leaf-content,
+.bob-canvas-stage-live .view-content,
+.bob-canvas-stage-live .canvas-wrapper,
+.bob-canvas-stage-live .canvas { height: 100% !important; width: 100% !important; }
+.bob-canvas-fallback { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; }
 
 @media (max-width: 640px) {
-  .cad-canvas-stage { height: calc(100vh - 210px); }
-  .cad-canvas-row-actions { flex-direction: column; }
+  .bob-canvas-stage { height: calc(100vh - 210px); }
+  .bob-canvas-row-actions { flex-direction: column; }
 }

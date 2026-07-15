@@ -1,7 +1,7 @@
 import { applyWorkspaceTemplate } from '../workspace-templates';
 import * as obsidian from 'obsidian';
 import type { App } from 'obsidian';
-import type { CadencePlugin } from '../plugin';
+import type { BobPlugin } from '../plugin';
 import type { WorkspaceConfig } from '../types';
 
 /** Bundled starter template: a WorkspaceConfig carrying `_template` metadata. */
@@ -12,11 +12,11 @@ interface WorkspaceTemplateMeta {
 }
 type WorkspaceTemplate = WorkspaceConfig & { _template?: WorkspaceTemplateMeta };
 
-export class CadenceWorkspaceSetupModal extends obsidian.Modal {
-  declare plugin: CadencePlugin;
+export class BobWorkspaceSetupModal extends obsidian.Modal {
+  declare plugin: BobPlugin;
   declare templates: WorkspaceTemplate[];
   declare selected: WorkspaceTemplate | null;
-  constructor(app: App, plugin: CadencePlugin, templates: WorkspaceTemplate[]) {
+  constructor(app: App, plugin: BobPlugin, templates: WorkspaceTemplate[]) {
     super(app);
     this.plugin = plugin;
     this.templates = templates;
@@ -26,25 +26,25 @@ export class CadenceWorkspaceSetupModal extends obsidian.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass('cad-setup-modal');
+    contentEl.addClass('bob-setup-modal');
     contentEl.createEl('h2', { text: 'Welcome to BOB Workspace' });
-    contentEl.createEl('p', { cls: 'cad-setup-subtitle', text: 'Choose a starter workspace to get going. You can customise it at any time from Settings → BOB Workspace → Workspace.' });
+    contentEl.createEl('p', { cls: 'bob-setup-subtitle', text: 'Choose a starter workspace to get going. You can customise it at any time from Settings → BOB Workspace → Workspace.' });
 
-    const grid = contentEl.createDiv({ cls: 'cad-template-grid' });
+    const grid = contentEl.createDiv({ cls: 'bob-template-grid' });
     for (const tpl of this.templates) {
       const meta = tpl._template;
-      const card = grid.createDiv({ cls: 'cad-template-card' });
+      const card = grid.createDiv({ cls: 'bob-template-card' });
       card.createEl('strong', { text: meta.label });
       card.createEl('p', { text: meta.description });
       card.addEventListener('click', () => {
-        grid.querySelectorAll('.cad-template-card').forEach((c) => c.classList.remove('is-selected'));
+        grid.querySelectorAll('.bob-template-card').forEach((c) => c.classList.remove('is-selected'));
         card.classList.add('is-selected');
         this.selected = tpl;
         applyBtn.disabled = false;
       });
     }
 
-    const footer = contentEl.createDiv({ cls: 'cad-setup-footer' });
+    const footer = contentEl.createDiv({ cls: 'bob-setup-footer' });
     const applyBtn = footer.createEl('button', { text: 'Apply template', cls: 'mod-cta' });
     applyBtn.disabled = true;
     applyBtn.addEventListener('click', async () => {
@@ -60,7 +60,7 @@ export class CadenceWorkspaceSetupModal extends obsidian.Modal {
       }
     });
 
-    const skipBtn = footer.createEl('button', { text: 'Skip for now', cls: 'cad-setup-skip' });
+    const skipBtn = footer.createEl('button', { text: 'Skip for now', cls: 'bob-setup-skip' });
     skipBtn.addEventListener('click', async () => {
       this.plugin.settings.setupDismissed = true;
       await this.plugin.saveSettings();

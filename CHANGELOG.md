@@ -4,6 +4,22 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [0.14.4-bob.51] — 2026-07-15
+
+### Changed
+- **Internal identifiers rebranded Cadence → BOB.** `Cadence*` classes →
+  `Bob*` (e.g. `CadencePlugin` → `BobPlugin`), `cad-`/`cadence-` CSS classes →
+  `bob-`, `VIEW_TYPE_CADENCE_APP` → `VIEW_TYPE_BOB_APP`, and the settings key
+  `cadenceAppDark` → `bobAppDark`. Purely internal; the view-type *value* was
+  already `bob-workspace-app` (no orphaned views).
+  - **Command IDs renamed** `open-cadence*`/`cadence-import-csv` → `open-bob*`/
+    `bob-import-csv`. **Any hotkeys bound to those commands reset** and need
+    re-binding.
+  - The scoped dark-mode preference resets once (key rename), re-toggle if used.
+  - **Deliberately kept** (compatibility/attribution, not internal naming): the
+    legacy `Cadence/…` fallback paths, the **Cadence Classic** template, and the
+    upstream **Cadence Planner** credit.
+
 ## [0.14.4-bob.50] — 2026-07-15
 
 ### Added
@@ -385,6 +401,7 @@ Today, an on-screen help layer, and onboarding docs.
 - Corrected CLAUDE.md/AGENTS.md drift and deprecation-stamped stale generated
   docs.
 
+[0.14.4-bob.51]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.51
 [0.14.4-bob.50]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.50
 [0.14.4-bob.49]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.49
 [0.14.4-bob.48]: https://github.com/cbruyndoncx/obsidian-bob-workspace/releases/tag/0.14.4-bob.48

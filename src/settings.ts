@@ -36,7 +36,7 @@ export const DEFAULT_SETTINGS: BobSettings = {
   pinnedSurfaces: [], // [surfaceId]
   dashboardState: {}, // { [surfaceId]: { [controlKey]: value } }
   currency: 'USD',
-  cadenceAppDark: false,
+  bobAppDark: false,
   taskProjectLinks: {}, // { "dailyPath::taskText": "Cadence/Projects/X.md" }
   modules: { crm: false, 'client-work': false, prm: false, finance: false, procurement: false, planner: false, ai: false },
   disabledSurfaces: [],    // surface IDs hidden from nav regardless of module toggle

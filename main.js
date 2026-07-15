@@ -22668,7 +22668,7 @@ function removeSurfaceFromGroups(groups, surfaceId) {
 }
 
 // src/nav.ts
-var VIEW_TYPE_CADENCE_APP = "bob-workspace-app";
+var VIEW_TYPE_BOB_APP = "bob-workspace-app";
 var BUILTIN_NAV_GROUPS = [
   {
     id: "home_group",
@@ -25936,7 +25936,7 @@ var DEFAULT_SETTINGS = {
   dashboardState: {},
   // { [surfaceId]: { [controlKey]: value } }
   currency: "USD",
-  cadenceAppDark: false,
+  bobAppDark: false,
   taskProjectLinks: {},
   // { "dailyPath::taskText": "Cadence/Projects/X.md" }
   modules: { crm: false, "client-work": false, prm: false, finance: false, procurement: false, planner: false, ai: false },
@@ -26308,7 +26308,7 @@ function reminderTimeStr(when) {
 
 // src/modals/common.ts
 var obsidian7 = __toESM(require("obsidian"));
-var CadencePromptModal = class extends obsidian7.Modal {
+var BobPromptModal = class extends obsidian7.Modal {
   constructor(app, opts) {
     super(app);
     this.title = opts.title || "Enter a name";
@@ -26321,7 +26321,7 @@ var CadencePromptModal = class extends obsidian7.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("cad-prompt-modal");
+    contentEl.addClass("bob-prompt-modal");
     contentEl.createEl("h3", { text: this.title });
     const input = contentEl.createEl("input", { type: "text" });
     input.placeholder = this.placeholder;
@@ -26369,7 +26369,7 @@ var CadencePromptModal = class extends obsidian7.Modal {
     this.contentEl.empty();
   }
 };
-var CadenceConfirmModal = class extends obsidian7.Modal {
+var BobConfirmModal = class extends obsidian7.Modal {
   constructor(app, opts) {
     super(app);
     this.message = opts.message || "Are you sure?";
@@ -26382,10 +26382,10 @@ var CadenceConfirmModal = class extends obsidian7.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("cad-confirm-modal");
+    contentEl.addClass("bob-confirm-modal");
     contentEl.createEl("h3", { text: this.heading });
     String(this.message).split("\n").forEach((line) => contentEl.createEl("p", { text: line }));
-    const row = contentEl.createDiv({ cls: "cad-confirm-actions" });
+    const row = contentEl.createDiv({ cls: "bob-confirm-actions" });
     const cancel = row.createEl("button", { text: "Cancel" });
     cancel.addEventListener("click", () => this.close());
     const ok = row.createEl("button", { text: this.cta, cls: this.danger ? "mod-warning" : "mod-cta" });
@@ -26403,10 +26403,10 @@ var CadenceConfirmModal = class extends obsidian7.Modal {
 };
 function confirmModal(app, message, opts = {}) {
   return new Promise((resolve) => {
-    new CadenceConfirmModal(app, { message, ...opts, onResolve: resolve }).open();
+    new BobConfirmModal(app, { message, ...opts, onResolve: resolve }).open();
   });
 }
-var CadenceIconPickerModal = class extends obsidian7.SuggestModal {
+var BobIconPickerModal = class extends obsidian7.SuggestModal {
   constructor(app, currentIcon, onChoose) {
     super(app);
     this.currentIcon = currentIcon || "";
@@ -26427,15 +26427,15 @@ var CadenceIconPickerModal = class extends obsidian7.SuggestModal {
     return matches;
   }
   renderSuggestion(item, el) {
-    el.addClass("cad-icon-picker-result");
-    const preview = el.createSpan({ cls: "cad-icon-picker-preview" });
+    el.addClass("bob-icon-picker-result");
+    const preview = el.createSpan({ cls: "bob-icon-picker-preview" });
     try {
       obsidian7.setIcon(preview, item.clear ? "circle-x" : item.iconId);
     } catch (_) {
     }
-    el.createSpan({ cls: "cad-icon-picker-name", text: item.clear ? "No icon" : item.iconId });
+    el.createSpan({ cls: "bob-icon-picker-name", text: item.clear ? "No icon" : item.iconId });
     if (!item.clear && item.iconId === this.currentIcon) {
-      el.createSpan({ cls: "cad-icon-picker-current", text: "current" });
+      el.createSpan({ cls: "bob-icon-picker-current", text: "current" });
     }
   }
   onChooseSuggestion(item) {
@@ -26454,7 +26454,7 @@ function attachRequiredValidation(submitBtn, requiredInputs) {
       return (inp.value || "").trim().length > 0;
     });
     submitBtn.disabled = !allFilled;
-    submitBtn.classList.toggle("cad-btn-disabled", !allFilled);
+    submitBtn.classList.toggle("bob-btn-disabled", !allFilled);
   };
   requiredInputs.forEach((inp) => {
     if (!inp) return;
@@ -26463,7 +26463,7 @@ function attachRequiredValidation(submitBtn, requiredInputs) {
   });
   check();
 }
-var CadenceCaptureModal = class extends obsidian8.Modal {
+var BobCaptureModal = class extends obsidian8.Modal {
   constructor(app, opts) {
     super(app);
     this.onSubmit = opts.onSubmit;
@@ -26475,11 +26475,11 @@ var CadenceCaptureModal = class extends obsidian8.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("cad-capture-modal");
+    contentEl.addClass("bob-capture-modal");
     contentEl.createEl("h3", { text: "Quick capture" });
-    const textRow = contentEl.createDiv({ cls: "cad-form-row" });
-    textRow.createDiv({ cls: "cad-form-label", text: "WHAT" });
-    const textInput = textRow.createEl("input", { type: "text", cls: "cad-form-input" });
+    const textRow = contentEl.createDiv({ cls: "bob-form-row" });
+    textRow.createDiv({ cls: "bob-form-label", text: "WHAT" });
+    const textInput = textRow.createEl("input", { type: "text", cls: "bob-form-input" });
     textInput.placeholder = "What needs doing?";
     textInput.value = this.defaultText;
     const schedToggleRow = contentEl.createDiv();
@@ -26495,14 +26495,14 @@ var CadenceCaptureModal = class extends obsidian8.Modal {
       schedCb.checked = !schedCb.checked;
       schedCb.dispatchEvent(new Event("change"));
     });
-    const schedFields = contentEl.createDiv({ cls: "cad-capture-sched" });
+    const schedFields = contentEl.createDiv({ cls: "bob-capture-sched" });
     schedFields.style.display = "none";
     schedFields.style.marginTop = "12px";
     schedFields.style.gap = "12px";
     schedFields.style.display = "none";
-    const dateRow = schedFields.createDiv({ cls: "cad-form-row" });
-    dateRow.createDiv({ cls: "cad-form-label", text: "WHEN" });
-    const dateInput = dateRow.createEl("input", { type: "datetime-local", cls: "cad-form-input" });
+    const dateRow = schedFields.createDiv({ cls: "bob-form-row" });
+    dateRow.createDiv({ cls: "bob-form-label", text: "WHEN" });
+    const dateInput = dateRow.createEl("input", { type: "datetime-local", cls: "bob-form-input" });
     if (this.defaultWhen) {
       const d = new Date(this.defaultWhen);
       if (!isNaN(d.getTime())) dateInput.value = toLocalDatetimeValue(d);
@@ -26522,7 +26522,7 @@ var CadenceCaptureModal = class extends obsidian8.Modal {
       dateInput.value = toLocalDatetimeValue(d);
     };
     const mkQ = (label, deltaMs) => {
-      const b = quick.createEl("button", { cls: "cad-btn cad-btn-sm", text: label });
+      const b = quick.createEl("button", { cls: "bob-btn bob-btn-sm", text: label });
       b.type = "button";
       b.addEventListener("click", () => setQuick(deltaMs));
     };
@@ -26537,10 +26537,10 @@ var CadenceCaptureModal = class extends obsidian8.Modal {
       d.setHours(9, 0, 0, 0);
       dateInput.value = toLocalDatetimeValue(d);
     });
-    const repeatRow = schedFields.createDiv({ cls: "cad-form-row" });
+    const repeatRow = schedFields.createDiv({ cls: "bob-form-row" });
     repeatRow.style.marginTop = "10px";
-    repeatRow.createDiv({ cls: "cad-form-label", text: "REPEAT" });
-    const repeatSelect = repeatRow.createEl("select", { cls: "cad-form-input" });
+    repeatRow.createDiv({ cls: "bob-form-label", text: "REPEAT" });
+    const repeatSelect = repeatRow.createEl("select", { cls: "bob-form-input" });
     [["none", "No repeat"], ["daily", "Daily"], ["weekly", "Weekly"]].forEach(([v, l]) => {
       const o = repeatSelect.createEl("option", { value: v, text: l });
       if (v === this.defaultRepeat) o.selected = true;
@@ -26557,10 +26557,10 @@ var CadenceCaptureModal = class extends obsidian8.Modal {
     row.style.justifyContent = "flex-end";
     row.style.gap = "8px";
     row.style.marginTop = "18px";
-    const cancel = row.createEl("button", { cls: "cad-btn", text: "Cancel" });
+    const cancel = row.createEl("button", { cls: "bob-btn", text: "Cancel" });
     cancel.type = "button";
     cancel.addEventListener("click", () => this.close());
-    const ok = row.createEl("button", { cls: "cad-btn primary", text: "Capture" });
+    const ok = row.createEl("button", { cls: "bob-btn primary", text: "Capture" });
     ok.type = "button";
     attachRequiredValidation(ok, [textInput]);
     const submit = () => {
@@ -26604,7 +26604,7 @@ function fromLocalDatetimeValue(s) {
   if (!s) return null;
   return new Date(s);
 }
-var CadenceReminderEditModal = class extends obsidian8.Modal {
+var BobReminderEditModal = class extends obsidian8.Modal {
   constructor(app, plugin, reminder, opts) {
     super(app);
     this.plugin = plugin;
@@ -26615,47 +26615,47 @@ var CadenceReminderEditModal = class extends obsidian8.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("cad-create-modal");
-    contentEl.addClass("cad-reminder-edit-modal");
-    contentEl.createEl("h3", { cls: "cad-create-title", text: this.isNew ? "New reminder" : "Edit reminder" });
-    const form = contentEl.createDiv({ cls: "cad-create-form" });
-    const textRow = form.createDiv({ cls: "cad-create-row" });
-    textRow.createDiv({ cls: "cad-create-label", text: "WHAT *" });
-    const textInput = textRow.createEl("input", { type: "text", cls: "cad-create-input" });
+    contentEl.addClass("bob-create-modal");
+    contentEl.addClass("bob-reminder-edit-modal");
+    contentEl.createEl("h3", { cls: "bob-create-title", text: this.isNew ? "New reminder" : "Edit reminder" });
+    const form = contentEl.createDiv({ cls: "bob-create-form" });
+    const textRow = form.createDiv({ cls: "bob-create-row" });
+    textRow.createDiv({ cls: "bob-create-label", text: "WHAT *" });
+    const textInput = textRow.createEl("input", { type: "text", cls: "bob-create-input" });
     textInput.value = this.reminder.text || "";
     textInput.placeholder = "What needs doing?";
-    const whenRow = form.createDiv({ cls: "cad-create-row" });
-    whenRow.createDiv({ cls: "cad-create-label", text: "WHEN" });
+    const whenRow = form.createDiv({ cls: "bob-create-row" });
+    whenRow.createDiv({ cls: "bob-create-label", text: "WHEN" });
     const whenWrap = whenRow.createDiv();
     whenWrap.style.display = "flex";
     whenWrap.style.gap = "8px";
     whenWrap.style.alignItems = "center";
-    const dateInput = whenWrap.createEl("input", { type: "datetime-local", cls: "cad-create-input" });
+    const dateInput = whenWrap.createEl("input", { type: "datetime-local", cls: "bob-create-input" });
     dateInput.style.flex = "1";
     if (this.reminder.when) {
       const d = new Date(this.reminder.when);
       if (!isNaN(d.getTime())) dateInput.value = toLocalDatetimeValue(d);
     }
-    const clearBtn = whenWrap.createEl("button", { cls: "cad-btn cad-btn-sm", text: "Clear" });
+    const clearBtn = whenWrap.createEl("button", { cls: "bob-btn bob-btn-sm", text: "Clear" });
     clearBtn.type = "button";
     clearBtn.title = "Move to unscheduled";
     clearBtn.addEventListener("click", () => {
       dateInput.value = "";
     });
-    const repeatRow = form.createDiv({ cls: "cad-create-row" });
-    repeatRow.createDiv({ cls: "cad-create-label", text: "REPEAT" });
-    const repeatSel = repeatRow.createEl("select", { cls: "cad-create-input" });
+    const repeatRow = form.createDiv({ cls: "bob-create-row" });
+    repeatRow.createDiv({ cls: "bob-create-label", text: "REPEAT" });
+    const repeatSel = repeatRow.createEl("select", { cls: "bob-create-input" });
     [["none", "No repeat"], ["daily", "Daily"], ["weekly", "Weekly"]].forEach(([v, l]) => {
       const o = repeatSel.createEl("option", { value: v, text: l });
       if (v === (this.reminder.repeat || "none")) o.selected = true;
     });
-    const projectRow = form.createDiv({ cls: "cad-create-row" });
-    projectRow.createDiv({ cls: "cad-create-label", text: "PROJECT" });
-    const projectField = projectRow.createDiv({ cls: "cad-rem-project-field" });
+    const projectRow = form.createDiv({ cls: "bob-create-row" });
+    projectRow.createDiv({ cls: "bob-create-label", text: "PROJECT" });
+    const projectField = projectRow.createDiv({ cls: "bob-rem-project-field" });
     const renderProjectField = () => {
       projectField.empty();
       if (this.reminder.project) {
-        const chip = projectField.createEl("a", { cls: "cad-rem-project-chip", text: "\u{1F4C1} " + (projectNameFromPath(this.app, this.reminder.project) || "Project") });
+        const chip = projectField.createEl("a", { cls: "bob-rem-project-chip", text: "\u{1F4C1} " + (projectNameFromPath(this.app, this.reminder.project) || "Project") });
         chip.title = "Open project (closes this modal)";
         chip.addEventListener("click", (e) => {
           e.preventDefault();
@@ -26663,41 +26663,41 @@ var CadenceReminderEditModal = class extends obsidian8.Modal {
           if (file && file instanceof obsidian8.TFile) {
             this._submitted = true;
             this.close();
-            const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
+            const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP)[0];
             const leafView = leaf?.view;
             if (leaf && leafView && typeof leafView.openEntityDetailFromFile === "function") {
               leafView.openEntityDetailFromFile(file);
             }
           }
         });
-        const changeBtn = projectField.createEl("button", { cls: "cad-btn cad-btn-sm", text: "Change" });
+        const changeBtn = projectField.createEl("button", { cls: "bob-btn bob-btn-sm", text: "Change" });
         changeBtn.type = "button";
         changeBtn.addEventListener("click", () => this._openReminderProjectPicker(renderProjectField));
-        const removeBtn = projectField.createEl("button", { cls: "cad-btn cad-btn-sm cad-btn-danger", text: "Remove" });
+        const removeBtn = projectField.createEl("button", { cls: "bob-btn bob-btn-sm bob-btn-danger", text: "Remove" });
         removeBtn.type = "button";
         removeBtn.addEventListener("click", () => {
           this.reminder.project = null;
           renderProjectField();
         });
       } else {
-        const linkBtn = projectField.createEl("button", { cls: "cad-btn cad-btn-sm", text: "\u{1F4C1} Link to project" });
+        const linkBtn = projectField.createEl("button", { cls: "bob-btn bob-btn-sm", text: "\u{1F4C1} Link to project" });
         linkBtn.type = "button";
         linkBtn.addEventListener("click", () => this._openReminderProjectPicker(renderProjectField));
       }
     };
     renderProjectField();
-    const notesRow = form.createDiv({ cls: "cad-create-row" });
+    const notesRow = form.createDiv({ cls: "bob-create-row" });
     notesRow.style.alignItems = "flex-start";
-    notesRow.createDiv({ cls: "cad-create-label", text: "NOTES" });
-    const notesArea = notesRow.createEl("textarea", { cls: "cad-create-input" });
+    notesRow.createDiv({ cls: "bob-create-label", text: "NOTES" });
+    const notesArea = notesRow.createEl("textarea", { cls: "bob-create-input" });
     notesArea.rows = 6;
     notesArea.placeholder = "Context, follow-ups, what happened, related links\u2026";
     notesArea.value = this.reminder.notes || "";
     notesArea.style.resize = "vertical";
     notesArea.style.fontFamily = "inherit";
-    const actions = contentEl.createDiv({ cls: "cad-create-actions" });
+    const actions = contentEl.createDiv({ cls: "bob-create-actions" });
     if (!this.isNew) {
-      const del = actions.createEl("button", { cls: "cad-btn cad-btn-danger", text: "Delete" });
+      const del = actions.createEl("button", { cls: "bob-btn bob-btn-danger", text: "Delete" });
       del.type = "button";
       del.style.marginRight = "auto";
       del.addEventListener("click", async () => {
@@ -26707,10 +26707,10 @@ var CadenceReminderEditModal = class extends obsidian8.Modal {
         this.close();
       });
     }
-    const cancel = actions.createEl("button", { cls: "cad-btn", text: "Cancel" });
+    const cancel = actions.createEl("button", { cls: "bob-btn", text: "Cancel" });
     cancel.type = "button";
     cancel.addEventListener("click", () => this.close());
-    const save = actions.createEl("button", { cls: "cad-btn primary", text: this.isNew ? "Create reminder" : "Save" });
+    const save = actions.createEl("button", { cls: "bob-btn primary", text: this.isNew ? "Create reminder" : "Save" });
     save.type = "button";
     attachRequiredValidation(save, [textInput]);
     const submit = async () => {
@@ -27259,7 +27259,7 @@ async function promptImportWorkbook(app, onDone = () => {
 
 // src/modals/import.ts
 var obsidian10 = __toESM(require("obsidian"));
-var CadenceImportModal = class extends obsidian10.Modal {
+var BobImportModal = class extends obsidian10.Modal {
   constructor(app, opts) {
     super(app);
     this.entityKey = opts && opts.entityKey || "contact";
@@ -27273,16 +27273,16 @@ var CadenceImportModal = class extends obsidian10.Modal {
   onOpen() {
     const { contentEl, modalEl } = this;
     contentEl.empty();
-    contentEl.addClass("cad-import-modal");
-    if (modalEl) modalEl.addClass("cad-import-modal-shell");
-    contentEl.createEl("h3", { cls: "cad-create-title", text: "Import" });
-    const srcRow = contentEl.createDiv({ cls: "cad-data-btn-row cad-import-src-row" });
-    const entitySelect = srcRow.createEl("select", { cls: "cad-de-select" });
-    const fileBtn = srcRow.createEl("button", { cls: "cad-btn", text: "Pick .csv file\u2026" });
+    contentEl.addClass("bob-import-modal");
+    if (modalEl) modalEl.addClass("bob-import-modal-shell");
+    contentEl.createEl("h3", { cls: "bob-create-title", text: "Import" });
+    const srcRow = contentEl.createDiv({ cls: "bob-data-btn-row bob-import-src-row" });
+    const entitySelect = srcRow.createEl("select", { cls: "bob-de-select" });
+    const fileBtn = srcRow.createEl("button", { cls: "bob-btn", text: "Pick .csv file\u2026" });
     fileBtn.type = "button";
-    const xlsxBtn = srcRow.createEl("button", { cls: "cad-btn", text: "Pick .xlsx file\u2026" });
+    const xlsxBtn = srcRow.createEl("button", { cls: "bob-btn", text: "Pick .xlsx file\u2026" });
     xlsxBtn.type = "button";
-    const entityRow = contentEl.createDiv({ cls: "cad-create-row" });
+    const entityRow = contentEl.createDiv({ cls: "bob-create-row" });
     entityRow.style.display = "none";
     entitySelect.createEl("option", { value: "", text: "Please select entity\u2026", attr: { disabled: "", selected: "" } });
     const importEntityEntries = workspaceConfiguredEntityEntries(WORKSPACE_CONFIG);
@@ -27299,16 +27299,16 @@ var CadenceImportModal = class extends obsidian10.Modal {
       this._renderFieldReference();
       this._renderPreview();
     });
-    this.fieldInfoEl = contentEl.createDiv({ cls: "cad-import-field-ref" });
+    this.fieldInfoEl = contentEl.createDiv({ cls: "bob-import-field-ref" });
     this._renderFieldReference();
-    const csvRow = contentEl.createDiv({ cls: "cad-create-row" });
+    const csvRow = contentEl.createDiv({ cls: "bob-create-row" });
     csvRow.style.alignItems = "flex-start";
-    csvRow.createDiv({ cls: "cad-create-label", text: "CSV DATA" });
+    csvRow.createDiv({ cls: "bob-create-label", text: "CSV DATA" });
     const csvWrap = csvRow.createDiv();
     csvWrap.style.display = "flex";
     csvWrap.style.flexDirection = "column";
     csvWrap.style.gap = "8px";
-    const ta = csvWrap.createEl("textarea", { cls: "cad-create-input" });
+    const ta = csvWrap.createEl("textarea", { cls: "bob-create-input" });
     ta.rows = 8;
     ta.placeholder = "Paste CSV here, including a header row\u2026";
     ta.style.fontFamily = "var(--font-monospace-theme, var(--font-monospace))";
@@ -27357,13 +27357,13 @@ var CadenceImportModal = class extends obsidian10.Modal {
       });
       inp.click();
     });
-    this.previewEl = contentEl.createDiv({ cls: "cad-import-preview" });
+    this.previewEl = contentEl.createDiv({ cls: "bob-import-preview" });
     this._renderPreview();
-    const actions = contentEl.createDiv({ cls: "cad-create-actions" });
-    const cancel = actions.createEl("button", { cls: "cad-btn", text: "Cancel" });
+    const actions = contentEl.createDiv({ cls: "bob-create-actions" });
+    const cancel = actions.createEl("button", { cls: "bob-btn", text: "Cancel" });
     cancel.type = "button";
     cancel.addEventListener("click", () => this.close());
-    this.importBtn = actions.createEl("button", { cls: "cad-btn primary", text: "Import" });
+    this.importBtn = actions.createEl("button", { cls: "bob-btn primary", text: "Import" });
     this.importBtn.type = "button";
     this.importBtn.disabled = true;
     this.importBtn.addEventListener("click", () => this._submitImport());
@@ -27373,22 +27373,22 @@ var CadenceImportModal = class extends obsidian10.Modal {
     this.fieldInfoEl.empty();
     const def = ENTITIES[this.entityKey];
     if (!def) return;
-    const head = this.fieldInfoEl.createDiv({ cls: "cad-import-field-ref-head" });
-    head.createDiv({ cls: "cad-create-label", text: "EXPECTED FIELDS" });
-    const hint = head.createDiv({ cls: "cad-import-field-hint" });
+    const head = this.fieldInfoEl.createDiv({ cls: "bob-import-field-ref-head" });
+    head.createDiv({ cls: "bob-create-label", text: "EXPECTED FIELDS" });
+    const hint = head.createDiv({ cls: "bob-import-field-hint" });
     hint.appendText("Use field keys as CSV headers for automatic mapping. ");
     hint.createEl("code", { text: def.fields.map((f) => f.key).join(", ") });
-    const list = this.fieldInfoEl.createDiv({ cls: "cad-import-field-list" });
+    const list = this.fieldInfoEl.createDiv({ cls: "bob-import-field-list" });
     def.fields.forEach((f, idx) => {
       const required = idx === 0 || f.required === true;
-      const item = list.createDiv({ cls: "cad-import-field-item" + (required ? " required" : "") });
-      item.createDiv({ cls: "cad-import-field-key", text: f.key });
-      item.createDiv({ cls: "cad-import-field-label", text: f.label || f.key });
+      const item = list.createDiv({ cls: "bob-import-field-item" + (required ? " required" : "") });
+      item.createDiv({ cls: "bob-import-field-key", text: f.key });
+      item.createDiv({ cls: "bob-import-field-label", text: f.label || f.key });
       const meta = [f.type || "text"];
       if (required) meta.push("required");
       if (f.type === "enum" && f.options?.length) meta.push(f.options.join(" / "));
       if (def.fieldAliases?.[f.key]?.length) meta.push(`aliases: ${def.fieldAliases[f.key].join(" / ")}`);
-      item.createDiv({ cls: "cad-import-field-meta", text: meta.join(" \xB7 ") });
+      item.createDiv({ cls: "bob-import-field-meta", text: meta.join(" \xB7 ") });
     });
   }
   async _exportTemplateCSV() {
@@ -27608,19 +27608,19 @@ var CadenceImportModal = class extends obsidian10.Modal {
   _renderPreview() {
     this.previewEl.empty();
     if (!this.headers.length) {
-      this.previewEl.createDiv({ cls: "cad-empty", text: "Paste or pick a CSV to preview\u2026" });
+      this.previewEl.createDiv({ cls: "bob-empty", text: "Paste or pick a CSV to preview\u2026" });
       if (this.importBtn) {
         this.importBtn.disabled = true;
-        this.importBtn.classList.add("cad-btn-disabled");
+        this.importBtn.classList.add("bob-btn-disabled");
       }
       return;
     }
     const def = ENTITIES[this.entityKey];
-    const head = this.previewEl.createDiv({ cls: "cad-create-label" });
+    const head = this.previewEl.createDiv({ cls: "bob-create-label" });
     head.style.marginTop = "14px";
     head.setText("COLUMN MAPPING");
-    const tableWrap = this.previewEl.createDiv({ cls: "cad-import-table-wrap" });
-    const table = tableWrap.createEl("table", { cls: "cad-import-table" });
+    const tableWrap = this.previewEl.createDiv({ cls: "bob-import-table-wrap" });
+    const table = tableWrap.createEl("table", { cls: "bob-import-table" });
     const thr = table.createEl("thead").createEl("tr");
     thr.createEl("th", { text: "CSV column" });
     thr.createEl("th", { text: "Maps to" });
@@ -27630,7 +27630,7 @@ var CadenceImportModal = class extends obsidian10.Modal {
       const tr = tbody.createEl("tr");
       tr.createEl("td", { text: h });
       const mc = tr.createEl("td");
-      const sel = mc.createEl("select", { cls: "cad-create-input cad-import-select" });
+      const sel = mc.createEl("select", { cls: "bob-create-input bob-import-select" });
       sel.createEl("option", { value: "", text: "\u2014 skip \u2014" });
       def.fields.forEach((f) => {
         const o = sel.createEl("option", { value: f.key, text: f.label });
@@ -27645,24 +27645,24 @@ var CadenceImportModal = class extends obsidian10.Modal {
       sample.setText(samples.join(" \xB7 ").slice(0, 60));
       sample.title = samples.join("\n");
     });
-    const summary = this.previewEl.createDiv({ cls: "cad-import-summary" });
+    const summary = this.previewEl.createDiv({ cls: "bob-import-summary" });
     const primary = primaryField(def);
     const requiredFields = def.fields.filter((f) => f.key === primary?.key || f.required === true);
     const mappedKeys = new Set(Object.values(this.mapping).filter(Boolean));
     const missing = requiredFields.filter((f) => !mappedKeys.has(f.key));
     if (missing.length) {
-      summary.addClass("cad-import-summary-warn");
+      summary.addClass("bob-import-summary-warn");
       summary.setText(`Missing required column${missing.length === 1 ? "" : "s"}: ${missing.map((f) => `"${f.label}"`).join(", ")}. Map ${missing.length === 1 ? "it" : "them"} above to enable import.`);
       if (this.importBtn) {
         this.importBtn.disabled = true;
-        this.importBtn.classList.add("cad-btn-disabled");
+        this.importBtn.classList.add("bob-btn-disabled");
       }
     } else {
       const mappedCount = mappedKeys.size;
       summary.setText(`Will create ${this.rows.length} ${this.rows.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${entityFolder(this.entityKey)}/  \xB7  ${mappedCount} column${mappedCount === 1 ? "" : "s"} mapped`);
       if (this.importBtn) {
         this.importBtn.disabled = false;
-        this.importBtn.classList.remove("cad-btn-disabled");
+        this.importBtn.classList.remove("bob-btn-disabled");
       }
     }
   }
@@ -28437,7 +28437,7 @@ async function applyWorkspaceTemplate(app, plugin, template) {
 
 // src/modals/workspace-setup.ts
 var obsidian13 = __toESM(require("obsidian"));
-var CadenceWorkspaceSetupModal = class extends obsidian13.Modal {
+var BobWorkspaceSetupModal = class extends obsidian13.Modal {
   constructor(app, plugin, templates) {
     super(app);
     this.plugin = plugin;
@@ -28447,23 +28447,23 @@ var CadenceWorkspaceSetupModal = class extends obsidian13.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("cad-setup-modal");
+    contentEl.addClass("bob-setup-modal");
     contentEl.createEl("h2", { text: "Welcome to BOB Workspace" });
-    contentEl.createEl("p", { cls: "cad-setup-subtitle", text: "Choose a starter workspace to get going. You can customise it at any time from Settings \u2192 BOB Workspace \u2192 Workspace." });
-    const grid = contentEl.createDiv({ cls: "cad-template-grid" });
+    contentEl.createEl("p", { cls: "bob-setup-subtitle", text: "Choose a starter workspace to get going. You can customise it at any time from Settings \u2192 BOB Workspace \u2192 Workspace." });
+    const grid = contentEl.createDiv({ cls: "bob-template-grid" });
     for (const tpl of this.templates) {
       const meta = tpl._template;
-      const card = grid.createDiv({ cls: "cad-template-card" });
+      const card = grid.createDiv({ cls: "bob-template-card" });
       card.createEl("strong", { text: meta.label });
       card.createEl("p", { text: meta.description });
       card.addEventListener("click", () => {
-        grid.querySelectorAll(".cad-template-card").forEach((c) => c.classList.remove("is-selected"));
+        grid.querySelectorAll(".bob-template-card").forEach((c) => c.classList.remove("is-selected"));
         card.classList.add("is-selected");
         this.selected = tpl;
         applyBtn.disabled = false;
       });
     }
-    const footer = contentEl.createDiv({ cls: "cad-setup-footer" });
+    const footer = contentEl.createDiv({ cls: "bob-setup-footer" });
     const applyBtn = footer.createEl("button", { text: "Apply template", cls: "mod-cta" });
     applyBtn.disabled = true;
     applyBtn.addEventListener("click", async () => {
@@ -28478,7 +28478,7 @@ var CadenceWorkspaceSetupModal = class extends obsidian13.Modal {
         new obsidian13.Notice(`BOB Workspace: could not apply template - ${e?.message || e}`);
       }
     });
-    const skipBtn = footer.createEl("button", { text: "Skip for now", cls: "cad-setup-skip" });
+    const skipBtn = footer.createEl("button", { text: "Skip for now", cls: "bob-setup-skip" });
     skipBtn.addEventListener("click", async () => {
       this.plugin.settings.setupDismissed = true;
       await this.plugin.saveSettings();
@@ -29115,7 +29115,7 @@ var CANVAS_GENERATORS = [
 
 // src/modals/entity-create.ts
 var obsidian14 = __toESM(require("obsidian"));
-var CadenceEntityCreateModal = class extends obsidian14.Modal {
+var BobEntityCreateModal = class extends obsidian14.Modal {
   constructor(app, entityKey, opts) {
     super(app);
     this.entityKey = entityKey;
@@ -29126,39 +29126,39 @@ var CadenceEntityCreateModal = class extends obsidian14.Modal {
   onOpen() {
     const { contentEl, modalEl } = this;
     contentEl.empty();
-    contentEl.addClass("cad-create-modal");
-    if (modalEl) modalEl.addClass("cad-create-modal-shell");
-    contentEl.createEl("h3", { cls: "cad-create-title", text: `New ${this.def.label}` });
-    const form = contentEl.createDiv({ cls: "cad-create-form" });
+    contentEl.addClass("bob-create-modal");
+    if (modalEl) modalEl.addClass("bob-create-modal-shell");
+    contentEl.createEl("h3", { cls: "bob-create-title", text: `New ${this.def.label}` });
+    const form = contentEl.createDiv({ cls: "bob-create-form" });
     const inputs = [];
     const requiredInputs = [];
     const primaryKey = primaryFieldKey(this.def);
     this.def.fields.forEach((f) => {
       const isPrimary = f.key === primaryKey;
       const isRequired = isPrimary || f.required === true;
-      const row = form.createDiv({ cls: "cad-create-row" });
-      const label = row.createDiv({ cls: "cad-create-label" });
+      const row = form.createDiv({ cls: "bob-create-row" });
+      const label = row.createDiv({ cls: "bob-create-label" });
       label.setText(f.label.toUpperCase() + (isRequired ? " *" : ""));
       let input;
       const fieldType = f.type || "text";
       if (fieldType === "enum") {
-        input = row.createEl("select", { cls: "cad-create-input" });
+        input = row.createEl("select", { cls: "bob-create-input" });
         input.createEl("option", { value: "", text: "\u2014 \u2014" });
         (f.options || []).forEach((opt) => input.createEl("option", { value: opt, text: opt }));
       } else if (fieldType === "date") {
-        input = row.createEl("input", { type: "date", cls: "cad-create-input" });
+        input = row.createEl("input", { type: "date", cls: "bob-create-input" });
         input.lang = navigator.language || "";
       } else if (fieldType === "number" || fieldType === "currency") {
-        input = row.createEl("input", { type: "number", cls: "cad-create-input" });
+        input = row.createEl("input", { type: "number", cls: "bob-create-input" });
         input.placeholder = "0";
       } else if (fieldType === "email") {
-        input = row.createEl("input", { type: "email", cls: "cad-create-input" });
+        input = row.createEl("input", { type: "email", cls: "bob-create-input" });
         input.placeholder = "name@example.com";
       } else if (fieldType === "tags") {
-        input = row.createEl("input", { type: "text", cls: "cad-create-input" });
+        input = row.createEl("input", { type: "text", cls: "bob-create-input" });
         input.placeholder = "tag1, tag2";
       } else {
-        input = row.createEl("input", { type: "text", cls: "cad-create-input" });
+        input = row.createEl("input", { type: "text", cls: "bob-create-input" });
         input.placeholder = this._placeholderFor(f, isPrimary);
       }
       const defaultValue = resolveEntityFieldDefault(f);
@@ -29173,11 +29173,11 @@ var CadenceEntityCreateModal = class extends obsidian14.Modal {
       }
       inputs.push(input);
     });
-    const actions = contentEl.createDiv({ cls: "cad-create-actions" });
-    const cancel = actions.createEl("button", { cls: "cad-btn", text: "Cancel" });
+    const actions = contentEl.createDiv({ cls: "bob-create-actions" });
+    const cancel = actions.createEl("button", { cls: "bob-btn", text: "Cancel" });
     cancel.type = "button";
     cancel.addEventListener("click", () => this.close());
-    const submitBtn = actions.createEl("button", { cls: "cad-btn primary", text: `Create ${this.def.label}` });
+    const submitBtn = actions.createEl("button", { cls: "bob-btn primary", text: `Create ${this.def.label}` });
     submitBtn.type = "button";
     attachRequiredValidation(submitBtn, requiredInputs);
     const submit = () => {
@@ -29941,7 +29941,7 @@ var OVERVIEW_DASHBOARD_ROUTES = /* @__PURE__ */ new Set([
   "prm.partners.overview",
   "crm.campaigns.overview"
 ]);
-var CadenceAppView = class extends obsidian17.ItemView {
+var BobAppView = class extends obsidian17.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -29961,7 +29961,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
   _toggleMobileNav(force) {
     const root = this.containerEl.children[1];
     this.mobileNavOpen = typeof force === "boolean" ? force : !this.mobileNavOpen;
-    if (root) root.toggleClass("cad-mobile-nav-open", this.mobileNavOpen);
+    if (root) root.toggleClass("bob-mobile-nav-open", this.mobileNavOpen);
   }
   async openEntityDetail(entityKey, file) {
     if (!file || !entityKey) return;
@@ -29990,10 +29990,10 @@ var CadenceAppView = class extends obsidian17.ItemView {
     if (id === "misc.dashboard-editor" || id === "misc.export" || id === "misc.import") return id;
     return SURFACE_BY_ID[id] ? id : SURFACE_BY_ID.home ? "home" : ALL_SURFACES[0]?.id || "home";
   }
-  /* Toggle Cadence-app dark mode. Scoped to `.cadence-app` only —
+  /* Toggle BOB app dark mode. Scoped to `.bob-app` only —
      does not affect Obsidian's overall light/dark mode. Persisted in settings. */
-  async _toggleCadenceDark() {
-    this.plugin.settings.cadenceAppDark = !this.plugin.settings.cadenceAppDark;
+  async _toggleBobDark() {
+    this.plugin.settings.bobAppDark = !this.plugin.settings.bobAppDark;
     await this.plugin.saveSettings();
     this.render();
   }
@@ -30104,7 +30104,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
     return reminders.filter((r) => r.when && new Date(r.when).getTime() <= now).length;
   }
   getViewType() {
-    return VIEW_TYPE_CADENCE_APP;
+    return VIEW_TYPE_BOB_APP;
   }
   getDisplayText() {
     return "BOB Workspace";
@@ -30182,12 +30182,12 @@ var CadenceAppView = class extends obsidian17.ItemView {
     this._closeColumnFilterMenu();
     this._teardownCanvasLeaf();
     const root = this.containerEl.children[1];
-    const previousNav = root.querySelector ? root.querySelector(".cad-app-nav") : null;
+    const previousNav = root.querySelector ? root.querySelector(".bob-app-nav") : null;
     const previousNavScrollTop = previousNav ? previousNav.scrollTop : this._navScrollTop || 0;
     const renderSeq = ++this._renderSeq;
     root.empty();
-    root.addClass("cadence-app");
-    root.toggleClass("cad-dark", !!this.plugin.settings.cadenceAppDark);
+    root.addClass("bob-app");
+    root.toggleClass("bob-dark", !!this.plugin.settings.bobAppDark);
     if (!SURFACE_BY_ID[this.mode]) this.mode = this._migrateModeId(this.mode);
     const active = SURFACE_BY_ID[this.mode] || SURFACE_BY_ID.home || ALL_SURFACES[0] || {
       id: "home",
@@ -30196,48 +30196,48 @@ var CadenceAppView = class extends obsidian17.ItemView {
       desc: "No configured surfaces."
     };
     const activeParentId = active?.parent || null;
-    const topbar = root.createDiv({ cls: "cad-app-topbar" });
-    const burger = topbar.createEl("button", { cls: "cad-mobile-burger" });
+    const topbar = root.createDiv({ cls: "bob-app-topbar" });
+    const burger = topbar.createEl("button", { cls: "bob-mobile-burger" });
     try {
       obsidian17.setIcon(burger, "menu");
     } catch (_) {
     }
     burger.title = "Show nav";
     burger.addEventListener("click", () => this._toggleMobileNav());
-    const brand = topbar.createDiv({ cls: "cad-app-brand" });
-    brand.createSpan({ cls: "cad-app-brand-mark", text: "\u25D0" });
-    brand.createSpan({ cls: "cad-app-brand-text", text: "BOB Workspace" });
-    const topRight = topbar.createDiv({ cls: "cad-app-topbar-right" });
-    const dark = !!this.plugin.settings.cadenceAppDark;
-    const themeBtn = topRight.createEl("button", { cls: "cad-topbar-icon-btn" });
+    const brand = topbar.createDiv({ cls: "bob-app-brand" });
+    brand.createSpan({ cls: "bob-app-brand-mark", text: "\u25D0" });
+    brand.createSpan({ cls: "bob-app-brand-text", text: "BOB Workspace" });
+    const topRight = topbar.createDiv({ cls: "bob-app-topbar-right" });
+    const dark = !!this.plugin.settings.bobAppDark;
+    const themeBtn = topRight.createEl("button", { cls: "bob-topbar-icon-btn" });
     try {
       obsidian17.setIcon(themeBtn, dark ? "sun" : "moon");
     } catch (_) {
     }
     themeBtn.title = dark ? "BOB Workspace: switch to light" : "BOB Workspace: switch to dark";
-    themeBtn.addEventListener("click", () => this._toggleCadenceDark());
-    const eyebrow = topRight.createDiv({ cls: "cad-app-topbar-meta" });
+    themeBtn.addEventListener("click", () => this._toggleBobDark());
+    const eyebrow = topRight.createDiv({ cls: "bob-app-topbar-meta" });
     eyebrow.setText(active.label.toUpperCase());
-    const body = root.createDiv({ cls: "cad-app-body" });
-    const backdrop = body.createDiv({ cls: "cad-mobile-backdrop" });
+    const body = root.createDiv({ cls: "bob-app-body" });
+    const backdrop = body.createDiv({ cls: "bob-mobile-backdrop" });
     backdrop.addEventListener("click", () => this._toggleMobileNav(false));
-    const nav = body.createDiv({ cls: "cad-app-nav" });
+    const nav = body.createDiv({ cls: "bob-app-nav" });
     this._navScrollTop = previousNavScrollTop;
     const collapsed = this.plugin.settings.collapsedGroups || {};
     const pinnedIds = this._pinnedNavSurfaceIds();
     const pinnedSet = new Set(pinnedIds);
     if (pinnedIds.length) {
-      const pinnedWrap = nav.createDiv({ cls: "cad-nav-pinned" });
-      const pinnedRow = pinnedWrap.createDiv({ cls: "cad-nav-pinned-row" });
+      const pinnedWrap = nav.createDiv({ cls: "bob-nav-pinned" });
+      const pinnedRow = pinnedWrap.createDiv({ cls: "bob-nav-pinned-row" });
       pinnedIds.forEach((surfaceId) => {
         const surface = SURFACE_BY_ID[surfaceId];
-        const pinWrap = pinnedRow.createDiv({ cls: "cad-nav-pinned-item-wrap" });
+        const pinWrap = pinnedRow.createDiv({ cls: "bob-nav-pinned-item-wrap" });
         const pin = pinWrap.createEl("button", {
-          cls: "cad-nav-pinned-item" + (this.mode === surfaceId ? " active" : ""),
+          cls: "bob-nav-pinned-item" + (this.mode === surfaceId ? " active" : ""),
           attr: { type: "button" }
         });
         pin.title = surface.label;
-        const ic = pin.createSpan({ cls: "cad-nav-pinned-icon" });
+        const ic = pin.createSpan({ cls: "bob-nav-pinned-icon" });
         try {
           obsidian17.setIcon(ic, surface.icon);
         } catch (_) {
@@ -30247,7 +30247,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
           if (this.mobileNavOpen) this._toggleMobileNav(false);
         });
         const remove = pinWrap.createEl("button", {
-          cls: "cad-nav-pinned-remove",
+          cls: "bob-nav-pinned-remove",
           attr: { type: "button", "aria-label": `Unpin ${surface.label}` }
         });
         remove.title = `Unpin ${surface.label}`;
@@ -30302,49 +30302,49 @@ var CadenceAppView = class extends obsidian17.ItemView {
     const visibleGroups = this._visibleNavGroups();
     visibleGroups.forEach((group) => {
       if (!Array.isArray(group.items)) {
-        nav.createEl("hr", { cls: "cad-nav-separator" });
+        nav.createEl("hr", { cls: "bob-nav-separator" });
         return;
       }
-      const groupEl = nav.createDiv({ cls: "cad-nav-group" });
+      const groupEl = nav.createDiv({ cls: "bob-nav-group" });
       const isCollapsed = !!collapsed[group.id];
       if (group.label) {
-        const head = groupEl.createDiv({ cls: "cad-nav-group-head" });
-        const chev = head.createSpan({ cls: "cad-nav-group-chev" });
+        const head = groupEl.createDiv({ cls: "bob-nav-group-head" });
+        const chev = head.createSpan({ cls: "bob-nav-group-chev" });
         try {
           obsidian17.setIcon(chev, isCollapsed ? "chevron-right" : "chevron-down");
         } catch (_) {
         }
         if (group.icon) {
-          const groupIcon = head.createSpan({ cls: "cad-nav-group-icon" });
+          const groupIcon = head.createSpan({ cls: "bob-nav-group-icon" });
           try {
             obsidian17.setIcon(groupIcon, group.icon);
           } catch (_) {
           }
         }
-        head.createSpan({ cls: "cad-nav-group-label", text: group.label.toUpperCase() });
+        head.createSpan({ cls: "bob-nav-group-label", text: group.label.toUpperCase() });
         head.addEventListener("click", () => this.toggleGroup(group.id));
       }
       if (!isCollapsed || !group.label) {
-        const list = groupEl.createDiv({ cls: "cad-nav-group-items" });
+        const list = groupEl.createDiv({ cls: "bob-nav-group-items" });
         group.items.forEach((s) => {
           const isActive = this.mode === s.id;
           const isActiveParent = activeParentId === s.id;
           const item = list.createDiv({
-            cls: "cad-app-nav-item" + (isActive ? " active" : "") + (isActiveParent ? " active-parent" : "")
+            cls: "bob-app-nav-item" + (isActive ? " active" : "") + (isActiveParent ? " active-parent" : "")
           });
           if (isActive) item.setAttribute("aria-current", "page");
-          const ic = item.createSpan({ cls: "cad-app-nav-icon" });
+          const ic = item.createSpan({ cls: "bob-app-nav-icon" });
           try {
             obsidian17.setIcon(ic, s.icon);
           } catch (_) {
           }
-          item.createSpan({ cls: "cad-app-nav-label", text: s.label });
+          item.createSpan({ cls: "bob-app-nav-label", text: s.label });
           if (!BUILT_SURFACES.has(s.id) && !s.entityKey) {
-            item.createSpan({ cls: "cad-app-nav-badge", text: "soon" });
+            item.createSpan({ cls: "bob-app-nav-badge", text: "soon" });
           }
           const isPinned = pinnedSet.has(s.id);
           const pinBtn = item.createEl("button", {
-            cls: "cad-nav-pin-toggle" + (isPinned ? " is-pinned" : ""),
+            cls: "bob-nav-pin-toggle" + (isPinned ? " is-pinned" : ""),
             attr: { type: "button" }
           });
           pinBtn.title = isPinned ? `Unpin ${s.label}` : `Pin ${s.label}`;
@@ -30360,7 +30360,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
           });
           if (s.id === "planner.inbox") {
             const overdue = this._inboxOverdueCount();
-            if (overdue > 0) item.createSpan({ cls: "cad-app-nav-badge cad-nav-badge-alert", text: String(overdue) });
+            if (overdue > 0) item.createSpan({ cls: "bob-app-nav-badge bob-nav-badge-alert", text: String(overdue) });
           }
           item.addEventListener("click", () => {
             this.setMode(s.id);
@@ -30377,7 +30377,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
     };
     restoreNavScroll();
     requestAnimationFrame(restoreNavScroll);
-    const content = body.createDiv({ cls: "cad-app-content" });
+    const content = body.createDiv({ cls: "bob-app-content" });
     if (this.detailFile && this.detailEntityKey) {
       await this.renderEntityDetail(content, this.detailEntityKey, this.detailFile);
       return;
@@ -30425,17 +30425,17 @@ var CadenceAppView = class extends obsidian17.ItemView {
     }
   }
   renderComingSoon(root, surface) {
-    root.addClass("cadence-soon");
-    const wrap = root.createDiv({ cls: "cad-soon-wrap" });
-    wrap.createDiv({ cls: "cad-eyebrow", text: "COMING SOON" });
-    wrap.createDiv({ cls: "cad-soon-title", text: surface.label });
-    wrap.createDiv({ cls: "cad-soon-desc", text: surface.desc });
-    const ic = wrap.createDiv({ cls: "cad-soon-icon" });
+    root.addClass("bob-soon");
+    const wrap = root.createDiv({ cls: "bob-soon-wrap" });
+    wrap.createDiv({ cls: "bob-eyebrow", text: "COMING SOON" });
+    wrap.createDiv({ cls: "bob-soon-title", text: surface.label });
+    wrap.createDiv({ cls: "bob-soon-desc", text: surface.desc });
+    const ic = wrap.createDiv({ cls: "bob-soon-icon" });
     try {
       obsidian17.setIcon(ic, surface.icon);
     } catch (_) {
     }
-    const meta = wrap.createDiv({ cls: "cad-soon-meta" });
+    const meta = wrap.createDiv({ cls: "bob-soon-meta" });
     meta.setText("This surface is scaffolded but not yet built. Tell the team to flesh it out next.");
   }
   /* ── Canvas (Obsidian .canvas) surfaces ────────────────── */
@@ -30459,25 +30459,25 @@ var CadenceAppView = class extends obsidian17.ItemView {
       "Canvases",
       `${files.length} ${files.length === 1 ? "canvas" : "canvases"} in the vault \xB7 open full-page or in a tab`,
       (right) => {
-        const gen = right.createEl("button", { cls: "cad-btn cad-btn-small", text: "+ Generate" });
+        const gen = right.createEl("button", { cls: "bob-btn bob-btn-small", text: "+ Generate" });
         gen.addEventListener("click", (e) => this._openCanvasGenerateMenu(e));
       },
       { configuredActions: false }
     );
     if (!files.length) {
-      const card = root.createDiv({ cls: "cad-dash-card" });
-      card.createDiv({ cls: "cad-dash-card-body" }).createDiv({ cls: "cad-empty", text: "No canvases yet. Create one in Obsidian (New canvas) and it will appear here." });
+      const card = root.createDiv({ cls: "bob-dash-card" });
+      card.createDiv({ cls: "bob-dash-card-body" }).createDiv({ cls: "bob-empty", text: "No canvases yet. Create one in Obsidian (New canvas) and it will appear here." });
       return;
     }
-    const wrap = root.createDiv({ cls: "cad-canvas-library" });
-    const search = wrap.createEl("input", { cls: "cad-canvas-search", type: "search", placeholder: "Search canvases\u2026" });
-    const list = wrap.createDiv({ cls: "cad-canvas-list" });
+    const wrap = root.createDiv({ cls: "bob-canvas-library" });
+    const search = wrap.createEl("input", { cls: "bob-canvas-search", type: "search", placeholder: "Search canvases\u2026" });
+    const list = wrap.createDiv({ cls: "bob-canvas-list" });
     const draw = (q) => {
       list.empty();
       const needle = String(q || "").trim().toLowerCase();
       const shown = needle ? files.filter((f) => f.path.toLowerCase().includes(needle)) : files;
       if (!shown.length) {
-        list.createDiv({ cls: "cad-empty", text: "No canvases match." });
+        list.createDiv({ cls: "bob-empty", text: "No canvases match." });
         return;
       }
       shown.forEach((f) => this._renderCanvasRow(list, f));
@@ -30602,27 +30602,27 @@ var CadenceAppView = class extends obsidian17.ItemView {
     else await this.app.vault.create(path, content);
   }
   _renderCanvasRow(list, file) {
-    const row = list.createDiv({ cls: "cad-canvas-row" });
-    const icon = row.createDiv({ cls: "cad-canvas-row-icon" });
+    const row = list.createDiv({ cls: "bob-canvas-row" });
+    const icon = row.createDiv({ cls: "bob-canvas-row-icon" });
     try {
       obsidian17.setIcon(icon, "layout-dashboard");
     } catch (_) {
     }
-    const main = row.createDiv({ cls: "cad-canvas-row-main" });
-    main.createDiv({ cls: "cad-canvas-row-name", text: file.basename });
+    const main = row.createDiv({ cls: "bob-canvas-row-main" });
+    main.createDiv({ cls: "bob-canvas-row-name", text: file.basename });
     const folder = file.parent?.path && file.parent.path !== "/" ? file.parent.path : "";
     const modified = file.stat?.mtime ? new Date(file.stat.mtime).toISOString().slice(0, 10) : "";
-    main.createDiv({ cls: "cad-canvas-row-meta", text: [folder, modified ? `modified ${modified}` : ""].filter(Boolean).join(" \xB7 ") });
+    main.createDiv({ cls: "bob-canvas-row-meta", text: [folder, modified ? `modified ${modified}` : ""].filter(Boolean).join(" \xB7 ") });
     row.addEventListener("click", () => {
       void this.openCanvas(file);
     });
-    const actions = row.createDiv({ cls: "cad-canvas-row-actions" });
-    const openBtn = actions.createEl("button", { cls: "cad-btn cad-btn-small", text: "Open" });
+    const actions = row.createDiv({ cls: "bob-canvas-row-actions" });
+    const openBtn = actions.createEl("button", { cls: "bob-btn bob-btn-small", text: "Open" });
     openBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       void this.openCanvas(file);
     });
-    const tabBtn = actions.createEl("button", { cls: "cad-btn cad-btn-small cad-btn-ghost", text: "Open in tab" });
+    const tabBtn = actions.createEl("button", { cls: "bob-btn bob-btn-small bob-btn-ghost", text: "Open in tab" });
     tabBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.app.workspace.openLinkText(file.path, "", true);
@@ -30632,23 +30632,23 @@ var CadenceAppView = class extends obsidian17.ItemView {
   async renderCanvasSurface(root, file) {
     const folder = file.parent?.path && file.parent.path !== "/" ? file.parent.path : "Canvas";
     this._renderPageHeader(root, file.basename, folder, (right) => {
-      const back = right.createEl("button", { cls: "cad-btn cad-btn-small cad-btn-ghost", text: "\u2190 Canvases" });
+      const back = right.createEl("button", { cls: "bob-btn bob-btn-small bob-btn-ghost", text: "\u2190 Canvases" });
       back.addEventListener("click", () => {
         void this.setMode("misc.canvases");
       });
-      const edit = right.createEl("button", { cls: "cad-btn cad-btn-small", text: "Pop out to edit" });
+      const edit = right.createEl("button", { cls: "bob-btn bob-btn-small", text: "Pop out to edit" });
       edit.addEventListener("click", () => {
         this.app.workspace.openLinkText(file.path, "", true);
       });
     }, { configuredActions: false });
-    const stage = root.createDiv({ cls: "cad-canvas-stage" });
+    const stage = root.createDiv({ cls: "bob-canvas-stage" });
     try {
       await this._mountLiveCanvas(stage, file);
     } catch (err) {
       stage.empty();
-      const fb = stage.createDiv({ cls: "cad-canvas-fallback" });
-      fb.createDiv({ cls: "cad-soon-desc", text: `Couldn't render this canvas inline (${err?.message || String(err)}).` });
-      const open = fb.createEl("button", { cls: "cad-btn", text: "Open canvas in Obsidian" });
+      const fb = stage.createDiv({ cls: "bob-canvas-fallback" });
+      fb.createDiv({ cls: "bob-soon-desc", text: `Couldn't render this canvas inline (${err?.message || String(err)}).` });
+      const open = fb.createEl("button", { cls: "bob-btn", text: "Open canvas in Obsidian" });
       open.addEventListener("click", () => this.app.workspace.openLinkText(file.path, "", true));
     }
   }
@@ -30677,7 +30677,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
       const view = leaf.view;
       const viewEl = view?.containerEl || leaf.containerEl;
       if (!viewEl) throw new Error("canvas view element not found");
-      body.addClass("cad-canvas-stage-live");
+      body.addClass("bob-canvas-stage-live");
       body.appendChild(viewEl);
       this._canvasLeaf = leaf;
       window.setTimeout(() => {
@@ -30716,12 +30716,12 @@ var CadenceAppView = class extends obsidian17.ItemView {
   }
   /* ── Generic page header ────────────────── */
   _renderPageHeader(root, title, subtitle, actions, options = {}) {
-    const head = root.createDiv({ cls: "cad-page-header" });
-    const left = head.createDiv({ cls: "cad-page-header-left" });
-    left.createDiv({ cls: "cad-eyebrow", text: "BOB WORKSPACE" });
-    left.createDiv({ cls: "cad-page-title", text: title });
-    if (subtitle) left.createDiv({ cls: "cad-page-subtitle", text: subtitle });
-    const right = head.createDiv({ cls: "cad-page-header-right" });
+    const head = root.createDiv({ cls: "bob-page-header" });
+    const left = head.createDiv({ cls: "bob-page-header-left" });
+    left.createDiv({ cls: "bob-eyebrow", text: "BOB WORKSPACE" });
+    left.createDiv({ cls: "bob-page-title", text: title });
+    if (subtitle) left.createDiv({ cls: "bob-page-subtitle", text: subtitle });
+    const right = head.createDiv({ cls: "bob-page-header-right" });
     const surfaceId = options.surfaceId || this.mode;
     const renderConfigured = options.configuredActions !== false;
     const configuredActionCount = renderConfigured ? this._configuredHeaderActionCount(surfaceId) : 0;
@@ -30747,7 +30747,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
       if (action.entityKey) {
         const def = ENTITIES[action.entityKey];
         const btn2 = container.createEl("button", {
-          cls: `cad-btn${action.primary ? " primary" : ""}`,
+          cls: `bob-btn${action.primary ? " primary" : ""}`,
           text: action.label || `+ ${def.label}`
         });
         btn2.addEventListener("click", () => this._createEntityFromPrompt(action.entityKey));
@@ -30759,7 +30759,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
       const label = action.label || (actionId === "quick-capture" ? "+ Inbox" : actionId === "today-task" ? "+ Task" : route && SURFACE_BY_ID[route] ? SURFACE_BY_ID[route].label : "");
       if (!label) return;
       const btn = container.createEl("button", {
-        cls: `cad-btn${action.primary ? " primary" : ""}`,
+        cls: `bob-btn${action.primary ? " primary" : ""}`,
         text: label
       });
       btn.addEventListener("click", () => {
@@ -30775,7 +30775,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
     const basePath = entityBasePath(this.plugin.settings, entityKey);
     if (!basePath) return;
     const select = container.createEl("select", {
-      cls: "dropdown cad-page-view-select",
+      cls: "dropdown bob-page-view-select",
       attr: { "aria-label": "Base view" }
     });
     select.title = "Base view";
@@ -30829,23 +30829,23 @@ var CadenceAppView = class extends obsidian17.ItemView {
     const def = ENTITIES[entityKey];
     const external = def?.externalBaseView;
     if (!external) return false;
-    const wrap = root.createDiv({ cls: "cad-external-base-view" });
-    const body = wrap.createDiv({ cls: "cad-external-base-view-body" });
+    const wrap = root.createDiv({ cls: "bob-external-base-view" });
+    const body = wrap.createDiv({ cls: "bob-external-base-view-body" });
     const file = external.basePath ? this.app.vault.getAbstractFileByPath(external.basePath) : null;
     if (file instanceof obsidian17.TFile) {
       void this._mountLiveBaseView(body, file, external.basePath, external.name || "").catch(() => {
         body.empty();
-        const fb = body.createDiv({ cls: "cad-empty-state" });
-        fb.createDiv({ cls: "cad-empty-state-title", text: external.name || "Base view" });
-        fb.createDiv({ cls: "cad-empty-state-desc", text: `This ${external.type || "non-table"} view couldn't be embedded here \u2014 use \u201COpen Base\u201D above to view it in Obsidian Bases.` });
-        const btn = fb.createEl("button", { cls: "cad-btn primary", text: "Open in Base" });
+        const fb = body.createDiv({ cls: "bob-empty-state" });
+        fb.createDiv({ cls: "bob-empty-state-title", text: external.name || "Base view" });
+        fb.createDiv({ cls: "bob-empty-state-desc", text: `This ${external.type || "non-table"} view couldn't be embedded here \u2014 use \u201COpen Base\u201D above to view it in Obsidian Bases.` });
+        const btn = fb.createEl("button", { cls: "bob-btn primary", text: "Open in Base" });
         btn.addEventListener("click", () => this._openEntityBase(entityKey));
       });
     } else {
-      const fb = body.createDiv({ cls: "cad-empty-state" });
-      fb.createDiv({ cls: "cad-empty-state-title", text: external.name || "Base view" });
-      fb.createDiv({ cls: "cad-empty-state-desc", text: external.basePath ? `Base file not found: ${external.basePath}` : "No Base file configured for this view." });
-      const btn = fb.createEl("button", { cls: "cad-btn primary", text: "Open in Base" });
+      const fb = body.createDiv({ cls: "bob-empty-state" });
+      fb.createDiv({ cls: "bob-empty-state-title", text: external.name || "Base view" });
+      fb.createDiv({ cls: "bob-empty-state-desc", text: external.basePath ? `Base file not found: ${external.basePath}` : "No Base file configured for this view." });
+      const btn = fb.createEl("button", { cls: "bob-btn primary", text: "Open in Base" });
       btn.addEventListener("click", () => this._openEntityBase(entityKey));
     }
     return true;
@@ -30853,7 +30853,7 @@ var CadenceAppView = class extends obsidian17.ItemView {
   _renderUnsupportedBaseFilters(root, def) {
     const unsupported = def?.unsupportedBaseFilters || [];
     if (!unsupported.length) return;
-    const details = root.createEl("details", { cls: "cad-base-filter-warnings" });
+    const details = root.createEl("details", { cls: "bob-base-filter-warnings" });
     details.createEl("summary", { text: `${unsupported.length} Base filter${unsupported.length === 1 ? "" : "s"} not applied` });
     const list = details.createEl("ul");
     unsupported.forEach((filter) => {
@@ -30883,9 +30883,9 @@ var CadenceAppView = class extends obsidian17.ItemView {
   _renderEntityTable(root, entities, entityKey, cols) {
     const def = ENTITIES[entityKey];
     const selected = /* @__PURE__ */ new Set();
-    const bulkBar = root.createDiv({ cls: "cad-bulk-bar cad-bulk-bar-hidden" });
-    const bulkCount = bulkBar.createSpan({ cls: "cad-bulk-count" });
-    const bulkDelete = bulkBar.createEl("button", { cls: "cad-btn cad-btn-danger", text: "Delete selected" });
+    const bulkBar = root.createDiv({ cls: "bob-bulk-bar bob-bulk-bar-hidden" });
+    const bulkCount = bulkBar.createSpan({ cls: "bob-bulk-count" });
+    const bulkDelete = bulkBar.createEl("button", { cls: "bob-btn bob-btn-danger", text: "Delete selected" });
     bulkDelete.addEventListener("click", async () => {
       const filesToDelete = [...selected].map((path) => this.app.vault.getAbstractFileByPath(path)).filter(Boolean);
       if (!filesToDelete.length) return;
@@ -30905,10 +30905,10 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     });
     const updateBulkBar = () => {
       if (selected.size > 0) {
-        bulkBar.removeClass("cad-bulk-bar-hidden");
+        bulkBar.removeClass("bob-bulk-bar-hidden");
         bulkCount.setText(`${selected.size} selected`);
       } else {
-        bulkBar.addClass("cad-bulk-bar-hidden");
+        bulkBar.addClass("bob-bulk-bar-hidden");
       }
     };
     const filterState = /* @__PURE__ */ new Map();
@@ -30924,20 +30924,20 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       });
     };
     const openFilterDropdown = (th, field, filterBtn) => {
-      document.querySelector(".cad-filter-dropdown")?.remove();
+      document.querySelector(".bob-filter-dropdown")?.remove();
       const current = filterState.get(field.key);
       const dropdown = document.createElement("div");
-      dropdown.className = "cad-filter-dropdown";
+      dropdown.className = "bob-filter-dropdown";
       dropdown.addEventListener("click", (ev) => ev.stopPropagation());
       const hdr = document.createElement("div");
-      hdr.className = "cad-filter-header";
+      hdr.className = "bob-filter-header";
       hdr.textContent = field.label;
       const clearBtn = document.createElement("button");
-      clearBtn.className = "cad-filter-clear";
+      clearBtn.className = "bob-filter-clear";
       clearBtn.textContent = "Clear";
       clearBtn.addEventListener("click", () => {
         filterState.delete(field.key);
-        filterBtn.classList.remove("cad-filter-btn-active");
+        filterBtn.classList.remove("bob-filter-btn-active");
         dropdown.remove();
         renderBody(applyFilters(sortEntities([...entities])));
       });
@@ -30946,7 +30946,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       let sel = current ? new Set(current) : null;
       field.options.forEach((opt) => {
         const label = document.createElement("label");
-        label.className = "cad-filter-option";
+        label.className = "bob-filter-option";
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.checked = !sel || sel.has(opt);
@@ -30959,7 +30959,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
             filterState.delete(field.key);
             sel = null;
           } else filterState.set(field.key, new Set(sel));
-          filterBtn.classList.toggle("cad-filter-btn-active", filterState.has(field.key));
+          filterBtn.classList.toggle("bob-filter-btn-active", filterState.has(field.key));
           renderBody(applyFilters(sortEntities([...entities])));
         });
         label.appendChild(cb);
@@ -30982,8 +30982,8 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       };
       setTimeout(() => document.addEventListener("click", onDocClick), 0);
     };
-    const tableWrap = root.createDiv({ cls: "cad-table-wrap" });
-    const table = tableWrap.createEl("table", { cls: "cad-table" });
+    const tableWrap = root.createDiv({ cls: "bob-table-wrap" });
+    const table = tableWrap.createEl("table", { cls: "bob-table" });
     const thead = table.createEl("thead");
     const trh = thead.createEl("tr");
     const sortState = this._tableSortState || (this._tableSortState = {});
@@ -31032,7 +31032,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         selectAllCb.indeterminate = false;
       }
       arr.forEach((e) => {
-        const tr = tbody.createEl("tr", { cls: "cad-row" });
+        const tr = tbody.createEl("tr", { cls: "bob-row" });
         tr.addEventListener("dblclick", () => {
           tr.querySelectorAll("td").forEach((cell) => {
             clearTimeout(cell._cadEditTimer);
@@ -31040,12 +31040,12 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
           });
           this.openEntityDetail(entityKey, e.file);
         });
-        const tdCb = tr.createEl("td", { cls: "cad-col-cb" });
-        const cb = tdCb.createEl("input", { type: "checkbox", cls: "cad-row-cb" });
+        const tdCb = tr.createEl("td", { cls: "bob-col-cb" });
+        const cb = tdCb.createEl("input", { type: "checkbox", cls: "bob-row-cb" });
         cb.addEventListener("change", () => {
           if (cb.checked) selected.add(e.file.path);
           else selected.delete(e.file.path);
-          tr.toggleClass("cad-row-selected", cb.checked);
+          tr.toggleClass("bob-row-selected", cb.checked);
           updateBulkBar();
           if (selectAllCb) {
             selectAllCb.indeterminate = selected.size > 0 && selected.size < arr.length;
@@ -31058,7 +31058,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
           const val = entityValue(e, f.key, def);
           const formatted = fmtValue(val, f.type);
           if (i === 0) {
-            const a = td.createEl("a", { cls: "cad-row-primary", text: formatted || e.basename });
+            const a = td.createEl("a", { cls: "bob-row-primary", text: formatted || e.basename });
             a.addEventListener("click", (ev) => {
               ev.preventDefault();
               this.openEntityDetail(entityKey, e.file);
@@ -31071,15 +31071,15 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     };
     const renderHeader = () => {
       trh.empty();
-      const thCb = trh.createEl("th", { cls: "cad-col-cb" });
-      selectAllCb = thCb.createEl("input", { type: "checkbox", cls: "cad-row-cb" });
+      const thCb = trh.createEl("th", { cls: "bob-col-cb" });
+      selectAllCb = thCb.createEl("input", { type: "checkbox", cls: "bob-row-cb" });
       selectAllCb.addEventListener("change", () => {
         if (selectAllCb.checked) currentArr.forEach((e) => selected.add(e.file.path));
         else selected.clear();
         tbody.querySelectorAll("tr").forEach((tr, idx) => {
-          const cb = tr.querySelector(".cad-row-cb");
+          const cb = tr.querySelector(".bob-row-cb");
           if (cb) cb.checked = selectAllCb.checked;
-          tr.toggleClass("cad-row-selected", selectAllCb.checked);
+          tr.toggleClass("bob-row-selected", selectAllCb.checked);
         });
         selectAllCb.indeterminate = false;
         updateBulkBar();
@@ -31087,11 +31087,11 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       cols.forEach((f) => {
         const isActive = currentSort.key === f.key;
         const th = trh.createEl("th", {
-          cls: "cad-th-sortable" + (isActive ? " cad-th-sorted" : "")
+          cls: "bob-th-sortable" + (isActive ? " bob-th-sorted" : "")
         });
-        const label = th.createSpan({ cls: "cad-th-label" });
+        const label = th.createSpan({ cls: "bob-th-label" });
         label.createSpan({ text: f.label });
-        const ind = label.createSpan({ cls: "cad-th-indicator" });
+        const ind = label.createSpan({ cls: "bob-th-indicator" });
         if (isActive) ind.setText(currentSort.dir === "DESC" ? "v" : "^");
         else ind.setText("");
         th.addEventListener("click", () => {
@@ -31107,7 +31107,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         if (f.type === "enum" && f.options?.length) {
           const isFiltered = filterState.has(f.key);
           const filterBtn = th.createEl("button", {
-            cls: "cad-filter-btn" + (isFiltered ? " cad-filter-btn-active" : ""),
+            cls: "bob-filter-btn" + (isFiltered ? " bob-filter-btn-active" : ""),
             text: "\u25BE"
           });
           filterBtn.addEventListener("click", (ev) => {
@@ -31121,7 +31121,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     renderBody(applyFilters(sortEntities([...entities])));
   }
   _makeInlineEditable(td, entity, field, def, initialFormatted) {
-    td.addClass("cad-cell-editable");
+    td.addClass("bob-cell-editable");
     td.setText(initialFormatted || "");
     td._cadEditing = false;
     const refreshCell = () => {
@@ -31129,7 +31129,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       const fm = cache?.frontmatter || {};
       const newVal = entityValue({ file: entity.file, frontmatter: fm, basename: entity.basename }, field.key, def);
       td.empty();
-      td.removeClass("cad-cell-editing");
+      td.removeClass("bob-cell-editing");
       td._cadEditing = false;
       td.setText(fmtValue(newVal, field.type) || "");
     };
@@ -31168,15 +31168,15 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       );
       const fieldType = field.type || "text";
       td.empty();
-      td.addClass("cad-cell-editing");
+      td.addClass("bob-cell-editing");
       const cancel = () => {
         td.empty();
-        td.removeClass("cad-cell-editing");
+        td.removeClass("bob-cell-editing");
         td._cadEditing = false;
         td.setText(fmtValue(currentVal, field.type) || "");
       };
       if (fieldType === "enum") {
-        const sel = td.createEl("select", { cls: "cad-cell-input" });
+        const sel = td.createEl("select", { cls: "bob-cell-input" });
         sel.createEl("option", { value: "", text: "\u2014" });
         (field.options || []).forEach((opt) => {
           const o = sel.createEl("option", { value: opt, text: opt });
@@ -31201,7 +31201,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         });
         sel.focus();
       } else if (fieldType === "date") {
-        const inp = td.createEl("input", { type: "date", cls: "cad-cell-input" });
+        const inp = td.createEl("input", { type: "date", cls: "bob-cell-input" });
         inp.lang = navigator.language || "";
         if (currentVal) {
           const d = new Date(String(currentVal).slice(0, 10));
@@ -31233,7 +31233,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         inp.focus();
       } else {
         const inputType = fieldType === "email" ? "email" : fieldType === "number" || fieldType === "currency" ? "number" : "text";
-        const inp = td.createEl("input", { type: inputType, cls: "cad-cell-input" });
+        const inp = td.createEl("input", { type: inputType, cls: "bob-cell-input" });
         if (fieldType === "tags" && Array.isArray(currentVal)) inp.value = currentVal.join(", ");
         else if (currentVal != null) inp.value = String(currentVal);
         let committed = false;
@@ -31282,11 +31282,11 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     const activeTab = tabs.find((tab) => tab.entityKey === current || tab.route === current) || tabs[0];
     const activeKey = activeTab?.entityKey || activeTab?.route || defaultEntityKey;
     state[parentId] = activeKey;
-    const tabWrap = root.createDiv({ cls: "cad-secondary-tabs" });
+    const tabWrap = root.createDiv({ cls: "bob-secondary-tabs" });
     tabs.forEach((tab) => {
       const key = tab.entityKey || tab.route;
       const btn = tabWrap.createEl("button", {
-        cls: "cad-secondary-tab" + (key === activeKey ? " active" : ""),
+        cls: "bob-secondary-tab" + (key === activeKey ? " active" : ""),
         text: tab.label
       });
       btn.addEventListener("click", async () => {
@@ -31353,8 +31353,8 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     return values.some((value) => String(value ?? "").trim() === projectId);
   }
   _renderClientWorkSelector(container) {
-    const wrap = container.createDiv({ cls: "cad-client-work-filter" });
-    const clientSelect = wrap.createEl("select", { cls: "dropdown cad-client-work-client-select" });
+    const wrap = container.createDiv({ cls: "bob-client-work-filter" });
+    const clientSelect = wrap.createEl("select", { cls: "dropdown bob-client-work-client-select" });
     clientSelect.createEl("option", { value: "", text: "All clients" });
     const clients = this._clientWorkOptions();
     clients.forEach((client) => {
@@ -31368,7 +31368,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       this._clientWorkClientId = clientSelect.value;
       await this.render();
     });
-    const projectSelect = wrap.createEl("select", { cls: "dropdown cad-client-work-project-select" });
+    const projectSelect = wrap.createEl("select", { cls: "dropdown bob-client-work-project-select" });
     projectSelect.createEl("option", { value: "", text: "All projects" });
     const projects = this._clientWorkProjectOptions();
     projects.forEach((project) => {
@@ -31528,16 +31528,16 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       if (!opts.skipHeader) {
         this._renderPageHeader(root, surface.label || surfaceId || "Dashboard", "No dashboard configuration found");
       }
-      const card = root.createDiv({ cls: "cad-dash-card" });
-      const body = card.createDiv({ cls: "cad-dash-card-body" });
+      const card = root.createDiv({ cls: "bob-dash-card" });
+      const body = card.createDiv({ cls: "bob-dash-card-body" });
       body.createDiv({
-        cls: "cad-empty",
+        cls: "bob-empty",
         text: `Add dashboards.${surfaceId} to workspace.json to render this surface.`
       });
       return;
     }
-    root.toggleClass("cadence-report", config.kind === "report" || String(surfaceId || "").startsWith("reports."));
-    root.toggleClass("cadence-planner", config.kind === "planner" || String(surfaceId || "").startsWith("planner."));
+    root.toggleClass("bob-report", config.kind === "report" || String(surfaceId || "").startsWith("reports."));
+    root.toggleClass("bob-planner", config.kind === "planner" || String(surfaceId || "").startsWith("planner."));
     const dashboardWarnings = [];
     const widgetCache = /* @__PURE__ */ new Map();
     const dashboardState = this._dashboardStateFor(surfaceId);
@@ -31595,7 +31595,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         config.subtitle,
         (r, ctx) => {
           if (config.contextFilter === "client-work") this._renderClientWorkSelector(r);
-          const exportBtn = r.createEl("button", { cls: "cad-btn", text: "Save" });
+          const exportBtn = r.createEl("button", { cls: "bob-btn", text: "Save" });
           exportBtn.addEventListener("click", async () => {
             exportBtn.disabled = true;
             exportBtn.textContent = "Saving\u2026";
@@ -31613,13 +31613,13 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       );
     }
     if (Array.isArray(config.controls) && config.controls.length) {
-      const controlsSection = root.createDiv({ cls: "cad-dash-filter-group" });
-      const controlsHead = controlsSection.createDiv({ cls: "cad-dash-filter-group-head" });
-      controlsHead.createDiv({ cls: "cad-dash-card-title", text: "FILTERS" });
-      controlsHead.createDiv({ cls: "cad-dash-filter-group-note", text: "All filters are combined with AND." });
-      const controlsWrap = controlsSection.createDiv({ cls: "cad-dash-controls" });
+      const controlsSection = root.createDiv({ cls: "bob-dash-filter-group" });
+      const controlsHead = controlsSection.createDiv({ cls: "bob-dash-filter-group-head" });
+      controlsHead.createDiv({ cls: "bob-dash-card-title", text: "FILTERS" });
+      controlsHead.createDiv({ cls: "bob-dash-filter-group-note", text: "All filters are combined with AND." });
+      const controlsWrap = controlsSection.createDiv({ cls: "bob-dash-controls" });
       for (const control of config.controls) {
-        await this._renderConfigCard(controlsWrap.createDiv({ cls: "cad-dash-col" }), control, getWidgetEntities);
+        await this._renderConfigCard(controlsWrap.createDiv({ cls: "bob-dash-col" }), control, getWidgetEntities);
       }
     }
     if (config.stats?.length) {
@@ -31680,9 +31680,9 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     }
     await prewarmLayout;
     for (const row of config.layout || []) {
-      const cols = root.createDiv({ cls: "cad-dash-cols" });
+      const cols = root.createDiv({ cls: "bob-dash-cols" });
       for (const colDef of row) {
-        const col = cols.createDiv({ cls: "cad-dash-col" });
+        const col = cols.createDiv({ cls: "bob-dash-col" });
         for (const card of Array.isArray(colDef) ? colDef : [colDef]) {
           await this._renderConfigCard(col, card, getWidgetEntities, dashboardContext);
         }
@@ -31692,13 +31692,13 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       const resolvedConditions = await Promise.all((cr.condition?.entities || []).map((key) => getWidgetEntities(null, key)));
       const hasData = resolvedConditions.some((resolved) => resolved.entities.length > 0);
       if (!hasData) continue;
-      const extra = root.createDiv({ cls: "cad-dash-cols" });
+      const extra = root.createDiv({ cls: "bob-dash-cols" });
       for (const card of cr.cards) {
-        await this._renderConfigCard(extra.createDiv({ cls: "cad-dash-col" }), card, getWidgetEntities, dashboardContext);
+        await this._renderConfigCard(extra.createDiv({ cls: "bob-dash-col" }), card, getWidgetEntities, dashboardContext);
       }
     }
     if (dashboardWarnings.length) {
-      const details = root.createEl("details", { cls: "cad-base-filter-warnings" });
+      const details = root.createEl("details", { cls: "bob-base-filter-warnings" });
       details.createEl("summary", { text: `${dashboardWarnings.length} dashboard warning${dashboardWarnings.length === 1 ? "" : "s"}` });
       const list = details.createEl("ul");
       dashboardWarnings.forEach((warning) => {
@@ -31719,26 +31719,26 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
   }
   _renderWidgetErrorCard(col, card, error) {
     const title = String(card?.title || card?.kind || "Widget").trim();
-    const cardEl = col.createDiv({ cls: "cad-dash-card cad-widget-error-card" });
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: title });
-    head.createSpan({ cls: "cad-widget-catalog-badge cad-widget-error-badge", text: "Error" });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body" });
-    body.createDiv({ cls: "cad-empty", text: "This widget failed to render." });
-    const details = body.createEl("details", { cls: "cad-widget-error-details" });
+    const cardEl = col.createDiv({ cls: "bob-dash-card bob-widget-error-card" });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: title });
+    head.createSpan({ cls: "bob-widget-catalog-badge bob-widget-error-badge", text: "Error" });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body" });
+    body.createDiv({ cls: "bob-empty", text: "This widget failed to render." });
+    const details = body.createEl("details", { cls: "bob-widget-error-details" });
     details.createEl("summary", { text: "Show details" });
     details.createEl("code", { text: String(error?.message || error || "Unknown widget error") });
   }
   _renderRowProgress(parent, progress) {
     if (!progress || typeof progress !== "object") return;
     const value = Math.max(0, Math.min(100, Number(progress.value ?? progress.percent ?? progress.pct ?? 0) || 0));
-    const wrap = parent.createDiv({ cls: "cad-proj-progress-wrap cad-row-progress" });
+    const wrap = parent.createDiv({ cls: "bob-proj-progress-wrap bob-row-progress" });
     wrap.dataset.pctBand = pctBand(value);
-    const label = wrap.createDiv({ cls: "cad-proj-progress-label" });
+    const label = wrap.createDiv({ cls: "bob-proj-progress-label" });
     label.createSpan({ text: String(progress.label || "Progress") });
-    label.createSpan({ cls: "cad-proj-progress-pct", text: String(progress.pct || `${value}%`) });
-    const bar = wrap.createDiv({ cls: "cad-proj-progress-bar" });
-    const fill = bar.createDiv({ cls: "cad-proj-progress-fill" });
+    label.createSpan({ cls: "bob-proj-progress-pct", text: String(progress.pct || `${value}%`) });
+    const bar = wrap.createDiv({ cls: "bob-proj-progress-bar" });
+    const fill = bar.createDiv({ cls: "bob-proj-progress-fill" });
     fill.style.width = `${value}%`;
   }
   _applyCardTone(cardEl, card = {}) {
@@ -32182,33 +32182,33 @@ ${snippet}` : "- No markdown content");
   }
   async _renderBaseLinkWidget(root, card, getWidgetEntities) {
     const { entityKey, basePath, viewName, label, description, entityDef, summary } = await this._resolveBaseWidgetTarget(card);
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-base-link-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-base-link-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "base-link" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: label });
-    if (viewName) head.createSpan({ cls: "cad-widget-catalog-badge", text: viewName });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body" });
-    if (description) body.createDiv({ cls: "cad-dash-card-sub", text: description });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: label });
+    if (viewName) head.createSpan({ cls: "bob-widget-catalog-badge", text: viewName });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body" });
+    if (description) body.createDiv({ cls: "bob-dash-card-sub", text: description });
     if (basePath) {
-      body.createDiv({ cls: "cad-dash-card-path", text: basePath });
+      body.createDiv({ cls: "bob-dash-card-path", text: basePath });
     } else {
-      body.createDiv({ cls: "cad-empty", text: "No Base file selected." });
+      body.createDiv({ cls: "bob-empty", text: "No Base file selected." });
     }
     if (summary) {
-      const meta = body.createDiv({ cls: "cad-dashboard-inventory-meta" });
-      meta.createSpan({ cls: "cad-dashboard-inventory-chip", text: summary.label || "base" });
+      const meta = body.createDiv({ cls: "bob-dashboard-inventory-meta" });
+      meta.createSpan({ cls: "bob-dashboard-inventory-chip", text: summary.label || "base" });
       if (Array.isArray(summary.views) && summary.views.length) {
-        meta.createSpan({ cls: "cad-dashboard-inventory-chip", text: `${summary.views.length} views` });
+        meta.createSpan({ cls: "bob-dashboard-inventory-chip", text: `${summary.views.length} views` });
       }
       if (Array.isArray(summary.typeFilters) && summary.typeFilters.length) {
-        meta.createSpan({ cls: "cad-dashboard-inventory-chip", text: summary.typeFilters.join(", ") });
+        meta.createSpan({ cls: "bob-dashboard-inventory-chip", text: summary.typeFilters.join(", ") });
       }
     }
     if (entityDef?.externalBaseView?.basePath) {
       body.createDiv({ cls: "setting-item-description", text: `Entity-backed Base target for ${entityDef.label} is available through the configured entity mapping.` });
     }
-    const actions = body.createDiv({ cls: "cad-de-actions" });
-    const openBtn = actions.createEl("button", { cls: "cad-btn primary", text: "Open Base" });
+    const actions = body.createDiv({ cls: "bob-de-actions" });
+    const openBtn = actions.createEl("button", { cls: "bob-btn primary", text: "Open Base" });
     openBtn.addEventListener("click", async () => {
       if (entityKey && entityDef?.externalBaseView) {
         this._openEntityBase(entityKey);
@@ -32223,7 +32223,7 @@ ${snippet}` : "- No markdown content");
       }
     });
     if (viewName && basePath) {
-      const copyBtn = actions.createEl("button", { cls: "cad-btn", text: "Copy config" });
+      const copyBtn = actions.createEl("button", { cls: "bob-btn", text: "Copy config" });
       copyBtn.addEventListener("click", async () => {
         const snippet = JSON.stringify({ base: { file: basePath, view: viewName } }, null, 2);
         try {
@@ -32242,30 +32242,30 @@ ${snippet}` : "- No markdown content");
     const metaFields = Array.isArray(card.metaFields) && card.metaFields.length ? card.metaFields : [String(card.groupBy || card.field || "").trim(), "status", "date", "value"].filter(Boolean);
     const limit = Math.max(1, Number(card.limit || 5) || 5);
     const preview = entities.slice(0, limit);
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-base-embed-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-base-embed-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "base-embed" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: label });
-    if (viewName) head.createSpan({ cls: "cad-widget-catalog-badge", text: viewName });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body" });
-    if (description) body.createDiv({ cls: "cad-dash-card-sub", text: description });
-    if (basePath) body.createDiv({ cls: "cad-dash-card-path", text: basePath });
-    const meta = body.createDiv({ cls: "cad-dashboard-inventory-meta" });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: label });
+    if (viewName) head.createSpan({ cls: "bob-widget-catalog-badge", text: viewName });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body" });
+    if (description) body.createDiv({ cls: "bob-dash-card-sub", text: description });
+    if (basePath) body.createDiv({ cls: "bob-dash-card-path", text: basePath });
+    const meta = body.createDiv({ cls: "bob-dashboard-inventory-meta" });
     if (summary) {
-      meta.createSpan({ cls: "cad-dashboard-inventory-chip", text: summary.label || "base" });
+      meta.createSpan({ cls: "bob-dashboard-inventory-chip", text: summary.label || "base" });
       if (Array.isArray(summary.views) && summary.views.length) {
-        meta.createSpan({ cls: "cad-dashboard-inventory-chip", text: `${summary.views.length} views` });
+        meta.createSpan({ cls: "bob-dashboard-inventory-chip", text: `${summary.views.length} views` });
       }
       if (Array.isArray(summary.typeFilters) && summary.typeFilters.length) {
-        meta.createSpan({ cls: "cad-dashboard-inventory-chip", text: summary.typeFilters.join(", ") });
+        meta.createSpan({ cls: "bob-dashboard-inventory-chip", text: summary.typeFilters.join(", ") });
       }
     }
-    meta.createSpan({ cls: "cad-dashboard-inventory-chip", text: `${preview.length}${entities.length > preview.length ? ` / ${entities.length}` : ""} rows` });
+    meta.createSpan({ cls: "bob-dashboard-inventory-chip", text: `${preview.length}${entities.length > preview.length ? ` / ${entities.length}` : ""} rows` });
     if (entityDef?.externalBaseView?.basePath) {
-      meta.createSpan({ cls: "cad-dashboard-inventory-chip", text: "external view" });
+      meta.createSpan({ cls: "bob-dashboard-inventory-chip", text: "external view" });
     }
-    const actions = body.createDiv({ cls: "cad-de-actions" });
-    const openBtn = actions.createEl("button", { cls: "cad-btn primary", text: "Open Base" });
+    const actions = body.createDiv({ cls: "bob-de-actions" });
+    const openBtn = actions.createEl("button", { cls: "bob-btn primary", text: "Open Base" });
     openBtn.addEventListener("click", async () => {
       if (entityKey && entityDef?.externalBaseView) {
         this._openEntityBase(entityKey);
@@ -32280,19 +32280,19 @@ ${snippet}` : "- No markdown content");
       }
     });
     if (!preview.length) {
-      body.createDiv({ cls: "cad-empty", text: entitySource ? "No rows matched this Base/view." : "No rows available for preview." });
+      body.createDiv({ cls: "bob-empty", text: entitySource ? "No rows matched this Base/view." : "No rows available for preview." });
       return;
     }
-    const list = body.createDiv({ cls: "cad-home-list cad-base-embed-list" });
+    const list = body.createDiv({ cls: "bob-home-list bob-base-embed-list" });
     preview.forEach((entity) => {
-      const row = list.createDiv({ cls: "cad-home-row cad-base-embed-row" });
+      const row = list.createDiv({ cls: "bob-home-row bob-base-embed-row" });
       const title = titleFields.map((field) => String(entityValue(entity, field, entityDef) || "").trim()).find(Boolean) || entity.basename;
       const metaBits = metaFields.map((field) => fmtValue(entityValue(entity, field, entityDef), entityDef?.fields?.find((f) => f.key === field)?.type)).filter(Boolean);
-      row.createDiv({ cls: "cad-home-row-date", text: entity.file?.basename || "" });
-      const main = row.createDiv({ cls: "cad-home-row-main" });
-      main.createDiv({ cls: "cad-home-row-title", text: title });
+      row.createDiv({ cls: "bob-home-row-date", text: entity.file?.basename || "" });
+      const main = row.createDiv({ cls: "bob-home-row-main" });
+      main.createDiv({ cls: "bob-home-row-title", text: title });
       if (metaBits.length) {
-        main.createDiv({ cls: "cad-home-row-meta", text: metaBits.join(" \xB7 ") });
+        main.createDiv({ cls: "bob-home-row-meta", text: metaBits.join(" \xB7 ") });
       }
       if (entity.file) {
         row.classList.add("clickable");
@@ -32318,12 +32318,12 @@ ${snippet}` : "- No markdown content");
       await this._renderBaseViewFallback(root, card, getWidgetEntities, `Base file not found: ${basePath}`);
       return;
     }
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-base-view-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-base-view-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "base-view" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: label || card.title || "Base view" });
-    if (viewName) head.createSpan({ cls: "cad-widget-catalog-badge", text: viewName });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body cad-base-view-body" });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: label || card.title || "Base view" });
+    if (viewName) head.createSpan({ cls: "bob-widget-catalog-badge", text: viewName });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body bob-base-view-body" });
     const normalizedHeight = this._normalizeBaseViewHeight(card.height);
     if (normalizedHeight) body.style.height = `${normalizedHeight}px`;
     try {
@@ -32398,19 +32398,19 @@ ${snippet}` : "- No markdown content");
       await this._renderBaseLinkWidget(root, card, getWidgetEntities);
       return;
     }
-    const fallbackCard = root.createDiv({ cls: "cad-dash-card cad-base-view-card cad-base-view-fallback" });
+    const fallbackCard = root.createDiv({ cls: "bob-dash-card bob-base-view-card bob-base-view-fallback" });
     this._applyCardTone(fallbackCard, Object.assign({ kind: "base-view" }, card));
-    const head = fallbackCard.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: card.title || "Base view" });
-    fallbackCard.createDiv({ cls: "cad-dash-card-body" }).createDiv({ cls: "cad-soon-desc", text: `Base view unavailable (${reason})` });
+    const head = fallbackCard.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: card.title || "Base view" });
+    fallbackCard.createDiv({ cls: "bob-dash-card-body" }).createDiv({ cls: "bob-soon-desc", text: `Base view unavailable (${reason})` });
   }
   async _renderBaseViewFallbackContent(body, card, getWidgetEntities, reason) {
     const mode = String(card.fallback || "preview").trim().toLowerCase();
     if (mode === "link") {
       const target = await this._resolveBaseWidgetTarget(card);
-      body.createDiv({ cls: "cad-soon-desc", text: reason });
+      body.createDiv({ cls: "bob-soon-desc", text: reason });
       if (target.basePath) {
-        const btn = body.createEl("button", { cls: "cad-btn cad-btn-sm", text: "Open Base" });
+        const btn = body.createEl("button", { cls: "bob-btn bob-btn-sm", text: "Open Base" });
         btn.addEventListener("click", () => this.app.workspace.openLinkText(target.basePath, "", false));
       }
       return;
@@ -32420,27 +32420,27 @@ ${snippet}` : "- No markdown content");
       const resolved = target.entityKey ? await getWidgetEntities(this._widgetSourceSpec(card, target.entityKey), target.entityKey).catch(() => null) : null;
       const entities = Array.isArray(resolved?.entities) ? resolved.entities : [];
       const rows = entities.slice(0, Math.max(1, Number(card.limit || 5) || 5));
-      body.createDiv({ cls: "cad-soon-desc", text: reason });
+      body.createDiv({ cls: "bob-soon-desc", text: reason });
       if (rows.length) {
-        const list = body.createDiv({ cls: "cad-base-embed-list cad-base-view-preview-list" });
+        const list = body.createDiv({ cls: "bob-base-embed-list bob-base-view-preview-list" });
         rows.forEach((entity) => {
-          const row = list.createDiv({ cls: "cad-base-embed-row" });
-          row.createDiv({ cls: "cad-home-row-title", text: entity?.title || entity?.name || entity?.file?.basename || entity?.basename || "Untitled" });
+          const row = list.createDiv({ cls: "bob-base-embed-row" });
+          row.createDiv({ cls: "bob-home-row-title", text: entity?.title || entity?.name || entity?.file?.basename || entity?.basename || "Untitled" });
           if (entity?.file) {
             row.classList.add("clickable");
             row.addEventListener("click", () => this.openEntityDetailFromFile(entity.file));
           }
         });
       } else {
-        body.createDiv({ cls: "cad-empty", text: "No rows available for preview." });
+        body.createDiv({ cls: "bob-empty", text: "No rows available for preview." });
       }
       if (target.basePath) {
-        const btn = body.createEl("button", { cls: "cad-btn cad-btn-sm", text: "Open Base" });
+        const btn = body.createEl("button", { cls: "bob-btn bob-btn-sm", text: "Open Base" });
         btn.addEventListener("click", () => this.app.workspace.openLinkText(target.basePath, "", false));
       }
       return;
     }
-    body.createDiv({ cls: "cad-soon-desc", text: `Base view unavailable (${reason})` });
+    body.createDiv({ cls: "bob-soon-desc", text: `Base view unavailable (${reason})` });
   }
   async _resolveMarkdownWidgetContent(card) {
     const source = card.source;
@@ -32468,18 +32468,18 @@ ${snippet}` : "- No markdown content");
     const title = String(card.title || "Note").trim();
     const subtitle = String(card.subtitle || card.description || "").trim();
     const { text, sourcePath } = await this._resolveMarkdownWidgetContent(card);
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-markdown-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-markdown-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "markdown" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: title });
-    if (sourcePath) head.createSpan({ cls: "cad-widget-catalog-badge", text: sourcePath.split("/").pop().replace(/\.md$/i, "") });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body cad-markdown-body" });
-    if (subtitle) body.createDiv({ cls: "cad-dash-card-sub", text: subtitle });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: title });
+    if (sourcePath) head.createSpan({ cls: "bob-widget-catalog-badge", text: sourcePath.split("/").pop().replace(/\.md$/i, "") });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body bob-markdown-body" });
+    if (subtitle) body.createDiv({ cls: "bob-dash-card-sub", text: subtitle });
     if (!text) {
-      body.createDiv({ cls: "cad-empty", text: "No markdown content supplied." });
+      body.createDiv({ cls: "bob-empty", text: "No markdown content supplied." });
       return;
     }
-    const target = body.createDiv({ cls: "cad-markdown-render" });
+    const target = body.createDiv({ cls: "bob-markdown-render" });
     try {
       if (obsidian17.MarkdownRenderer?.renderMarkdown) {
         await obsidian17.MarkdownRenderer.renderMarkdown(text, target, sourcePath || "", this);
@@ -32551,27 +32551,27 @@ ${snippet}` : "- No markdown content");
   }
   async _renderActionsWidget(root, card) {
     const actions = Array.isArray(card.actions) ? card.actions : Array.isArray(card.buttons) ? card.buttons : [];
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-actions-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-actions-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "actions" }, card));
     const title = String(card.title || "").trim();
     if (title) {
-      const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-      head.createDiv({ cls: "cad-dash-card-title", text: title });
+      const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+      head.createDiv({ cls: "bob-dash-card-title", text: title });
     }
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body" });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body" });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: "cad-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
+      body.createDiv({ cls: "bob-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
     }
-    const bar = body.createDiv({ cls: "cad-actions-bar" });
+    const bar = body.createDiv({ cls: "bob-actions-bar" });
     if (!actions.length) {
-      bar.createDiv({ cls: "cad-empty", text: "No actions configured." });
+      bar.createDiv({ cls: "bob-empty", text: "No actions configured." });
       return;
     }
     actions.map((action) => this._normalizeActionSpec(action)).filter(Boolean).forEach((action) => {
       const isCreate = !!action.entityKey;
       const isPrimaryAction = action.type === "quick-capture" || action.type === "today-task" || isCreate || !!action.primary;
       const btn = bar.createEl("button", {
-        cls: `cad-btn${isPrimaryAction ? " primary" : ""}${action.danger ? " cad-btn-danger" : ""}`,
+        cls: `bob-btn${isPrimaryAction ? " primary" : ""}${action.danger ? " bob-btn-danger" : ""}`,
         text: action.entityKey ? `+ New ${ENTITIES[action.entityKey]?.label || action.entityKey}` : action.type === "quick-capture" ? "+ Capture" : action.label
       });
       if (action.description) btn.title = action.description;
@@ -32588,22 +32588,22 @@ ${snippet}` : "- No markdown content");
     const filterKey = `${key}Filter`;
     const dateRangeMode = String(card.mode || card.type || "").trim().toLowerCase() === "date-range";
     if (!key) {
-      const cardEl2 = root.createDiv({ cls: "cad-dash-card cad-selector-card" });
+      const cardEl2 = root.createDiv({ cls: "bob-dash-card bob-selector-card" });
       this._applyCardTone(cardEl2, Object.assign({ kind: "selector" }, card));
-      const body2 = cardEl2.createDiv({ cls: "cad-dash-card-body" });
-      body2.createDiv({ cls: "cad-empty", text: "Selector needs a key." });
+      const body2 = cardEl2.createDiv({ cls: "bob-dash-card-body" });
+      body2.createDiv({ cls: "bob-empty", text: "Selector needs a key." });
       return;
     }
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-selector-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-selector-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "selector" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: label });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body" });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: label });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body" });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: "cad-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
+      body.createDiv({ cls: "bob-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
     }
-    const row = body.createDiv({ cls: "cad-selector-row" });
-    const select = row.createEl("select", { cls: "dropdown cad-selector-select" });
+    const row = body.createDiv({ cls: "bob-selector-row" });
+    const select = row.createEl("select", { cls: "dropdown bob-selector-select" });
     const options = [];
     const allLabel = String(card.allLabel || "All").trim();
     options.push({ value: "", label: allLabel, filter: "true" });
@@ -32682,9 +32682,9 @@ ${snippet}` : "- No markdown content");
       await this._persistDashboardState();
       await this.render();
     });
-    const hint = body.createDiv({ cls: "cad-selector-hint" });
+    const hint = body.createDiv({ cls: "bob-selector-hint" });
     hint.createSpan({ text: `${key}: ` });
-    hint.createSpan({ cls: "cad-selector-current", text: select.value || allLabel });
+    hint.createSpan({ cls: "bob-selector-current", text: select.value || allLabel });
   }
   async _renderDateRangeWidget(root, card) {
     const surfaceId = this.mode;
@@ -32697,13 +32697,13 @@ ${snippet}` : "- No markdown content");
     const endKey = `${key}End`;
     const presetKey = `${key}Preset`;
     const current = String(state[presetKey] || card.default || "this-month").trim() || "this-month";
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-selector-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-selector-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "date-range" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: label });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body" });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: label });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body" });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: "cad-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
+      body.createDiv({ cls: "bob-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
     }
     const presets = [
       { value: "all", label: String(card.allLabel || "All").trim(), from: "", to: "", filter: "true" },
@@ -32741,15 +32741,15 @@ ${snippet}` : "- No markdown content");
       state[filterKey] = from && to ? `${field} >= ${JSON.stringify(from)} && ${field} <= ${JSON.stringify(to)}` : "true";
     };
     if (!state[presetKey]) updateFromPreset(current);
-    const presetRow = body.createDiv({ cls: "cad-selector-row" });
-    const presetSelect = presetRow.createEl("select", { cls: "dropdown cad-selector-select" });
+    const presetRow = body.createDiv({ cls: "bob-selector-row" });
+    const presetSelect = presetRow.createEl("select", { cls: "dropdown bob-selector-select" });
     presets.forEach((preset) => {
       const option = presetSelect.createEl("option", { value: preset.value, text: preset.label });
       if ((state[presetKey] || current) === preset.value) option.selected = true;
     });
-    const rangeWrap = body.createDiv({ cls: "cad-date-range" });
-    const startInput = rangeWrap.createEl("input", { type: "date", cls: "cad-selector-date" });
-    const endInput = rangeWrap.createEl("input", { type: "date", cls: "cad-selector-date" });
+    const rangeWrap = body.createDiv({ cls: "bob-date-range" });
+    const startInput = rangeWrap.createEl("input", { type: "date", cls: "bob-selector-date" });
+    const endInput = rangeWrap.createEl("input", { type: "date", cls: "bob-selector-date" });
     startInput.value = state[startKey] || "";
     endInput.value = state[endKey] || "";
     startInput.disabled = (state[presetKey] || current) !== "custom";
@@ -32774,9 +32774,9 @@ ${snippet}` : "- No markdown content");
     };
     startInput.addEventListener("change", commitCustom);
     endInput.addEventListener("change", commitCustom);
-    const hint = body.createDiv({ cls: "cad-selector-hint" });
+    const hint = body.createDiv({ cls: "bob-selector-hint" });
     hint.createSpan({ text: `${key}: ` });
-    hint.createSpan({ cls: "cad-selector-current", text: state[presetKey] || current });
+    hint.createSpan({ cls: "bob-selector-current", text: state[presetKey] || current });
   }
   _coerceFiniteNumber(value, fallback = 0) {
     const n = Number(value);
@@ -32868,43 +32868,43 @@ ${snippet}` : "- No markdown content");
   }
   async _renderGaugeWidget(root, card, getWidgetEntities) {
     const resolved = await this._resolveScalarWidgetValue(card, getWidgetEntities);
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-gauge-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-gauge-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "gauge" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: String(card.title || card.label || "Gauge").trim() });
-    head.createSpan({ cls: "cad-widget-catalog-badge", text: `${resolved.percent}%` });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body cad-gauge-body" });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: String(card.title || card.label || "Gauge").trim() });
+    head.createSpan({ cls: "bob-widget-catalog-badge", text: `${resolved.percent}%` });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body bob-gauge-body" });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: "cad-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
+      body.createDiv({ cls: "bob-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
     }
-    const gauge = body.createDiv({ cls: "cad-gauge" });
+    const gauge = body.createDiv({ cls: "bob-gauge" });
     gauge.dataset.pctBand = pctBand(resolved.percent);
-    gauge.style.setProperty("--cad-gauge-pct", `${resolved.percent}%`);
+    gauge.style.setProperty("--bob-gauge-pct", `${resolved.percent}%`);
     gauge.title = `${resolved.percent}% of ${resolved.max}`;
-    const center = gauge.createDiv({ cls: "cad-gauge-center" });
-    center.createDiv({ cls: "cad-gauge-value", text: this._formatScalarValue(resolved, card) });
-    center.createDiv({ cls: "cad-gauge-label", text: String(card.caption || resolved.label || "score").trim() });
-    if (resolved.sub) body.createDiv({ cls: "cad-gauge-sub", text: resolved.sub });
+    const center = gauge.createDiv({ cls: "bob-gauge-center" });
+    center.createDiv({ cls: "bob-gauge-value", text: this._formatScalarValue(resolved, card) });
+    center.createDiv({ cls: "bob-gauge-label", text: String(card.caption || resolved.label || "score").trim() });
+    if (resolved.sub) body.createDiv({ cls: "bob-gauge-sub", text: resolved.sub });
   }
   async _renderProgressWidget(root, card, getWidgetEntities) {
     const resolved = await this._resolveScalarWidgetValue(card, getWidgetEntities);
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-progress-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-progress-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "progress" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: String(card.title || card.label || "Progress").trim() });
-    head.createSpan({ cls: "cad-widget-catalog-badge", text: `${resolved.percent}%` });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body cad-progress-body" });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: String(card.title || card.label || "Progress").trim() });
+    head.createSpan({ cls: "bob-widget-catalog-badge", text: `${resolved.percent}%` });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body bob-progress-body" });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: "cad-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
+      body.createDiv({ cls: "bob-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
     }
-    const top = body.createDiv({ cls: "cad-progress-widget-label" });
+    const top = body.createDiv({ cls: "bob-progress-widget-label" });
     top.createSpan({ text: String(card.label || resolved.label || "Built").trim() });
-    top.createSpan({ cls: "cad-progress-widget-value", text: this._formatScalarValue(resolved, card) });
-    const track = body.createDiv({ cls: "cad-progress-widget-track" });
+    top.createSpan({ cls: "bob-progress-widget-value", text: this._formatScalarValue(resolved, card) });
+    const track = body.createDiv({ cls: "bob-progress-widget-track" });
     track.dataset.pctBand = pctBand(resolved.percent);
-    const fill = track.createDiv({ cls: "cad-progress-widget-fill" });
+    const fill = track.createDiv({ cls: "bob-progress-widget-fill" });
     fill.style.width = `${resolved.percent}%`;
-    if (resolved.sub) body.createDiv({ cls: "cad-progress-widget-sub", text: resolved.sub });
+    if (resolved.sub) body.createDiv({ cls: "bob-progress-widget-sub", text: resolved.sub });
   }
   _heatmapDateFromValue(value) {
     if (value instanceof Date && !isNaN(value.getTime())) return startOfDay(value);
@@ -32972,28 +32972,28 @@ ${snippet}` : "- No markdown content");
     const max = Math.max(1, ...buckets.map((bucket) => bucket.value));
     const total = buckets.reduce((sum, bucket) => sum + bucket.value, 0);
     const columns = Math.max(7, Math.min(53, Number(card.columns || Math.ceil(buckets.length / 7)) || 7));
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-heatmap-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-heatmap-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "heatmap" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: String(card.title || card.label || "Heatmap").trim() });
-    head.createSpan({ cls: "cad-widget-catalog-badge", text: `${Math.round(total)} total` });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body cad-heatmap-body" });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: String(card.title || card.label || "Heatmap").trim() });
+    head.createSpan({ cls: "bob-widget-catalog-badge", text: `${Math.round(total)} total` });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body bob-heatmap-body" });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: "cad-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
+      body.createDiv({ cls: "bob-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
     }
     if (!buckets.length) {
-      body.createDiv({ cls: "cad-empty", text: String(card.empty || "No heatmap buckets").trim() });
+      body.createDiv({ cls: "bob-empty", text: String(card.empty || "No heatmap buckets").trim() });
       return;
     }
-    const grid = body.createDiv({ cls: "cad-heatmap-grid" });
-    grid.style.setProperty("--cad-heatmap-columns", String(columns));
+    const grid = body.createDiv({ cls: "bob-heatmap-grid" });
+    grid.style.setProperty("--bob-heatmap-columns", String(columns));
     buckets.forEach((bucket) => {
-      const cell = grid.createDiv({ cls: "cad-heatmap-cell" });
+      const cell = grid.createDiv({ cls: "bob-heatmap-cell" });
       const ratio = bucket.value / max;
       cell.dataset.level = bucket.value <= 0 ? "0" : ratio < 0.25 ? "1" : ratio < 0.5 ? "2" : ratio < 0.75 ? "3" : "4";
       cell.title = `${fmtValue(bucket.key, "date")} \u2014 ${Math.round(bucket.value * 10) / 10}`;
     });
-    const footer = body.createDiv({ cls: "cad-heatmap-footer" });
+    const footer = body.createDiv({ cls: "bob-heatmap-footer" });
     footer.createSpan({ text: `${buckets.length} days` });
     footer.createSpan({ text: `Peak ${Math.round(max * 10) / 10}` });
   }
@@ -33060,7 +33060,7 @@ ${snippet}` : "- No markdown content");
       }
       return sorted;
     };
-    const board = root.createDiv({ cls: "cad-kanban-board" });
+    const board = root.createDiv({ cls: "bob-kanban-board" });
     const isMobile = !!(obsidian17.Platform && obsidian17.Platform.isMobile);
     let activeDragPath = null;
     groups.forEach((group) => {
@@ -33068,21 +33068,21 @@ ${snippet}` : "- No markdown content");
       const columnValue = items.reduce((sum, e) => sum + (Number(entityValue(e, valueField, def)) || 0), 0);
       const groupLimit = Number(group.limit || group.wipLimit || card.wipLimit || 0);
       const overLimit = groupLimit > 0 && items.length > groupLimit;
-      const col = board.createDiv({ cls: "cad-kanban-col" });
-      if (overLimit) col.addClass("cad-kanban-col-over-limit");
+      const col = board.createDiv({ cls: "bob-kanban-col" });
+      if (overLimit) col.addClass("bob-kanban-col-over-limit");
       col.dataset.stage = group.value;
-      const head = col.createDiv({ cls: "cad-kanban-col-head" });
-      head.createDiv({ cls: "cad-kanban-col-title", text: group.label });
-      const headMeta = head.createDiv({ cls: "cad-kanban-col-meta" });
+      const head = col.createDiv({ cls: "bob-kanban-col-head" });
+      head.createDiv({ cls: "bob-kanban-col-title", text: group.label });
+      const headMeta = head.createDiv({ cls: "bob-kanban-col-meta" });
       headMeta.setText(`${items.length}${valueField ? ` \xB7 ${fmtValue(columnValue, "currency")}` : ""}`);
       if (groupLimit > 0) {
-        const limitChip = head.createSpan({ cls: "cad-kanban-col-limit", text: `${items.length}/${groupLimit}` });
+        const limitChip = head.createSpan({ cls: "bob-kanban-col-limit", text: `${items.length}/${groupLimit}` });
         if (overLimit) limitChip.addClass("is-over-limit");
       }
       if (group.description) {
-        col.createDiv({ cls: "cad-kanban-col-description", text: group.description });
+        col.createDiv({ cls: "bob-kanban-col-description", text: group.description });
       }
-      const list = col.createDiv({ cls: "cad-kanban-col-list" });
+      const list = col.createDiv({ cls: "bob-kanban-col-list" });
       const onDropEntity = async (filePath) => {
         if (!filePath || !groupBy) return;
         try {
@@ -33097,7 +33097,7 @@ ${snippet}` : "- No markdown content");
         }
       };
       const allowDrop = (event) => {
-        const hasPath = !!event.dataTransfer?.getData("text/cadence-entity") || !!activeDragPath;
+        const hasPath = !!event.dataTransfer?.getData("text/bob-entity") || !!activeDragPath;
         if (!hasPath) return false;
         event.preventDefault();
         event.stopPropagation();
@@ -33110,22 +33110,22 @@ ${snippet}` : "- No markdown content");
       col.addEventListener("drop", async (event) => {
         if (!allowDrop(event)) return;
         col.removeClass("drag-over");
-        const filePath = activeDragPath || event.dataTransfer?.getData("text/cadence-entity");
+        const filePath = activeDragPath || event.dataTransfer?.getData("text/bob-entity");
         activeDragPath = null;
         await onDropEntity(filePath);
       });
       if (!items.length) {
-        list.createDiv({ cls: "cad-empty", text: group.empty || "\u2014" });
+        list.createDiv({ cls: "bob-empty", text: group.empty || "\u2014" });
         return;
       }
       sortEntities(items).forEach((entity) => {
-        const cardEl = list.createDiv({ cls: "cad-kanban-card" });
+        const cardEl = list.createDiv({ cls: "bob-kanban-card" });
         cardEl.dataset.path = entity.file.path;
         const title = titleFields.map((field) => String(entityValue(entity, field, def) || "").trim()).find(Boolean) || entityPrimaryValue(entity, def) || entity.basename;
-        cardEl.createDiv({ cls: "cad-kanban-card-title", text: title });
-        const meta = cardEl.createDiv({ cls: "cad-kanban-card-meta" });
+        cardEl.createDiv({ cls: "bob-kanban-card-title", text: title });
+        const meta = cardEl.createDiv({ cls: "bob-kanban-card-meta" });
         const value = valueField ? entityValue(entity, valueField, def) : null;
-        if (value != null && value !== "") meta.createSpan({ cls: "cad-kanban-card-value", text: fmtValue(value, "currency") });
+        if (value != null && value !== "") meta.createSpan({ cls: "bob-kanban-card-value", text: fmtValue(value, "currency") });
         const metaText = metaFields.map((field) => {
           if (!field) return "";
           if (field === valueField) return "";
@@ -33134,8 +33134,8 @@ ${snippet}` : "- No markdown content");
           const fieldDef = def.fields?.find((f) => f.key === field);
           return fmtValue(current, fieldDef?.type || "text");
         }).filter(Boolean).join(" \xB7 ");
-        if (metaText) meta.createSpan({ cls: "cad-kanban-card-company", text: metaText });
-        if (overLimit) cardEl.addClass("cad-kanban-card-over-limit");
+        if (metaText) meta.createSpan({ cls: "bob-kanban-card-company", text: metaText });
+        if (overLimit) cardEl.addClass("bob-kanban-card-over-limit");
         if (!isMobile) {
           cardEl.draggable = true;
           cardEl.addEventListener("dragstart", (ev) => {
@@ -33143,8 +33143,8 @@ ${snippet}` : "- No markdown content");
             cardEl.addClass("dragging");
             try {
               ev.dataTransfer.effectAllowed = "move";
-              ev.dataTransfer.setData("text/cadence-entity", entity.file.path);
-              ev.dataTransfer.setData("text/cadence-stage", group.value);
+              ev.dataTransfer.setData("text/bob-entity", entity.file.path);
+              ev.dataTransfer.setData("text/bob-stage", group.value);
               ev.dataTransfer.setData("text/plain", `[[${entity.file.basename}]]`);
             } catch (_) {
             }
@@ -33154,7 +33154,7 @@ ${snippet}` : "- No markdown content");
             cardEl.removeClass("dragging");
           });
         } else {
-          cardEl.addClass("cad-kanban-card-touch");
+          cardEl.addClass("bob-kanban-card-touch");
         }
         cardEl.addEventListener("click", () => this.openEntityDetail(entityKey, entity.file));
       });
@@ -33162,24 +33162,24 @@ ${snippet}` : "- No markdown content");
   }
   async _renderListWidget(root, card, getWidgetEntities) {
     const rows = await this._resolveCardRows(card, getWidgetEntities);
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-list-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-list-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "list" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: String(card.title || card.label || "List").trim() });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body" });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: String(card.title || card.label || "List").trim() });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body" });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: "cad-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
+      body.createDiv({ cls: "bob-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
     }
     if (!rows.length) {
-      body.createDiv({ cls: "cad-empty", text: String(card.empty || "No rows").trim() });
+      body.createDiv({ cls: "bob-empty", text: String(card.empty || "No rows").trim() });
       return;
     }
-    const list = body.createDiv({ cls: "cad-home-list cad-list-widget" });
+    const list = body.createDiv({ cls: "bob-home-list bob-list-widget" });
     rows.slice(0, Math.max(1, Number(card.limit || 6) || 6)).forEach((row) => {
-      const item = list.createDiv({ cls: "cad-home-row cad-list-row" });
-      const main = item.createDiv({ cls: "cad-home-row-main" });
-      main.createDiv({ cls: "cad-home-row-title", text: row.title || "Untitled" });
-      if (row.meta) main.createDiv({ cls: "cad-home-row-meta", text: row.meta });
+      const item = list.createDiv({ cls: "bob-home-row bob-list-row" });
+      const main = item.createDiv({ cls: "bob-home-row-main" });
+      main.createDiv({ cls: "bob-home-row-title", text: row.title || "Untitled" });
+      if (row.meta) main.createDiv({ cls: "bob-home-row-meta", text: row.meta });
       this._renderRowProgress(main, row.progress);
       if (row.file || row.surface || row.command || row.url || row.action) {
         item.classList.add("clickable");
@@ -33217,25 +33217,25 @@ ${snippet}` : "- No markdown content");
   // read-only for now (write-back for those is Phase 2).
   async _renderTaskListWidget(root, card, getWidgetEntities) {
     const rows = await this._resolveCardRows(card, getWidgetEntities);
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-list-card cad-task-list-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-list-card bob-task-list-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "task-list" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: String(card.title || card.label || "Tasks").trim() });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body" });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: String(card.title || card.label || "Tasks").trim() });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body" });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: "cad-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
+      body.createDiv({ cls: "bob-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
     }
     if (!rows.length) {
-      body.createDiv({ cls: "cad-empty", text: String(card.empty || "No tasks").trim() });
+      body.createDiv({ cls: "bob-empty", text: String(card.empty || "No tasks").trim() });
       return;
     }
-    const list = body.createDiv({ cls: "cad-home-list cad-task-list-widget" });
+    const list = body.createDiv({ cls: "bob-home-list bob-task-list-widget" });
     rows.slice(0, Math.max(1, Number(card.limit || 12) || 12)).forEach((row) => {
       const file = row.file || null;
       const fm = file ? this.app.metadataCache.getFileCache(file)?.frontmatter || {} : {};
       const dailyIdx = typeof row.taskIndex === "number" ? row.taskIndex : null;
       const done = file ? String(fm.status || "").trim().toLowerCase() === "done" : !!row.done;
-      const item = list.createDiv({ cls: "cad-task-row cad-dash-task-row" + (done ? " done" : "") });
+      const item = list.createDiv({ cls: "bob-task-row bob-dash-task-row" + (done ? " done" : "") });
       const cb = item.createEl("input", { type: "checkbox" });
       cb.checked = done;
       if (file) {
@@ -33251,9 +33251,9 @@ ${snippet}` : "- No markdown content");
       } else {
         cb.disabled = true;
       }
-      const main = item.createDiv({ cls: "cad-task-text cad-home-row-main" });
-      main.createDiv({ cls: "cad-home-row-title", text: row.title || "Untitled" });
-      if (row.meta) main.createDiv({ cls: "cad-home-row-meta", text: row.meta });
+      const main = item.createDiv({ cls: "bob-task-text bob-home-row-main" });
+      main.createDiv({ cls: "bob-home-row-title", text: row.title || "Untitled" });
+      if (row.meta) main.createDiv({ cls: "bob-home-row-meta", text: row.meta });
       if (file) {
         main.classList.add("clickable");
         main.addEventListener("click", () => {
@@ -33290,12 +33290,12 @@ ${snippet}` : "- No markdown content");
   }
   // Quick-add input: type + Enter appends a task to today's daily note.
   _renderQuickAddWidget(root, card) {
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-quick-add-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-quick-add-card" });
     if (card.title || card.label) {
-      cardEl.createDiv({ cls: "cad-dash-card-head" }).createDiv({ cls: "cad-dash-card-title", text: String(card.title || card.label).trim() });
+      cardEl.createDiv({ cls: "bob-dash-card-head" }).createDiv({ cls: "bob-dash-card-title", text: String(card.title || card.label).trim() });
     }
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body" });
-    const input = body.createEl("input", { type: "text", cls: "cad-quick-add-input", attr: { placeholder: String(card.placeholder || "Add a task and press Enter\u2026") } });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body" });
+    const input = body.createEl("input", { type: "text", cls: "bob-quick-add-input", attr: { placeholder: String(card.placeholder || "Add a task and press Enter\u2026") } });
     input.addEventListener("keydown", async (e) => {
       if (e.key !== "Enter") return;
       const text = input.value.trim();
@@ -33308,13 +33308,13 @@ ${snippet}` : "- No markdown content");
   // Read-only date hero (weekday / day / month / year).
   _renderDateHeroWidget(root, card) {
     const info = dateInfo(/* @__PURE__ */ new Date());
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-date-hero-card" });
-    cardEl.createDiv({ cls: "cad-eyebrow", text: String(card.eyebrow || info.weekday).toUpperCase() });
-    const hero = cardEl.createDiv({ cls: "cad-date-hero" });
-    hero.createDiv({ cls: "cad-date-day", text: String(info.day) });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-date-hero-card" });
+    cardEl.createDiv({ cls: "bob-eyebrow", text: String(card.eyebrow || info.weekday).toUpperCase() });
+    const hero = cardEl.createDiv({ cls: "bob-date-hero" });
+    hero.createDiv({ cls: "bob-date-day", text: String(info.day) });
     const col = hero.createDiv();
-    col.createDiv({ cls: "cad-month", text: info.month });
-    col.createDiv({ cls: "cad-year", text: String(info.year) });
+    col.createDiv({ cls: "bob-month", text: info.month });
+    col.createDiv({ cls: "bob-year", text: String(info.year) });
   }
   // Editable note-body section (e.g. the daily-note Journal), saved on blur.
   async _renderNoteSectionWidget(root, card) {
@@ -33331,14 +33331,14 @@ ${snippet}` : "- No markdown content");
       }
       return out.join("\n").replace(/\s+$/, "");
     };
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-note-section-card" });
-    cardEl.createDiv({ cls: "cad-dash-card-head" }).createDiv({ cls: "cad-dash-card-title", text: String(card.title || "Today\u2019s entry").trim() });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-note-section-card" });
+    cardEl.createDiv({ cls: "bob-dash-card-head" }).createDiv({ cls: "bob-dash-card-title", text: String(card.title || "Today\u2019s entry").trim() });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body" });
     const path = dailyNotePath(this.plugin.settings);
     const existing = this.app.vault.getAbstractFileByPath(path);
     let current = "";
     if (existing) current = readSection(await this.app.vault.read(existing));
-    const ta = body.createEl("textarea", { cls: "cad-journal cad-note-section-textarea" });
+    const ta = body.createEl("textarea", { cls: "bob-journal bob-note-section-textarea" });
     ta.value = current;
     ta.spellcheck = false;
     ta.addEventListener("blur", async () => {
@@ -33418,27 +33418,27 @@ ${snippet}` : "- No markdown content");
       };
     }).sort((a, b) => b.value - a.value).slice(0, limit);
     const max = Math.max(1, ...chartValues.map((entry) => Number(entry.value) || 0));
-    const cardEl = root.createDiv({ cls: "cad-dash-card cad-bar-chart-card" });
+    const cardEl = root.createDiv({ cls: "bob-dash-card bob-bar-chart-card" });
     this._applyCardTone(cardEl, Object.assign({ kind: "bar-chart" }, card));
-    const head = cardEl.createDiv({ cls: "cad-dash-card-head" });
-    head.createDiv({ cls: "cad-dash-card-title", text: String(card.title || card.label || "Bar chart").trim() });
+    const head = cardEl.createDiv({ cls: "bob-dash-card-head" });
+    head.createDiv({ cls: "bob-dash-card-title", text: String(card.title || card.label || "Bar chart").trim() });
     const badge = isProductivityBuiltIn ? valueField || String(resolved.source?.section || card.section || "").trim() : groupBy;
-    if (badge) head.createSpan({ cls: "cad-widget-catalog-badge", text: badge });
-    const body = cardEl.createDiv({ cls: "cad-dash-card-body" });
+    if (badge) head.createSpan({ cls: "bob-widget-catalog-badge", text: badge });
+    const body = cardEl.createDiv({ cls: "bob-dash-card-body" });
     if (card.description || card.subtitle) {
-      body.createDiv({ cls: "cad-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
+      body.createDiv({ cls: "bob-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
     }
-    const chart = body.createDiv({ cls: "cad-bar-chart cad-bar-chart-tall" });
+    const chart = body.createDiv({ cls: "bob-bar-chart bob-bar-chart-tall" });
     chartValues.forEach((entry) => {
       labels.set(entry.group.value, entry.group.label);
-      const col = chart.createDiv({ cls: "cad-bar-col" });
-      const bar = col.createDiv({ cls: "cad-bar" });
+      const col = chart.createDiv({ cls: "bob-bar-col" });
+      const bar = col.createDiv({ cls: "bob-bar" });
       bar.style.height = `${Number(entry.value) / max * 100}%`;
       const ratio = Number(entry.value) / max;
       bar.dataset.band = Number(entry.value) === 0 ? "empty" : ratio < 0.34 ? "low" : ratio < 0.67 ? "mid" : "high";
       bar.title = `${entry.group.label} \u2014 ${fmtValue(entry.value, metric === "sum" || metric === "avg" ? "currency" : "number")}${entry.meta ? ` \xB7 ${entry.meta}` : ""}`;
-      col.createDiv({ cls: "cad-bar-label", text: entry.group.label });
-      col.createDiv({ cls: "cad-bar-value", text: String(entry.value) });
+      col.createDiv({ cls: "bob-bar-label", text: entry.group.label });
+      col.createDiv({ cls: "bob-bar-value", text: String(entry.value) });
       if (entry.items.length && entry.items[0]?.file) {
         col.addEventListener("click", () => {
           const first = entry.items[0];
@@ -33452,13 +33452,13 @@ ${snippet}` : "- No markdown content");
     });
   }
   _dashboardStats(root, stats) {
-    const grid = root.createDiv({ cls: "cad-stat-grid" });
+    const grid = root.createDiv({ cls: "bob-stat-grid" });
     stats.forEach((item) => {
-      const card = grid.createDiv({ cls: "cad-stat-card" });
+      const card = grid.createDiv({ cls: "bob-stat-card" });
       if (item.accent) card.dataset.accent = item.accent;
-      card.createDiv({ cls: "cad-stat-label", text: item.label });
-      card.createDiv({ cls: "cad-stat-value", text: String(item.value) });
-      if (item.sub) card.createDiv({ cls: "cad-stat-sub", text: item.sub });
+      card.createDiv({ cls: "bob-stat-label", text: item.label });
+      card.createDiv({ cls: "bob-stat-value", text: String(item.value) });
+      if (item.sub) card.createDiv({ cls: "bob-stat-sub", text: item.sub });
       if (item.mode) {
         card.style.cursor = "pointer";
         card.addEventListener("click", () => this.setMode(item.mode));
@@ -33466,64 +33466,64 @@ ${snippet}` : "- No markdown content");
     });
   }
   _renderWidgetCatalog(root) {
-    const section = root.createDiv({ cls: "cad-widget-catalog" });
-    section.createDiv({ cls: "cad-section-label-lg", text: "Widget catalog" });
+    const section = root.createDiv({ cls: "bob-widget-catalog" });
+    section.createDiv({ cls: "bob-section-label-lg", text: "Widget catalog" });
     section.createEl("p", {
       cls: "setting-item-description",
       text: "This catalog shows the dashboard widget shapes that can be expressed in workspace.json today, plus the gaps we still want to close."
     });
-    const grid = section.createDiv({ cls: "cad-widget-catalog-grid" });
+    const grid = section.createDiv({ cls: "bob-widget-catalog-grid" });
     DASHBOARD_WIDGET_CATALOG.forEach((entry) => {
-      const card = grid.createDiv({ cls: `cad-widget-catalog-card cad-widget-catalog-${entry.status}` });
-      const head = card.createDiv({ cls: "cad-widget-catalog-head" });
-      head.createDiv({ cls: "cad-widget-catalog-title", text: entry.label });
-      head.createSpan({ cls: "cad-widget-catalog-badge", text: entry.status });
-      card.createDiv({ cls: "cad-widget-catalog-id", text: entry.id });
-      card.createDiv({ cls: "cad-widget-catalog-desc", text: entry.description });
-      const chips = card.createDiv({ cls: "cad-widget-catalog-chips" });
-      entry.config.forEach((key) => chips.createSpan({ cls: "cad-widget-catalog-chip", text: key }));
+      const card = grid.createDiv({ cls: `bob-widget-catalog-card bob-widget-catalog-${entry.status}` });
+      const head = card.createDiv({ cls: "bob-widget-catalog-head" });
+      head.createDiv({ cls: "bob-widget-catalog-title", text: entry.label });
+      head.createSpan({ cls: "bob-widget-catalog-badge", text: entry.status });
+      card.createDiv({ cls: "bob-widget-catalog-id", text: entry.id });
+      card.createDiv({ cls: "bob-widget-catalog-desc", text: entry.description });
+      const chips = card.createDiv({ cls: "bob-widget-catalog-chips" });
+      entry.config.forEach((key) => chips.createSpan({ cls: "bob-widget-catalog-chip", text: key }));
       if (entry.examples?.length) {
-        const ex = card.createDiv({ cls: "cad-widget-catalog-examples" });
-        ex.createSpan({ cls: "cad-widget-catalog-examples-label", text: "Examples" });
-        ex.createSpan({ cls: "cad-widget-catalog-examples-value", text: entry.examples.join(" \xB7 ") });
+        const ex = card.createDiv({ cls: "bob-widget-catalog-examples" });
+        ex.createSpan({ cls: "bob-widget-catalog-examples-label", text: "Examples" });
+        ex.createSpan({ cls: "bob-widget-catalog-examples-value", text: entry.examples.join(" \xB7 ") });
       }
     });
-    const gap = section.createDiv({ cls: "cad-widget-gap" });
-    gap.createDiv({ cls: "cad-widget-gap-title", text: "Configuration gap snapshot" });
+    const gap = section.createDiv({ cls: "bob-widget-gap" });
+    gap.createDiv({ cls: "bob-widget-gap-title", text: "Configuration gap snapshot" });
     gap.createDiv({
       cls: "setting-item-description",
       text: "Metric stats, list, bar chart, card lists, merged sources, kanban, Base links, Base previews, markdown, actions and selectors are already config-driven. The remaining work is mostly about richer report composition, stronger Base integration, and any remaining runtime-snapshot-backed sections."
     });
   }
   _renderDashboardInventory(root) {
-    const section = root.createDiv({ cls: "cad-dashboard-inventory" });
-    section.createDiv({ cls: "cad-section-label-lg", text: "Built-in dashboard inventory" });
+    const section = root.createDiv({ cls: "bob-dashboard-inventory" });
+    section.createDiv({ cls: "bob-section-label-lg", text: "Built-in dashboard inventory" });
     section.createEl("p", {
       cls: "setting-item-description",
       text: "Use this inventory to compare the shipped dashboards against the widget catalog and see where we still rely on runtime-snapshot-backed sections."
     });
-    const grid = section.createDiv({ cls: "cad-dashboard-inventory-grid" });
+    const grid = section.createDiv({ cls: "bob-dashboard-inventory-grid" });
     Object.entries(BUILTIN_DASHBOARD_DEFAULTS).forEach(([id, config]) => {
       const summary = summarizeDashboardBlueprint(id, config);
-      const card = grid.createDiv({ cls: "cad-dashboard-inventory-card" });
-      const head = card.createDiv({ cls: "cad-dashboard-inventory-head" });
-      head.createDiv({ cls: "cad-dashboard-inventory-title", text: summary.title });
-      head.createSpan({ cls: "cad-dashboard-inventory-id", text: id });
-      const meta = card.createDiv({ cls: "cad-dashboard-inventory-meta" });
+      const card = grid.createDiv({ cls: "bob-dashboard-inventory-card" });
+      const head = card.createDiv({ cls: "bob-dashboard-inventory-head" });
+      head.createDiv({ cls: "bob-dashboard-inventory-title", text: summary.title });
+      head.createSpan({ cls: "bob-dashboard-inventory-id", text: id });
+      const meta = card.createDiv({ cls: "bob-dashboard-inventory-meta" });
       meta.createSpan({ text: `kind: ${summary.kind}` });
       meta.createSpan({ text: `${summary.statsCount} stats` });
       meta.createSpan({ text: `${summary.cardCount} cards` });
       if (summary.contextFilter) meta.createSpan({ text: `context: ${summary.contextFilter}` });
       if (summary.legend) meta.createSpan({ text: `legend: ${summary.legend}` });
-      const kindRow = card.createDiv({ cls: "cad-dashboard-inventory-row" });
-      kindRow.createSpan({ cls: "cad-dashboard-inventory-label", text: "Widgets" });
+      const kindRow = card.createDiv({ cls: "bob-dashboard-inventory-row" });
+      kindRow.createSpan({ cls: "bob-dashboard-inventory-label", text: "Widgets" });
       (summary.widgetKinds.length ? summary.widgetKinds : ["none"]).forEach((kind) => {
-        kindRow.createSpan({ cls: "cad-dashboard-inventory-chip", text: kind });
+        kindRow.createSpan({ cls: "bob-dashboard-inventory-chip", text: kind });
       });
-      const sourceRow = card.createDiv({ cls: "cad-dashboard-inventory-row" });
-      sourceRow.createSpan({ cls: "cad-dashboard-inventory-label", text: "Sources" });
+      const sourceRow = card.createDiv({ cls: "bob-dashboard-inventory-row" });
+      sourceRow.createSpan({ cls: "bob-dashboard-inventory-label", text: "Sources" });
       (summary.sourceKinds.length ? summary.sourceKinds : ["n/a"]).forEach((kind) => {
-        sourceRow.createSpan({ cls: "cad-dashboard-inventory-chip", text: kind });
+        sourceRow.createSpan({ cls: "bob-dashboard-inventory-chip", text: kind });
       });
     });
   }
@@ -33557,9 +33557,9 @@ ${snippet}` : "- No markdown content");
     });
   }
   _renderFinanceStatementLegend(root) {
-    const card = root.createDiv({ cls: "cad-dash-card cad-finance-legend" });
-    card.createDiv({ cls: "cad-dash-card-head" }).createDiv({ cls: "cad-dash-card-title", text: "FINANCIAL STATEMENT LEGEND" });
-    const body = card.createDiv({ cls: "cad-dash-card-body cad-finance-legend-grid" });
+    const card = root.createDiv({ cls: "bob-dash-card bob-finance-legend" });
+    card.createDiv({ cls: "bob-dash-card-head" }).createDiv({ cls: "bob-dash-card-title", text: "FINANCIAL STATEMENT LEGEND" });
+    const body = card.createDiv({ cls: "bob-dash-card-body bob-finance-legend-grid" });
     [
       ["SOFP", "Statement of Financial Position", "Balance sheet: assets, liabilities and equity at a date."],
       ["SOPL", "Statement of Profit or Loss", "Income statement / P&L for the period."],
@@ -33567,19 +33567,19 @@ ${snippet}` : "- No markdown content");
       ["SOCF", "Statement of Cash Flows", "Operating, investing and financing cash movements."],
       ["SOCE", "Statement of Changes in Equity", "Opening equity, profit/loss, contributions, distributions and closing equity."]
     ].forEach(([code, title, desc]) => {
-      const item = body.createDiv({ cls: "cad-finance-legend-item" });
-      item.createDiv({ cls: "cad-finance-legend-code", text: code });
-      const text = item.createDiv({ cls: "cad-finance-legend-text" });
-      text.createDiv({ cls: "cad-finance-legend-title", text: title });
-      text.createDiv({ cls: "cad-finance-legend-desc", text: desc });
+      const item = body.createDiv({ cls: "bob-finance-legend-item" });
+      item.createDiv({ cls: "bob-finance-legend-code", text: code });
+      const text = item.createDiv({ cls: "bob-finance-legend-text" });
+      text.createDiv({ cls: "bob-finance-legend-title", text: title });
+      text.createDiv({ cls: "bob-finance-legend-desc", text: desc });
     });
   }
   async renderExport(root) {
     this._renderPageHeader(root, "Export", "Export your data to an Excel workbook");
     const section = (parent, title, desc) => {
-      const s = parent.createDiv({ cls: "cad-data-section" });
-      s.createDiv({ cls: "cad-data-section-title", text: title });
-      if (desc) s.createDiv({ cls: "cad-data-section-desc", text: desc });
+      const s = parent.createDiv({ cls: "bob-data-section" });
+      s.createDiv({ cls: "bob-data-section-title", text: title });
+      if (desc) s.createDiv({ cls: "bob-data-section-desc", text: desc });
       return s;
     };
     const exportGroups = workbookExportGroups();
@@ -33590,9 +33590,9 @@ ${snippet}` : "- No markdown content");
     );
     const checked = new Set(exportGroups.map((g) => g.id));
     if (exportGroups.length) {
-      const groupsWrap = exportSec.createDiv({ cls: "cad-data-group-list" });
+      const groupsWrap = exportSec.createDiv({ cls: "bob-data-group-list" });
       exportGroups.forEach((g) => {
-        const lbl = groupsWrap.createEl("label", { cls: "cad-data-group-item" });
+        const lbl = groupsWrap.createEl("label", { cls: "bob-data-group-item" });
         const cb = lbl.createEl("input", { type: "checkbox" });
         cb.checked = true;
         cb.addEventListener("change", () => {
@@ -33600,41 +33600,41 @@ ${snippet}` : "- No markdown content");
           else checked.delete(g.id);
         });
         lbl.createSpan({ text: g.label });
-        lbl.createSpan({ cls: "cad-data-group-count", text: `${g.entityKeys.length} types` });
+        lbl.createSpan({ cls: "bob-data-group-count", text: `${g.entityKeys.length} types` });
       });
     }
-    const destDesc = exportSec.createDiv({ cls: "cad-data-section-desc" });
+    const destDesc = exportSec.createDiv({ cls: "bob-data-section-desc" });
     destDesc.setText("Output folder: ");
     destDesc.createEl("strong", { text: workbookExportFolder(this.plugin.settings) });
-    const exportRow = exportSec.createDiv({ cls: "cad-data-action-row" });
-    const exportBtnRow = exportRow.createDiv({ cls: "cad-data-btn-row" });
-    const exportBtn = exportBtnRow.createEl("button", { cls: "cad-btn", text: "Export workbook" });
-    const exportStatus = exportRow.createDiv({ cls: "cad-data-status" });
+    const exportRow = exportSec.createDiv({ cls: "bob-data-action-row" });
+    const exportBtnRow = exportRow.createDiv({ cls: "bob-data-btn-row" });
+    const exportBtn = exportBtnRow.createEl("button", { cls: "bob-btn", text: "Export workbook" });
+    const exportStatus = exportRow.createDiv({ cls: "bob-data-status" });
     exportBtn.addEventListener("click", async () => {
       const keys = exportGroups.length ? selectedWorkbookEntityKeys([...checked]) : [...workspaceConfiguredEntityKeys(WORKSPACE_CONFIG)];
       if (!keys.length) {
-        exportStatus.className = "cad-data-status cad-data-status-error";
+        exportStatus.className = "bob-data-status bob-data-status-error";
         exportStatus.setText("Nothing to export.");
         return;
       }
       exportBtn.disabled = true;
       exportBtn.setText("Exporting\u2026");
-      exportStatus.className = "cad-data-status";
+      exportStatus.className = "bob-data-status";
       exportStatus.setText("");
       try {
         const suffix = exportGroups.length && checked.size < exportGroups.length ? "selected" : "";
         const path = await exportEntitiesXLSX(this.app, keys, suffix, this.plugin.settings);
-        exportStatus.className = "cad-data-status cad-data-status-ok";
+        exportStatus.className = "bob-data-status bob-data-status-ok";
         exportStatus.setText("Saved to ");
         exportStatus.createEl("strong", { text: path });
         exportStatus.createSpan({ text: " \u2014 " });
-        const openLink = exportStatus.createEl("a", { cls: "cad-data-open-link", text: "Open file", href: "#" });
+        const openLink = exportStatus.createEl("a", { cls: "bob-data-open-link", text: "Open file", href: "#" });
         openLink.addEventListener("click", (evt) => {
           evt.preventDefault();
           this.app.openWithDefaultApp(path);
         });
       } catch (e) {
-        exportStatus.className = "cad-data-status cad-data-status-error";
+        exportStatus.className = "bob-data-status bob-data-status-error";
         exportStatus.setText(`Export failed \u2014 ${e.message}`);
       } finally {
         exportBtn.disabled = false;
@@ -33646,22 +33646,22 @@ ${snippet}` : "- No markdown content");
       "Export import template",
       "Download a pre-filled template file to use as a starting point for importing a specific entity type."
     );
-    const tmplRow = tmplSec.createDiv({ cls: "cad-data-btn-row" });
-    const tmplSelect = tmplRow.createEl("select", { cls: "cad-de-select" });
+    const tmplRow = tmplSec.createDiv({ cls: "bob-data-btn-row" });
+    const tmplSelect = tmplRow.createEl("select", { cls: "bob-de-select" });
     workspaceConfiguredEntityEntries(WORKSPACE_CONFIG).forEach(([key, def]) => tmplSelect.createEl("option", { value: key, text: def.plural || def.label || key }));
-    const tmplCsvBtn = tmplRow.createEl("button", { cls: "cad-btn", text: "CSV template" });
-    const tmplXlsxBtn = tmplRow.createEl("button", { cls: "cad-btn", text: "XLSX template" });
+    const tmplCsvBtn = tmplRow.createEl("button", { cls: "bob-btn", text: "CSV template" });
+    const tmplXlsxBtn = tmplRow.createEl("button", { cls: "bob-btn", text: "XLSX template" });
     tmplCsvBtn.addEventListener("click", async () => {
-      const modal = new CadenceImportModal(this.app, { entityKey: tmplSelect.value });
+      const modal = new BobImportModal(this.app, { entityKey: tmplSelect.value });
       await modal._exportTemplateCSV();
     });
     tmplXlsxBtn.addEventListener("click", async () => {
-      const modal = new CadenceImportModal(this.app, { entityKey: tmplSelect.value });
+      const modal = new BobImportModal(this.app, { entityKey: tmplSelect.value });
       await modal._exportTemplateXLSX();
     });
   }
   renderImport(root) {
-    new CadenceImportModal(this.app, {}).open();
+    new BobImportModal(this.app, {}).open();
   }
   // Reusable, toggleable colored help panel. `key` persists open/closed state
   // for this session; `build` populates the panel body (headings, paragraphs,
@@ -33669,17 +33669,17 @@ ${snippet}` : "- No markdown content");
   _helpPanel(parent, key, title, build) {
     if (!this._openHelpPanels) this._openHelpPanels = /* @__PURE__ */ new Set();
     const open = this._openHelpPanels.has(key);
-    const block = parent.createDiv({ cls: "cad-help-block" });
-    const toggle = block.createEl("button", { cls: "cad-help-toggle" + (open ? " is-open" : ""), attr: { type: "button" } });
-    const icon = toggle.createSpan({ cls: "cad-help-toggle-icon" });
+    const block = parent.createDiv({ cls: "bob-help-block" });
+    const toggle = block.createEl("button", { cls: "bob-help-toggle" + (open ? " is-open" : ""), attr: { type: "button" } });
+    const icon = toggle.createSpan({ cls: "bob-help-toggle-icon" });
     try {
       obsidian17.setIcon(icon, "help-circle");
     } catch (_) {
       icon.setText("?");
     }
-    toggle.createSpan({ cls: "cad-help-toggle-label", text: title });
-    const chevron = toggle.createSpan({ cls: "cad-help-toggle-chevron", text: open ? "\u25BE" : "\u25B8" });
-    const panel = block.createDiv({ cls: "cad-help-panel" });
+    toggle.createSpan({ cls: "bob-help-toggle-label", text: title });
+    const chevron = toggle.createSpan({ cls: "bob-help-toggle-chevron", text: open ? "\u25BE" : "\u25B8" });
+    const panel = block.createDiv({ cls: "bob-help-panel" });
     if (!open) panel.style.display = "none";
     build(panel);
     toggle.addEventListener("click", () => {
@@ -33701,14 +33701,14 @@ ${snippet}` : "- No markdown content");
   }
   // Small helper: render a heading + paragraph/list items into a help panel body.
   _helpBlock(body, heading, lines) {
-    body.createDiv({ cls: "cad-help-heading", text: heading });
+    body.createDiv({ cls: "bob-help-heading", text: heading });
     lines.forEach((line) => {
-      const row = body.createDiv({ cls: "cad-help-line" });
+      const row = body.createDiv({ cls: "bob-help-line" });
       if (Array.isArray(line)) {
-        row.createSpan({ cls: "cad-help-term", text: line[0] });
-        row.createSpan({ cls: "cad-help-desc", text: line[1] });
+        row.createSpan({ cls: "bob-help-term", text: line[0] });
+        row.createSpan({ cls: "bob-help-desc", text: line[1] });
       } else {
-        row.createSpan({ cls: "cad-help-desc", text: line });
+        row.createSpan({ cls: "bob-help-desc", text: line });
       }
     });
   }
@@ -33724,18 +33724,18 @@ ${snippet}` : "- No markdown content");
     const workspaceDashIds = Object.keys(WORKSPACE_CONFIG.dashboards || {});
     const customOnlyIds = workspaceDashIds.filter((id) => !builtinIds.includes(id) && !builtinPlannerIds.includes(id));
     const allIds = [...builtinIds, ...builtinPlannerIds, ...customOnlyIds];
-    const toolbar = root.createDiv({ cls: "cad-de-toolbar" });
-    toolbar.createDiv({ cls: "cad-de-toolbar-label", text: "Dashboard" });
-    const sel = toolbar.createEl("select", { cls: "cad-de-select" });
+    const toolbar = root.createDiv({ cls: "bob-de-toolbar" });
+    toolbar.createDiv({ cls: "bob-de-toolbar-label", text: "Dashboard" });
+    const sel = toolbar.createEl("select", { cls: "bob-de-select" });
     allIds.forEach((id) => {
       const opt = sel.createEl("option", { text: id, value: id });
       if (id === (this._dashEditorSurfaceId || builtinIds[0])) opt.selected = true;
     });
-    const newSurfaceWrap = toolbar.createDiv({ cls: "cad-de-toolbar-new-surface" });
-    const newSurfaceInput = newSurfaceWrap.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm", placeholder: "New route id" });
-    const newSurfaceKind = newSurfaceWrap.createEl("select", { cls: "cad-de-select" });
+    const newSurfaceWrap = toolbar.createDiv({ cls: "bob-de-toolbar-new-surface" });
+    const newSurfaceInput = newSurfaceWrap.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm", placeholder: "New route id" });
+    const newSurfaceKind = newSurfaceWrap.createEl("select", { cls: "bob-de-select" });
     ["dashboard", "report", "planner"].forEach((kind) => newSurfaceKind.createEl("option", { value: kind, text: kind }));
-    const addSurfaceBtn = newSurfaceWrap.createEl("button", { cls: "cad-btn", text: "+ Add surface" });
+    const addSurfaceBtn = newSurfaceWrap.createEl("button", { cls: "bob-btn", text: "+ Add surface" });
     addSurfaceBtn.addEventListener("click", async () => {
       const id = String(newSurfaceInput.value || "").trim();
       if (!id) {
@@ -33769,13 +33769,13 @@ ${snippet}` : "- No markdown content");
         new obsidian17.Notice(`Create failed: ${e.message}`);
       }
     });
-    const modeToggle = toolbar.createDiv({ cls: "cad-de-mode-toggle" });
+    const modeToggle = toolbar.createDiv({ cls: "bob-de-mode-toggle" });
     if (!this._dashEditorMode) this._dashEditorMode = "visual";
-    const visualBtn = modeToggle.createEl("button", { cls: `cad-de-mode-btn${this._dashEditorMode === "visual" ? " active" : ""}`, text: "Visual" });
-    const jsonBtn = modeToggle.createEl("button", { cls: `cad-de-mode-btn${this._dashEditorMode === "json" ? " active" : ""}`, text: "JSON" });
-    const split = root.createDiv({ cls: "cad-de-split" });
-    const editorPane = split.createDiv({ cls: "cad-de-editor-pane" });
-    const previewPane = split.createDiv({ cls: "cad-de-preview-pane" });
+    const visualBtn = modeToggle.createEl("button", { cls: `bob-de-mode-btn${this._dashEditorMode === "visual" ? " active" : ""}`, text: "Visual" });
+    const jsonBtn = modeToggle.createEl("button", { cls: `bob-de-mode-btn${this._dashEditorMode === "json" ? " active" : ""}`, text: "JSON" });
+    const split = root.createDiv({ cls: "bob-de-split" });
+    const editorPane = split.createDiv({ cls: "bob-de-editor-pane" });
+    const previewPane = split.createDiv({ cls: "bob-de-preview-pane" });
     const getConfig = (id) => {
       const plannerConfig = (WORKSPACE_CONFIG.planner || {})[id];
       if (plannerConfig) return normalizeDashboardConfigShape(JSON.parse(JSON.stringify(plannerConfig)));
@@ -33812,14 +33812,14 @@ ${snippet}` : "- No markdown content");
       const editable = isEditable(id);
       const config = this._dashEditorDraft;
       editorPane.createDiv({
-        cls: `cad-de-badge ${editable ? "cad-de-badge-custom" : "cad-de-badge-builtin"}`,
+        cls: `bob-de-badge ${editable ? "bob-de-badge-custom" : "bob-de-badge-builtin"}`,
         text: editable ? "Custom override" : "Built-in (read-only)"
       });
       const reRender = () => {
         renderEditorPane(id);
         triggerPreview(id);
       };
-      const validationStatus = editorPane.createDiv({ cls: "cad-de-validation-status" });
+      const validationStatus = editorPane.createDiv({ cls: "bob-de-validation-status" });
       let validationTimer = null;
       const setValidationStatus = (message, ok) => {
         validationStatus.setText(message);
@@ -33848,7 +33848,7 @@ ${snippet}` : "- No markdown content");
           triggerPreview(id);
         });
       } else {
-        const ta = editorPane.createEl("textarea", { cls: "cad-de-textarea" });
+        const ta = editorPane.createEl("textarea", { cls: "bob-de-textarea" });
         ta.value = JSON.stringify(config, null, 2);
         ta.readOnly = !editable;
         ta.spellcheck = false;
@@ -33867,9 +33867,9 @@ ${snippet}` : "- No markdown content");
           });
         }
       }
-      const actions = editorPane.createDiv({ cls: "cad-de-actions" });
+      const actions = editorPane.createDiv({ cls: "bob-de-actions" });
       if (!editable) {
-        const customizeBtn = actions.createEl("button", { cls: "cad-btn primary", text: "Customize" });
+        const customizeBtn = actions.createEl("button", { cls: "bob-btn primary", text: "Customize" });
         customizeBtn.addEventListener("click", () => {
           const targetStore = id.startsWith("planner.") ? "planner" : "dashboards";
           if (!WORKSPACE_CONFIG[targetStore]) WORKSPACE_CONFIG[targetStore] = {};
@@ -33879,7 +33879,7 @@ ${snippet}` : "- No markdown content");
           renderPreview(id);
         });
       } else {
-        const saveBtn = actions.createEl("button", { cls: "cad-btn primary", text: "Save" });
+        const saveBtn = actions.createEl("button", { cls: "bob-btn primary", text: "Save" });
         saveBtn.addEventListener("click", async () => {
           try {
             if (!validateDraft()) return;
@@ -33894,7 +33894,7 @@ ${snippet}` : "- No markdown content");
           }
         });
         if (BUILTIN_DASHBOARD_DEFAULTS[id] || id.startsWith("planner.")) {
-          const resetBtn = actions.createEl("button", { cls: "cad-btn cad-btn-danger", text: "Reset to built-in" });
+          const resetBtn = actions.createEl("button", { cls: "bob-btn bob-btn-danger", text: "Reset to built-in" });
           resetBtn.addEventListener("click", async () => {
             const stores = id.startsWith("planner.") ? ["planner", "dashboards"] : ["dashboards"];
             stores.forEach((targetStore) => {
@@ -33954,23 +33954,23 @@ ${snippet}` : "- No markdown content");
       }
       return String(source).trim();
     };
-    const metaSection = pane.createDiv({ cls: "cad-de-section" });
-    metaSection.createDiv({ cls: "cad-de-section-label", text: "Header" });
-    const titleInput = metaSection.createEl("input", { type: "text", cls: "cad-de-field", value: config.title || "", placeholder: "Title" });
+    const metaSection = pane.createDiv({ cls: "bob-de-section" });
+    metaSection.createDiv({ cls: "bob-de-section-label", text: "Header" });
+    const titleInput = metaSection.createEl("input", { type: "text", cls: "bob-de-field", value: config.title || "", placeholder: "Title" });
     titleInput.disabled = !editable;
     titleInput.addEventListener("input", () => {
       config.title = titleInput.value;
       triggerPreview();
     });
-    const subInput = metaSection.createEl("input", { type: "text", cls: "cad-de-field", value: config.subtitle || "", placeholder: "Subtitle" });
+    const subInput = metaSection.createEl("input", { type: "text", cls: "bob-de-field", value: config.subtitle || "", placeholder: "Subtitle" });
     subInput.disabled = !editable;
     subInput.addEventListener("input", () => {
       config.subtitle = subInput.value;
       triggerPreview();
     });
-    const kindRow = metaSection.createDiv({ cls: "cad-de-form-row" });
-    kindRow.createDiv({ cls: "cad-de-form-label", text: "Kind" });
-    const kindSelect = kindRow.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
+    const kindRow = metaSection.createDiv({ cls: "bob-de-form-row" });
+    kindRow.createDiv({ cls: "bob-de-form-label", text: "Kind" });
+    const kindSelect = kindRow.createEl("select", { cls: "bob-de-field bob-de-field-sm" });
     const defaultKind = String(config.kind || (String(this._dashEditorSurfaceId || "").startsWith("planner.") ? "planner" : "dashboard")).trim().toLowerCase() || "dashboard";
     ["dashboard", "report", "planner"].forEach((kind) => {
       const opt = kindSelect.createEl("option", { value: kind, text: kind });
@@ -33981,9 +33981,9 @@ ${snippet}` : "- No markdown content");
       config.kind = kindSelect.value;
       triggerPreview();
     });
-    const contextRow = metaSection.createDiv({ cls: "cad-de-form-row" });
-    contextRow.createDiv({ cls: "cad-de-form-label", text: "Context" });
-    const contextSelect = contextRow.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
+    const contextRow = metaSection.createDiv({ cls: "bob-de-form-row" });
+    contextRow.createDiv({ cls: "bob-de-form-label", text: "Context" });
+    const contextSelect = contextRow.createEl("select", { cls: "bob-de-field bob-de-field-sm" });
     [
       { value: "", label: "none" },
       { value: "client-work", label: "selected client/project" }
@@ -33997,19 +33997,19 @@ ${snippet}` : "- No markdown content");
       else delete config.contextFilter;
       triggerPreview();
     });
-    const statsSection = pane.createDiv({ cls: "cad-de-section" });
-    const statsHead = statsSection.createDiv({ cls: "cad-de-section-head" });
-    statsHead.createDiv({ cls: "cad-de-section-label", text: `Stats (${(config.stats || []).length})` });
+    const statsSection = pane.createDiv({ cls: "bob-de-section" });
+    const statsHead = statsSection.createDiv({ cls: "bob-de-section-head" });
+    statsHead.createDiv({ cls: "bob-de-section-label", text: `Stats (${(config.stats || []).length})` });
     if (editable) {
-      const addBtn = statsHead.createEl("button", { cls: "cad-btn cad-btn-sm", text: "+ Add stat" });
+      const addBtn = statsHead.createEl("button", { cls: "bob-btn bob-btn-sm", text: "+ Add stat" });
       addBtn.addEventListener("click", () => {
         (config.stats || (config.stats = [])).push({ label: "NEW STAT", entity: defaultEntityKey, count: "all" });
         reRender();
       });
     }
     (config.stats || []).forEach((stat, idx) => {
-      const chip = statsSection.createDiv({ cls: "cad-de-stat-chip" });
-      const lbl = chip.createEl("input", { type: "text", cls: "cad-de-stat-label" });
+      const chip = statsSection.createDiv({ cls: "bob-de-stat-chip" });
+      const lbl = chip.createEl("input", { type: "text", cls: "bob-de-stat-label" });
       lbl.value = stat.label || "";
       lbl.placeholder = "LABEL";
       lbl.disabled = !editable;
@@ -34017,7 +34017,7 @@ ${snippet}` : "- No markdown content");
         stat.label = lbl.value;
         triggerPreview();
       });
-      const ent = chip.createEl("select", { cls: "cad-de-stat-select" });
+      const ent = chip.createEl("select", { cls: "bob-de-stat-select" });
       ent.disabled = !editable;
       if (stat.entity && !entityKeys.includes(stat.entity) && ENTITIES[stat.entity]) {
         const o = ent.createEl("option", { value: stat.entity, text: stat.entity });
@@ -34031,7 +34031,7 @@ ${snippet}` : "- No markdown content");
         stat.entity = ent.value;
         triggerPreview();
       });
-      const cnt = chip.createEl("select", { cls: "cad-de-stat-select" });
+      const cnt = chip.createEl("select", { cls: "bob-de-stat-select" });
       cnt.disabled = !editable;
       ["all", "open"].forEach((v) => {
         const o = cnt.createEl("option", { value: v, text: v });
@@ -34042,26 +34042,26 @@ ${snippet}` : "- No markdown content");
         triggerPreview();
       });
       if (editable) {
-        const del = chip.createEl("button", { cls: "cad-btn cad-btn-sm cad-btn-danger", text: "\xD7" });
+        const del = chip.createEl("button", { cls: "bob-btn bob-btn-sm bob-btn-danger", text: "\xD7" });
         del.addEventListener("click", () => {
           config.stats.splice(idx, 1);
           reRender();
         });
       }
     });
-    const controlsSection = pane.createDiv({ cls: "cad-de-section" });
-    const controlsHead = controlsSection.createDiv({ cls: "cad-de-section-head" });
-    controlsHead.createDiv({ cls: "cad-de-section-label", text: `Controls (${(config.controls || []).length})` });
+    const controlsSection = pane.createDiv({ cls: "bob-de-section" });
+    const controlsHead = controlsSection.createDiv({ cls: "bob-de-section-head" });
+    controlsHead.createDiv({ cls: "bob-de-section-label", text: `Controls (${(config.controls || []).length})` });
     if (editable) {
-      const addBtn = controlsHead.createEl("button", { cls: "cad-btn cad-btn-sm", text: "+ Add control" });
+      const addBtn = controlsHead.createEl("button", { cls: "bob-btn bob-btn-sm", text: "+ Add control" });
       addBtn.addEventListener("click", () => {
         (config.controls || (config.controls = [])).push({ kind: "selector", key: "filter", label: "New control", allLabel: "All" });
         reRender();
       });
     }
     (config.controls || []).forEach((control, idx) => {
-      const chip = controlsSection.createDiv({ cls: "cad-de-stat-chip cad-de-control-chip" });
-      const lbl = chip.createEl("input", { type: "text", cls: "cad-de-stat-label" });
+      const chip = controlsSection.createDiv({ cls: "bob-de-stat-chip bob-de-control-chip" });
+      const lbl = chip.createEl("input", { type: "text", cls: "bob-de-stat-label" });
       lbl.value = control.title || control.label || "";
       lbl.placeholder = "LABEL";
       lbl.disabled = !editable;
@@ -34069,7 +34069,7 @@ ${snippet}` : "- No markdown content");
         control.label = lbl.value;
         triggerPreview();
       });
-      const typ = chip.createEl("select", { cls: "cad-de-stat-select" });
+      const typ = chip.createEl("select", { cls: "bob-de-stat-select" });
       typ.disabled = !editable;
       ["selector", "date-range", "markdown", "actions", "base-link", "base-embed", "base-view"].forEach((type) => {
         const o = typ.createEl("option", { value: type, text: type });
@@ -34080,7 +34080,7 @@ ${snippet}` : "- No markdown content");
         triggerPreview();
       });
       if (editable) {
-        const del = chip.createEl("button", { cls: "cad-btn cad-btn-sm cad-btn-danger", text: "\xD7" });
+        const del = chip.createEl("button", { cls: "bob-btn bob-btn-sm bob-btn-danger", text: "\xD7" });
         del.addEventListener("click", () => {
           config.controls.splice(idx, 1);
           reRender();
@@ -34089,48 +34089,48 @@ ${snippet}` : "- No markdown content");
     });
     if (!config.layout) config.layout = [];
     config.layout = config.layout.map((row) => row.map((col) => Array.isArray(col) ? col : [col]));
-    const layoutSection = pane.createDiv({ cls: "cad-de-section" });
-    layoutSection.createDiv({ cls: "cad-de-section-label", text: "Layout" });
+    const layoutSection = pane.createDiv({ cls: "bob-de-section" });
+    layoutSection.createDiv({ cls: "bob-de-section-label", text: "Layout" });
     let activeDrag = null;
     config.layout.forEach((row, rowIdx) => {
-      const rowEl = layoutSection.createDiv({ cls: "cad-de-layout-row" });
-      const rowHead = rowEl.createDiv({ cls: "cad-de-row-head" });
-      rowHead.createDiv({ cls: "cad-de-row-label", text: `Row ${rowIdx + 1}` });
+      const rowEl = layoutSection.createDiv({ cls: "bob-de-layout-row" });
+      const rowHead = rowEl.createDiv({ cls: "bob-de-row-head" });
+      rowHead.createDiv({ cls: "bob-de-row-label", text: `Row ${rowIdx + 1}` });
       if (editable) {
-        const addCol = rowHead.createEl("button", { cls: "cad-btn cad-btn-sm", text: "+ Col" });
+        const addCol = rowHead.createEl("button", { cls: "bob-btn bob-btn-sm", text: "+ Col" });
         addCol.addEventListener("click", () => {
           row.push([{ kind: "list", title: "New Card", entity: defaultEntityKey, source: "recent", titleFields: ["title", "name"], metaFields: ["status"], empty: "No items." }]);
           reRender();
         });
-        const delRow = rowHead.createEl("button", { cls: "cad-btn cad-btn-sm cad-btn-danger", text: "\xD7 Row" });
+        const delRow = rowHead.createEl("button", { cls: "bob-btn bob-btn-sm bob-btn-danger", text: "\xD7 Row" });
         delRow.addEventListener("click", () => {
           config.layout.splice(rowIdx, 1);
           reRender();
         });
       }
-      const cols = rowEl.createDiv({ cls: "cad-de-row-cols" });
+      const cols = rowEl.createDiv({ cls: "bob-de-row-cols" });
       row.forEach((col, colIdx) => {
-        const colEl = cols.createDiv({ cls: "cad-de-layout-col" });
+        const colEl = cols.createDiv({ cls: "bob-de-layout-col" });
         if (editable && row.length > 1) {
-          const delCol = colEl.createEl("button", { cls: "cad-btn cad-btn-sm cad-btn-danger cad-de-del-col", text: "\xD7 Col" });
+          const delCol = colEl.createEl("button", { cls: "bob-btn bob-btn-sm bob-btn-danger bob-de-del-col", text: "\xD7 Col" });
           delCol.addEventListener("click", () => {
             row.splice(colIdx, 1);
             reRender();
           });
         }
         col.forEach((card, cardIdx) => {
-          const cardEl = colEl.createDiv({ cls: "cad-de-card" });
+          const cardEl = colEl.createDiv({ cls: "bob-de-card" });
           cardEl.draggable = editable;
           if (editable) {
             cardEl.addEventListener("dragstart", (ev) => {
               activeDrag = { rowIdx, colIdx, cardIdx };
               ev.dataTransfer.effectAllowed = "move";
-              ev.dataTransfer.setData("text/cad-dash", JSON.stringify(activeDrag));
-              setTimeout(() => cardEl.addClass("cad-de-dragging"), 0);
+              ev.dataTransfer.setData("text/bob-dash", JSON.stringify(activeDrag));
+              setTimeout(() => cardEl.addClass("bob-de-dragging"), 0);
             });
             cardEl.addEventListener("dragend", () => {
               activeDrag = null;
-              cardEl.removeClass("cad-de-dragging");
+              cardEl.removeClass("bob-de-dragging");
             });
             cardEl.addEventListener("dragover", (ev) => {
               if (!activeDrag) return;
@@ -34152,21 +34152,21 @@ ${snippet}` : "- No markdown content");
               reRender();
             });
           }
-          const cardHead = cardEl.createDiv({ cls: "cad-de-card-head" });
-          if (editable) cardHead.createSpan({ cls: "cad-de-drag-handle", text: "\u283F" });
-          const titleSpan = cardHead.createSpan({ cls: "cad-de-card-title-text", text: card.title || "(untitled)" });
-          const badges = cardHead.createDiv({ cls: "cad-de-card-badges" });
-          badges.createSpan({ cls: "cad-de-card-badge", text: card.kind || card.entity || "?" });
+          const cardHead = cardEl.createDiv({ cls: "bob-de-card-head" });
+          if (editable) cardHead.createSpan({ cls: "bob-de-drag-handle", text: "\u283F" });
+          const titleSpan = cardHead.createSpan({ cls: "bob-de-card-title-text", text: card.title || "(untitled)" });
+          const badges = cardHead.createDiv({ cls: "bob-de-card-badges" });
+          badges.createSpan({ cls: "bob-de-card-badge", text: card.kind || card.entity || "?" });
           const sourceLabel = summarizeCardSource(card.source);
-          if (sourceLabel && sourceLabel !== "recent") badges.createSpan({ cls: "cad-de-card-badge cad-de-badge-source", text: sourceLabel });
+          if (sourceLabel && sourceLabel !== "recent") badges.createSpan({ cls: "bob-de-card-badge bob-de-badge-source", text: sourceLabel });
           if (editable) {
-            const acts = cardHead.createDiv({ cls: "cad-de-card-actions" });
-            const editBtn = acts.createEl("button", { cls: "cad-btn cad-btn-sm", text: "Edit" });
+            const acts = cardHead.createDiv({ cls: "bob-de-card-actions" });
+            const editBtn = acts.createEl("button", { cls: "bob-btn bob-btn-sm", text: "Edit" });
             editBtn.addEventListener("mousedown", (ev) => ev.stopPropagation());
             editBtn.addEventListener("dragstart", (ev) => ev.stopPropagation());
             editBtn.addEventListener("click", (ev) => {
               ev.stopPropagation();
-              const existing = cardEl.querySelector(".cad-de-card-form");
+              const existing = cardEl.querySelector(".bob-de-card-form");
               if (existing) {
                 existing.remove();
                 return;
@@ -34174,15 +34174,15 @@ ${snippet}` : "- No markdown content");
               this._renderCardForm(cardEl, card, () => {
                 titleSpan.textContent = card.title || "(untitled)";
                 badges.empty();
-                badges.createSpan({ cls: "cad-de-card-badge", text: card.kind || card.entity || "?" });
+                badges.createSpan({ cls: "bob-de-card-badge", text: card.kind || card.entity || "?" });
                 const updatedSourceLabel = summarizeCardSource(card.source);
                 if (updatedSourceLabel && updatedSourceLabel !== "recent") {
-                  badges.createSpan({ cls: "cad-de-card-badge cad-de-badge-source", text: updatedSourceLabel });
+                  badges.createSpan({ cls: "bob-de-card-badge bob-de-badge-source", text: updatedSourceLabel });
                 }
                 triggerPreview();
               });
             });
-            const delBtn = acts.createEl("button", { cls: "cad-btn cad-btn-sm cad-btn-danger", text: "\xD7" });
+            const delBtn = acts.createEl("button", { cls: "bob-btn bob-btn-sm bob-btn-danger", text: "\xD7" });
             delBtn.addEventListener("mousedown", (ev) => ev.stopPropagation());
             delBtn.addEventListener("click", () => {
               col.splice(cardIdx, 1);
@@ -34191,7 +34191,7 @@ ${snippet}` : "- No markdown content");
           }
         });
         if (editable) {
-          const dropZone = colEl.createDiv({ cls: "cad-de-col-drop-zone", text: "+ Add card" });
+          const dropZone = colEl.createDiv({ cls: "bob-de-col-drop-zone", text: "+ Add card" });
           dropZone.addEventListener("dragover", (ev) => {
             if (!activeDrag) return;
             ev.preventDefault();
@@ -34217,21 +34217,21 @@ ${snippet}` : "- No markdown content");
       });
     });
     if (editable) {
-      const addRowBtn = layoutSection.createEl("button", { cls: "cad-btn cad-btn-sm cad-de-add-row-btn", text: "+ Add row" });
+      const addRowBtn = layoutSection.createEl("button", { cls: "bob-btn bob-btn-sm bob-de-add-row-btn", text: "+ Add row" });
       addRowBtn.addEventListener("click", () => {
         config.layout.push([[{ title: "New Card", entity: defaultEntityKey, source: "recent", titleFields: ["title", "name"], metaFields: ["status"], empty: "No items." }]]);
         reRender();
       });
     }
     if ((config.conditionalRows || []).length > 0 || editable) {
-      const crSection = pane.createDiv({ cls: "cad-de-section" });
-      crSection.createDiv({ cls: "cad-de-section-label", text: "Conditional rows" });
+      const crSection = pane.createDiv({ cls: "bob-de-section" });
+      crSection.createDiv({ cls: "bob-de-section-label", text: "Conditional rows" });
       const newCard = () => ({ title: "New Card", entity: defaultEntityKey, source: "recent", titleFields: ["title", "name"], metaFields: ["status"], empty: "No items." });
       (config.conditionalRows || []).forEach((cr, crIdx) => {
-        const crEl = crSection.createDiv({ cls: "cad-de-layout-row" });
-        const crRowHead = crEl.createDiv({ cls: "cad-de-row-head" });
-        crRowHead.createDiv({ cls: "cad-de-row-label", text: "Show when" });
-        const condInp = crRowHead.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm" });
+        const crEl = crSection.createDiv({ cls: "bob-de-layout-row" });
+        const crRowHead = crEl.createDiv({ cls: "bob-de-row-head" });
+        crRowHead.createDiv({ cls: "bob-de-row-label", text: "Show when" });
+        const condInp = crRowHead.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm" });
         condInp.value = (cr.condition?.entities || []).join(", ");
         condInp.placeholder = "entities with data (comma-separated)";
         condInp.disabled = !editable;
@@ -34241,41 +34241,41 @@ ${snippet}` : "- No markdown content");
           triggerPreview();
         });
         if (editable) {
-          const addCol = crRowHead.createEl("button", { cls: "cad-btn cad-btn-sm", text: "+ Col" });
+          const addCol = crRowHead.createEl("button", { cls: "bob-btn bob-btn-sm", text: "+ Col" });
           addCol.addEventListener("click", () => {
             (cr.cards || (cr.cards = [])).push(newCard());
             reRender();
           });
-          const delCr = crRowHead.createEl("button", { cls: "cad-btn cad-btn-sm cad-btn-danger", text: "\xD7 Row" });
+          const delCr = crRowHead.createEl("button", { cls: "bob-btn bob-btn-sm bob-btn-danger", text: "\xD7 Row" });
           delCr.addEventListener("click", () => {
             config.conditionalRows.splice(crIdx, 1);
             reRender();
           });
         }
-        const crCols = crEl.createDiv({ cls: "cad-de-row-cols" });
+        const crCols = crEl.createDiv({ cls: "bob-de-row-cols" });
         (cr.cards || []).forEach((card, cardIdx) => {
-          const col = crCols.createDiv({ cls: "cad-de-layout-col" });
+          const col = crCols.createDiv({ cls: "bob-de-layout-col" });
           if (editable && (cr.cards || []).length > 1) {
-            const delCol = col.createEl("button", { cls: "cad-btn cad-btn-sm cad-btn-danger cad-de-del-col", text: "\xD7 Col" });
+            const delCol = col.createEl("button", { cls: "bob-btn bob-btn-sm bob-btn-danger bob-de-del-col", text: "\xD7 Col" });
             delCol.addEventListener("click", () => {
               cr.cards.splice(cardIdx, 1);
               reRender();
             });
           }
-          const cardEl = col.createDiv({ cls: "cad-de-card" });
-          const cardHead = cardEl.createDiv({ cls: "cad-de-card-head" });
-          const titleSpan = cardHead.createSpan({ cls: "cad-de-card-title-text", text: card.title || "(untitled)" });
-          const badges = cardHead.createDiv({ cls: "cad-de-card-badges" });
-          badges.createSpan({ cls: "cad-de-card-badge", text: card.entity || "?" });
+          const cardEl = col.createDiv({ cls: "bob-de-card" });
+          const cardHead = cardEl.createDiv({ cls: "bob-de-card-head" });
+          const titleSpan = cardHead.createSpan({ cls: "bob-de-card-title-text", text: card.title || "(untitled)" });
+          const badges = cardHead.createDiv({ cls: "bob-de-card-badges" });
+          badges.createSpan({ cls: "bob-de-card-badge", text: card.entity || "?" });
           const sourceLabel = summarizeCardSource(card.source);
-          if (sourceLabel && sourceLabel !== "recent") badges.createSpan({ cls: "cad-de-card-badge cad-de-badge-source", text: sourceLabel });
+          if (sourceLabel && sourceLabel !== "recent") badges.createSpan({ cls: "bob-de-card-badge bob-de-badge-source", text: sourceLabel });
           if (editable) {
-            const acts = cardHead.createDiv({ cls: "cad-de-card-actions" });
-            const editBtn = acts.createEl("button", { cls: "cad-btn cad-btn-sm", text: "Edit" });
+            const acts = cardHead.createDiv({ cls: "bob-de-card-actions" });
+            const editBtn = acts.createEl("button", { cls: "bob-btn bob-btn-sm", text: "Edit" });
             editBtn.addEventListener("mousedown", (ev) => ev.stopPropagation());
             editBtn.addEventListener("click", (ev) => {
               ev.stopPropagation();
-              const existing = cardEl.querySelector(".cad-de-card-form");
+              const existing = cardEl.querySelector(".bob-de-card-form");
               if (existing) {
                 existing.remove();
                 return;
@@ -34283,15 +34283,15 @@ ${snippet}` : "- No markdown content");
               this._renderCardForm(cardEl, card, () => {
                 titleSpan.textContent = card.title || "(untitled)";
                 badges.empty();
-                badges.createSpan({ cls: "cad-de-card-badge", text: card.entity || "?" });
+                badges.createSpan({ cls: "bob-de-card-badge", text: card.entity || "?" });
                 const updatedSourceLabel = summarizeCardSource(card.source);
                 if (updatedSourceLabel && updatedSourceLabel !== "recent") {
-                  badges.createSpan({ cls: "cad-de-card-badge cad-de-badge-source", text: updatedSourceLabel });
+                  badges.createSpan({ cls: "bob-de-card-badge bob-de-badge-source", text: updatedSourceLabel });
                 }
                 triggerPreview();
               });
             });
-            const delBtn = acts.createEl("button", { cls: "cad-btn cad-btn-sm cad-btn-danger", text: "\xD7" });
+            const delBtn = acts.createEl("button", { cls: "bob-btn bob-btn-sm bob-btn-danger", text: "\xD7" });
             delBtn.addEventListener("click", () => {
               cr.cards.splice(cardIdx, 1);
               reRender();
@@ -34300,7 +34300,7 @@ ${snippet}` : "- No markdown content");
         });
       });
       if (editable) {
-        const addRowBtn = crSection.createEl("button", { cls: "cad-btn cad-btn-sm cad-de-add-row-btn", text: "+ Add conditional row" });
+        const addRowBtn = crSection.createEl("button", { cls: "bob-btn bob-btn-sm bob-de-add-row-btn", text: "+ Add conditional row" });
         addRowBtn.addEventListener("click", () => {
           (config.conditionalRows || (config.conditionalRows = [])).push({ condition: { entities: [] }, cards: [newCard()] });
           reRender();
@@ -34313,7 +34313,7 @@ ${snippet}` : "- No markdown content");
     const config = card;
     const entityDef = ENTITIES[card.entity];
     const defaultEntityKey = Object.keys(ENTITIES)[0] || "";
-    const form = parent.createDiv({ cls: "cad-de-card-form" });
+    const form = parent.createDiv({ cls: "bob-de-card-form" });
     let _dlId = 0;
     const entityFieldKeys = [...new Set((ENTITIES[card.entity]?.fields || []).map((field) => field.key).filter(Boolean))];
     const fieldSuggestions = entityFieldKeys.length ? entityFieldKeys : ["title", "name", "status", "value", "date"];
@@ -34353,12 +34353,12 @@ ${snippet}` : "- No markdown content");
       return value;
     };
     const addRow = (label, key, opts, combobox = false) => {
-      const r = form.createDiv({ cls: "cad-de-form-row" });
-      const labelEl = r.createDiv({ cls: "cad-de-form-label", text: label });
+      const r = form.createDiv({ cls: "bob-de-form-row" });
+      const labelEl = r.createDiv({ cls: "bob-de-form-label", text: label });
       const help = FIELD_HELP[key];
       if (help) labelEl.setAttribute("title", help);
       if (opts && !combobox) {
-        const sel = r.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
+        const sel = r.createEl("select", { cls: "bob-de-field bob-de-field-sm" });
         opts.forEach((v) => {
           const o = sel.createEl("option", { value: v, text: v });
           if (v === card[key]) o.selected = true;
@@ -34368,8 +34368,8 @@ ${snippet}` : "- No markdown content");
           onChange();
         });
       } else if (opts && combobox) {
-        const dlId = `cad-de-dl-${++_dlId}`;
-        const inp = r.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm", attr: { list: dlId } });
+        const dlId = `bob-de-dl-${++_dlId}`;
+        const inp = r.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm", attr: { list: dlId } });
         inp.value = formatFieldValue(card[key]);
         const dl = r.createEl("datalist", { attr: { id: dlId } });
         opts.forEach((v) => dl.createEl("option", { value: v }));
@@ -34381,7 +34381,7 @@ ${snippet}` : "- No markdown content");
       } else {
         const current = card[key];
         if (Array.isArray(current) && !current.every(isScalarValue)) {
-          const ta = r.createEl("textarea", { cls: "cad-de-textarea cad-de-json-field" });
+          const ta = r.createEl("textarea", { cls: "bob-de-textarea bob-de-json-field" });
           ta.rows = 4;
           ta.value = formatFieldValue(current);
           ta.spellcheck = false;
@@ -34390,7 +34390,7 @@ ${snippet}` : "- No markdown content");
             onChange();
           });
         } else if (current && typeof current === "object") {
-          const ta = r.createEl("textarea", { cls: "cad-de-textarea cad-de-json-field" });
+          const ta = r.createEl("textarea", { cls: "bob-de-textarea bob-de-json-field" });
           ta.rows = 4;
           ta.value = formatFieldValue(current);
           ta.spellcheck = false;
@@ -34400,7 +34400,7 @@ ${snippet}` : "- No markdown content");
           });
         } else {
           const val = formatFieldValue(current);
-          const inp = r.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm" });
+          const inp = r.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm" });
           inp.value = val;
           inp.placeholder = key;
           inp.addEventListener("input", () => {
@@ -34492,8 +34492,8 @@ ${snippet}` : "- No markdown content");
         if (guide.fields.length) this._helpBlock(body, "Key settings", guide.fields);
       });
     }
-    const basicsSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
-    const basicsLabel = basicsSection.createDiv({ cls: "cad-de-section-label", text: `Settings \u2014 ${cardSchema?.label || widgetKind}` });
+    const basicsSection = form.createDiv({ cls: "bob-de-section bob-de-section-compact" });
+    const basicsLabel = basicsSection.createDiv({ cls: "bob-de-section-label", text: `Settings \u2014 ${cardSchema?.label || widgetKind}` });
     if (WIDGET_INTRO[widgetKind]) basicsLabel.setAttribute("title", WIDGET_INTRO[widgetKind]);
     addRow("Title", "title");
     if (fieldOn("entity")) addRow("Entity", "entity", sortedEntityKeys, true);
@@ -34518,9 +34518,9 @@ ${snippet}` : "- No markdown content");
     const resolvedBaseFile = explicitBaseFile || (card.entity ? entityBasePath(this.plugin.settings, String(card.entity)) : "");
     if (fieldOn("view", "base")) {
       if (resolvedBaseFile) {
-        const r = form.createDiv({ cls: "cad-de-form-row" });
-        r.createDiv({ cls: "cad-de-form-label", text: "View", attr: { title: FIELD_HELP.view || "" } });
-        const sel = r.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
+        const r = form.createDiv({ cls: "bob-de-form-row" });
+        r.createDiv({ cls: "bob-de-form-label", text: "View", attr: { title: FIELD_HELP.view || "" } });
+        const sel = r.createEl("select", { cls: "bob-de-field bob-de-field-sm" });
         sel.createEl("option", { value: "", text: "\u2014 default view \u2014" });
         const currentView = String(card.view || "").trim();
         if (currentView) {
@@ -34556,9 +34556,9 @@ ${snippet}` : "- No markdown content");
       }
     }
     if (fieldOn("base", "source")) (() => {
-      const r = form.createDiv({ cls: "cad-de-form-row" });
-      r.createDiv({ cls: "cad-de-form-label", text: "Base" });
-      const sel = r.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
+      const r = form.createDiv({ cls: "bob-de-form-row" });
+      r.createDiv({ cls: "bob-de-form-label", text: "Base" });
+      const sel = r.createEl("select", { cls: "bob-de-field bob-de-field-sm" });
       sel.createEl("option", { value: "", text: "\u2014 none (use entity) \u2014" });
       this.app.vault.getFiles().filter((f) => f.extension === "base").map((f) => f.path).sort().forEach((p) => {
         const o = sel.createEl("option", { value: p, text: p });
@@ -34579,9 +34579,9 @@ ${snippet}` : "- No markdown content");
     })();
     if (fieldOn("height")) addRow("Height", "height");
     if (fieldOn("fallback")) addRow("Fallback", "fallback", ["preview", "link", "error"]);
-    const typeRow = form.createDiv({ cls: "cad-de-form-row" });
-    typeRow.createDiv({ cls: "cad-de-form-label", text: "Widget type" });
-    const typeSelect = typeRow.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
+    const typeRow = form.createDiv({ cls: "bob-de-form-row" });
+    typeRow.createDiv({ cls: "bob-de-form-label", text: "Widget type" });
+    const typeSelect = typeRow.createEl("select", { cls: "bob-de-field bob-de-field-sm" });
     const widgetTypes = [...PURE_DASHBOARD_WIDGET_TYPES];
     const currentType = String(card.kind || (Array.isArray(card.merge) ? "merge" : "list")).trim() || "list";
     if (!widgetTypes.includes(currentType)) widgetTypes.push(currentType);
@@ -34615,12 +34615,12 @@ ${snippet}` : "- No markdown content");
       card.source = next;
       onChange();
     };
-    const sourceSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
+    const sourceSection = form.createDiv({ cls: "bob-de-section bob-de-section-compact" });
     if (!usesSource) sourceSection.style.display = "none";
-    sourceSection.createDiv({ cls: "cad-de-section-label", text: "Where does the data come from?" }).setAttribute("title", SOURCE_SECTION_HELP);
-    const sourceModeRow = sourceSection.createDiv({ cls: "cad-de-form-row" });
-    sourceModeRow.createDiv({ cls: "cad-de-form-label", text: "Mode" });
-    const sourceMode = sourceModeRow.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
+    sourceSection.createDiv({ cls: "bob-de-section-label", text: "Where does the data come from?" }).setAttribute("title", SOURCE_SECTION_HELP);
+    const sourceModeRow = sourceSection.createDiv({ cls: "bob-de-form-row" });
+    sourceModeRow.createDiv({ cls: "bob-de-form-label", text: "Mode" });
+    const sourceMode = sourceModeRow.createEl("select", { cls: "bob-de-field bob-de-field-sm" });
     ["recent", "recent-open", "due", "due-open", "entity", "base", "list", "table", "built-in"].forEach((mode) => {
       const opt = sourceMode.createEl("option", { value: mode, text: mode });
       if (sourceModeValue === mode || !sourceModeValue && mode === "recent") opt.selected = true;
@@ -34637,9 +34637,9 @@ ${snippet}` : "- No markdown content");
       }
       syncBuiltInControls();
     });
-    const sourceProviderRow = sourceSection.createDiv({ cls: "cad-de-form-row" });
-    sourceProviderRow.createDiv({ cls: "cad-de-form-label", text: "Built-in source" });
-    const sourceProvider = sourceProviderRow.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
+    const sourceProviderRow = sourceSection.createDiv({ cls: "bob-de-form-row" });
+    sourceProviderRow.createDiv({ cls: "bob-de-form-label", text: "Built-in source" });
+    const sourceProvider = sourceProviderRow.createEl("select", { cls: "bob-de-field bob-de-field-sm" });
     const builtInSourceOptions = [
       { value: "home", label: "home" },
       { value: "planner", label: "planner" },
@@ -34661,40 +34661,40 @@ ${snippet}` : "- No markdown content");
       }, { clearSource: false });
       syncBuiltInControls();
     });
-    const sourceEntityRow = sourceSection.createDiv({ cls: "cad-de-form-row" });
-    sourceEntityRow.createDiv({ cls: "cad-de-form-label", text: "Source entity" });
-    const sourceEntity = sourceEntityRow.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm" });
+    const sourceEntityRow = sourceSection.createDiv({ cls: "bob-de-form-row" });
+    sourceEntityRow.createDiv({ cls: "bob-de-form-label", text: "Source entity" });
+    const sourceEntity = sourceEntityRow.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm" });
     sourceEntity.value = source.entity || card.entity || "";
     sourceEntity.placeholder = "entity key";
     sourceEntity.addEventListener("input", () => {
       card.entity = sourceEntity.value || "";
       setSourceField({ entity: sourceEntity.value || null }, { clearSource: false });
     });
-    const sourceFiltersRow = sourceSection.createDiv({ cls: "cad-de-form-row" });
-    sourceFiltersRow.createDiv({ cls: "cad-de-form-label", text: "Filters" });
-    const sourceFilters = sourceFiltersRow.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm" });
+    const sourceFiltersRow = sourceSection.createDiv({ cls: "bob-de-form-row" });
+    sourceFiltersRow.createDiv({ cls: "bob-de-form-label", text: "Filters" });
+    const sourceFilters = sourceFiltersRow.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm" });
     sourceFilters.value = source.filters || card.filters || "";
     sourceFilters.placeholder = "YAML/SQL-like filter expression";
     sourceFilters.addEventListener("input", () => {
       setSourceField({ filters: sourceFilters.value });
     });
-    const sourceGroupRow = sourceSection.createDiv({ cls: "cad-de-form-row" });
-    sourceGroupRow.createDiv({ cls: "cad-de-form-label", text: "Group by" });
-    const sourceGroup = sourceGroupRow.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm", attr: { list: `cad-de-group-${++_dlId}` } });
+    const sourceGroupRow = sourceSection.createDiv({ cls: "bob-de-form-row" });
+    sourceGroupRow.createDiv({ cls: "bob-de-form-label", text: "Group by" });
+    const sourceGroup = sourceGroupRow.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm", attr: { list: `bob-de-group-${++_dlId}` } });
     sourceGroup.value = source.groupBy || card.groupBy || "";
     sourceGroup.placeholder = "field key";
-    const sourceGroupList = sourceGroupRow.createEl("datalist", { attr: { id: `cad-de-group-${_dlId}` } });
+    const sourceGroupList = sourceGroupRow.createEl("datalist", { attr: { id: `bob-de-group-${_dlId}` } });
     fieldSuggestions.forEach((field) => sourceGroupList.createEl("option", { value: field }));
     sourceGroup.addEventListener("input", () => {
       card.groupBy = sourceGroup.value || "";
       setSourceField({ groupBy: sourceGroup.value });
     });
-    const sourceSortRow = sourceSection.createDiv({ cls: "cad-de-form-row" });
-    sourceSortRow.createDiv({ cls: "cad-de-form-label", text: "Sort" });
-    const sourceSort = sourceSortRow.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm", attr: { list: `cad-de-sort-${++_dlId}` } });
+    const sourceSortRow = sourceSection.createDiv({ cls: "bob-de-form-row" });
+    sourceSortRow.createDiv({ cls: "bob-de-form-label", text: "Sort" });
+    const sourceSort = sourceSortRow.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm", attr: { list: `bob-de-sort-${++_dlId}` } });
     sourceSort.value = source.sort || card.sort || "";
     sourceSort.placeholder = "field ASC";
-    const sourceSortList = sourceSortRow.createEl("datalist", { attr: { id: `cad-de-sort-${_dlId}` } });
+    const sourceSortList = sourceSortRow.createEl("datalist", { attr: { id: `bob-de-sort-${_dlId}` } });
     fieldSuggestions.forEach((field) => {
       sourceSortList.createEl("option", { value: `${field} ASC` });
       sourceSortList.createEl("option", { value: `${field} DESC` });
@@ -34772,10 +34772,10 @@ ${snippet}` : "- No markdown content");
       };
       return aliases[builtIn]?.[title] || "";
     };
-    const sourceSectionRow = sourceSection.createDiv({ cls: "cad-de-form-row" });
-    sourceSectionRow.createDiv({ cls: "cad-de-form-label", text: "Built-in section" });
-    const sectionWrap = sourceSectionRow.createDiv({ cls: "cad-de-source-section-wrap" });
-    const sectionSelect = sectionWrap.createEl("select", { cls: "cad-de-field cad-de-field-sm" });
+    const sourceSectionRow = sourceSection.createDiv({ cls: "bob-de-form-row" });
+    sourceSectionRow.createDiv({ cls: "bob-de-form-label", text: "Built-in section" });
+    const sectionWrap = sourceSectionRow.createDiv({ cls: "bob-de-source-section-wrap" });
+    const sectionSelect = sectionWrap.createEl("select", { cls: "bob-de-field bob-de-field-sm" });
     const syncBuiltInControls = () => {
       const isBuiltIn = sourceMode.value === "built-in";
       const builtInName = String(sourceProvider.value || "home").trim().toLowerCase() || "home";
@@ -34804,9 +34804,9 @@ ${snippet}` : "- No markdown content");
       setSourceField({ section: section || null });
     });
     syncBuiltInControls();
-    const sourceLabelsRow = sourceSection.createDiv({ cls: "cad-de-form-row" });
-    sourceLabelsRow.createDiv({ cls: "cad-de-form-label", text: "Labels" });
-    const sourceLabels = sourceLabelsRow.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm" });
+    const sourceLabelsRow = sourceSection.createDiv({ cls: "bob-de-form-row" });
+    sourceLabelsRow.createDiv({ cls: "bob-de-form-label", text: "Labels" });
+    const sourceLabels = sourceLabelsRow.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm" });
     sourceLabels.value = Array.isArray(source.labels) ? source.labels.join(", ") : "";
     sourceLabels.placeholder = "Comma-separated labels";
     sourceLabels.addEventListener("input", () => {
@@ -34846,9 +34846,9 @@ ${snippet}` : "- No markdown content");
         addSuggestion(sourceSortList, `${field} DESC`);
       });
     })();
-    const sourceLimitRow = sourceSection.createDiv({ cls: "cad-de-form-row" });
-    sourceLimitRow.createDiv({ cls: "cad-de-form-label", text: "Limit" });
-    const sourceLimit = sourceLimitRow.createEl("input", { type: "number", cls: "cad-de-field cad-de-field-sm" });
+    const sourceLimitRow = sourceSection.createDiv({ cls: "bob-de-form-row" });
+    sourceLimitRow.createDiv({ cls: "bob-de-form-label", text: "Limit" });
+    const sourceLimit = sourceLimitRow.createEl("input", { type: "number", cls: "bob-de-field bob-de-field-sm" });
     sourceLimit.value = source.limit != null ? String(source.limit) : card.limit != null ? String(card.limit) : "";
     sourceLimit.placeholder = "rows";
     sourceLimit.addEventListener("input", () => {
@@ -34856,35 +34856,35 @@ ${snippet}` : "- No markdown content");
       card.limit = limitValue;
       setObjectField("source", { limit: limitValue });
     });
-    const baseSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
-    baseSection.createDiv({ cls: "cad-de-section-label", text: "Base target" });
-    const baseFileRow = baseSection.createDiv({ cls: "cad-de-form-row" });
-    baseFileRow.createDiv({ cls: "cad-de-form-label", text: "Base file" });
-    const baseFile = baseFileRow.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm" });
+    const baseSection = form.createDiv({ cls: "bob-de-section bob-de-section-compact" });
+    baseSection.createDiv({ cls: "bob-de-section-label", text: "Base target" });
+    const baseFileRow = baseSection.createDiv({ cls: "bob-de-form-row" });
+    baseFileRow.createDiv({ cls: "bob-de-form-label", text: "Base file" });
+    const baseFile = baseFileRow.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm" });
     baseFile.value = baseObj.file || "";
     baseFile.placeholder = "00-CORE/Bases/... .base";
     baseFile.addEventListener("input", () => {
       setObjectField("base", { file: baseFile.value });
     });
-    const baseViewRow = baseSection.createDiv({ cls: "cad-de-form-row" });
-    baseViewRow.createDiv({ cls: "cad-de-form-label", text: "Base view" });
-    const baseView = baseViewRow.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm" });
+    const baseViewRow = baseSection.createDiv({ cls: "bob-de-form-row" });
+    baseViewRow.createDiv({ cls: "bob-de-form-label", text: "Base view" });
+    const baseView = baseViewRow.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm" });
     baseView.value = baseObj.view || "";
     baseView.placeholder = "View name";
     baseView.addEventListener("input", () => {
       setObjectField("base", { view: baseView.value });
     });
-    const baseEntityRow = baseSection.createDiv({ cls: "cad-de-form-row" });
-    baseEntityRow.createDiv({ cls: "cad-de-form-label", text: "Base entity" });
-    const baseEntity = baseEntityRow.createEl("input", { type: "text", cls: "cad-de-field cad-de-field-sm" });
+    const baseEntityRow = baseSection.createDiv({ cls: "bob-de-form-row" });
+    baseEntityRow.createDiv({ cls: "bob-de-form-label", text: "Base entity" });
+    const baseEntity = baseEntityRow.createEl("input", { type: "text", cls: "bob-de-field bob-de-field-sm" });
     baseEntity.value = baseObj.entity || "";
     baseEntity.placeholder = "entity key";
     baseEntity.addEventListener("input", () => {
       setObjectField("base", { entity: baseEntity.value });
     });
     if (String(card.kind || "").trim() === "selector") {
-      const selectorSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
-      selectorSection.createDiv({ cls: "cad-de-section-label", text: "Selector details" });
+      const selectorSection = form.createDiv({ cls: "bob-de-section bob-de-section-compact" });
+      selectorSection.createDiv({ cls: "bob-de-section-label", text: "Selector details" });
       addRow("Key", "key");
       addRow("Label", "label");
       addRow("Field", "field");
@@ -34893,8 +34893,8 @@ ${snippet}` : "- No markdown content");
       addRow("Options", "options");
     }
     if (["gauge", "score-gauge", "dial", "progress", "progress-bar"].includes(String(card.kind || "").trim().toLowerCase())) {
-      const scalarSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
-      scalarSection.createDiv({ cls: "cad-de-section-label", text: String(card.kind || "").trim().toLowerCase() === "progress" ? "Progress details" : "Gauge details" });
+      const scalarSection = form.createDiv({ cls: "bob-de-section bob-de-section-compact" });
+      scalarSection.createDiv({ cls: "bob-de-section-label", text: String(card.kind || "").trim().toLowerCase() === "progress" ? "Progress details" : "Gauge details" });
       addRow("Value", "value");
       addRow("Field", "field", fieldSuggestions, true);
       addRow("Metric", "metric", ["count", "sum", "avg", "min", "max", "filled", "empty", "open", "uniqueCount", "ratio"], true);
@@ -34905,8 +34905,8 @@ ${snippet}` : "- No markdown content");
       addRow("Subtext", "sub");
     }
     if (["heatmap", "streak-heatmap"].includes(String(card.kind || "").trim().toLowerCase())) {
-      const heatmapSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
-      heatmapSection.createDiv({ cls: "cad-de-section-label", text: "Heatmap details" });
+      const heatmapSection = form.createDiv({ cls: "bob-de-section bob-de-section-compact" });
+      heatmapSection.createDiv({ cls: "bob-de-section-label", text: "Heatmap details" });
       addRow("Date field", "dateField", ["date", "day", "created", "createdAt", "updated", "modified", "start", "scheduled", "due"], true);
       addRow("Value field", "field", fieldSuggestions, true);
       addRow("Days", "days");
@@ -34914,8 +34914,8 @@ ${snippet}` : "- No markdown content");
       addRow("Items", "items");
     }
     if (String(card.kind || "").trim() === "kanban") {
-      const kanbanSection = form.createDiv({ cls: "cad-de-section cad-de-section-compact" });
-      kanbanSection.createDiv({ cls: "cad-de-section-label", text: "Kanban details" });
+      const kanbanSection = form.createDiv({ cls: "bob-de-section bob-de-section-compact" });
+      kanbanSection.createDiv({ cls: "bob-de-section-label", text: "Kanban details" });
       addRow("Group by", "groupBy");
       addRow("Columns", "columns");
       addRow("Groups", "groups");
@@ -34927,7 +34927,7 @@ ${snippet}` : "- No markdown content");
   }
   /* ── Generic entity LIST view ───────────── */
   async renderEntityList(root, entityKey, opts = {}) {
-    root.addClass("cadence-list");
+    root.addClass("bob-list");
     const def = ENTITIES[entityKey];
     if (!def) {
       this.renderComingSoon(root, SURFACE_BY_ID[this.mode]);
@@ -34942,31 +34942,31 @@ ${snippet}` : "- No markdown content");
       if (opts.renderHeaderControls) opts.renderHeaderControls(right, entityKey);
       this._renderEntityViewSelect(right, entityKey);
       if (def.externalBaseView) {
-        const openBaseBtn = right.createEl("button", { cls: "cad-btn", text: "Open Base" });
+        const openBaseBtn = right.createEl("button", { cls: "bob-btn", text: "Open Base" });
         openBaseBtn.addEventListener("click", () => this._openEntityBase(entityKey));
       }
       if (entityLifecycle(def)) {
-        const procBtn = right.createEl("button", { cls: "cad-btn", text: "Process canvas" });
+        const procBtn = right.createEl("button", { cls: "bob-btn", text: "Process canvas" });
         procBtn.addEventListener("click", () => void this._generateProcessCanvas(entityKey));
       }
       if (!ctx.hasConfiguredActions) {
-        const btn = right.createEl("button", { cls: "cad-btn primary", text: `+ New ${def.label}` });
+        const btn = right.createEl("button", { cls: "bob-btn primary", text: `+ New ${def.label}` });
         btn.addEventListener("click", () => this._createEntityFromPrompt(entityKey));
       }
     });
     if (!opts.forceInternal && this._renderExternalBaseView(root, entityKey)) return;
     this._renderUnsupportedBaseFilters(root, def);
     if (!filtered.length) {
-      const empty = root.createDiv({ cls: "cad-empty-state" });
-      empty.createDiv({ cls: "cad-empty-state-title", text: `No ${def.plural.toLowerCase()} yet` });
-      empty.createDiv({ cls: "cad-empty-state-desc", text: opts.emptyDescription || `Drop a markdown note in ${entityFolder(entityKey)}/ with frontmatter, or hit "+ New" above.` });
+      const empty = root.createDiv({ cls: "bob-empty-state" });
+      empty.createDiv({ cls: "bob-empty-state-title", text: `No ${def.plural.toLowerCase()} yet` });
+      empty.createDiv({ cls: "bob-empty-state-desc", text: opts.emptyDescription || `Drop a markdown note in ${entityFolder(entityKey)}/ with frontmatter, or hit "+ New" above.` });
       return;
     }
     const cols = opts.columns ? opts.columns.map((k) => def.fields.find((f) => f.key === k)).filter(Boolean) : def.fields;
     const groups = this._groupEntitiesForView(filtered, def);
     if (groups) {
       groups.forEach(([label, items]) => {
-        root.createDiv({ cls: "cad-section-label-lg", text: `${label} \xB7 ${items.length}` });
+        root.createDiv({ cls: "bob-section-label-lg", text: `${label} \xB7 ${items.length}` });
         this._renderEntityTable(root, items, entityKey, cols);
       });
     } else {
@@ -34976,7 +34976,7 @@ ${snippet}` : "- No markdown content");
   /* ── Entity DETAIL view (in-app form, autosaves to frontmatter) ── */
   async renderEntityDetail(root, entityKey, file) {
     if (entityKey === "project") return this.renderProjectDetail(root, file);
-    root.addClass("cadence-detail");
+    root.addClass("bob-detail");
     const def = ENTITIES[entityKey];
     if (!def || !file) {
       this.closeEntityDetail();
@@ -34986,21 +34986,21 @@ ${snippet}` : "- No markdown content");
     const fm = Object.assign({}, cache.frontmatter || {});
     const primaryKey = primaryFieldKey(def);
     const titleVal = primaryKey ? entityValue({ file, frontmatter: fm, basename: file.basename }, primaryKey, def) : file.basename;
-    const head = root.createDiv({ cls: "cad-detail-header" });
-    const headLeft = head.createDiv({ cls: "cad-detail-header-left" });
-    const back = headLeft.createEl("button", { cls: "cad-btn cad-detail-back", text: "\u2190 " + def.plural });
+    const head = root.createDiv({ cls: "bob-detail-header" });
+    const headLeft = head.createDiv({ cls: "bob-detail-header-left" });
+    const back = headLeft.createEl("button", { cls: "bob-btn bob-detail-back", text: "\u2190 " + def.plural });
     back.addEventListener("click", () => this.closeEntityDetail());
-    const breadcrumb = headLeft.createDiv({ cls: "cad-detail-breadcrumb" });
-    breadcrumb.createSpan({ cls: "cad-eyebrow", text: def.plural.toUpperCase() });
-    breadcrumb.createSpan({ cls: "cad-detail-title", text: String(titleVal) });
-    breadcrumb.createDiv({ cls: "cad-detail-path", text: file.path });
-    const headRight = head.createDiv({ cls: "cad-detail-header-right" });
-    const savedBadge = headRight.createSpan({ cls: "cad-detail-saved", text: "" });
-    const openNote = headRight.createEl("button", { cls: "cad-btn", text: "Open as note" });
+    const breadcrumb = headLeft.createDiv({ cls: "bob-detail-breadcrumb" });
+    breadcrumb.createSpan({ cls: "bob-eyebrow", text: def.plural.toUpperCase() });
+    breadcrumb.createSpan({ cls: "bob-detail-title", text: String(titleVal) });
+    breadcrumb.createDiv({ cls: "bob-detail-path", text: file.path });
+    const headRight = head.createDiv({ cls: "bob-detail-header-right" });
+    const savedBadge = headRight.createSpan({ cls: "bob-detail-saved", text: "" });
+    const openNote = headRight.createEl("button", { cls: "bob-btn", text: "Open as note" });
     openNote.addEventListener("click", () => this.app.workspace.openLinkText(file.path, "", false));
-    const ctxCanvas = headRight.createEl("button", { cls: "cad-btn", text: "Context canvas" });
+    const ctxCanvas = headRight.createEl("button", { cls: "bob-btn", text: "Context canvas" });
     ctxCanvas.addEventListener("click", () => void this._generateContextCanvas(file));
-    const deleteBtn = headRight.createEl("button", { cls: "cad-btn cad-btn-danger", text: "Delete" });
+    const deleteBtn = headRight.createEl("button", { cls: "bob-btn bob-btn-danger", text: "Delete" });
     deleteBtn.addEventListener("click", async () => {
       if (!await confirmModal(this.app, `Delete this ${def.label.toLowerCase()}? This moves the file to trash.`, { title: "Delete", cta: "Delete" })) return;
       try {
@@ -35011,7 +35011,7 @@ ${snippet}` : "- No markdown content");
         new obsidian17.Notice(`Delete failed: ${e.message}`);
       }
     });
-    const form = root.createDiv({ cls: "cad-detail-form" });
+    const form = root.createDiv({ cls: "bob-detail-form" });
     let saveTimer = null;
     const flashSaved = () => {
       savedBadge.setText("Saved");
@@ -35050,12 +35050,12 @@ ${snippet}` : "- No markdown content");
       saveTimer = setTimeout(() => writeField(key, val), 350);
     };
     def.fields.forEach((f) => {
-      const row = form.createDiv({ cls: "cad-form-row" });
-      row.createDiv({ cls: "cad-form-label", text: f.label.toUpperCase() });
+      const row = form.createDiv({ cls: "bob-form-row" });
+      row.createDiv({ cls: "bob-form-label", text: f.label.toUpperCase() });
       const current = fm[f.key];
       const fieldType = f.type || "text";
       if (fieldType === "enum") {
-        const sel = row.createEl("select", { cls: "cad-form-input" });
+        const sel = row.createEl("select", { cls: "bob-form-input" });
         sel.createEl("option", { value: "", text: "\u2014" });
         (f.options || []).forEach((opt) => {
           const o = sel.createEl("option", { value: opt, text: opt });
@@ -35063,7 +35063,7 @@ ${snippet}` : "- No markdown content");
         });
         sel.addEventListener("change", () => writeField(f.key, sel.value));
       } else if (fieldType === "date") {
-        const inp = row.createEl("input", { type: "date", cls: "cad-form-input" });
+        const inp = row.createEl("input", { type: "date", cls: "bob-form-input" });
         inp.lang = navigator.language || "";
         if (current) {
           const d = new Date(current);
@@ -35071,24 +35071,24 @@ ${snippet}` : "- No markdown content");
         }
         inp.addEventListener("change", () => writeField(f.key, inp.value));
       } else if (fieldType === "number" || fieldType === "currency") {
-        const inp = row.createEl("input", { type: "number", cls: "cad-form-input" });
+        const inp = row.createEl("input", { type: "number", cls: "bob-form-input" });
         if (current != null) inp.value = String(current);
         if (fieldType === "currency") inp.placeholder = `${this.plugin.settings.currency || "USD"} amount`;
         inp.addEventListener("input", () => debouncedWrite(f.key, inp.value));
         inp.addEventListener("blur", () => writeField(f.key, inp.value));
       } else if (fieldType === "email") {
-        const inp = row.createEl("input", { type: "email", cls: "cad-form-input" });
+        const inp = row.createEl("input", { type: "email", cls: "bob-form-input" });
         if (current) inp.value = String(current);
         inp.addEventListener("input", () => debouncedWrite(f.key, inp.value));
         inp.addEventListener("blur", () => writeField(f.key, inp.value));
       } else if (fieldType === "tags") {
-        const inp = row.createEl("input", { type: "text", cls: "cad-form-input", placeholder: "tag1, tag2, tag3" });
+        const inp = row.createEl("input", { type: "text", cls: "bob-form-input", placeholder: "tag1, tag2, tag3" });
         if (Array.isArray(current)) inp.value = current.join(", ");
         else if (current) inp.value = String(current);
         inp.addEventListener("input", () => debouncedWrite(f.key, inp.value));
         inp.addEventListener("blur", () => writeField(f.key, inp.value));
       } else {
-        const inp = row.createEl("input", { type: "text", cls: "cad-form-input" });
+        const inp = row.createEl("input", { type: "text", cls: "bob-form-input" });
         if (current) inp.value = String(current);
         if (def.typeFilter === "project") {
           if (f.key === "project_id") inp.placeholder = "Project ID";
@@ -35100,15 +35100,15 @@ ${snippet}` : "- No markdown content");
         inp.addEventListener("blur", () => writeField(f.key, inp.value));
       }
     });
-    const bodyHint = root.createDiv({ cls: "cad-detail-body-hint" });
-    bodyHint.createDiv({ cls: "cad-eyebrow", text: "NOTE BODY" });
-    bodyHint.createDiv({ cls: "cad-detail-body-desc", text: "Brief, milestones, notes and any other markdown lives in the note body." });
-    const openBody = bodyHint.createEl("button", { cls: "cad-btn primary", text: "Open as note for full editing" });
+    const bodyHint = root.createDiv({ cls: "bob-detail-body-hint" });
+    bodyHint.createDiv({ cls: "bob-eyebrow", text: "NOTE BODY" });
+    bodyHint.createDiv({ cls: "bob-detail-body-desc", text: "Brief, milestones, notes and any other markdown lives in the note body." });
+    const openBody = bodyHint.createEl("button", { cls: "bob-btn primary", text: "Open as note for full editing" });
     openBody.addEventListener("click", () => this.app.workspace.openLinkText(file.path, "", false));
   }
   /* ── Project DETAIL view (real PM surface) ─────── */
   async renderProjectDetail(root, file) {
-    root.addClass("cadence-project-detail");
+    root.addClass("bob-project-detail");
     const def = ENTITIES.project;
     const cache = this.app.metadataCache.getFileCache(file) || {};
     const fm = Object.assign({}, cache.frontmatter || {});
@@ -35117,25 +35117,25 @@ ${snippet}` : "- No markdown content");
     const titleVal = projectNameFromPath(this.app, file.path) || fm.project_name || fm.name || fm.project || fm[primaryKey] || file.basename;
     const status = String(fm.status || "active");
     const priority = String(fm.priority || "");
-    const head = root.createDiv({ cls: "cad-detail-header" });
-    const headLeft = head.createDiv({ cls: "cad-detail-header-left" });
-    const back = headLeft.createEl("button", { cls: "cad-btn cad-detail-back", text: "\u2190 Projects" });
+    const head = root.createDiv({ cls: "bob-detail-header" });
+    const headLeft = head.createDiv({ cls: "bob-detail-header-left" });
+    const back = headLeft.createEl("button", { cls: "bob-btn bob-detail-back", text: "\u2190 Projects" });
     back.addEventListener("click", () => this.closeEntityDetail());
-    const breadcrumb = headLeft.createDiv({ cls: "cad-detail-breadcrumb" });
-    breadcrumb.createSpan({ cls: "cad-eyebrow", text: "PROJECT" });
-    breadcrumb.createSpan({ cls: "cad-detail-title", text: String(titleVal) });
-    breadcrumb.createDiv({ cls: "cad-detail-path", text: file.path });
-    const headRight = head.createDiv({ cls: "cad-detail-header-right" });
-    const savedBadge = headRight.createSpan({ cls: "cad-detail-saved", text: "" });
+    const breadcrumb = headLeft.createDiv({ cls: "bob-detail-breadcrumb" });
+    breadcrumb.createSpan({ cls: "bob-eyebrow", text: "PROJECT" });
+    breadcrumb.createSpan({ cls: "bob-detail-title", text: String(titleVal) });
+    breadcrumb.createDiv({ cls: "bob-detail-path", text: file.path });
+    const headRight = head.createDiv({ cls: "bob-detail-header-right" });
+    const savedBadge = headRight.createSpan({ cls: "bob-detail-saved", text: "" });
     const flashSaved = () => {
       savedBadge.setText("Saved");
       savedBadge.addClass("show");
       clearTimeout(savedBadge._t);
       savedBadge._t = setTimeout(() => savedBadge.removeClass("show"), 1400);
     };
-    const openNote = headRight.createEl("button", { cls: "cad-btn", text: "Open as note" });
+    const openNote = headRight.createEl("button", { cls: "bob-btn", text: "Open as note" });
     openNote.addEventListener("click", () => this.app.workspace.openLinkText(file.path, "", false));
-    const deleteBtn = headRight.createEl("button", { cls: "cad-btn cad-btn-danger", text: "Delete" });
+    const deleteBtn = headRight.createEl("button", { cls: "bob-btn bob-btn-danger", text: "Delete" });
     deleteBtn.addEventListener("click", async () => {
       if (!await confirmModal(this.app, `Delete this project? This moves the file to trash.`, { title: "Delete project", cta: "Delete" })) return;
       try {
@@ -35146,11 +35146,11 @@ ${snippet}` : "- No markdown content");
         new obsidian17.Notice(`Delete failed: ${e.message}`);
       }
     });
-    const hero = root.createDiv({ cls: "cad-pd-hero" });
-    const pillRow = hero.createDiv({ cls: "cad-pd-pills" });
+    const hero = root.createDiv({ cls: "bob-pd-hero" });
+    const pillRow = hero.createDiv({ cls: "bob-pd-pills" });
     const mkSelect = (cls, options, current, onChange) => {
-      const wrap = pillRow.createDiv({ cls: `cad-pd-select-wrap ${cls}` });
-      const sel = wrap.createEl("select", { cls: "cad-pd-select" });
+      const wrap = pillRow.createDiv({ cls: `bob-pd-select-wrap ${cls}` });
+      const sel = wrap.createEl("select", { cls: "bob-pd-select" });
       options.forEach((opt) => {
         const o = sel.createEl("option", { value: opt, text: opt });
         if (String(current) === opt) o.selected = true;
@@ -35161,22 +35161,22 @@ ${snippet}` : "- No markdown content");
     const statusOptions = def.fields?.find((f) => f.key === "status")?.options || ["active", "on_hold", "backlog", "done", "cancelled"];
     const priorityOptions = def.fields?.find((f) => f.key === "priority")?.options || ["low", "medium", "high"];
     mkSelect(
-      "cad-pill cad-pill-" + status.toLowerCase().replace(/\s+/g, "-"),
+      "bob-pill bob-pill-" + status.toLowerCase().replace(/\s+/g, "-"),
       statusOptions,
       status,
       (v) => this._writeProjectFrontmatter(file, { status: v }, flashSaved)
     );
     mkSelect(
-      "cad-pill cad-pill-prio-" + (priority || priorityOptions[1] || "medium").toLowerCase(),
+      "bob-pill bob-pill-prio-" + (priority || priorityOptions[1] || "medium").toLowerCase(),
       priorityOptions,
       priority || priorityOptions[1] || "medium",
       (v) => this._writeProjectFrontmatter(file, { priority: v }, flashSaved)
     );
-    const metaRow = hero.createDiv({ cls: "cad-pd-meta" });
+    const metaRow = hero.createDiv({ cls: "bob-pd-meta" });
     const mkMeta = (label, key, type) => {
-      const cell = metaRow.createDiv({ cls: "cad-pd-meta-cell" });
-      cell.createDiv({ cls: "cad-pd-meta-label", text: label });
-      const inp = cell.createEl("input", { type: type || "text", cls: "cad-pd-meta-input" });
+      const cell = metaRow.createDiv({ cls: "bob-pd-meta-cell" });
+      cell.createDiv({ cls: "bob-pd-meta-label", text: label });
+      const inp = cell.createEl("input", { type: type || "text", cls: "bob-pd-meta-input" });
       const cur = fm[key];
       if (type === "date" && cur) {
         const d = new Date(cur);
@@ -35198,17 +35198,17 @@ ${snippet}` : "- No markdown content");
       { key: "due", label: "DUE", type: "date" }
     ];
     (def.detailMetaFields || defaultMetaFields).forEach((mf) => mkMeta(mf.label, mf.key, mf.type));
-    const progWrap = hero.createDiv({ cls: "cad-proj-progress-wrap cad-pd-progress" });
+    const progWrap = hero.createDiv({ cls: "bob-proj-progress-wrap bob-pd-progress" });
     progWrap.dataset.pctBand = pctBand(meta.percent);
-    const progLabel = progWrap.createDiv({ cls: "cad-proj-progress-label" });
+    const progLabel = progWrap.createDiv({ cls: "bob-proj-progress-label" });
     progLabel.createSpan({ text: `${meta.done}/${meta.total} milestones complete` });
-    progLabel.createSpan({ cls: "cad-proj-progress-pct", text: `${meta.percent}%` });
-    const bar = progWrap.createDiv({ cls: "cad-proj-progress-bar" });
-    const fill = bar.createDiv({ cls: "cad-proj-progress-fill" });
+    progLabel.createSpan({ cls: "bob-proj-progress-pct", text: `${meta.percent}%` });
+    const bar = progWrap.createDiv({ cls: "bob-proj-progress-bar" });
+    const fill = bar.createDiv({ cls: "bob-proj-progress-fill" });
     fill.style.width = `${meta.percent}%`;
-    const cols = root.createDiv({ cls: "cad-pd-cols" });
-    const left = cols.createDiv({ cls: "cad-pd-col" });
-    const right = cols.createDiv({ cls: "cad-pd-col" });
+    const cols = root.createDiv({ cls: "bob-pd-cols" });
+    const left = cols.createDiv({ cls: "bob-pd-col" });
+    const right = cols.createDiv({ cls: "bob-pd-col" });
     this._renderMilestoneSection(left, file, meta.milestones, flashSaved);
     const taskList = parseTasksList(meta.sections["Tasks"] || "");
     this._renderTaskSection(left, file, taskList, flashSaved);
@@ -35223,27 +35223,27 @@ ${snippet}` : "- No markdown content");
     bodySections.forEach((s) => this._renderProjectTextSection(right, file, meta.sections, s, flashSaved));
   }
   _renderMilestoneSection(parent, file, milestones, flashSaved) {
-    const card = parent.createDiv({ cls: "cad-pd-card" });
-    const head = card.createDiv({ cls: "cad-pd-card-head" });
-    head.createDiv({ cls: "cad-pd-card-title", text: `MILESTONES \xB7 ${milestones.filter((m) => m.done).length}/${milestones.length}` });
-    const addBtn = head.createEl("button", { cls: "cad-btn cad-btn-sm", text: "+ Add" });
-    const list = card.createDiv({ cls: "cad-pd-checklist" });
+    const card = parent.createDiv({ cls: "bob-pd-card" });
+    const head = card.createDiv({ cls: "bob-pd-card-head" });
+    head.createDiv({ cls: "bob-pd-card-title", text: `MILESTONES \xB7 ${milestones.filter((m) => m.done).length}/${milestones.length}` });
+    const addBtn = head.createEl("button", { cls: "bob-btn bob-btn-sm", text: "+ Add" });
+    const list = card.createDiv({ cls: "bob-pd-checklist" });
     const renderRows = (items) => {
       list.empty();
       if (!items.length) {
-        list.createDiv({ cls: "cad-empty", text: "No milestones yet \u2014 add the first one." });
+        list.createDiv({ cls: "bob-empty", text: "No milestones yet \u2014 add the first one." });
         return;
       }
       items.forEach((m, idx) => {
-        const wrapper = list.createDiv({ cls: "cad-mile-wrapper" });
-        const row = wrapper.createDiv({ cls: "cad-pd-mile-row" + (m.done ? " done" : "") });
+        const wrapper = list.createDiv({ cls: "bob-mile-wrapper" });
+        const row = wrapper.createDiv({ cls: "bob-pd-mile-row" + (m.done ? " done" : "") });
         const cb = row.createEl("input", { type: "checkbox" });
         cb.checked = !!m.done;
         cb.addEventListener("change", async () => {
           items[idx].done = cb.checked;
           await this._commitMilestones(file, items, flashSaved);
         });
-        const dateInp = row.createEl("input", { type: "date", cls: "cad-pd-mile-date" });
+        const dateInp = row.createEl("input", { type: "date", cls: "bob-pd-mile-date" });
         dateInp.lang = navigator.language || "";
         if (m.date instanceof Date && !isNaN(m.date.getTime())) {
           dateInp.value = m.date.toISOString().slice(0, 10);
@@ -35256,7 +35256,7 @@ ${snippet}` : "- No markdown content");
             await this._commitMilestones(file, items, flashSaved, true);
           }, 350);
         });
-        const titleInp = row.createEl("input", { type: "text", cls: "cad-pd-mile-title" });
+        const titleInp = row.createEl("input", { type: "text", cls: "bob-pd-mile-title" });
         titleInp.value = m.title || "";
         titleInp.placeholder = "Milestone title";
         let tt;
@@ -35267,23 +35267,23 @@ ${snippet}` : "- No markdown content");
             await this._commitMilestones(file, items, flashSaved, true);
           }, 400);
         });
-        const del = row.createEl("button", { cls: "cad-btn cad-btn-sm cad-btn-danger", text: "\xD7" });
+        const del = row.createEl("button", { cls: "bob-btn bob-btn-sm bob-btn-danger", text: "\xD7" });
         del.title = "Delete milestone";
         del.addEventListener("click", async () => {
           items.splice(idx, 1);
           await this._commitMilestones(file, items, flashSaved);
         });
-        const notesEl = wrapper.createDiv({ cls: "cad-mile-notes-section" });
+        const notesEl = wrapper.createDiv({ cls: "bob-mile-notes-section" });
         const renderNotesIdle = () => {
           notesEl.empty();
           const hasNotes = (items[idx].notes || "").trim().length > 0;
           if (hasNotes) {
-            const preview = notesEl.createDiv({ cls: "cad-mile-notes-preview" });
+            const preview = notesEl.createDiv({ cls: "bob-mile-notes-preview" });
             preview.setText(items[idx].notes);
             preview.title = "Click to edit notes";
             preview.addEventListener("click", openNotesEditor);
           } else {
-            const addBtn2 = notesEl.createEl("a", { cls: "cad-mile-notes-add", text: "+ Add notes" });
+            const addBtn2 = notesEl.createEl("a", { cls: "bob-mile-notes-add", text: "+ Add notes" });
             addBtn2.addEventListener("click", (e) => {
               e.preventDefault();
               openNotesEditor();
@@ -35292,7 +35292,7 @@ ${snippet}` : "- No markdown content");
         };
         const openNotesEditor = () => {
           notesEl.empty();
-          const ta = notesEl.createEl("textarea", { cls: "cad-mile-notes-textarea" });
+          const ta = notesEl.createEl("textarea", { cls: "bob-mile-notes-textarea" });
           ta.value = items[idx].notes || "";
           ta.placeholder = "Notes \u2014 context, follow-ups, what happened\u2026";
           const autosize = () => {
@@ -35337,20 +35337,20 @@ ${snippet}` : "- No markdown content");
     if (!skipRender) this.render();
   }
   _renderTaskSection(parent, file, tasks, flashSaved) {
-    const card = parent.createDiv({ cls: "cad-pd-card" });
-    const head = card.createDiv({ cls: "cad-pd-card-head" });
+    const card = parent.createDiv({ cls: "bob-pd-card" });
+    const head = card.createDiv({ cls: "bob-pd-card-head" });
     const open = tasks.filter((t) => !t.done).length;
-    head.createDiv({ cls: "cad-pd-card-title", text: `TASKS \xB7 ${open} open \xB7 ${tasks.length - open} done` });
-    const addBtn = head.createEl("button", { cls: "cad-btn cad-btn-sm", text: "+ Add" });
-    const list = card.createDiv({ cls: "cad-pd-checklist" });
+    head.createDiv({ cls: "bob-pd-card-title", text: `TASKS \xB7 ${open} open \xB7 ${tasks.length - open} done` });
+    const addBtn = head.createEl("button", { cls: "bob-btn bob-btn-sm", text: "+ Add" });
+    const list = card.createDiv({ cls: "bob-pd-checklist" });
     const renderRows = (items) => {
       list.empty();
       if (!items.length) {
-        list.createDiv({ cls: "cad-empty", text: "No tasks yet." });
+        list.createDiv({ cls: "bob-empty", text: "No tasks yet." });
         return;
       }
       items.forEach((t, idx) => {
-        const row = list.createDiv({ cls: "cad-pd-task-row" + (t.done ? " done" : "") });
+        const row = list.createDiv({ cls: "bob-pd-task-row" + (t.done ? " done" : "") });
         const cb = row.createEl("input", { type: "checkbox" });
         cb.checked = !!t.done;
         cb.addEventListener("change", async () => {
@@ -35359,7 +35359,7 @@ ${snippet}` : "- No markdown content");
           const txt = (items[idx].title || "").trim();
           if (txt) await this._propagateTaskComplete(txt, cb.checked, { kind: "project", file });
         });
-        const titleInp = row.createEl("input", { type: "text", cls: "cad-pd-task-title" });
+        const titleInp = row.createEl("input", { type: "text", cls: "bob-pd-task-title" });
         titleInp.value = t.title || "";
         titleInp.placeholder = "Task description";
         let tt;
@@ -35372,7 +35372,7 @@ ${snippet}` : "- No markdown content");
         });
         const linked = findProjectTaskReminder(this.plugin, file.path, t.title || "");
         const bell = row.createEl("button", {
-          cls: "cad-btn cad-btn-sm cad-pd-task-bell" + (linked ? " linked" : ""),
+          cls: "bob-btn bob-btn-sm bob-pd-task-bell" + (linked ? " linked" : ""),
           text: linked ? "\u{1F514}" : "\u{1F515}"
         });
         bell.title = linked ? `Edit reminder${linked.when ? " \xB7 " + reminderTimeStr(linked.when) : ""}` : "Set a reminder for this task";
@@ -35387,9 +35387,9 @@ ${snippet}` : "- No markdown content");
           }
           const existing = findProjectTaskReminder(this.plugin, file.path, taskText);
           if (existing) {
-            new CadenceReminderEditModal(this.app, this.plugin, existing).open();
+            new BobReminderEditModal(this.app, this.plugin, existing).open();
           } else {
-            new CadenceReminderEditModal(this.app, this.plugin, {
+            new BobReminderEditModal(this.app, this.plugin, {
               text: taskText,
               when: null,
               repeat: "none",
@@ -35398,7 +35398,7 @@ ${snippet}` : "- No markdown content");
             }, { isNew: true }).open();
           }
         });
-        const del = row.createEl("button", { cls: "cad-btn cad-btn-sm cad-btn-danger", text: "\xD7" });
+        const del = row.createEl("button", { cls: "bob-btn bob-btn-sm bob-btn-danger", text: "\xD7" });
         del.addEventListener("click", async () => {
           items.splice(idx, 1);
           await this._commitTasks(file, items, flashSaved);
@@ -35420,9 +35420,9 @@ ${snippet}` : "- No markdown content");
     if (!skipRender) this.render();
   }
   _renderProjectTextSection(parent, file, sections, def, flashSaved) {
-    const card = parent.createDiv({ cls: "cad-pd-card" });
-    card.createDiv({ cls: "cad-pd-card-head" }).createDiv({ cls: "cad-pd-card-title", text: def.label });
-    const ta = card.createEl("textarea", { cls: "cad-pd-textarea" });
+    const card = parent.createDiv({ cls: "bob-pd-card" });
+    card.createDiv({ cls: "bob-pd-card-head" }).createDiv({ cls: "bob-pd-card-title", text: def.label });
+    const ta = card.createEl("textarea", { cls: "bob-pd-textarea" });
     ta.placeholder = def.placeholder || "";
     ta.rows = def.rows || 4;
     const initial = (sections[def.key] || "").replace(/^\s+|\s+$/g, "");
@@ -35453,7 +35453,7 @@ ${snippet}` : "- No markdown content");
   }
   /* ── Projects: rich card grid with milestone progress ─ */
   async renderProjectsView(root) {
-    root.addClass("cadence-projects");
+    root.addClass("bob-projects");
     const def = ENTITIES.project;
     const files = listEntityFiles(this.app, "project");
     const projectFolderLabel = ENTITIES.project.folders ? ENTITIES.project.folders.join(", ") : entityFolder("project");
@@ -35462,20 +35462,20 @@ ${snippet}` : "- No markdown content");
     this._renderPageHeader(root, "Projects", `${files.length} ${files.length === 1 ? "project" : "projects"} in ${projectFolderLabel}${unsupportedText}`, (right, ctx) => {
       this._renderEntityViewSelect(right, "project");
       if (def.externalBaseView) {
-        const openBaseBtn = right.createEl("button", { cls: "cad-btn", text: "Open Base" });
+        const openBaseBtn = right.createEl("button", { cls: "bob-btn", text: "Open Base" });
         openBaseBtn.addEventListener("click", () => this._openEntityBase("project"));
       }
       if (!ctx.hasConfiguredActions) {
-        const btn = right.createEl("button", { cls: "cad-btn primary", text: "+ New Project" });
+        const btn = right.createEl("button", { cls: "bob-btn primary", text: "+ New Project" });
         btn.addEventListener("click", () => this._createEntityFromPrompt("project"));
       }
     });
     if (this._renderExternalBaseView(root, "project")) return;
     this._renderUnsupportedBaseFilters(root, def);
     if (!files.length) {
-      const empty = root.createDiv({ cls: "cad-empty-state" });
-      empty.createDiv({ cls: "cad-empty-state-title", text: "No projects yet" });
-      empty.createDiv({ cls: "cad-empty-state-desc", text: `Hit "+ New Project" \u2014 you'll get a templated note with Brief, Scope, Milestones, Tasks, Risks and Stakeholders sections ready to fill in.` });
+      const empty = root.createDiv({ cls: "bob-empty-state" });
+      empty.createDiv({ cls: "bob-empty-state-title", text: "No projects yet" });
+      empty.createDiv({ cls: "bob-empty-state-desc", text: `Hit "+ New Project" \u2014 you'll get a templated note with Brief, Scope, Milestones, Tasks, Risks and Stakeholders sections ready to fill in.` });
       return;
     }
     const projects = await Promise.all(files.map(async (f) => {
@@ -35491,11 +35491,11 @@ ${snippet}` : "- No markdown content");
       const key = groups[status] !== void 0 ? status : fallbackStatus;
       groups[key].push(p);
     });
-    const grid = root.createDiv({ cls: "cad-proj-grid" });
+    const grid = root.createDiv({ cls: "bob-proj-grid" });
     const renderCard = (p) => {
-      const card = grid.createDiv({ cls: "cad-proj-card" });
-      const head = card.createDiv({ cls: "cad-proj-card-head" });
-      const title = head.createEl("a", { cls: "cad-proj-title", text: entityValue(p.entity, "name", def) || p.entity.basename });
+      const card = grid.createDiv({ cls: "bob-proj-card" });
+      const head = card.createDiv({ cls: "bob-proj-card-head" });
+      const title = head.createEl("a", { cls: "bob-proj-title", text: entityValue(p.entity, "name", def) || p.entity.basename });
       title.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
@@ -35505,32 +35505,32 @@ ${snippet}` : "- No markdown content");
       card.addEventListener("click", () => this.openEntityDetailFromFile(p.entity.file));
       const status = String(entityValue(p.entity, "status", def) || "active");
       const priority = String(entityValue(p.entity, "priority", def) || "");
-      const pillRow = head.createDiv({ cls: "cad-proj-pills" });
-      pillRow.createSpan({ cls: `cad-pill cad-pill-${status.toLowerCase().replace(/\s+/g, "-")}`, text: status });
-      if (priority) pillRow.createSpan({ cls: `cad-pill cad-pill-prio-${priority.toLowerCase()}`, text: priority });
-      const metaRow = card.createDiv({ cls: "cad-proj-meta" });
+      const pillRow = head.createDiv({ cls: "bob-proj-pills" });
+      pillRow.createSpan({ cls: `bob-pill bob-pill-${status.toLowerCase().replace(/\s+/g, "-")}`, text: status });
+      if (priority) pillRow.createSpan({ cls: `bob-pill bob-pill-prio-${priority.toLowerCase()}`, text: priority });
+      const metaRow = card.createDiv({ cls: "bob-proj-meta" });
       const owner = entityValue(p.entity, "owner", def);
       const due = entityValue(p.entity, "due", def);
       if (owner) metaRow.createSpan({ text: `Owner: ${owner}` });
       if (due) metaRow.createSpan({ text: `Due: ${fmtValue(due, "date")}` });
-      const progWrap = card.createDiv({ cls: "cad-proj-progress-wrap" });
+      const progWrap = card.createDiv({ cls: "bob-proj-progress-wrap" });
       progWrap.dataset.pctBand = pctBand(p.meta.percent);
-      const progLabel = progWrap.createDiv({ cls: "cad-proj-progress-label" });
+      const progLabel = progWrap.createDiv({ cls: "bob-proj-progress-label" });
       progLabel.createSpan({ text: `${p.meta.done}/${p.meta.total} milestones` });
-      progLabel.createSpan({ cls: "cad-proj-progress-pct", text: `${p.meta.percent}%` });
-      const bar = progWrap.createDiv({ cls: "cad-proj-progress-bar" });
-      const fill = bar.createDiv({ cls: "cad-proj-progress-fill" });
+      progLabel.createSpan({ cls: "bob-proj-progress-pct", text: `${p.meta.percent}%` });
+      const bar = progWrap.createDiv({ cls: "bob-proj-progress-bar" });
+      const fill = bar.createDiv({ cls: "bob-proj-progress-fill" });
       fill.style.width = `${p.meta.percent}%`;
       if (p.meta.next) {
-        const nextRow = card.createDiv({ cls: "cad-proj-next" });
-        nextRow.createSpan({ cls: "cad-proj-next-label", text: "NEXT \xB7 " });
-        nextRow.createSpan({ cls: "cad-proj-next-date", text: fmtValue(p.meta.next.date, "date") });
+        const nextRow = card.createDiv({ cls: "bob-proj-next" });
+        nextRow.createSpan({ cls: "bob-proj-next-label", text: "NEXT \xB7 " });
+        nextRow.createSpan({ cls: "bob-proj-next-date", text: fmtValue(p.meta.next.date, "date") });
         if (p.meta.next.title) nextRow.createSpan({ text: ` \u2014 ${p.meta.next.title}` });
       }
     };
     const renderSection = (label, list) => {
       if (!list.length) return;
-      root.createDiv({ cls: "cad-section-label-lg", text: label });
+      root.createDiv({ cls: "bob-section-label-lg", text: label });
       list.forEach(renderCard);
     };
     grid.remove();
@@ -35539,12 +35539,12 @@ ${snippet}` : "- No markdown content");
     order.forEach((key) => {
       const list = groups[key];
       if (!list.length) return;
-      root.createDiv({ cls: "cad-section-label-lg", text: sectionLabels[key] });
-      const section = root.createDiv({ cls: "cad-proj-grid" });
+      root.createDiv({ cls: "bob-section-label-lg", text: sectionLabels[key] });
+      const section = root.createDiv({ cls: "bob-proj-grid" });
       list.forEach((p) => {
-        const card = section.createDiv({ cls: "cad-proj-card" });
-        const head = card.createDiv({ cls: "cad-proj-card-head" });
-        const title = head.createEl("a", { cls: "cad-proj-title", text: entityValue(p.entity, "name", def) || p.entity.basename });
+        const card = section.createDiv({ cls: "bob-proj-card" });
+        const head = card.createDiv({ cls: "bob-proj-card-head" });
+        const title = head.createEl("a", { cls: "bob-proj-title", text: entityValue(p.entity, "name", def) || p.entity.basename });
         title.addEventListener("click", (ev) => {
           ev.preventDefault();
           ev.stopPropagation();
@@ -35554,25 +35554,25 @@ ${snippet}` : "- No markdown content");
         card.addEventListener("click", () => this.openEntityDetailFromFile(p.entity.file));
         const status = String(entityValue(p.entity, "status", def) || "active");
         const priority = String(entityValue(p.entity, "priority", def) || "");
-        const pillRow = head.createDiv({ cls: "cad-proj-pills" });
-        pillRow.createSpan({ cls: `cad-pill cad-pill-${status.toLowerCase().replace(/\s+/g, "-")}`, text: status });
-        if (priority) pillRow.createSpan({ cls: `cad-pill cad-pill-prio-${priority.toLowerCase()}`, text: priority });
-        const metaRow = card.createDiv({ cls: "cad-proj-meta" });
+        const pillRow = head.createDiv({ cls: "bob-proj-pills" });
+        pillRow.createSpan({ cls: `bob-pill bob-pill-${status.toLowerCase().replace(/\s+/g, "-")}`, text: status });
+        if (priority) pillRow.createSpan({ cls: `bob-pill bob-pill-prio-${priority.toLowerCase()}`, text: priority });
+        const metaRow = card.createDiv({ cls: "bob-proj-meta" });
         const owner = entityValue(p.entity, "owner", def);
         const due = entityValue(p.entity, "due", def);
         if (owner) metaRow.createSpan({ text: `Owner: ${owner}` });
         if (due) metaRow.createSpan({ text: `Due: ${fmtValue(due, "date")}` });
-        const progWrap = card.createDiv({ cls: "cad-proj-progress-wrap" });
-        const progLabel = progWrap.createDiv({ cls: "cad-proj-progress-label" });
+        const progWrap = card.createDiv({ cls: "bob-proj-progress-wrap" });
+        const progLabel = progWrap.createDiv({ cls: "bob-proj-progress-label" });
         progLabel.createSpan({ text: `${p.meta.done}/${p.meta.total} milestones` });
-        progLabel.createSpan({ cls: "cad-proj-progress-pct", text: `${p.meta.percent}%` });
-        const bar = progWrap.createDiv({ cls: "cad-proj-progress-bar" });
-        const fill = bar.createDiv({ cls: "cad-proj-progress-fill" });
+        progLabel.createSpan({ cls: "bob-proj-progress-pct", text: `${p.meta.percent}%` });
+        const bar = progWrap.createDiv({ cls: "bob-proj-progress-bar" });
+        const fill = bar.createDiv({ cls: "bob-proj-progress-fill" });
         fill.style.width = `${p.meta.percent}%`;
         if (p.meta.next) {
-          const nextRow = card.createDiv({ cls: "cad-proj-next" });
-          nextRow.createSpan({ cls: "cad-proj-next-label", text: "NEXT \xB7 " });
-          nextRow.createSpan({ cls: "cad-proj-next-date", text: fmtValue(p.meta.next.date, "date") });
+          const nextRow = card.createDiv({ cls: "bob-proj-next" });
+          nextRow.createSpan({ cls: "bob-proj-next-label", text: "NEXT \xB7 " });
+          nextRow.createSpan({ cls: "bob-proj-next-date", text: fmtValue(p.meta.next.date, "date") });
           if (p.meta.next.title) nextRow.createSpan({ text: ` \u2014 ${p.meta.next.title}` });
         }
       });
@@ -35580,7 +35580,7 @@ ${snippet}` : "- No markdown content");
   }
   /* ── Home / Command Centre ───────────────── */
   async renderHome(root) {
-    root.addClass("cadence-home");
+    root.addClass("bob-home");
     const today = /* @__PURE__ */ new Date();
     const dateStr = today.toLocaleDateString(void 0, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
     this._renderPageHeader(root, `${greeting()}.`, dateStr);
@@ -35588,7 +35588,7 @@ ${snippet}` : "- No markdown content");
   }
   /* ── Inbox (Planner reminders + captures) ── */
   async renderInbox(root) {
-    root.addClass("cadence-inbox");
+    root.addClass("bob-inbox");
     const all = (this.plugin.settings.reminders || []).filter((r) => !r.done);
     all.sort((a, b) => {
       const wa = a.when ? new Date(a.when).getTime() : Infinity;
@@ -35602,22 +35602,22 @@ ${snippet}` : "- No markdown content");
     all.forEach((r) => buckets[reminderBucket(r.when)].push(r));
     this._renderPageHeader(root, "Inbox", `${all.length} ${all.length === 1 ? "item" : "items"} \xB7 capture once, surface at the right time`, (right, ctx) => {
       if (!ctx.hasConfiguredActions) {
-        const captureBtn = right.createEl("button", { cls: "cad-btn primary", text: "+ Quick capture" });
+        const captureBtn = right.createEl("button", { cls: "bob-btn primary", text: "+ Quick capture" });
         captureBtn.addEventListener("click", () => this.plugin.openQuickCapture());
       }
     });
     if (!all.length) {
-      const empty = root.createDiv({ cls: "cad-empty-state" });
-      empty.createDiv({ cls: "cad-empty-state-title", text: "Inbox zero" });
-      empty.createDiv({ cls: "cad-empty-state-desc", text: "Capture anything with + Quick capture above (or Cmd+Shift+I). Add a time and BOB Workspace will remind you." });
+      const empty = root.createDiv({ cls: "bob-empty-state" });
+      empty.createDiv({ cls: "bob-empty-state-title", text: "Inbox zero" });
+      empty.createDiv({ cls: "bob-empty-state-desc", text: "Capture anything with + Quick capture above (or Cmd+Shift+I). Add a time and BOB Workspace will remind you." });
       return;
     }
     const sectionLabels = { now: "NOW \xB7 OVERDUE OR DUE WITHIN 1 HOUR", today: "TODAY", week: "THIS WEEK", later: "LATER \xB7 UNSCHEDULED" };
     ["now", "today", "week", "later"].forEach((key) => {
       const items = buckets[key];
       if (!items.length) return;
-      root.createDiv({ cls: "cad-section-label-lg", text: `${sectionLabels[key]} \xB7 ${items.length}` });
-      const list = root.createDiv({ cls: "cad-inbox-list" });
+      root.createDiv({ cls: "bob-section-label-lg", text: `${sectionLabels[key]} \xB7 ${items.length}` });
+      const list = root.createDiv({ cls: "bob-inbox-list" });
       items.forEach((r) => this._renderInboxRow(list, r, key));
     });
     await this._renderProjectTasksSection(root);
@@ -35648,28 +35648,28 @@ ${snippet}` : "- No markdown content");
       });
     }
     if (!totalOpen) return;
-    root.createDiv({ cls: "cad-section-label-lg", text: `PROJECT TASKS \xB7 ${totalOpen} open across ${groups.length} ${groups.length === 1 ? "project" : "projects"}` });
-    const wrap = root.createDiv({ cls: "cad-pt-wrap" });
+    root.createDiv({ cls: "bob-section-label-lg", text: `PROJECT TASKS \xB7 ${totalOpen} open across ${groups.length} ${groups.length === 1 ? "project" : "projects"}` });
+    const wrap = root.createDiv({ cls: "bob-pt-wrap" });
     groups.forEach((g) => {
-      const card = wrap.createDiv({ cls: "cad-pt-group" });
-      const head = card.createDiv({ cls: "cad-pt-group-head" });
-      const link = head.createEl("a", { cls: "cad-pt-group-link", text: "\u{1F4C1} " + g.name });
+      const card = wrap.createDiv({ cls: "bob-pt-group" });
+      const head = card.createDiv({ cls: "bob-pt-group-head" });
+      const link = head.createEl("a", { cls: "bob-pt-group-link", text: "\u{1F4C1} " + g.name });
       link.addEventListener("click", (e) => {
         e.preventDefault();
         this.openEntityDetailFromFile(g.file);
       });
-      head.createSpan({ cls: "cad-pt-group-meta", text: `${g.tasks.length} open` });
-      const list = card.createDiv({ cls: "cad-pt-list" });
+      head.createSpan({ cls: "bob-pt-group-meta", text: `${g.tasks.length} open` });
+      const list = card.createDiv({ cls: "bob-pt-list" });
       g.tasks.forEach((t) => {
         const linked = findProjectTaskReminder(this.plugin, g.file.path, t.title);
-        const row = list.createDiv({ cls: "cad-pt-row" });
-        row.createSpan({ cls: "cad-pt-bullet", text: "\u2022" });
-        const txt = row.createSpan({ cls: "cad-pt-text", text: t.title });
+        const row = list.createDiv({ cls: "bob-pt-row" });
+        row.createSpan({ cls: "bob-pt-bullet", text: "\u2022" });
+        const txt = row.createSpan({ cls: "bob-pt-text", text: t.title });
         if (linked && linked.when) {
-          row.createSpan({ cls: "cad-pt-when", text: reminderTimeStr(linked.when) });
+          row.createSpan({ cls: "bob-pt-when", text: reminderTimeStr(linked.when) });
         }
         const bell = row.createEl("button", {
-          cls: "cad-btn cad-btn-sm cad-pt-bell" + (linked ? " linked" : ""),
+          cls: "bob-btn bob-btn-sm bob-pt-bell" + (linked ? " linked" : ""),
           text: linked ? "\u{1F514}" : "\u{1F515}"
         });
         bell.title = linked ? "Edit reminder" : "Set a reminder";
@@ -35677,9 +35677,9 @@ ${snippet}` : "- No markdown content");
           ev.stopPropagation();
           const existing = findProjectTaskReminder(this.plugin, g.file.path, t.title);
           if (existing) {
-            new CadenceReminderEditModal(this.app, this.plugin, existing).open();
+            new BobReminderEditModal(this.app, this.plugin, existing).open();
           } else {
-            new CadenceReminderEditModal(this.app, this.plugin, {
+            new BobReminderEditModal(this.app, this.plugin, {
               text: t.title,
               when: null,
               repeat: "none",
@@ -35693,22 +35693,22 @@ ${snippet}` : "- No markdown content");
     });
   }
   _renderInboxRow(parent, r, bucket) {
-    const row = parent.createDiv({ cls: "cad-inbox-row" + (bucket === "now" ? " overdue" : "") });
-    const left = row.createDiv({ cls: "cad-inbox-row-left" });
-    const tWrap = left.createDiv({ cls: "cad-inbox-time" });
+    const row = parent.createDiv({ cls: "bob-inbox-row" + (bucket === "now" ? " overdue" : "") });
+    const left = row.createDiv({ cls: "bob-inbox-row-left" });
+    const tWrap = left.createDiv({ cls: "bob-inbox-time" });
     if (r.when) {
-      tWrap.createSpan({ cls: "cad-inbox-time-text", text: reminderTimeStr(r.when) });
+      tWrap.createSpan({ cls: "bob-inbox-time-text", text: reminderTimeStr(r.when) });
       if (r.repeat && r.repeat !== "none") {
-        tWrap.createSpan({ cls: "cad-inbox-repeat", text: r.repeat === "daily" ? "\u21BB daily" : "\u21BB weekly" });
+        tWrap.createSpan({ cls: "bob-inbox-repeat", text: r.repeat === "daily" ? "\u21BB daily" : "\u21BB weekly" });
       }
     } else {
-      tWrap.createSpan({ cls: "cad-inbox-time-text muted", text: "unscheduled" });
+      tWrap.createSpan({ cls: "bob-inbox-time-text muted", text: "unscheduled" });
     }
-    const main = row.createDiv({ cls: "cad-inbox-row-main" });
-    main.createDiv({ cls: "cad-inbox-row-text", text: r.text });
+    const main = row.createDiv({ cls: "bob-inbox-row-main" });
+    main.createDiv({ cls: "bob-inbox-row-text", text: r.text });
     if (r.project) {
-      const chipRow = main.createDiv({ cls: "cad-inbox-row-meta-row" });
-      const chip = chipRow.createEl("a", { cls: "cad-rem-project-chip", text: "\u{1F4C1} " + (projectNameFromPath(this.app, r.project) || "Project") });
+      const chipRow = main.createDiv({ cls: "bob-inbox-row-meta-row" });
+      const chip = chipRow.createEl("a", { cls: "bob-rem-project-chip", text: "\u{1F4C1} " + (projectNameFromPath(this.app, r.project) || "Project") });
       chip.title = "Open project";
       chip.addEventListener("click", (ev) => {
         ev.preventDefault();
@@ -35720,19 +35720,19 @@ ${snippet}` : "- No markdown content");
     if (r.notes) {
       const previewLine = String(r.notes).split("\n").find((l) => l.trim()) || "";
       if (previewLine) {
-        const note = main.createDiv({ cls: "cad-inbox-row-notes" });
-        note.createSpan({ cls: "cad-inbox-row-notes-icon", text: "\u{1F4DD} " });
+        const note = main.createDiv({ cls: "bob-inbox-row-notes" });
+        note.createSpan({ cls: "bob-inbox-row-notes-icon", text: "\u{1F4DD} " });
         note.appendText(previewLine.length > 120 ? previewLine.slice(0, 117) + "\u2026" : previewLine);
       }
     }
-    const openEdit = () => new CadenceReminderEditModal(this.app, this.plugin, r).open();
+    const openEdit = () => new BobReminderEditModal(this.app, this.plugin, r).open();
     left.addEventListener("click", openEdit);
     main.addEventListener("click", openEdit);
     left.style.cursor = "pointer";
     main.style.cursor = "pointer";
-    const actions = row.createDiv({ cls: "cad-inbox-actions" });
+    const actions = row.createDiv({ cls: "bob-inbox-actions" });
     const mk = (label, title, fn) => {
-      const b = actions.createEl("button", { cls: "cad-btn cad-btn-sm", text: label });
+      const b = actions.createEl("button", { cls: "bob-btn bob-btn-sm", text: label });
       b.title = title;
       b.addEventListener("click", (ev) => {
         ev.stopPropagation();
@@ -35761,7 +35761,7 @@ ${snippet}` : "- No markdown content");
     const delBtn = mk("\xD7", "Delete", async () => {
       if (await confirmModal(this.app, "Delete this reminder?", { title: "Delete reminder", cta: "Delete" })) this.plugin.deleteReminder(r.id);
     });
-    delBtn.classList.add("cad-btn-danger");
+    delBtn.classList.add("bob-btn-danger");
   }
   async _quickAddTodayTask() {
     const text = await this._prompt({
@@ -35786,17 +35786,17 @@ ${snippet}` : "- No markdown content");
   /* ── CRM Dashboard ──────────────────────── */
   /* Reusable list card on the dashboard. */
   _dashCardSection(parent, title, rows, emptyMsg) {
-    const card = parent.createDiv({ cls: "cad-dash-card" });
-    card.createDiv({ cls: "cad-dash-card-head" }).createDiv({ cls: "cad-dash-card-title", text: title });
-    const body = card.createDiv({ cls: "cad-dash-card-body" });
+    const card = parent.createDiv({ cls: "bob-dash-card" });
+    card.createDiv({ cls: "bob-dash-card-head" }).createDiv({ cls: "bob-dash-card-title", text: title });
+    const body = card.createDiv({ cls: "bob-dash-card-body" });
     if (!rows || !rows.length) {
-      body.createDiv({ cls: "cad-empty", text: emptyMsg || "Nothing here yet." });
+      body.createDiv({ cls: "bob-empty", text: emptyMsg || "Nothing here yet." });
       return;
     }
     rows.forEach((r) => {
-      const row = body.createDiv({ cls: "cad-dash-row" });
-      row.createDiv({ cls: "cad-dash-row-title", text: r.title });
-      row.createDiv({ cls: "cad-dash-row-meta", text: r.meta });
+      const row = body.createDiv({ cls: "bob-dash-row" });
+      row.createDiv({ cls: "bob-dash-row-title", text: r.title });
+      row.createDiv({ cls: "bob-dash-row-meta", text: r.meta });
       if (r.file) row.addEventListener("click", () => {
         if (r.entityKey) {
           this.openEntityDetail(r.entityKey, r.file);
@@ -35809,7 +35809,7 @@ ${snippet}` : "- No markdown content");
   /* ── Reports: Productivity (over daily notes) ── */
   /* ── PRM Analytics ──────────────────────── */
   async renderPRMAnalytics(root) {
-    root.addClass("cadence-report");
+    root.addClass("bob-report");
     const partnerDef = ENTITIES.partner;
     const dealDef = ENTITIES.deal;
     const partners = listEntities(this.app, "partner");
@@ -35819,13 +35819,13 @@ ${snippet}` : "- No markdown content");
     const partnerSourced = deals.filter((e) => entityValue(e, "partner", dealDef));
     const partnerWon = partnerSourced.filter((e) => dealWonStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
     this._renderPageHeader(root, "PRM analytics", "Partner programme health, tier mix and revenue contribution");
-    const grid = root.createDiv({ cls: "cad-stat-grid" });
+    const grid = root.createDiv({ cls: "bob-stat-grid" });
     const stat = (label, value, sub, accent) => {
-      const c = grid.createDiv({ cls: "cad-stat-card" });
+      const c = grid.createDiv({ cls: "bob-stat-card" });
       if (accent) c.dataset.accent = accent;
-      c.createDiv({ cls: "cad-stat-label", text: label });
-      c.createDiv({ cls: "cad-stat-value", text: String(value) });
-      if (sub) c.createDiv({ cls: "cad-stat-sub", text: sub });
+      c.createDiv({ cls: "bob-stat-label", text: label });
+      c.createDiv({ cls: "bob-stat-value", text: String(value) });
+      if (sub) c.createDiv({ cls: "bob-stat-sub", text: sub });
     };
     stat("PARTNERS", partners.length, "on the books", "sky");
     stat("SOURCED DEALS", partnerSourced.length, fmtValue(sumVal(partnerSourced), "currency"), "mint");
@@ -35851,25 +35851,25 @@ ${snippet}` : "- No markdown content");
       tierValueMap.set(tier, (tierValueMap.get(tier) || 0) + dealValue(d));
     });
     if (tierMap.size) {
-      root.createDiv({ cls: "cad-section-label-lg", text: "PARTNERS BY TIER" });
-      const tierCard = root.createDiv({ cls: "cad-dash-card" });
+      root.createDiv({ cls: "bob-section-label-lg", text: "PARTNERS BY TIER" });
+      const tierCard = root.createDiv({ cls: "bob-dash-card" });
       tierCard.style.margin = "0 36px 18px 36px";
-      const tierBody = tierCard.createDiv({ cls: "cad-dash-card-body cad-mini-stat-row" });
+      const tierBody = tierCard.createDiv({ cls: "bob-dash-card-body bob-mini-stat-row" });
       const tierAccent = { "Gold": "warn", "Silver": "sky", "Bronze": "rose", "Standard": "mint", "Untiered": "mint" };
       [...tierMap.entries()].sort((a, b) => b[1] - a[1]).forEach(([tier, count]) => {
         const value = tierValueMap.get(tier) || 0;
-        const mini = tierBody.createDiv({ cls: "cad-mini-stat" });
+        const mini = tierBody.createDiv({ cls: "bob-mini-stat" });
         mini.dataset.accent = tierAccent[tier] || "sky";
-        mini.createDiv({ cls: "cad-mini-stat-value", text: String(count) });
-        mini.createDiv({ cls: "cad-mini-stat-label", text: tier.toUpperCase() });
-        const sub = mini.createDiv({ cls: "cad-stat-sub" });
+        mini.createDiv({ cls: "bob-mini-stat-value", text: String(count) });
+        mini.createDiv({ cls: "bob-mini-stat-label", text: tier.toUpperCase() });
+        const sub = mini.createDiv({ cls: "bob-stat-sub" });
         sub.style.marginTop = "4px";
         sub.setText(value > 0 ? fmtValue(value, "currency") : "\u2014");
       });
     }
-    const cols = root.createDiv({ cls: "cad-dash-cols" });
-    const left = cols.createDiv({ cls: "cad-dash-col" });
-    const right = cols.createDiv({ cls: "cad-dash-col" });
+    const cols = root.createDiv({ cls: "bob-dash-cols" });
+    const left = cols.createDiv({ cls: "bob-dash-col" });
+    const right = cols.createDiv({ cls: "bob-dash-col" });
     const partnerRevenue = /* @__PURE__ */ new Map();
     partnerWon.forEach((d) => {
       const p = String(entityValue(d, "partner", dealDef) || "(direct)");
@@ -35888,15 +35888,15 @@ ${snippet}` : "- No markdown content");
     const sourcedOpen = partnerSourced.filter((e) => !dealTerminalStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
     const sourcedLost = partnerSourced.filter((e) => dealLostStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
     const conv = partnerSourced.length === 0 ? 0 : Math.round(partnerWon.length / partnerSourced.length * 100);
-    const funnelCard = right.createDiv({ cls: "cad-dash-card" });
-    funnelCard.createDiv({ cls: "cad-dash-card-head" }).createDiv({ cls: "cad-dash-card-title", text: "PARTNER FUNNEL" });
-    const funnelBody = funnelCard.createDiv({ cls: "cad-dash-card-body cad-mini-stat-row" });
+    const funnelCard = right.createDiv({ cls: "bob-dash-card" });
+    funnelCard.createDiv({ cls: "bob-dash-card-head" }).createDiv({ cls: "bob-dash-card-title", text: "PARTNER FUNNEL" });
+    const funnelBody = funnelCard.createDiv({ cls: "bob-dash-card-body bob-mini-stat-row" });
     const mkF = (label, val, sub, accent) => {
-      const m = funnelBody.createDiv({ cls: "cad-mini-stat" });
+      const m = funnelBody.createDiv({ cls: "bob-mini-stat" });
       m.dataset.accent = accent;
-      m.createDiv({ cls: "cad-mini-stat-value", text: String(val) });
-      m.createDiv({ cls: "cad-mini-stat-label", text: label });
-      const s = m.createDiv({ cls: "cad-stat-sub" });
+      m.createDiv({ cls: "bob-mini-stat-value", text: String(val) });
+      m.createDiv({ cls: "bob-mini-stat-label", text: label });
+      const s = m.createDiv({ cls: "bob-stat-sub" });
       s.style.marginTop = "4px";
       s.setText(sub);
     };
@@ -35904,17 +35904,17 @@ ${snippet}` : "- No markdown content");
     mkF("OPEN", sourcedOpen.length, fmtValue(sumVal(sourcedOpen), "currency"), "mint");
     mkF("WON", partnerWon.length, fmtValue(sumVal(partnerWon), "currency"), "emerald");
     mkF("LOST", sourcedLost.length, fmtValue(sumVal(sourcedLost), "currency"), "rose");
-    const convCard = right.createDiv({ cls: "cad-dash-card" });
-    convCard.createDiv({ cls: "cad-dash-card-head" }).createDiv({ cls: "cad-dash-card-title", text: `CONVERSION \xB7 sourced \u2192 won` });
-    const convBody = convCard.createDiv({ cls: "cad-dash-card-body" });
+    const convCard = right.createDiv({ cls: "bob-dash-card" });
+    convCard.createDiv({ cls: "bob-dash-card-head" }).createDiv({ cls: "bob-dash-card-title", text: `CONVERSION \xB7 sourced \u2192 won` });
+    const convBody = convCard.createDiv({ cls: "bob-dash-card-body" });
     convBody.style.padding = "20px 16px";
-    const convWrap = convBody.createDiv({ cls: "cad-proj-progress-wrap" });
+    const convWrap = convBody.createDiv({ cls: "bob-proj-progress-wrap" });
     convWrap.dataset.pctBand = pctBand(conv);
-    const convLabel = convWrap.createDiv({ cls: "cad-proj-progress-label" });
+    const convLabel = convWrap.createDiv({ cls: "bob-proj-progress-label" });
     convLabel.createSpan({ text: `${partnerWon.length}/${partnerSourced.length} sourced deals won` });
-    convLabel.createSpan({ cls: "cad-proj-progress-pct", text: `${conv}%` });
-    const convBar = convWrap.createDiv({ cls: "cad-proj-progress-bar" });
-    const convFill = convBar.createDiv({ cls: "cad-proj-progress-fill" });
+    convLabel.createSpan({ cls: "bob-proj-progress-pct", text: `${conv}%` });
+    const convBar = convWrap.createDiv({ cls: "bob-proj-progress-bar" });
+    const convFill = convBar.createDiv({ cls: "bob-proj-progress-fill" });
     convFill.style.width = `${conv}%`;
   }
   /* ── Team (configurable People categories) ─ */
@@ -35932,17 +35932,17 @@ ${snippet}` : "- No markdown content");
   }
   /* ── Settings (opens Obsidian settings → BOB Workspace) ─ */
   async openSettingsTab(root) {
-    root.addClass("cadence-soon");
-    const wrap = root.createDiv({ cls: "cad-soon-wrap" });
-    const ic = wrap.createDiv({ cls: "cad-soon-icon" });
+    root.addClass("bob-soon");
+    const wrap = root.createDiv({ cls: "bob-soon-wrap" });
+    const ic = wrap.createDiv({ cls: "bob-soon-icon" });
     try {
       obsidian17.setIcon(ic, "settings-2");
     } catch (_) {
     }
-    wrap.createDiv({ cls: "cad-eyebrow", text: "BOB WORKSPACE" });
-    wrap.createDiv({ cls: "cad-soon-title", text: "Settings" });
-    wrap.createDiv({ cls: "cad-soon-desc", text: "Configure folders, headings, week start, default tab, and the future BOB Workspace backend connection." });
-    const btn = wrap.createEl("button", { cls: "cad-btn primary", text: "Open BOB Workspace settings" });
+    wrap.createDiv({ cls: "bob-eyebrow", text: "BOB WORKSPACE" });
+    wrap.createDiv({ cls: "bob-soon-title", text: "Settings" });
+    wrap.createDiv({ cls: "bob-soon-desc", text: "Configure folders, headings, week start, default tab, and the future BOB Workspace backend connection." });
+    const btn = wrap.createEl("button", { cls: "bob-btn primary", text: "Open BOB Workspace settings" });
     btn.style.marginTop = "12px";
     btn.addEventListener("click", () => {
       this.app.setting.open();
@@ -36040,10 +36040,10 @@ ${snippet}` : "- No markdown content");
     const next = replaceSection(content, this.plugin.settings.tasksHeading, newSection);
     await this.app.vault.modify(file, next);
   }
-  /* ── Cadence-styled prompt modal ─ */
+  /* ── BOB Workspace prompt modal ─ */
   _prompt(opts) {
     return new Promise((resolve) => {
-      new CadencePromptModal(this.app, {
+      new BobPromptModal(this.app, {
         title: opts.title || "Enter a name",
         placeholder: opts.placeholder || "",
         defaultValue: opts.defaultValue || "",
@@ -36054,7 +36054,7 @@ ${snippet}` : "- No markdown content");
   }
   async _createEntityFromPrompt(entityKey) {
     const def = ENTITIES[entityKey];
-    new CadenceEntityCreateModal(this.app, entityKey, {
+    new BobEntityCreateModal(this.app, entityKey, {
       onSubmit: async (result) => {
         if (!result) return;
         try {
@@ -36081,45 +36081,45 @@ Saved to ${file.path}`, 4e3);
   }
   /* ── Today pane ─────────────────────────── */
   async renderTodayPane(root) {
-    root.addClass("cadence-today");
+    root.addClass("bob-today");
     this.todayFile = await ensureDailyNote(this.app, this.plugin.settings);
     const fileContent = await this.app.vault.read(this.todayFile);
     this.todayParsed = parseSections(fileContent, this.plugin.settings);
     const info = dateInfo();
-    root.createDiv({ cls: "cad-eyebrow", text: info.weekday.toUpperCase() });
-    const hero = root.createDiv({ cls: "cad-date-hero" });
-    hero.createSpan({ cls: "cad-day", text: String(info.day) });
+    root.createDiv({ cls: "bob-eyebrow", text: info.weekday.toUpperCase() });
+    const hero = root.createDiv({ cls: "bob-date-hero" });
+    hero.createSpan({ cls: "bob-day", text: String(info.day) });
     const monthCol = hero.createDiv();
-    monthCol.createDiv({ cls: "cad-month", text: info.month });
-    monthCol.createDiv({ cls: "cad-year", text: String(info.year) });
+    monthCol.createDiv({ cls: "bob-month", text: info.month });
+    monthCol.createDiv({ cls: "bob-year", text: String(info.year) });
     const taskCount = this.todayParsed.tasks.filter((l) => / \[ \] /.test(l)).length;
     root.createDiv({
-      cls: "cad-greet",
+      cls: "bob-greet",
       text: taskCount === 0 ? `${greeting()}. Nothing on the books \u2014 your day is clear.` : `${greeting()}. You have ${taskCount} ${taskCount === 1 ? "thing" : "things"} to handle.`
     });
     const taskMode = this.plugin.settings.taskMode || "checkbox";
-    const taskSection = root.createDiv({ cls: "cad-section" });
-    const taskLabel = taskSection.createDiv({ cls: "cad-section-label" });
+    const taskSection = root.createDiv({ cls: "bob-section" });
+    const taskLabel = taskSection.createDiv({ cls: "bob-section-label" });
     taskLabel.createSpan({ text: "TODAY" });
     if (taskMode === "checkbox" || taskMode === "hybrid") {
       const total = this.todayParsed.tasks.length;
       const open = this.todayParsed.tasks.filter((l) => / \[ \] /.test(l)).length;
-      taskLabel.createSpan({ cls: "cad-count", text: `${open} open \xB7 ${total - open} done` });
+      taskLabel.createSpan({ cls: "bob-count", text: `${open} open \xB7 ${total - open} done` });
       if (!this.todayParsed.tasks.length) {
-        taskSection.createDiv({ cls: "cad-empty", text: "No tasks in today's note yet." });
+        taskSection.createDiv({ cls: "bob-empty", text: "No tasks in today's note yet." });
       } else {
         const dailyPath = this.todayFile.path;
         this.todayParsed.tasks.forEach((rawLine, idx) => {
           const checked = / \[(x|X)\] /.test(rawLine);
           const text = rawLine.replace(/^\s*-\s\[(x|X| )\]\s/, "");
-          const row = taskSection.createDiv({ cls: "cad-task-row" + (checked ? " done" : "") });
+          const row = taskSection.createDiv({ cls: "bob-task-row" + (checked ? " done" : "") });
           const cb = row.createEl("input", { type: "checkbox" });
           cb.checked = checked;
           cb.addEventListener("change", () => this.toggleTodayTask(idx, cb.checked));
-          row.createSpan({ cls: "cad-task-text", text });
+          row.createSpan({ cls: "bob-task-text", text });
           const linkedProject = this._getTaskProjectLink(dailyPath, text);
           if (linkedProject) {
-            const chip = row.createEl("a", { cls: "cad-task-proj-chip", text: "\u{1F4C1} " + (projectNameFromPath(this.app, linkedProject) || "Project") });
+            const chip = row.createEl("a", { cls: "bob-task-proj-chip", text: "\u{1F4C1} " + (projectNameFromPath(this.app, linkedProject) || "Project") });
             chip.title = "Open linked project";
             chip.addEventListener("click", (ev) => {
               ev.preventDefault();
@@ -36128,14 +36128,14 @@ Saved to ${file.path}`, 4e3);
               if (f instanceof obsidian17.TFile) this.openEntityDetailFromFile(f);
             });
           }
-          const linkBtn = row.createEl("button", { cls: "cad-task-link-btn" + (linkedProject ? " linked" : ""), text: linkedProject ? "\u270E" : "\u{1F4C1}" });
+          const linkBtn = row.createEl("button", { cls: "bob-task-link-btn" + (linkedProject ? " linked" : ""), text: linkedProject ? "\u270E" : "\u{1F4C1}" });
           linkBtn.title = linkedProject ? "Change linked project" : "Link to a project";
           linkBtn.addEventListener("click", (ev) => {
             ev.stopPropagation();
             this._openTaskProjectPicker(dailyPath, text, linkedProject);
           });
           if (taskMode === "hybrid") {
-            const promBtn = row.createEl("button", { cls: "cad-task-link-btn", text: "\u2191", title: "Promote to TaskNote" });
+            const promBtn = row.createEl("button", { cls: "bob-task-link-btn", text: "\u2191", title: "Promote to TaskNote" });
             promBtn.addEventListener("click", async (ev) => {
               ev.stopPropagation();
               await createTaskNote(this.app, this.plugin.settings, text);
@@ -36146,31 +36146,31 @@ Saved to ${file.path}`, 4e3);
       }
     }
     if (taskMode === "tasknotes" || taskMode === "hybrid") {
-      if (taskMode === "hybrid") taskSection.createDiv({ cls: "cad-section-label", text: "TASKNOTES TODAY" });
+      if (taskMode === "hybrid") taskSection.createDiv({ cls: "bob-section-label", text: "TASKNOTES TODAY" });
       const notes = listTodayTaskNotes(this.app, this.plugin.settings);
       if (!notes.length) {
-        taskSection.createDiv({ cls: "cad-empty", text: "No TaskNotes due today." });
+        taskSection.createDiv({ cls: "bob-empty", text: "No TaskNotes due today." });
       } else {
         if (taskMode === "tasknotes") {
-          taskLabel.createSpan({ cls: "cad-count", text: `${notes.length} due today` });
+          taskLabel.createSpan({ cls: "bob-count", text: `${notes.length} due today` });
         }
         notes.forEach(({ file, fm }) => {
           const done = fm.status === "done";
-          const row = taskSection.createDiv({ cls: "cad-task-row" + (done ? " done" : "") });
+          const row = taskSection.createDiv({ cls: "bob-task-row" + (done ? " done" : "") });
           const cb = row.createEl("input", { type: "checkbox" });
           cb.checked = done;
           cb.addEventListener("change", async () => {
             await toggleTaskNoteStatus(this.app, file, cb.checked);
             this.render();
           });
-          const lbl = row.createEl("a", { cls: "cad-task-text", text: fm.title || file.basename });
+          const lbl = row.createEl("a", { cls: "bob-task-text", text: fm.title || file.basename });
           lbl.title = "Open TaskNote";
           lbl.addEventListener("click", (ev) => {
             ev.preventDefault();
             this.app.workspace.openLinkText(file.path, "", false);
           });
           if (fm.priority && fm.priority !== "normal") {
-            row.createSpan({ cls: "cad-count", text: fm.priority });
+            row.createSpan({ cls: "bob-count", text: fm.priority });
           }
         });
       }
@@ -36195,9 +36195,9 @@ Saved to ${file.path}`, 4e3);
         }
       }
     });
-    const journalSection = root.createDiv({ cls: "cad-section" });
-    journalSection.createDiv({ cls: "cad-section-label" }).setText("TODAY\u2019S ENTRY");
-    const ta = journalSection.createEl("textarea", { cls: "cad-journal" });
+    const journalSection = root.createDiv({ cls: "bob-section" });
+    journalSection.createDiv({ cls: "bob-section-label" }).setText("TODAY\u2019S ENTRY");
+    const ta = journalSection.createEl("textarea", { cls: "bob-journal" });
     ta.value = this.todayParsed.journal;
     ta.placeholder = "Write what\u2019s on your mind\u2026";
     ta.rows = Math.max(8, ta.value.split("\n").length + 2);
@@ -36214,9 +36214,9 @@ Saved to ${file.path}`, 4e3);
     const footer = root.createDiv();
     footer.style.marginTop = "24px";
     footer.style.fontSize = "12px";
-    footer.style.color = "var(--cad-ink-4)";
+    footer.style.color = "var(--bob-ink-4)";
     const link = footer.createEl("a", { text: "Open today's daily note \u2192" });
-    link.style.color = "var(--cad-emerald-deep)";
+    link.style.color = "var(--bob-emerald-deep)";
     link.style.cursor = "pointer";
     link.addEventListener("click", () => {
       this.app.workspace.openLinkText(this.todayFile.path, "", false);
@@ -36253,19 +36253,19 @@ Saved to ${file.path}`, 4e3);
   }
   /* ── Planner pane ───────────────────────── */
   async renderPlannerPane(root) {
-    root.addClass("cadence-planner");
+    root.addClass("bob-planner");
     const settings = this.plugin.settings;
     const days = weekDates(this.plannerAnchor, settings.weekStartsOn);
     const today = startOfDay(/* @__PURE__ */ new Date());
-    const header = root.createDiv({ cls: "cad-pl-header" });
-    const titleWrap = header.createDiv({ cls: "cad-pl-title-wrap" });
-    titleWrap.createDiv({ cls: "cad-eyebrow", text: "WEEK OF" });
+    const header = root.createDiv({ cls: "bob-pl-header" });
+    const titleWrap = header.createDiv({ cls: "bob-pl-title-wrap" });
+    titleWrap.createDiv({ cls: "bob-eyebrow", text: "WEEK OF" });
     const startStr = days[0].toLocaleDateString(void 0, { month: "long", day: "numeric" });
     const endStr = days[6].toLocaleDateString(void 0, { month: "long", day: "numeric", year: "numeric" });
-    titleWrap.createDiv({ cls: "cad-pl-title", text: `${startStr} \u2013 ${endStr}` });
-    const nav = header.createDiv({ cls: "cad-pl-nav" });
+    titleWrap.createDiv({ cls: "bob-pl-title", text: `${startStr} \u2013 ${endStr}` });
+    const nav = header.createDiv({ cls: "bob-pl-nav" });
     const mkBtn = (label, fn, cls = "") => {
-      const b = nav.createEl("button", { text: label, cls: "cad-pl-btn " + cls });
+      const b = nav.createEl("button", { text: label, cls: "bob-pl-btn " + cls });
       b.addEventListener("click", fn);
     };
     mkBtn("\u25C0", () => {
@@ -36297,29 +36297,29 @@ Saved to ${file.path}`, 4e3);
         else if (/ \[ \] /.test(l)) totalOpen++;
       });
     });
-    const stats = root.createDiv({ cls: "cad-pl-stats" });
+    const stats = root.createDiv({ cls: "bob-pl-stats" });
     const mkStat = (label, value) => {
-      const c = stats.createDiv({ cls: "cad-pl-stat" });
-      c.createDiv({ cls: "cad-pl-stat-label", text: label });
-      c.createDiv({ cls: "cad-pl-stat-value", text: String(value) });
+      const c = stats.createDiv({ cls: "bob-pl-stat" });
+      c.createDiv({ cls: "bob-pl-stat-label", text: label });
+      c.createDiv({ cls: "bob-pl-stat-value", text: String(value) });
     };
     mkStat("OPEN", totalOpen);
     mkStat("DONE", totalDone);
     mkStat("TOTAL", totalOpen + totalDone);
-    const grid = root.createDiv({ cls: "cad-pl-grid" });
+    const grid = root.createDiv({ cls: "bob-pl-grid" });
     dayData.forEach((d) => {
       const isToday = sameDay(d.date, today);
-      const col = grid.createDiv({ cls: "cad-pl-day" + (isToday ? " today" : "") });
-      const colHead = col.createDiv({ cls: "cad-pl-day-head" });
+      const col = grid.createDiv({ cls: "bob-pl-day" + (isToday ? " today" : "") });
+      const colHead = col.createDiv({ cls: "bob-pl-day-head" });
       colHead.createDiv({
-        cls: "cad-pl-weekday",
+        cls: "bob-pl-weekday",
         text: d.date.toLocaleDateString(void 0, { weekday: "short" }).toUpperCase()
       });
-      colHead.createDiv({ cls: "cad-pl-daynum", text: String(d.date.getDate()) });
+      colHead.createDiv({ cls: "bob-pl-daynum", text: String(d.date.getDate()) });
       const open = d.tasks.filter((l) => / \[ \] /.test(l)).length;
       const done = d.tasks.filter((l) => / \[(x|X)\] /.test(l)).length;
       colHead.createDiv({
-        cls: "cad-pl-meta",
+        cls: "bob-pl-meta",
         text: d.exists ? `${open} open \xB7 ${done} done` : "no note"
       });
       colHead.addEventListener("click", async () => {
@@ -36328,14 +36328,14 @@ Saved to ${file.path}`, 4e3);
         }
         this.app.workspace.openLinkText(d.path, "", false);
       });
-      const list = col.createDiv({ cls: "cad-pl-tasks" });
+      const list = col.createDiv({ cls: "bob-pl-tasks" });
       if (!d.tasks.length) {
-        list.createDiv({ cls: "cad-empty", text: d.exists ? "\u2014" : "" });
+        list.createDiv({ cls: "bob-empty", text: d.exists ? "\u2014" : "" });
       } else {
         d.tasks.forEach((rawLine, idx) => {
           const checked = / \[(x|X)\] /.test(rawLine);
           const text = rawLine.replace(/^\s*-\s\[(x|X| )\]\s/, "");
-          const row = list.createDiv({ cls: "cad-pl-task" + (checked ? " done" : "") });
+          const row = list.createDiv({ cls: "bob-pl-task" + (checked ? " done" : "") });
           const cb = row.createEl("input", { type: "checkbox" });
           cb.checked = checked;
           cb.addEventListener("change", () => this.togglePlannerTask(d, idx, cb.checked));
@@ -36369,7 +36369,7 @@ Saved to ${file.path}`, 4e3);
 
 // src/settings-tab.ts
 var obsidian18 = __toESM(require("obsidian"));
-var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
+var BobSettingTab = class extends obsidian18.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -36377,22 +36377,22 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     this._reviewRenderSeq = 0;
     this._workspaceDraftDirty = false;
   }
-  // Reusable toggleable colored help panel (shares .cad-help-* styles with the
+  // Reusable toggleable colored help panel (shares .bob-help-* styles with the
   // Surface Designer). `key` persists open/closed for this session.
   _helpPanel(parent, key, title, build) {
     if (!this._openHelpPanels) this._openHelpPanels = /* @__PURE__ */ new Set();
     const open = this._openHelpPanels.has(key);
-    const block = parent.createDiv({ cls: "cad-help-block" });
-    const toggle = block.createEl("button", { cls: "cad-help-toggle" + (open ? " is-open" : ""), attr: { type: "button" } });
-    const icon = toggle.createSpan({ cls: "cad-help-toggle-icon" });
+    const block = parent.createDiv({ cls: "bob-help-block" });
+    const toggle = block.createEl("button", { cls: "bob-help-toggle" + (open ? " is-open" : ""), attr: { type: "button" } });
+    const icon = toggle.createSpan({ cls: "bob-help-toggle-icon" });
     try {
       obsidian18.setIcon(icon, "help-circle");
     } catch (_) {
       icon.setText("?");
     }
-    toggle.createSpan({ cls: "cad-help-toggle-label", text: title });
-    const chevron = toggle.createSpan({ cls: "cad-help-toggle-chevron", text: open ? "\u25BE" : "\u25B8" });
-    const panel = block.createDiv({ cls: "cad-help-panel" });
+    toggle.createSpan({ cls: "bob-help-toggle-label", text: title });
+    const chevron = toggle.createSpan({ cls: "bob-help-toggle-chevron", text: open ? "\u25BE" : "\u25B8" });
+    const panel = block.createDiv({ cls: "bob-help-panel" });
     if (!open) panel.style.display = "none";
     build(panel);
     toggle.addEventListener("click", () => {
@@ -36405,14 +36405,14 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     });
   }
   _helpBlock(body, heading, lines) {
-    body.createDiv({ cls: "cad-help-heading", text: heading });
+    body.createDiv({ cls: "bob-help-heading", text: heading });
     lines.forEach((line) => {
-      const row = body.createDiv({ cls: "cad-help-line" });
+      const row = body.createDiv({ cls: "bob-help-line" });
       if (Array.isArray(line)) {
-        row.createSpan({ cls: "cad-help-term", text: line[0] });
-        row.createSpan({ cls: "cad-help-desc", text: line[1] });
+        row.createSpan({ cls: "bob-help-term", text: line[0] });
+        row.createSpan({ cls: "bob-help-desc", text: line[1] });
       } else {
-        row.createSpan({ cls: "cad-help-desc", text: line });
+        row.createSpan({ cls: "bob-help-desc", text: line });
       }
     });
   }
@@ -36435,7 +36435,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
   }
   _dashboardSettingsRenderer() {
     if (!this._dashboardRenderer) {
-      const renderer = Object.create(CadenceAppView.prototype);
+      const renderer = Object.create(BobAppView.prototype);
       renderer.mode = "settings.dashboard-editor";
       renderer.detailFile = null;
       renderer.detailEntityKey = null;
@@ -36473,11 +36473,11 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     const TAB_LABELS = ["Workspace", "Review", "Navigation", "Dashboards", "Widgets", "Modules", "Data model", "Planner", "App", "Exports", "Data"];
     if (!this._activeSettingsTab) this._activeSettingsTab = "workspace";
     if (!this._collapsedModules) this._collapsedModules = /* @__PURE__ */ new Set();
-    const tabBar = containerEl.createDiv({ cls: "cad-settings-tabs" });
+    const tabBar = containerEl.createDiv({ cls: "bob-settings-tabs" });
     const tabPanels = {};
     const tabBtns = {};
     TAB_IDS.forEach((id, i) => {
-      const btn = tabBar.createEl("button", { cls: "cad-settings-tab", text: TAB_LABELS[i], attr: { "data-tab": id } });
+      const btn = tabBar.createEl("button", { cls: "bob-settings-tab", text: TAB_LABELS[i], attr: { "data-tab": id } });
       if (id === this._activeSettingsTab) btn.addClass("is-active");
       btn.addEventListener("click", () => {
         TAB_IDS.forEach((tid) => {
@@ -36487,7 +36487,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         this._activeSettingsTab = id;
       });
       tabBtns[id] = btn;
-      const panel = containerEl.createDiv({ cls: "cad-settings-tab-panel" });
+      const panel = containerEl.createDiv({ cls: "bob-settings-tab-panel" });
       if (id !== this._activeSettingsTab) panel.style.display = "none";
       tabPanels[id] = panel;
     });
@@ -36513,9 +36513,9 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     workspaceDesc.appendText("Define schema loading, Base/view associations and templates in ");
     workspaceDesc.createEl("code", { text: "workspace.json" });
     workspaceDesc.appendText(" next to plugin data. Use the other tabs for navigation, dashboards, widget catalog and export-group editing.");
-    const workspaceWrap = pWs.createDiv({ cls: "cad-settings-entities" });
-    const workspaceStatus = workspaceWrap.createDiv({ cls: "cad-settings-entities-status" });
-    const workspaceTa = workspaceWrap.createEl("textarea", { cls: "cad-settings-entities-textarea" });
+    const workspaceWrap = pWs.createDiv({ cls: "bob-settings-entities" });
+    const workspaceStatus = workspaceWrap.createDiv({ cls: "bob-settings-entities-status" });
+    const workspaceTa = workspaceWrap.createEl("textarea", { cls: "bob-settings-entities-textarea" });
     workspaceTa.rows = 18;
     workspaceTa.spellcheck = false;
     workspaceTa.style.width = "100%";
@@ -36551,7 +36551,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         setWorkspaceStatus(`Invalid JSON/config: ${e.message}`, false);
       }
     });
-    const workspaceBtns = workspaceWrap.createDiv({ cls: "cad-settings-entities-btns" });
+    const workspaceBtns = workspaceWrap.createDiv({ cls: "bob-settings-entities-btns" });
     workspaceBtns.style.display = "flex";
     workspaceBtns.style.gap = "8px";
     workspaceBtns.style.marginTop = "8px";
@@ -36632,10 +36632,10 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     templateDesc.appendText(". Applying a template writes the active ");
     templateDesc.createEl("code", { text: "workspace.json" });
     templateDesc.appendText(" and stores the selected template in plugin data.");
-    const templateWrap = pWs.createDiv({ cls: "setting-group cad-settings-section" });
+    const templateWrap = pWs.createDiv({ cls: "setting-group bob-settings-section" });
     const templatePanel = templateWrap.createDiv({ cls: "setting-items" });
     const templateStatus = templatePanel.createDiv({ cls: "setting-item-description" });
-    const templateRow = templatePanel.createDiv({ cls: "cad-workspace-template-row" });
+    const templateRow = templatePanel.createDiv({ cls: "bob-workspace-template-row" });
     const templateSelect = templateRow.createEl("select", { cls: "dropdown" });
     const templateReloadBtn = templateRow.createEl("button", { text: "Reload" });
     const templateApplyBtn = templateRow.createEl("button", { text: "Apply selected", cls: "mod-cta" });
@@ -36696,23 +36696,23 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     });
     setTimeout(() => refreshWorkspaceTemplateSelector(), 0);
     this._renderHelpTopic(pNav, "navigation-overview");
-    const navDesigner = pNav.createDiv({ cls: "cad-nav-designer" });
-    const navDesignerHead = navDesigner.createDiv({ cls: "cad-nav-designer-head" });
+    const navDesigner = pNav.createDiv({ cls: "bob-nav-designer" });
+    const navDesignerHead = navDesigner.createDiv({ cls: "bob-nav-designer-head" });
     navDesignerHead.createEl("h4", { text: "Navigation designer" });
     navDesignerHead.createEl("p", {
       cls: "setting-item-description",
       text: "Drag unassigned tabs or record types into groups and move existing menu items between groups. Choose icons from Obsidian's registered icon library. Remove an item to return it to its available pool. Changes update the workspace JSON draft; use Save and apply above to persist them."
     });
-    const navDesignerBody = navDesigner.createDiv({ cls: "cad-nav-designer-body" });
+    const navDesignerBody = navDesigner.createDiv({ cls: "bob-nav-designer-body" });
     pExp.createEl("h3", { text: "Exports" });
-    const workbookDesigner = pExp.createDiv({ cls: "cad-workbook-designer" });
-    const workbookDesignerHead = workbookDesigner.createDiv({ cls: "cad-nav-designer-head" });
+    const workbookDesigner = pExp.createDiv({ cls: "bob-workbook-designer" });
+    const workbookDesignerHead = workbookDesigner.createDiv({ cls: "bob-nav-designer-head" });
     workbookDesignerHead.createEl("h4", { text: "Workbook export groups" });
     workbookDesignerHead.createEl("p", {
       cls: "setting-item-description",
       text: "Define reusable XLSX export bundles in workspace.json. Assign a record type to more than one bundle when separate exports need overlapping data."
     });
-    const workbookDesignerBody = workbookDesigner.createDiv({ cls: "cad-workbook-designer-body" });
+    const workbookDesignerBody = workbookDesigner.createDiv({ cls: "bob-workbook-designer-body" });
     const readWorkspaceDraft = () => validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(workspaceTa.value)));
     const reviewText = (value, fallback = "\u2014") => {
       if (value == null || value === "") return fallback;
@@ -36724,14 +36724,14 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       return String(value);
     };
     const renderReviewTable = (parent, title, headers, rows, emptyText = "Nothing to review yet") => {
-      const section = parent.createDiv({ cls: "cad-review-section" });
-      section.createDiv({ cls: "cad-section-label-lg", text: title });
+      const section = parent.createDiv({ cls: "bob-review-section" });
+      section.createDiv({ cls: "bob-section-label-lg", text: title });
       if (!rows.length) {
-        section.createDiv({ cls: "cad-empty", text: emptyText });
+        section.createDiv({ cls: "bob-empty", text: emptyText });
         return section;
       }
-      const wrap = section.createDiv({ cls: "cad-review-table-wrap" });
-      const table = wrap.createEl("table", { cls: "cad-review-table" });
+      const wrap = section.createDiv({ cls: "bob-review-table-wrap" });
+      const table = wrap.createEl("table", { cls: "bob-review-table" });
       const thead = table.createEl("thead");
       const headRow = thead.createEl("tr");
       headers.forEach((header) => headRow.createEl("th", { text: header }));
@@ -36832,14 +36832,14 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         ["unassigned", "Unassigned"]
       ];
       if (!reviewTabs.some(([id]) => id === activeTab)) this._reviewActiveTab = "overview";
-      const tabBar2 = pReview.createDiv({ cls: "cad-settings-tabs cad-review-tabs" });
-      const panel = pReview.createDiv({ cls: "cad-settings-tab-panel cad-review-panel" });
+      const tabBar2 = pReview.createDiv({ cls: "bob-settings-tabs bob-review-tabs" });
+      const panel = pReview.createDiv({ cls: "bob-settings-tab-panel bob-review-panel" });
       const setActiveTab = (id) => {
         this._reviewActiveTab = id;
         void renderWorkspaceReview();
       };
       reviewTabs.forEach(([id, label]) => {
-        const btn = tabBar2.createEl("button", { cls: "cad-settings-tab cad-review-tab", text: label });
+        const btn = tabBar2.createEl("button", { cls: "bob-settings-tab bob-review-tab", text: label });
         btn.toggleClass("is-active", id === activeTab);
         btn.addEventListener("click", () => setActiveTab(id));
       });
@@ -36997,7 +36997,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         row.sourceStatus
       ]);
       if (schemaSources.errors.length) {
-        const details = panel.createEl("details", { cls: "cad-base-filter-warnings" });
+        const details = panel.createEl("details", { cls: "bob-base-filter-warnings" });
         details.createEl("summary", { text: `${schemaSources.errors.length} schema source warning${schemaSources.errors.length === 1 ? "" : "s"}` });
         const list = details.createEl("ul");
         schemaSources.errors.forEach((error) => {
@@ -37005,22 +37005,22 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         });
       }
       if (activeTab === "overview") {
-        const summary = panel.createDiv({ cls: "cad-review-summary" });
+        const summary = panel.createDiv({ cls: "bob-review-summary" });
         counts.forEach(([label, value]) => {
-          const card = summary.createDiv({ cls: "cad-review-summary-card" });
-          card.createDiv({ cls: "cad-review-summary-value", text: String(value) });
-          card.createDiv({ cls: "cad-review-summary-label", text: String(label) });
+          const card = summary.createDiv({ cls: "bob-review-summary-card" });
+          card.createDiv({ cls: "bob-review-summary-value", text: String(value) });
+          card.createDiv({ cls: "bob-review-summary-label", text: String(label) });
         });
-        const note = panel.createDiv({ cls: "cad-widget-gap" });
-        note.createDiv({ cls: "cad-widget-gap-title", text: "Review focus" });
+        const note = panel.createDiv({ cls: "bob-widget-gap" });
+        note.createDiv({ cls: "bob-widget-gap-title", text: "Review focus" });
         note.createDiv({
           cls: "setting-item-description",
           text: "Use the dedicated tabs to inspect navigation, bases, dashboards, widgets, and the reverse entity mapping. The reverse map shows which schema and base-backed entities are not yet represented in the menu tree."
         });
         const missingCount = allEntityRows.filter((row) => row.menuStatus !== "in menu" && (row.schemaPath || row.basePath)).length;
-        const missingCard = note.createDiv({ cls: "cad-review-summary-card" });
-        missingCard.createDiv({ cls: "cad-review-summary-value", text: String(missingCount) });
-        missingCard.createDiv({ cls: "cad-review-summary-label", text: "Entities not in menu" });
+        const missingCard = note.createDiv({ cls: "bob-review-summary-card" });
+        missingCard.createDiv({ cls: "bob-review-summary-value", text: String(missingCount) });
+        missingCard.createDiv({ cls: "bob-review-summary-label", text: "Entities not in menu" });
       } else if (activeTab === "navigation") {
         renderReviewTable(panel, "Navigation inventory", ["Label", "Surface", "Group", "Order", "Parent", "Level", "Module", "Entity", "Source", "Visibility"], navRows, "No navigation items are available.");
       } else if (activeTab === "secondary") {
@@ -37097,25 +37097,25 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     const createIconPickerButton = (parent, initialIcon, onChange, emptyText = "Choose icon") => {
       let currentIcon = initialIcon || "";
       const button = parent.createEl("button", {
-        cls: "cad-nav-designer-icon-button",
+        cls: "bob-nav-designer-icon-button",
         attr: { type: "button", title: "Choose an Obsidian icon" }
       });
       button.draggable = false;
       const render = () => {
         button.empty();
-        const preview = button.createSpan({ cls: "cad-nav-designer-icon-preview" });
+        const preview = button.createSpan({ cls: "bob-nav-designer-icon-preview" });
         try {
           obsidian18.setIcon(preview, currentIcon || "shapes");
         } catch (_) {
         }
-        button.createSpan({ cls: "cad-nav-designer-icon-name", text: currentIcon || emptyText });
+        button.createSpan({ cls: "bob-nav-designer-icon-name", text: currentIcon || emptyText });
       };
       button.addEventListener("mousedown", (event) => event.stopPropagation());
       button.addEventListener("dragstart", (event) => event.stopPropagation());
       button.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
-        new CadenceIconPickerModal(this.plugin.app, currentIcon, (iconId) => {
+        new BobIconPickerModal(this.plugin.app, currentIcon, (iconId) => {
           currentIcon = iconId;
           render();
           onChange(iconId);
@@ -37242,7 +37242,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       const assignedSurfaces = allSurfaces.filter(
         (surface) => !isTabBackedSurface(surface, config.navigation.secondaryTabs || {}) || surface.placement === "navigation"
       );
-      const addGroupRow = navDesignerBody.createDiv({ cls: "cad-nav-designer-add-group" });
+      const addGroupRow = navDesignerBody.createDiv({ cls: "bob-nav-designer-add-group" });
       const newGroupInput = addGroupRow.createEl("input", { type: "text", placeholder: "New group label" });
       let newGroupIcon = "";
       createIconPickerButton(addGroupRow, "", (iconId) => {
@@ -37261,33 +37261,33 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         groups.push(group);
         updateWorkspaceDraft(config, `${label} group added - click Save and apply`);
       });
-      const palette = navDesignerBody.createDiv({ cls: "cad-nav-designer-tabs" });
-      palette.createDiv({ cls: "cad-nav-designer-label", text: "Tabs - drag a tab into navigation, or drop an item into a parent tab area" });
-      const tabParents = palette.createDiv({ cls: "cad-nav-designer-tab-parents" });
+      const palette = navDesignerBody.createDiv({ cls: "bob-nav-designer-tabs" });
+      palette.createDiv({ cls: "bob-nav-designer-label", text: "Tabs - drag a tab into navigation, or drop an item into a parent tab area" });
+      const tabParents = palette.createDiv({ cls: "bob-nav-designer-tab-parents" });
       const tabEntityKeys = /* @__PURE__ */ new Set();
       Object.entries(config.navigation.secondaryTabs || {}).forEach(([parentId, tabs]) => {
         const parentSurface = allSurfaces.find((surface) => surface.id === parentId);
-        const parentEl = tabParents.createDiv({ cls: "cad-nav-designer-tab-parent" });
-        const parentHead = parentEl.createDiv({ cls: "cad-nav-designer-tab-parent-head" });
+        const parentEl = tabParents.createDiv({ cls: "bob-nav-designer-tab-parent" });
+        const parentHead = parentEl.createDiv({ cls: "bob-nav-designer-tab-parent-head" });
         parentHead.createSpan({ text: parentSurface?.label || parentId });
         if (!tabs.length) {
-          const removeTabs = parentHead.createEl("button", { cls: "cad-nav-designer-action danger", text: "Remove" });
+          const removeTabs = parentHead.createEl("button", { cls: "bob-nav-designer-action danger", text: "Remove" });
           removeTabs.addEventListener("click", () => {
             delete config.navigation.secondaryTabs[parentId];
             updateWorkspaceDraft(config, `${parentSurface?.label || parentId} tab area removed - click Save and apply`);
           });
         }
-        const tabChips = parentEl.createDiv({ cls: "cad-nav-designer-tab-chips" });
+        const tabChips = parentEl.createDiv({ cls: "bob-nav-designer-tab-chips" });
         tabs.forEach((tab, tabIndex) => {
           if (tab.entityKey) tabEntityKeys.add(tab.entityKey);
           const existing = assignedSurfaces.find(
             (surface) => surface.id !== parentId && (tab.entityKey && surface.entityKey === tab.entityKey || tab.route && surface.id === tab.route)
           );
           if (existing) return;
-          const chip = tabChips.createDiv({ cls: "cad-nav-designer-tab" });
+          const chip = tabChips.createDiv({ cls: "bob-nav-designer-tab" });
           chip.draggable = true;
           chip.createSpan({ text: tab.label });
-          const removeTab = chip.createEl("button", { cls: "cad-nav-designer-tab-remove", text: "\xD7" });
+          const removeTab = chip.createEl("button", { cls: "bob-nav-designer-tab-remove", text: "\xD7" });
           removeTab.type = "button";
           removeTab.title = `Remove ${tab.label} tab`;
           removeTab.draggable = false;
@@ -37306,7 +37306,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           chip.addEventListener("dragstart", (event) => dragPayload(event, { type: "tab", parentId, tabIndex }));
           chip.addEventListener("dragend", clearDragPayload);
         });
-        if (!tabChips.childElementCount) tabChips.createSpan({ cls: "cad-nav-designer-empty", text: "Drop a child here" });
+        if (!tabChips.childElementCount) tabChips.createSpan({ cls: "bob-nav-designer-empty", text: "Drop a child here" });
         parentEl.addEventListener("dragover", (event) => {
           const payload = parseDragData(event);
           const itemSurface = payload?.type === "item" ? groups[payload.groupIndex]?.items?.[payload.itemIndex] : null;
@@ -37327,22 +37327,22 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           clearDragPayload();
         });
       });
-      if (!tabParents.childElementCount) tabParents.createSpan({ cls: "cad-nav-designer-empty", text: "Create a tab area from a navigation parent to add tabs." });
-      const entityPalette = navDesignerBody.createDiv({ cls: "cad-nav-designer-tabs" });
-      entityPalette.createDiv({ cls: "cad-nav-designer-label", text: "Unassigned record types - drag into a navigation group" });
-      const entityChips = entityPalette.createDiv({ cls: "cad-nav-designer-tab-chips" });
+      if (!tabParents.childElementCount) tabParents.createSpan({ cls: "bob-nav-designer-empty", text: "Create a tab area from a navigation parent to add tabs." });
+      const entityPalette = navDesignerBody.createDiv({ cls: "bob-nav-designer-tabs" });
+      entityPalette.createDiv({ cls: "bob-nav-designer-label", text: "Unassigned record types - drag into a navigation group" });
+      const entityChips = entityPalette.createDiv({ cls: "bob-nav-designer-tab-chips" });
       workspaceConfiguredEntityEntries(config).forEach(([entityKey, def]) => {
         if (!def || !def.label) return;
         const existing = assignedSurfaces.find((surface) => surface.entityKey === entityKey);
         if (existing || tabEntityKeys.has(entityKey)) return;
-        const chip = entityChips.createDiv({ cls: "cad-nav-designer-tab" });
+        const chip = entityChips.createDiv({ cls: "bob-nav-designer-tab" });
         chip.draggable = true;
         chip.createSpan({ text: def.plural || pluralizeEntityLabel(def.label) });
         chip.addEventListener("dragstart", (event) => dragPayload(event, { type: "entity", entityKey }));
         chip.addEventListener("dragend", clearDragPayload);
       });
-      if (!entityChips.childElementCount) entityChips.createSpan({ cls: "cad-nav-designer-empty", text: "All record types are assigned." });
-      const removeZone = navDesignerBody.createDiv({ cls: "cad-nav-designer-remove", text: "Drop a navigation item here to remove it and return it to the available pool" });
+      if (!entityChips.childElementCount) entityChips.createSpan({ cls: "bob-nav-designer-empty", text: "All record types are assigned." });
+      const removeZone = navDesignerBody.createDiv({ cls: "bob-nav-designer-remove", text: "Drop a navigation item here to remove it and return it to the available pool" });
       removeZone.addEventListener("dragover", (event) => {
         if (parseDragData(event)?.type !== "item") return;
         event.preventDefault();
@@ -37359,9 +37359,9 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         if (surface) updateWorkspaceDraft(config, `${surface.label} removed from navigation - click Save and apply`);
         clearDragPayload();
       });
-      const board = navDesignerBody.createDiv({ cls: "cad-nav-designer-board" });
+      const board = navDesignerBody.createDiv({ cls: "bob-nav-designer-board" });
       groups.forEach((group, groupIndex) => {
-        const groupEl = board.createDiv({ cls: "cad-nav-designer-group" });
+        const groupEl = board.createDiv({ cls: "bob-nav-designer-group" });
         groupEl.dataset.groupIndex = String(groupIndex);
         groupEl.addEventListener("dragover", (event) => {
           if (!parseDragData(event)) return;
@@ -37382,15 +37382,15 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           }
           clearDragPayload();
         });
-        const groupHead = groupEl.createDiv({ cls: "cad-nav-designer-group-head" });
+        const groupHead = groupEl.createDiv({ cls: "bob-nav-designer-group-head" });
         groupHead.draggable = true;
         groupHead.addEventListener("dragstart", (event) => {
           event.stopPropagation();
           dragPayload(event, { type: "group", groupIndex });
         });
         groupHead.addEventListener("dragend", clearDragPayload);
-        groupHead.createSpan({ cls: "cad-nav-designer-handle", text: "::" });
-        const groupTitleInput = groupHead.createEl("input", { cls: "cad-nav-designer-group-title-input", type: "text" });
+        groupHead.createSpan({ cls: "bob-nav-designer-handle", text: "::" });
+        const groupTitleInput = groupHead.createEl("input", { cls: "bob-nav-designer-group-title-input", type: "text" });
         groupTitleInput.value = group.label || "";
         groupTitleInput.placeholder = group.id;
         groupTitleInput.title = "Group label (leave blank for no heading)";
@@ -37415,7 +37415,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           updateWorkspaceDraft(config, `${group.label || group.id} icon updated - click Save and apply`);
         });
         if (!(group.items || []).length) {
-          const removeGroup = groupHead.createEl("button", { cls: "cad-nav-designer-action danger", text: "Remove" });
+          const removeGroup = groupHead.createEl("button", { cls: "bob-nav-designer-action danger", text: "Remove" });
           removeGroup.draggable = false;
           removeGroup.addEventListener("mousedown", (event) => event.stopPropagation());
           removeGroup.addEventListener("click", (event) => {
@@ -37424,11 +37424,11 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
             updateWorkspaceDraft(config, `${group.label || group.id} group removed - click Save and apply`);
           });
         }
-        const groupItems = groupEl.createDiv({ cls: "cad-nav-designer-items" });
+        const groupItems = groupEl.createDiv({ cls: "bob-nav-designer-items" });
         (group.items || []).forEach((surface, itemIndex) => {
           const isTabBacked = isTabBackedSurface(surface, config.navigation.secondaryTabs || {});
           if (isTabBacked && surface.placement !== "navigation") return;
-          const item = groupItems.createDiv({ cls: "cad-nav-designer-item" });
+          const item = groupItems.createDiv({ cls: "bob-nav-designer-item" });
           item.draggable = true;
           item.addEventListener("dragstart", (event) => {
             event.stopPropagation();
@@ -37455,17 +37455,17 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
             }
             clearDragPayload();
           });
-          item.createSpan({ cls: "cad-nav-designer-handle", text: "::" });
-          const itemText = item.createSpan({ cls: "cad-nav-designer-item-text", text: surface.label });
+          item.createSpan({ cls: "bob-nav-designer-handle", text: "::" });
+          const itemText = item.createSpan({ cls: "bob-nav-designer-item-text", text: surface.label });
           itemText.title = surface.id;
           createIconPickerButton(item, surface.icon, (iconId) => {
             if (iconId) surface.icon = iconId;
             else delete surface.icon;
             updateWorkspaceDraft(config, `${surface.label} icon updated - click Save and apply`);
           });
-          if (surface.navLevel) item.createSpan({ cls: "cad-nav-designer-level", text: surface.navLevel });
+          if (surface.navLevel) item.createSpan({ cls: "bob-nav-designer-level", text: surface.navLevel });
           if (!surface.parent && !Object.prototype.hasOwnProperty.call(config.navigation.secondaryTabs || {}, surface.id)) {
-            const addTabs = item.createEl("button", { cls: "cad-nav-designer-action", text: "+ Tabs" });
+            const addTabs = item.createEl("button", { cls: "bob-nav-designer-action", text: "+ Tabs" });
             addTabs.draggable = false;
             addTabs.addEventListener("mousedown", (event) => event.stopPropagation());
             addTabs.addEventListener("click", (event) => {
@@ -37476,7 +37476,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
             });
           }
           const remove = item.createEl("button", {
-            cls: "cad-nav-designer-action danger",
+            cls: "bob-nav-designer-action danger",
             text: isTabBacked ? "As tabs" : "Remove"
           });
           remove.draggable = false;
@@ -37487,7 +37487,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
             updateWorkspaceDraft(config, isTabBacked ? `${surface.label} moved to tabs - click Save and apply` : `${surface.label} removed from navigation - click Save and apply`);
           });
         });
-        const empty = groupItems.createDiv({ cls: "cad-nav-designer-dropzone", text: "Drop available item here" });
+        const empty = groupItems.createDiv({ cls: "bob-nav-designer-dropzone", text: "Drop available item here" });
         empty.addEventListener("dragover", (event) => {
           if (!parseDragData(event)) return;
           event.preventDefault();
@@ -37520,7 +37520,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         return;
       }
       if (!Array.isArray(config.workbookGroups)) config.workbookGroups = [];
-      const addRow = workbookDesignerBody.createDiv({ cls: "cad-nav-designer-add-group" });
+      const addRow = workbookDesignerBody.createDiv({ cls: "bob-nav-designer-add-group" });
       const newGroupInput = addRow.createEl("input", { type: "text", placeholder: "New export group label" });
       const addGroup = addRow.createEl("button", { text: "+ Add export group" });
       addGroup.addEventListener("click", () => {
@@ -37534,15 +37534,15 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         updateWorkspaceDraft(config, `${label} export group added - click Save and apply`);
       });
       if (!config.workbookGroups.length) {
-        workbookDesignerBody.createDiv({ cls: "cad-nav-designer-empty", text: "No export groups defined. Add a group to make selected workbook exports available." });
+        workbookDesignerBody.createDiv({ cls: "bob-nav-designer-empty", text: "No export groups defined. Add a group to make selected workbook exports available." });
         return;
       }
       const entities = workspaceConfiguredEntityEntries(config);
-      const board = workbookDesignerBody.createDiv({ cls: "cad-workbook-designer-board" });
+      const board = workbookDesignerBody.createDiv({ cls: "bob-workbook-designer-board" });
       config.workbookGroups.forEach((group, groupIndex) => {
-        const card = board.createDiv({ cls: "cad-workbook-designer-group" });
-        const head = card.createDiv({ cls: "cad-workbook-designer-group-head" });
-        const labelInput = head.createEl("input", { type: "text", cls: "cad-workbook-designer-title" });
+        const card = board.createDiv({ cls: "bob-workbook-designer-group" });
+        const head = card.createDiv({ cls: "bob-workbook-designer-group-head" });
+        const labelInput = head.createEl("input", { type: "text", cls: "bob-workbook-designer-title" });
         labelInput.value = group.label;
         labelInput.addEventListener("change", () => {
           const next = labelInput.value.trim();
@@ -37553,28 +37553,28 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           group.label = next;
           updateWorkspaceDraft(config, `${next} export group renamed - click Save and apply`);
         });
-        const up = head.createEl("button", { cls: "cad-nav-designer-action", text: "Up" });
+        const up = head.createEl("button", { cls: "bob-nav-designer-action", text: "Up" });
         up.disabled = groupIndex === 0;
         up.addEventListener("click", () => {
           if (groupIndex === 0) return;
           [config.workbookGroups[groupIndex - 1], config.workbookGroups[groupIndex]] = [config.workbookGroups[groupIndex], config.workbookGroups[groupIndex - 1]];
           updateWorkspaceDraft(config, "Export group order updated - click Save and apply");
         });
-        const down = head.createEl("button", { cls: "cad-nav-designer-action", text: "Down" });
+        const down = head.createEl("button", { cls: "bob-nav-designer-action", text: "Down" });
         down.disabled = groupIndex === config.workbookGroups.length - 1;
         down.addEventListener("click", () => {
           if (groupIndex >= config.workbookGroups.length - 1) return;
           [config.workbookGroups[groupIndex], config.workbookGroups[groupIndex + 1]] = [config.workbookGroups[groupIndex + 1], config.workbookGroups[groupIndex]];
           updateWorkspaceDraft(config, "Export group order updated - click Save and apply");
         });
-        const remove = head.createEl("button", { cls: "cad-nav-designer-action danger", text: "Remove" });
+        const remove = head.createEl("button", { cls: "bob-nav-designer-action danger", text: "Remove" });
         remove.addEventListener("click", () => {
           config.workbookGroups.splice(groupIndex, 1);
           updateWorkspaceDraft(config, `${group.label} export group removed - click Save and apply`);
         });
-        const choices = card.createDiv({ cls: "cad-workbook-designer-choices" });
+        const choices = card.createDiv({ cls: "bob-workbook-designer-choices" });
         entities.forEach(([entityKey, def]) => {
-          const row = choices.createEl("label", { cls: "cad-workbook-designer-choice" });
+          const row = choices.createEl("label", { cls: "bob-workbook-designer-choice" });
           const checkbox = row.createEl("input", { type: "checkbox" });
           checkbox.checked = group.entityKeys.includes(entityKey);
           row.createSpan({ text: def.plural || pluralizeEntityLabel(def.label) });
@@ -37646,12 +37646,12 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       const moduleDisabled = isModuleGroup && ensureMods()[group.module] === false;
       const cardKey = group.module || group.id;
       const isCollapsed = this._collapsedModules.has(cardKey);
-      const card = pMod.createDiv({ cls: "cad-module-card" + (moduleDisabled ? " is-off" : "") + (isCollapsed ? " is-collapsed" : "") });
-      const cardHead = card.createDiv({ cls: "cad-module-card-head" });
-      cardHead.createSpan({ text: headingText, cls: "cad-module-card-label" });
-      const headRight = cardHead.createDiv({ cls: "cad-module-card-head-right" });
+      const card = pMod.createDiv({ cls: "bob-module-card" + (moduleDisabled ? " is-off" : "") + (isCollapsed ? " is-collapsed" : "") });
+      const cardHead = card.createDiv({ cls: "bob-module-card-head" });
+      cardHead.createSpan({ text: headingText, cls: "bob-module-card-label" });
+      const headRight = cardHead.createDiv({ cls: "bob-module-card-head-right" });
       if (isModuleGroup) {
-        const toggleWrap = headRight.createDiv({ cls: "cad-module-card-toggle" });
+        const toggleWrap = headRight.createDiv({ cls: "bob-module-card-toggle" });
         toggleWrap.setAttribute("aria-label", ensureMods()[group.module] !== false ? `Disable ${headingText}` : `Enable ${headingText}`);
         toggleWrap.addEventListener("click", (e) => e.stopPropagation());
         new obsidian18.ToggleComponent(toggleWrap).setValue(ensureMods()[group.module] !== false).onChange(async (v) => {
@@ -37661,7 +37661,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           this.display();
         });
       }
-      const chevron = headRight.createSpan({ cls: "cad-module-card-chevron", text: isCollapsed ? "\u203A" : "\u2304" });
+      const chevron = headRight.createSpan({ cls: "bob-module-card-chevron", text: isCollapsed ? "\u203A" : "\u2304" });
       cardHead.addEventListener("click", () => {
         if (this._collapsedModules.has(cardKey)) {
           this._collapsedModules.delete(cardKey);
@@ -37673,11 +37673,11 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           chevron.setText("\u203A");
         }
       });
-      const cardBody = card.createDiv({ cls: "cad-module-card-body" });
-      const settingGroup = cardBody.createDiv({ cls: "setting-group" + (moduleDisabled ? " cad-settings-panel-off" : "") });
+      const cardBody = card.createDiv({ cls: "bob-module-card-body" });
+      const settingGroup = cardBody.createDiv({ cls: "setting-group" + (moduleDisabled ? " bob-settings-panel-off" : "") });
       const panel = settingGroup.createDiv({ cls: "setting-items" });
       if (isModuleGroup) {
-        panel.createDiv({ cls: "setting-item-description cad-module-card-desc", text: moduleLabels[group.module] || `${headingText} module defined in workspace.json.` });
+        panel.createDiv({ cls: "setting-item-description bob-module-card-desc", text: moduleLabels[group.module] || `${headingText} module defined in workspace.json.` });
       }
       const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
       const renderSurfaceRow = (surface, showVisibility = true) => {
@@ -37701,14 +37701,14 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         if (hasCustomDash) desc.push("\u270E custom dashboard");
         else if (hasBuiltinDash) desc.push("built-in dashboard");
         const s = new obsidian18.Setting(panel).setName(level !== "primary" ? `${surface.label} (${levelLabel})` : surface.label).setDesc(desc.join(" \xB7 "));
-        if (moduleDisabled) s.settingEl.classList.add("cad-setting-disabled");
+        if (moduleDisabled) s.settingEl.classList.add("bob-setting-disabled");
         if (hasCustomDash || hasBuiltinDash) {
           s.addExtraButton((b) => b.setIcon("layout-panel-left").setTooltip(hasCustomDash ? "Edit custom dashboard in Surface Designer" : "Customize this dashboard in Surface Designer").onClick(() => {
             this.plugin.pendingDesignerSurface = surface.id;
             this.plugin.openApp("misc.dashboard-editor");
           }));
         }
-        if (level !== "primary") s.settingEl.classList.add("cad-setting-nested");
+        if (level !== "primary") s.settingEl.classList.add("bob-setting-nested");
         if (showVisibility) s.addToggle((t) => {
           t.setValue(!disabled.has(surface.id)).onChange(async (v) => {
             const arr = this.plugin.settings.disabledSurfaces || [];
@@ -37801,7 +37801,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         });
       });
       if (group.id === "planner") {
-        const projectFoldersEl = panel.createDiv({ cls: "cad-project-folders" });
+        const projectFoldersEl = panel.createDiv({ cls: "bob-project-folders" });
         projectFoldersEl.style.cssText = "padding:0 16px 12px;";
         const renderProjectFolders = () => {
           projectFoldersEl.empty();
@@ -37811,9 +37811,9 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
             ...this.plugin.settings.projectFolders || []
           ];
           allFolders.forEach((folder, idx) => {
-            const row = projectFoldersEl.createDiv({ cls: "cad-folder-row" });
+            const row = projectFoldersEl.createDiv({ cls: "bob-folder-row" });
             row.style.cssText = "display:flex;align-items:center;gap:6px;margin:4px 0;";
-            const inp = row.createEl("input", { type: "text", cls: "cad-folder-input" });
+            const inp = row.createEl("input", { type: "text", cls: "bob-folder-input" });
             inp.style.cssText = "flex:1;";
             inp.value = folder;
             inp.placeholder = idx === 0 ? "Default folder" : "Additional folder";
@@ -37853,7 +37853,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       }
     });
     pApp.createEl("h3", { text: "Navigation" });
-    const navGroup = pApp.createDiv({ cls: "setting-group cad-settings-section" });
+    const navGroup = pApp.createDiv({ cls: "setting-group bob-settings-section" });
     const navPanel = navGroup.createDiv({ cls: "setting-items" });
     new obsidian18.Setting(navPanel).setName("Show secondary nav items").setDesc("Show lower-frequency child surfaces (e.g. campaign sub-tabs, finance children) directly in the left rail. When off, they stay reachable via their parent surface's tabs.").addToggle((t) => t.setValue(!!this.plugin.settings.showSecondaryNav).onChange(async (v) => {
       this.plugin.settings.showSecondaryNav = v;
@@ -37866,7 +37866,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       this.plugin.refreshOpenViews();
     }));
     pApp.createEl("h3", { text: "Rendering" });
-    const renderGroup = pApp.createDiv({ cls: "setting-group cad-settings-section" });
+    const renderGroup = pApp.createDiv({ cls: "setting-group bob-settings-section" });
     const renderPanel = renderGroup.createDiv({ cls: "setting-items" });
     new obsidian18.Setting(renderPanel).setName("Inline canvases & Base views").setDesc('Render Obsidian canvases and non-table Base views inline inside the workspace. Uses Obsidian internal APIs, so it is off by default \u2014 canvases open in a tab and Base views show an "Open Base" button. Enable for the richer in-app experience (may be affected by Obsidian updates).').addToggle((t) => t.setValue(!!this.plugin.settings.inlineNativeViews).onChange(async (v) => {
       this.plugin.settings.inlineNativeViews = v;
@@ -37874,7 +37874,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       this.plugin.refreshOpenViews();
     }));
     pApp.createEl("h3", { text: "Reminders" });
-    const remindersGroup = pApp.createDiv({ cls: "setting-group cad-settings-section" });
+    const remindersGroup = pApp.createDiv({ cls: "setting-group bob-settings-section" });
     const remindersPanel = remindersGroup.createDiv({ cls: "setting-items" });
     new obsidian18.Setting(remindersPanel).setName("Desktop notifications").setDesc("In addition to the in-app banner, fire a system notification when a reminder is due. Requires browser permission.").addToggle((t) => t.setValue(!!this.plugin.settings.desktopNotifications).onChange(async (v) => {
       this.plugin.settings.desktopNotifications = v;
@@ -37900,18 +37900,18 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       this.plugin.refreshOpenViews();
       this.display();
     }));
-    const appGroup = pApp.createDiv({ cls: "setting-group cad-settings-section" });
+    const appGroup = pApp.createDiv({ cls: "setting-group bob-settings-section" });
     const appPanel = appGroup.createDiv({ cls: "setting-items" });
-    const plannerGroup = pPlanner.createDiv({ cls: "setting-group cad-settings-section" });
+    const plannerGroup = pPlanner.createDiv({ cls: "setting-group bob-settings-section" });
     const plannerPanel = plannerGroup.createDiv({ cls: "setting-items" });
     const peopleCategories = ENTITIES.contact.fields.find((f) => f.key === "person_category")?.options || DEFAULT_SETTINGS.teamPersonCategories;
     const selectedTeamCategories = new Set(
       (Array.isArray(this.plugin.settings.teamPersonCategories) ? this.plugin.settings.teamPersonCategories : DEFAULT_SETTINGS.teamPersonCategories).map((v) => String(v || "").toLowerCase())
     );
     const teamSetting = new obsidian18.Setting(appPanel).setName("Team person categories").setDesc("People categories included on the Team screen.");
-    const teamControls = teamSetting.controlEl.createDiv({ cls: "cad-settings-checkboxes" });
+    const teamControls = teamSetting.controlEl.createDiv({ cls: "bob-settings-checkboxes" });
     peopleCategories.forEach((category) => {
-      const label = teamControls.createEl("label", { cls: "cad-settings-checkbox" });
+      const label = teamControls.createEl("label", { cls: "bob-settings-checkbox" });
       const checkbox = label.createEl("input", { type: "checkbox" });
       checkbox.checked = selectedTeamCategories.has(category);
       label.createEl("span", { text: category });
@@ -37969,7 +37969,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       d.onChange(async (v) => {
         this.plugin.settings.currency = v;
         await this.plugin.saveSettings();
-        this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP).forEach((leaf) => {
+        this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP).forEach((leaf) => {
           if (leaf.view && typeof leaf.view.render === "function") leaf.view.render();
         });
       });
@@ -37997,7 +37997,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       });
     });
     pDm.createEl("h3", { text: "Data model" });
-    const basesGroup = pDm.createDiv({ cls: "setting-group cad-settings-section" });
+    const basesGroup = pDm.createDiv({ cls: "setting-group bob-settings-section" });
     const basesPanel = basesGroup.createDiv({ cls: "setting-items" });
     new obsidian18.Setting(basesPanel).setName("Bases folder").setDesc("Vault folder where entity .base files live. Authoritative: changing it relocates where every base is resolved (the filename comes from the entity config, the folder from here).").addText((t) => t.setPlaceholder("00-CORE/Bases").setValue(this.plugin.settings.basesFolder || "00-CORE/Bases").onChange(async (v) => {
       this.plugin.settings.basesFolder = v.trim() || "00-CORE/Bases";
@@ -38016,14 +38016,14 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         new obsidian18.Notice(`BOB Workspace: generate bases failed \u2014 ${e.message}`);
       }
     }));
-    const schemasGroup = pDm.createDiv({ cls: "setting-group cad-settings-section" });
+    const schemasGroup = pDm.createDiv({ cls: "setting-group bob-settings-section" });
     const schemasPanel = schemasGroup.createDiv({ cls: "setting-items" });
     const configuredSchemas = WORKSPACE_CONFIG.schemas || {};
     const schemaSettings = effectiveSchemaSettings(this.plugin.settings);
     const schemasManaged = configuredSchemas.enabled != null || !!configuredSchemas.folder;
     if (schemasManaged) {
-      const banner = schemasPanel.createDiv({ cls: "cad-managed-banner" });
-      const icon = banner.createSpan({ cls: "cad-managed-banner-icon" });
+      const banner = schemasPanel.createDiv({ cls: "bob-managed-banner" });
+      const icon = banner.createSpan({ cls: "bob-managed-banner-icon" });
       try {
         obsidian18.setIcon(icon, "lock");
       } catch (_) {
@@ -38031,9 +38031,9 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       banner.createSpan({ text: "Schema settings are controlled by " });
       banner.createEl("code", { text: "workspace.json" });
       banner.createSpan({ text: ". Edit the " });
-      const wsLink = banner.createEl("a", { text: "Workspace tab", cls: "cad-managed-banner-link" });
+      const wsLink = banner.createEl("a", { text: "Workspace tab", cls: "bob-managed-banner-link" });
       wsLink.addEventListener("click", () => {
-        const wsTab = containerEl.querySelector('.cad-settings-tab[data-tab="workspace"]');
+        const wsTab = containerEl.querySelector('.bob-settings-tab[data-tab="workspace"]');
         if (wsTab) wsTab.click();
       });
       banner.createSpan({ text: " to change them." });
@@ -38066,16 +38066,16 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         new obsidian18.Notice(`BOB Workspace: output generation failed - ${e.message}`);
       }
     }));
-    const schemaBootstrapBanner = schemasPanel.createDiv({ cls: "cad-managed-banner cad-schema-bootstrap-banner" });
+    const schemaBootstrapBanner = schemasPanel.createDiv({ cls: "bob-managed-banner bob-schema-bootstrap-banner" });
     schemaBootstrapBanner.style.display = "none";
-    const bootstrapIcon = schemaBootstrapBanner.createSpan({ cls: "cad-managed-banner-icon" });
+    const bootstrapIcon = schemaBootstrapBanner.createSpan({ cls: "bob-managed-banner-icon" });
     try {
       obsidian18.setIcon(bootstrapIcon, "database");
     } catch (_) {
     }
     const bootstrapText = schemaBootstrapBanner.createSpan({ text: "No schema sources found in the configured folder." });
     schemaBootstrapBanner.createSpan({ text: " " });
-    const bootstrapAction = schemaBootstrapBanner.createEl("button", { cls: "cad-btn cad-btn-sm", text: "Bootstrap schemas" });
+    const bootstrapAction = schemaBootstrapBanner.createEl("button", { cls: "bob-btn bob-btn-sm", text: "Bootstrap schemas" });
     bootstrapAction.addEventListener("click", async () => {
       if (!await confirmModal(this.plugin.app, "Create canonical schema YAML from the current workspace entity definitions? Existing source files will be left untouched.", { title: "Bootstrap schemas", cta: "Bootstrap", danger: false })) return;
       try {
@@ -38089,22 +38089,22 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         new obsidian18.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
       }
     });
-    const schemaDesigner = schemasPanel.createDiv({ cls: "cad-schema-designer" });
-    const schemaDesignerHead = schemaDesigner.createDiv({ cls: "cad-schema-designer-head" });
+    const schemaDesigner = schemasPanel.createDiv({ cls: "bob-schema-designer" });
+    const schemaDesignerHead = schemaDesigner.createDiv({ cls: "bob-schema-designer-head" });
     schemaDesignerHead.createEl("h4", { text: "Data model designer" });
     schemaDesignerHead.createEl("p", {
       cls: "setting-item-description",
       text: "Edit canonical entity schema YAML visually. Schema sources define record structure and BOB display hints; generated JSON Schemas and Metadata Menu FileClasses are derived with one click."
     });
-    const schemaToolbar = schemaDesigner.createDiv({ cls: "cad-schema-designer-toolbar" });
+    const schemaToolbar = schemaDesigner.createDiv({ cls: "bob-schema-designer-toolbar" });
     const schemaSelect = schemaToolbar.createEl("select", { cls: "dropdown" });
     const schemaNew = schemaToolbar.createEl("button", { text: "+ New entity" });
     const schemaReload = schemaToolbar.createEl("button", { text: "Reload source" });
     const schemaSave = schemaToolbar.createEl("button", { text: "Save schema source", cls: "mod-cta" });
     const schemaSaveGenerate = schemaToolbar.createEl("button", { text: "Save and regenerate", cls: "mod-cta" });
     const schemaDelete = schemaToolbar.createEl("button", { text: "Archive source", cls: "mod-warning" });
-    const schemaStatus = schemaDesigner.createDiv({ cls: "cad-schema-designer-status setting-item-description" });
-    const schemaForm = schemaDesigner.createDiv({ cls: "cad-schema-designer-form" });
+    const schemaStatus = schemaDesigner.createDiv({ cls: "bob-schema-designer-status setting-item-description" });
+    const schemaForm = schemaDesigner.createDiv({ cls: "bob-schema-designer-form" });
     let sourceSchema = null;
     let sourceSchemaPath = "";
     let schemaDirty = false;
@@ -38123,12 +38123,12 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     })();
     const setSchemaStatus = (text, ok = true) => {
       schemaStatus.setText(text || "");
-      schemaStatus.toggleClass("cad-status-ok", !!ok);
-      schemaStatus.toggleClass("cad-status-err", !ok);
+      schemaStatus.toggleClass("bob-status-ok", !!ok);
+      schemaStatus.toggleClass("bob-status-err", !ok);
     };
     const highlightSaveButtons = (on) => {
-      schemaSave.toggleClass("cad-schema-save-needed", on);
-      schemaSaveGenerate.toggleClass("cad-schema-save-needed", on);
+      schemaSave.toggleClass("bob-schema-save-needed", on);
+      schemaSaveGenerate.toggleClass("bob-schema-save-needed", on);
     };
     const autoSaveSchema = async () => {
       if (!sourceSchema || !sourceSchemaPath) return;
@@ -38198,13 +38198,13 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       return parsed;
     };
     const fieldRow = (parent, label) => {
-      const row = parent.createDiv({ cls: "cad-schema-designer-row" });
-      row.createDiv({ cls: "cad-schema-designer-label", text: label });
-      return row.createDiv({ cls: "cad-schema-designer-control" });
+      const row = parent.createDiv({ cls: "bob-schema-designer-row" });
+      row.createDiv({ cls: "bob-schema-designer-label", text: label });
+      return row.createDiv({ cls: "bob-schema-designer-control" });
     };
     const textControl = (parent, label, value, onInput, multiline = false) => {
       const control = fieldRow(parent, label);
-      const input = multiline ? control.createEl("textarea", { cls: "cad-schema-designer-input" }) : control.createEl("input", { type: "text", cls: "cad-schema-designer-input" });
+      const input = multiline ? control.createEl("textarea", { cls: "bob-schema-designer-input" }) : control.createEl("input", { type: "text", cls: "bob-schema-designer-input" });
       input.value = value || "";
       if (multiline) input.rows = 2;
       input.addEventListener("input", () => {
@@ -38222,7 +38222,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         schemaForm.createDiv({ cls: "setting-item-description", text: "Select an entity schema, or create a new one." });
         return;
       }
-      const identity = schemaForm.createDiv({ cls: "cad-schema-designer-section" });
+      const identity = schemaForm.createDiv({ cls: "bob-schema-designer-section" });
       identity.createEl("h5", { text: sourceSchemaPath || sourceSchema.entity });
       textControl(identity, "Entity key", sourceSchema.entity, (value) => {
         sourceSchema.entity = value.trim();
@@ -38235,17 +38235,17 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         else delete sourceSchema.plural;
       });
       const iconControl = fieldRow(identity, "Default icon");
-      const iconButton = iconControl.createEl("button", { cls: "cad-nav-designer-icon-button", attr: { type: "button" } });
+      const iconButton = iconControl.createEl("button", { cls: "bob-nav-designer-icon-button", attr: { type: "button" } });
       const renderSchemaIcon = () => {
         iconButton.empty();
-        const preview = iconButton.createSpan({ cls: "cad-nav-designer-icon-preview" });
+        const preview = iconButton.createSpan({ cls: "bob-nav-designer-icon-preview" });
         try {
           obsidian18.setIcon(preview, sourceSchema.icon || "file-text");
         } catch (_) {
         }
-        iconButton.createSpan({ cls: "cad-nav-designer-icon-name", text: sourceSchema.icon || "Choose icon" });
+        iconButton.createSpan({ cls: "bob-nav-designer-icon-name", text: sourceSchema.icon || "Choose icon" });
       };
-      iconButton.addEventListener("click", () => new CadenceIconPickerModal(this.plugin.app, sourceSchema.icon, (iconId) => {
+      iconButton.addEventListener("click", () => new BobIconPickerModal(this.plugin.app, sourceSchema.icon, (iconId) => {
         if (iconId) sourceSchema.icon = iconId;
         else delete sourceSchema.icon;
         markSchemaDirty();
@@ -38298,8 +38298,8 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           sourceSchema.bob = value;
         }
       }, true);
-      const fieldsSection = schemaForm.createDiv({ cls: "cad-schema-designer-section" });
-      const fieldsHead = fieldsSection.createDiv({ cls: "cad-schema-designer-fields-head" });
+      const fieldsSection = schemaForm.createDiv({ cls: "bob-schema-designer-section" });
+      const fieldsHead = fieldsSection.createDiv({ cls: "bob-schema-designer-fields-head" });
       fieldsHead.createEl("h5", { text: "Fields" });
       const addField = fieldsHead.createEl("button", { text: "+ Add field" });
       addField.addEventListener("click", () => {
@@ -38310,9 +38310,9 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         renderSourceSchema();
       });
       (sourceSchema.fields || []).forEach((field, index) => {
-        const card = fieldsSection.createDiv({ cls: "cad-schema-field" });
-        const row = card.createDiv({ cls: "cad-schema-field-main" });
-        const nameInput = row.createEl("input", { type: "text", cls: "cad-schema-designer-input", placeholder: "field_name" });
+        const card = fieldsSection.createDiv({ cls: "bob-schema-field" });
+        const row = card.createDiv({ cls: "bob-schema-field-main" });
+        const nameInput = row.createEl("input", { type: "text", cls: "bob-schema-designer-input", placeholder: "field_name" });
         nameInput.value = field.name || "";
         nameInput.addEventListener("input", () => {
           field.name = nameInput.value.trim();
@@ -38321,7 +38321,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
         nameInput.addEventListener("blur", () => {
           if (schemaDirty) autoSaveSchema();
         });
-        const typeSelect = row.createEl("select", { cls: "dropdown cad-schema-field-type" });
+        const typeSelect = row.createEl("select", { cls: "dropdown bob-schema-field-type" });
         [["string", "Text"], ["number", "Number"], ["integer", "Integer"], ["boolean", "Boolean"], ["array", "Array"], ["date", "Date"], ["datetime", "Date/time"], ["enum", "Enum"]].forEach(([value, label]) => {
           typeSelect.createEl("option", { value, text: label });
         });
@@ -38332,7 +38332,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           autoSaveSchema();
           renderSourceSchema();
         });
-        const requiredWrap = row.createEl("label", { cls: "cad-schema-required" });
+        const requiredWrap = row.createEl("label", { cls: "bob-schema-required" });
         const required = requiredWrap.createEl("input", { type: "checkbox" });
         required.checked = !!field.required;
         requiredWrap.appendText(" Required");
@@ -38341,7 +38341,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           markSchemaDirty();
           autoSaveSchema();
         });
-        const up = row.createEl("button", { cls: "cad-nav-designer-action", text: "\u2191", attr: { title: "Move up" } });
+        const up = row.createEl("button", { cls: "bob-nav-designer-action", text: "\u2191", attr: { title: "Move up" } });
         up.disabled = index === 0;
         up.addEventListener("click", () => {
           if (index === 0) return;
@@ -38350,7 +38350,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           autoSaveSchema();
           renderSourceSchema();
         });
-        const down = row.createEl("button", { cls: "cad-nav-designer-action", text: "\u2193", attr: { title: "Move down" } });
+        const down = row.createEl("button", { cls: "bob-nav-designer-action", text: "\u2193", attr: { title: "Move down" } });
         down.disabled = index === sourceSchema.fields.length - 1;
         down.addEventListener("click", () => {
           if (index >= sourceSchema.fields.length - 1) return;
@@ -38359,16 +38359,16 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
           autoSaveSchema();
           renderSourceSchema();
         });
-        const remove = row.createEl("button", { cls: "cad-nav-designer-action danger", text: "Remove" });
+        const remove = row.createEl("button", { cls: "bob-nav-designer-action danger", text: "Remove" });
         remove.addEventListener("click", () => {
           sourceSchema.fields.splice(index, 1);
           markSchemaDirty();
           autoSaveSchema();
           renderSourceSchema();
         });
-        const detail = card.createDiv({ cls: "cad-schema-field-detail" });
+        const detail = card.createDiv({ cls: "bob-schema-field-detail" });
         const displayControl = fieldRow(detail, "BOB display");
-        const displayType = displayControl.createEl("select", { cls: "dropdown cad-schema-field-type" });
+        const displayType = displayControl.createEl("select", { cls: "dropdown bob-schema-field-type" });
         [["", "Derived"], ["text", "Text"], ["email", "Email"], ["currency", "Currency"], ["tags", "Tags"], ["date", "Date"], ["enum", "Enum"], ["number", "Number"]].forEach(([value, label]) => {
           displayType.createEl("option", { value, text: label });
         });
@@ -38442,7 +38442,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
       await refreshSchemaSelect(sourceSchemaPath);
     });
     schemaNew.addEventListener("click", () => {
-      new CadencePromptModal(this.plugin.app, {
+      new BobPromptModal(this.plugin.app, {
         title: "New entity schema",
         placeholder: "entity-key",
         cta: "Create",
@@ -38534,7 +38534,7 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
     });
     setTimeout(() => refreshSchemaSelect(initialSchemaPath), 0);
     pData.createEl("h3", { text: "Data import/export" });
-    const dataGroup = pData.createDiv({ cls: "setting-group cad-settings-section" });
+    const dataGroup = pData.createDiv({ cls: "setting-group bob-settings-section" });
     const dataPanel = dataGroup.createDiv({ cls: "setting-items" });
     new obsidian18.Setting(dataPanel).setName("Workbook export folder").setDesc("Vault folder where XLSX workbook exports are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.workbookExportFolder).setValue(this.plugin.settings.workbookExportFolder || DEFAULT_SETTINGS.workbookExportFolder).onChange(async (v) => {
       this.plugin.settings.workbookExportFolder = v.trim().replace(/^\/+/, "").replace(/\/+$/, "") || DEFAULT_SETTINGS.workbookExportFolder;
@@ -38560,13 +38560,13 @@ var CadenceSettingTab = class extends obsidian18.PluginSettingTab {
 var obsidian19 = __toESM(require("obsidian"));
 var PLAYBOOK_RUNNER_VIEW_TYPE = "agent-client-playbook-runner";
 var PLAYBOOK_RUNNER_PINNED_KEY = "bob-pinned-playbooks";
-var CadencePlaybookRunnerView = class _CadencePlaybookRunnerView extends (obsidian19.BasesView || class {
+var BobPlaybookRunnerView = class _BobPlaybookRunnerView extends (obsidian19.BasesView || class {
 }) {
   constructor(controller, parentEl, app) {
     super(controller);
     this._app = app;
-    this._pinned = _CadencePlaybookRunnerView._loadPinned();
-    this._root = parentEl.createDiv({ cls: "cad-pb-runner" });
+    this._pinned = _BobPlaybookRunnerView._loadPinned();
+    this._root = parentEl.createDiv({ cls: "bob-pb-runner" });
   }
   static _loadPinned() {
     try {
@@ -38588,27 +38588,27 @@ var CadencePlaybookRunnerView = class _CadencePlaybookRunnerView extends (obsidi
         const name = entry.file.basename;
         const title = String(entry.getValue?.("note.title") ?? entry.getValue?.("file.name") ?? name);
         const trigger = String(entry.getValue?.("note.trigger") ?? "");
-        const card = this._root.createDiv({ cls: "cad-pb-card" });
-        const pinBtn = card.createEl("button", { cls: "cad-pb-pin" + (this._pinned.has(path) ? " cad-pb-pin--active" : "") });
+        const card = this._root.createDiv({ cls: "bob-pb-card" });
+        const pinBtn = card.createEl("button", { cls: "bob-pb-pin" + (this._pinned.has(path) ? " bob-pb-pin--active" : "") });
         pinBtn.setText(this._pinned.has(path) ? "\u2605" : "\u2606");
         pinBtn.title = this._pinned.has(path) ? "Unpin" : "Pin";
         pinBtn.addEventListener("click", () => {
           this._pinned.has(path) ? this._pinned.delete(path) : this._pinned.add(path);
-          _CadencePlaybookRunnerView._savePinned(this._pinned);
+          _BobPlaybookRunnerView._savePinned(this._pinned);
           this.onDataUpdated();
         });
-        const info = card.createDiv({ cls: "cad-pb-card-info" });
-        const titleEl = info.createSpan({ cls: "cad-pb-card-title", text: title });
+        const info = card.createDiv({ cls: "bob-pb-card-info" });
+        const titleEl = info.createSpan({ cls: "bob-pb-card-title", text: title });
         if (trigger) {
-          info.createSpan({ cls: "cad-pb-card-trigger", text: trigger });
+          info.createSpan({ cls: "bob-pb-card-trigger", text: trigger });
           titleEl.title = trigger;
         }
-        const runBtn = card.createEl("button", { cls: "cad-btn primary cad-pb-run", text: "\u25B6" });
+        const runBtn = card.createEl("button", { cls: "bob-btn primary bob-pb-run", text: "\u25B6" });
         runBtn.title = "Run playbook in AI chat session";
         runBtn.addEventListener("click", () => this._runPlaybook(title));
       }
     }
-    if (total === 0) this._root.createDiv({ cls: "cad-empty-state-title", text: "No playbooks found" });
+    if (total === 0) this._root.createDiv({ cls: "bob-empty-state-title", text: "No playbooks found" });
   }
   async _runPlaybook(title) {
     const ACW_CHAT = "agent-client-chat-view";
@@ -38642,7 +38642,7 @@ ${cmd}`, 5e3);
 
 // src/plugin.ts
 var obsidian20 = __toESM(require("obsidian"));
-var CadencePlugin = class extends obsidian20.Plugin {
+var BobPlugin = class extends obsidian20.Plugin {
   constructor() {
     super(...arguments);
     // Set by the Modules settings "Edit dashboard" action to deep-link the Surface
@@ -38655,8 +38655,8 @@ var CadencePlugin = class extends obsidian20.Plugin {
     await this.loadSettings();
     await reloadEntityConfiguration(this.app, this.settings);
     this.registerView(
-      VIEW_TYPE_CADENCE_APP,
-      (leaf) => new CadenceAppView(leaf, this)
+      VIEW_TYPE_BOB_APP,
+      (leaf) => new BobAppView(leaf, this)
     );
     const dropScanCache = () => invalidateEntityScanCache();
     this.registerEvent(this.app.vault.on("create", dropScanCache));
@@ -38667,32 +38667,32 @@ var CadencePlugin = class extends obsidian20.Plugin {
       this.registerBasesView(PLAYBOOK_RUNNER_VIEW_TYPE, {
         name: "Playbook Runner",
         icon: "play-circle",
-        factory: (controller, parentEl) => new CadencePlaybookRunnerView(controller, parentEl, this.app)
+        factory: (controller, parentEl) => new BobPlaybookRunnerView(controller, parentEl, this.app)
       });
     }
     this.addRibbonIcon("sparkles", "Open BOB Workspace", () => this.openApp());
     this.addCommand({
-      id: "open-cadence",
+      id: "open-bob",
       name: "Open BOB Workspace",
       callback: () => this.openApp()
     });
     this.addCommand({
-      id: "open-cadence-home",
+      id: "open-bob-home",
       name: "Open BOB Workspace \u2014 Home (command centre)",
       callback: () => this.openApp("home")
     });
     this.addCommand({
-      id: "open-cadence-today",
+      id: "open-bob-today",
       name: "Open BOB Workspace \u2014 Today",
       callback: () => this.openApp("planner.today")
     });
     this.addCommand({
-      id: "open-cadence-calendar",
+      id: "open-bob-calendar",
       name: "Open BOB Workspace \u2014 Calendar (week)",
       callback: () => this.openApp("planner.calendar")
     });
     this.addCommand({
-      id: "open-cadence-pipeline",
+      id: "open-bob-pipeline",
       name: "Open BOB Workspace \u2014 Pipeline",
       callback: () => this.openApp("crm.pipeline")
     });
@@ -38731,7 +38731,7 @@ var CadencePlugin = class extends obsidian20.Plugin {
         this.app.workspace.openLinkText(file.path, "", false);
       }
     });
-    this.addSettingTab(new CadenceSettingTab(this.app, this));
+    this.addSettingTab(new BobSettingTab(this.app, this));
     this.addRibbonIcon("plus-circle", "BOB Workspace quick capture", () => this.openQuickCapture());
     this.addCommand({
       id: "quick-capture",
@@ -38740,16 +38740,16 @@ var CadencePlugin = class extends obsidian20.Plugin {
       callback: () => this.openQuickCapture()
     });
     this.addCommand({
-      id: "open-cadence-inbox",
+      id: "open-bob-inbox",
       name: "Open BOB Workspace \u2014 Inbox",
       callback: () => this.openApp("planner.inbox")
     });
     this.addCommand({
-      id: "cadence-import-csv",
+      id: "bob-import-csv",
       name: "Import from CSV",
       callback: () => {
         let entityKey = "contact";
-        const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
+        const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP)[0];
         if (leaf && leaf.view) {
           const m = String(leaf.view.mode || "");
           if (m === "crm.contacts") entityKey = "contact";
@@ -38765,7 +38765,7 @@ var CadencePlugin = class extends obsidian20.Plugin {
           else if (m === "crm.sequences") entityKey = "sequence";
           else if (m === "planner.projects") entityKey = "project";
         }
-        new CadenceImportModal(this.app, { entityKey }).open();
+        new BobImportModal(this.app, { entityKey }).open();
       }
     });
     this.addCommand({
@@ -38810,7 +38810,7 @@ var CadencePlugin = class extends obsidian20.Plugin {
           new obsidian20.Notice("BOB Workspace: no templates found in plugin templates/ folder.");
           return;
         }
-        new CadenceWorkspaceSetupModal(this.app, this, templates).open();
+        new BobWorkspaceSetupModal(this.app, this, templates).open();
       }
     });
     this.addCommand({
@@ -38858,7 +38858,7 @@ var CadencePlugin = class extends obsidian20.Plugin {
       if (!hasWorkspace && !this.settings.setupDismissed) {
         const templates = await loadWorkspaceTemplates(this.app);
         if (templates.length > 0) {
-          new CadenceWorkspaceSetupModal(this.app, this, templates).open();
+          new BobWorkspaceSetupModal(this.app, this, templates).open();
         }
       }
     });
@@ -38868,7 +38868,7 @@ var CadencePlugin = class extends obsidian20.Plugin {
   }
   /* ── Quick capture API ── */
   openQuickCapture(prefill) {
-    new CadenceCaptureModal(this.app, {
+    new BobCaptureModal(this.app, {
       defaultText: prefill && prefill.text ? prefill.text : "",
       defaultWhen: prefill && prefill.when ? prefill.when : null,
       defaultRepeat: prefill && prefill.repeat ? prefill.repeat : "none",
@@ -38947,7 +38947,7 @@ var CadencePlugin = class extends obsidian20.Plugin {
   }
   refreshOpenViews() {
     invalidateEntityScanCache();
-    this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP).forEach((leaf) => {
+    this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP).forEach((leaf) => {
       const view = leaf.view;
       if (view && view.canvasFile) return;
       if (view && typeof view.render === "function") view.render();
@@ -38997,10 +38997,10 @@ var CadencePlugin = class extends obsidian20.Plugin {
     }
   }
   async openApp(mode = null) {
-    let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
+    let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP)[0];
     if (!leaf) {
       leaf = this.app.workspace.getLeaf("tab");
-      await leaf.setViewState({ type: VIEW_TYPE_CADENCE_APP, active: true });
+      await leaf.setViewState({ type: VIEW_TYPE_BOB_APP, active: true });
     }
     this.app.workspace.revealLeaf(leaf);
     const view = leaf.view;
@@ -39053,5 +39053,5 @@ var CadencePlugin = class extends obsidian20.Plugin {
 };
 
 // src/main.ts
-var main_default = CadencePlugin;
+var main_default = BobPlugin;
 /*! xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */

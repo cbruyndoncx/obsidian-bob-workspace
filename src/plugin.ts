@@ -1,20 +1,20 @@
 import { setCurrentCurrency } from './settings';
 import { setWorkspaceConfig } from './workspace-config';
 import { generateMissingBases } from './bases-config';
-import { CadenceCaptureModal } from './modals/capture';
-import { CadenceImportModal } from './modals/import';
-import { CadenceWorkspaceSetupModal } from './modals/workspace-setup';
+import { BobCaptureModal } from './modals/capture';
+import { BobImportModal } from './modals/import';
+import { BobWorkspaceSetupModal } from './modals/workspace-setup';
 import { invalidateEntityScanCache } from './entity-files';
-import { VIEW_TYPE_CADENCE_APP } from './nav';
+import { VIEW_TYPE_BOB_APP } from './nav';
 import { ensureDailyNote, parseSections, replaceSection } from './notes';
 import { nextRepeat, reminderId, reminderTimeStr } from './reminders';
 import { reloadEntityConfiguration, workspaceConfigTemplate } from './runtime-config';
 import { bootstrapCanonicalSchemaSources, regenerateSchemaOutputs } from './schema-designer';
 import { CURRENT_CURRENCY, DEFAULT_SETTINGS, syncEntityFolders } from './settings';
-import { CadenceSettingTab } from './settings-tab';
+import { BobSettingTab } from './settings-tab';
 import { sameDay, startOfDay, ymd } from './utils';
-import { CadenceAppView } from './views/app-view';
-import { CadencePlaybookRunnerView, PLAYBOOK_RUNNER_VIEW_TYPE } from './views/playbook-runner';
+import { BobAppView } from './views/app-view';
+import { BobPlaybookRunnerView, PLAYBOOK_RUNNER_VIEW_TYPE } from './views/playbook-runner';
 import { exportAllEntitiesXLSX, promptImportWorkbook } from './workbook';
 import { WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, WORKSPACE_LOAD_FAILED, WORKSPACE_OWNED_SETTING_KEYS, applyWorkspaceOwnedSettings, initPluginPaths, loadWorkspaceConfig, persistedWorkspaceOwnedSettings, saveWorkspaceConfig, validateWorkspaceConfig } from './workspace-config';
 import { loadWorkspaceTemplates, seedWorkspaceTemplates } from './workspace-templates';
@@ -24,7 +24,7 @@ import type { BobSettings, PartialSettings, Reminder } from './types';
 /* ── Module-local types (type-only; erased by esbuild) ─────────── */
 
 /**
- * Loose handle to the CadenceAppView leaf view. Typed locally (instead of
+ * Loose handle to the BobAppView leaf view. Typed locally (instead of
  * importing the view class) because only these few members are touched and
  * plugin.ts ↔ app-view.ts already share a runtime import edge.
  */
@@ -55,7 +55,7 @@ interface StoredReminder extends Reminder {
   notes?: string;
 }
 
-export class CadencePlugin extends obsidian.Plugin {
+export class BobPlugin extends obsidian.Plugin {
   settings: BobSettings;
   // Set by the Modules settings "Edit dashboard" action to deep-link the Surface
   // Designer to a specific surface; consumed (once) by renderDashboardEditor.
@@ -67,8 +67,8 @@ export class CadencePlugin extends obsidian.Plugin {
     await reloadEntityConfiguration(this.app, this.settings);
 
     this.registerView(
-      VIEW_TYPE_CADENCE_APP,
-      (leaf) => new CadenceAppView(leaf, this)
+      VIEW_TYPE_BOB_APP,
+      (leaf) => new BobAppView(leaf, this)
     );
 
     // Drop the shared entity scan cache whenever vault content changes, so the
@@ -84,35 +84,35 @@ export class CadencePlugin extends obsidian.Plugin {
       this.registerBasesView(PLAYBOOK_RUNNER_VIEW_TYPE, {
         name: 'Playbook Runner',
         icon: 'play-circle',
-        factory: (controller, parentEl) => new CadencePlaybookRunnerView(controller, parentEl, this.app) as unknown as obsidian.BasesView,
+        factory: (controller, parentEl) => new BobPlaybookRunnerView(controller, parentEl, this.app) as unknown as obsidian.BasesView,
       });
     }
 
-    // Single ribbon icon → opens the Cadence app
+    // Single ribbon icon → opens the BOB Workspace app
     this.addRibbonIcon('sparkles', 'Open BOB Workspace', () => this.openApp());
 
     this.addCommand({
-      id: 'open-cadence',
+      id: 'open-bob',
       name: 'Open BOB Workspace',
       callback: () => this.openApp(),
     });
     this.addCommand({
-      id: 'open-cadence-home',
+      id: 'open-bob-home',
       name: 'Open BOB Workspace — Home (command centre)',
       callback: () => this.openApp('home'),
     });
     this.addCommand({
-      id: 'open-cadence-today',
+      id: 'open-bob-today',
       name: 'Open BOB Workspace — Today',
       callback: () => this.openApp('planner.today'),
     });
     this.addCommand({
-      id: 'open-cadence-calendar',
+      id: 'open-bob-calendar',
       name: 'Open BOB Workspace — Calendar (week)',
       callback: () => this.openApp('planner.calendar'),
     });
     this.addCommand({
-      id: 'open-cadence-pipeline',
+      id: 'open-bob-pipeline',
       name: 'Open BOB Workspace — Pipeline',
       callback: () => this.openApp('crm.pipeline'),
     });
@@ -149,7 +149,7 @@ export class CadencePlugin extends obsidian.Plugin {
       },
     });
 
-    this.addSettingTab(new CadenceSettingTab(this.app, this));
+    this.addSettingTab(new BobSettingTab(this.app, this));
 
     // ─── Quick capture (with optional reminder) ───
     this.addRibbonIcon('plus-circle', 'BOB Workspace quick capture', () => this.openQuickCapture());
@@ -160,18 +160,18 @@ export class CadencePlugin extends obsidian.Plugin {
       callback: () => this.openQuickCapture(),
     });
     this.addCommand({
-      id: 'open-cadence-inbox',
+      id: 'open-bob-inbox',
       name: 'Open BOB Workspace — Inbox',
       callback: () => this.openApp('planner.inbox'),
     });
 
     this.addCommand({
-      id: 'cadence-import-csv',
+      id: 'bob-import-csv',
       name: 'Import from CSV',
       callback: () => {
         // Default to whichever entity list the user is on, fallback to contact
         let entityKey = 'contact';
-        const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
+        const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP)[0];
         if (leaf && leaf.view) {
           const m = String((leaf.view as AppViewLike).mode || '');
           if (m === 'crm.contacts')  entityKey = 'contact';
@@ -187,7 +187,7 @@ export class CadencePlugin extends obsidian.Plugin {
           else if (m === 'crm.sequences') entityKey = 'sequence';
           else if (m === 'planner.projects') entityKey = 'project';
         }
-        new CadenceImportModal(this.app, { entityKey }).open();
+        new BobImportModal(this.app, { entityKey }).open();
       },
     });
 
@@ -236,7 +236,7 @@ export class CadencePlugin extends obsidian.Plugin {
           new obsidian.Notice('BOB Workspace: no templates found in plugin templates/ folder.');
           return;
         }
-        new CadenceWorkspaceSetupModal(this.app, this, templates).open();
+        new BobWorkspaceSetupModal(this.app, this, templates).open();
       },
     });
 
@@ -293,7 +293,7 @@ export class CadencePlugin extends obsidian.Plugin {
       if (!hasWorkspace && !this.settings.setupDismissed) {
         const templates = await loadWorkspaceTemplates(this.app);
         if (templates.length > 0) {
-          new CadenceWorkspaceSetupModal(this.app, this, templates).open();
+          new BobWorkspaceSetupModal(this.app, this, templates).open();
         }
       }
     });
@@ -306,7 +306,7 @@ export class CadencePlugin extends obsidian.Plugin {
 
   /* ── Quick capture API ── */
   openQuickCapture(prefill?: { text?: string; when?: string | null; repeat?: string }) {
-    new CadenceCaptureModal(this.app, {
+    new BobCaptureModal(this.app, {
       defaultText: prefill && prefill.text ? prefill.text : '',
       defaultWhen: prefill && prefill.when ? prefill.when : null,
       defaultRepeat: prefill && prefill.repeat ? prefill.repeat : 'none',
@@ -396,7 +396,7 @@ export class CadencePlugin extends obsidian.Plugin {
     // Settings/config changes (ignored folders, schema reloads) can change the
     // scannable set without a vault event, so drop the cache before re-render.
     invalidateEntityScanCache();
-    this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP).forEach((leaf) => {
+    this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP).forEach((leaf) => {
       const view = leaf.view as AppViewLike;
       // Don't tear down a hosted interactive canvas on incidental refreshes
       // (reminder tick, schema reload). Navigation re-renders it explicitly.
@@ -450,10 +450,10 @@ export class CadencePlugin extends obsidian.Plugin {
   }
 
   async openApp(mode: string | null = null) {
-    let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
+    let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP)[0];
     if (!leaf) {
       leaf = this.app.workspace.getLeaf('tab');
-      await leaf.setViewState({ type: VIEW_TYPE_CADENCE_APP, active: true });
+      await leaf.setViewState({ type: VIEW_TYPE_BOB_APP, active: true });
     }
     this.app.workspace.revealLeaf(leaf);
     const view: AppViewLike = leaf.view;

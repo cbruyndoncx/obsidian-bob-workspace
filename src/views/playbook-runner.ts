@@ -19,7 +19,7 @@ interface AgentChatView extends obsidian.View {
   sendMessage?: () => unknown;
 }
 
-export class CadencePlaybookRunnerView extends ((obsidian as any).BasesView || class {}) {
+export class BobPlaybookRunnerView extends ((obsidian as any).BasesView || class {}) {
   declare _app: App;
   declare _pinned: Set<string>;
   declare _root: HTMLDivElement;
@@ -28,8 +28,8 @@ export class CadencePlaybookRunnerView extends ((obsidian as any).BasesView || c
   constructor(controller: unknown, parentEl: HTMLElement, app: App) {
     super(controller);
     this._app = app;
-    this._pinned = CadencePlaybookRunnerView._loadPinned();
-    this._root = parentEl.createDiv({ cls: 'cad-pb-runner' });
+    this._pinned = BobPlaybookRunnerView._loadPinned();
+    this._root = parentEl.createDiv({ cls: 'bob-pb-runner' });
   }
 
   static _loadPinned(): Set<string> {
@@ -51,27 +51,27 @@ export class CadencePlaybookRunnerView extends ((obsidian as any).BasesView || c
         const title = String(entry.getValue?.('note.title') ?? entry.getValue?.('file.name') ?? name);
         const trigger = String(entry.getValue?.('note.trigger') ?? '');
 
-        const card = this._root.createDiv({ cls: 'cad-pb-card' });
+        const card = this._root.createDiv({ cls: 'bob-pb-card' });
 
-        const pinBtn = card.createEl('button', { cls: 'cad-pb-pin' + (this._pinned.has(path) ? ' cad-pb-pin--active' : '') });
+        const pinBtn = card.createEl('button', { cls: 'bob-pb-pin' + (this._pinned.has(path) ? ' bob-pb-pin--active' : '') });
         pinBtn.setText(this._pinned.has(path) ? '★' : '☆');
         pinBtn.title = this._pinned.has(path) ? 'Unpin' : 'Pin';
         pinBtn.addEventListener('click', () => {
           this._pinned.has(path) ? this._pinned.delete(path) : this._pinned.add(path);
-          CadencePlaybookRunnerView._savePinned(this._pinned);
+          BobPlaybookRunnerView._savePinned(this._pinned);
           this.onDataUpdated();
         });
 
-        const info = card.createDiv({ cls: 'cad-pb-card-info' });
-        const titleEl = info.createSpan({ cls: 'cad-pb-card-title', text: title });
-        if (trigger) { info.createSpan({ cls: 'cad-pb-card-trigger', text: trigger }); titleEl.title = trigger; }
+        const info = card.createDiv({ cls: 'bob-pb-card-info' });
+        const titleEl = info.createSpan({ cls: 'bob-pb-card-title', text: title });
+        if (trigger) { info.createSpan({ cls: 'bob-pb-card-trigger', text: trigger }); titleEl.title = trigger; }
 
-        const runBtn = card.createEl('button', { cls: 'cad-btn primary cad-pb-run', text: '▶' });
+        const runBtn = card.createEl('button', { cls: 'bob-btn primary bob-pb-run', text: '▶' });
         runBtn.title = 'Run playbook in AI chat session';
         runBtn.addEventListener('click', () => this._runPlaybook(title));
       }
     }
-    if (total === 0) this._root.createDiv({ cls: 'cad-empty-state-title', text: 'No playbooks found' });
+    if (total === 0) this._root.createDiv({ cls: 'bob-empty-state-title', text: 'No playbooks found' });
   }
 
   async _runPlaybook(title: string) {

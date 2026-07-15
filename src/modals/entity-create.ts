@@ -13,16 +13,16 @@ export interface EntityCreateResult {
   values: Record<string, string | number | string[]>;
 }
 
-interface CadenceEntityCreateModalOptions {
+interface BobEntityCreateModalOptions {
   onSubmit: (result: EntityCreateResult | null) => void;
 }
 
-export class CadenceEntityCreateModal extends obsidian.Modal {
+export class BobEntityCreateModal extends obsidian.Modal {
   declare entityKey: string;
   declare def: BobEntityDef;
   declare onSubmit: (result: EntityCreateResult | null) => void;
   declare _submitted: boolean;
-  constructor(app: App, entityKey: string, opts: CadenceEntityCreateModalOptions) {
+  constructor(app: App, entityKey: string, opts: BobEntityCreateModalOptions) {
     super(app);
     this.entityKey = entityKey;
     this.def = ENTITIES[entityKey];
@@ -33,12 +33,12 @@ export class CadenceEntityCreateModal extends obsidian.Modal {
   onOpen() {
     const { contentEl, modalEl } = this;
     contentEl.empty();
-    contentEl.addClass('cad-create-modal');
-    if (modalEl) modalEl.addClass('cad-create-modal-shell');
+    contentEl.addClass('bob-create-modal');
+    if (modalEl) modalEl.addClass('bob-create-modal-shell');
 
-    contentEl.createEl('h3', { cls: 'cad-create-title', text: `New ${this.def.label}` });
+    contentEl.createEl('h3', { cls: 'bob-create-title', text: `New ${this.def.label}` });
 
-    const form = contentEl.createDiv({ cls: 'cad-create-form' });
+    const form = contentEl.createDiv({ cls: 'bob-create-form' });
     const inputs: CreateFormControl[] = [];
 
     const requiredInputs: CreateFormControl[] = [];
@@ -47,31 +47,31 @@ export class CadenceEntityCreateModal extends obsidian.Modal {
     this.def.fields.forEach((f) => {
       const isPrimary = f.key === primaryKey;
       const isRequired = isPrimary || f.required === true;
-      const row = form.createDiv({ cls: 'cad-create-row' });
-      const label = row.createDiv({ cls: 'cad-create-label' });
+      const row = form.createDiv({ cls: 'bob-create-row' });
+      const label = row.createDiv({ cls: 'bob-create-label' });
       label.setText(f.label.toUpperCase() + (isRequired ? ' *' : ''));
 
       let input: CreateFormControl;
       const fieldType = f.type || 'text';
 
       if (fieldType === 'enum') {
-        input = row.createEl('select', { cls: 'cad-create-input' });
+        input = row.createEl('select', { cls: 'bob-create-input' });
         input.createEl('option', { value: '', text: '— —' });
         (f.options || []).forEach((opt) => input.createEl('option', { value: opt, text: opt }));
       } else if (fieldType === 'date') {
-        input = row.createEl('input', { type: 'date', cls: 'cad-create-input' });
+        input = row.createEl('input', { type: 'date', cls: 'bob-create-input' });
         input.lang = navigator.language || '';
       } else if (fieldType === 'number' || fieldType === 'currency') {
-        input = row.createEl('input', { type: 'number', cls: 'cad-create-input' });
+        input = row.createEl('input', { type: 'number', cls: 'bob-create-input' });
         input.placeholder = '0';
       } else if (fieldType === 'email') {
-        input = row.createEl('input', { type: 'email', cls: 'cad-create-input' });
+        input = row.createEl('input', { type: 'email', cls: 'bob-create-input' });
         input.placeholder = 'name@example.com';
       } else if (fieldType === 'tags') {
-        input = row.createEl('input', { type: 'text', cls: 'cad-create-input' });
+        input = row.createEl('input', { type: 'text', cls: 'bob-create-input' });
         input.placeholder = 'tag1, tag2';
       } else {
-        input = row.createEl('input', { type: 'text', cls: 'cad-create-input' });
+        input = row.createEl('input', { type: 'text', cls: 'bob-create-input' });
         input.placeholder = this._placeholderFor(f, isPrimary);
       }
       const defaultValue = resolveEntityFieldDefault(f);
@@ -88,12 +88,12 @@ export class CadenceEntityCreateModal extends obsidian.Modal {
     });
 
     /* Action row */
-    const actions = contentEl.createDiv({ cls: 'cad-create-actions' });
-    const cancel = actions.createEl('button', { cls: 'cad-btn', text: 'Cancel' });
+    const actions = contentEl.createDiv({ cls: 'bob-create-actions' });
+    const cancel = actions.createEl('button', { cls: 'bob-btn', text: 'Cancel' });
     cancel.type = 'button';
     cancel.addEventListener('click', () => this.close());
 
-    const submitBtn = actions.createEl('button', { cls: 'cad-btn primary', text: `Create ${this.def.label}` });
+    const submitBtn = actions.createEl('button', { cls: 'bob-btn primary', text: `Create ${this.def.label}` });
     submitBtn.type = 'button';
     attachRequiredValidation(submitBtn, requiredInputs);
 
