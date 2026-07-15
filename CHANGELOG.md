@@ -4,6 +4,15 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [1.0.0] — 2026-07-16
+
+### Added
+- Initial public release, submitted to the Obsidian community plugin store.
+
+The `0.14.4-bob.*` entries below are the pre-release development history of
+this fork (from the original Cadence plugin's `0.14.4` through the BOB
+rebrand); `1.0.0` is the first version intended for general use.
+
 ## [0.14.4-bob.51] — 2026-07-15
 
 ### Changed
