@@ -3,7 +3,7 @@
   "name": "BOB Workspace",
   "version": "1.0.0",
   "minAppVersion": "1.4.0",
-  "description": "A configurable vault-native workspace for CRM, PRM, Planner, Projects, Reports and Reminders. Markdown is the source of truth.",
+  "description": "Runs CRM, PRM, client work, finance, procurement, and planning as a configurable, vault-native workspace on plain markdown.",
   "author": "cbruyndoncx",
   "authorUrl": "https://github.com/cbruyndoncx",
   "isDesktopOnly": false
