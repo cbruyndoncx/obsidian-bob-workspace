@@ -190,7 +190,7 @@ interface PageHeaderOptions {
   surfaceId?: string;
   configuredActions?: boolean;
 }
-type PageHeaderActionsFn = (right: HTMLElement, ctx: { surfaceId: string; configuredActionCount: number; hasConfiguredActions: boolean }) => void;
+type PageHeaderActionsFn = (right: HTMLElement, ctx: { surfaceId: string; configuredActionCount: number; hasConfiguredActions: boolean; inlineEl: HTMLElement }) => void;
 
 // Known workspace "overview" routes that render through renderConfigDashboard
 // even when unconfigured (so they show the add-dashboard prompt, not "coming soon").
@@ -692,29 +692,28 @@ export class BobAppView extends obsidian.ItemView {
     const activeParentId = active?.parent || null;
 
     /* ── Top brand bar ──────────────────────── */
+    // Compact layout: everything clusters left (burger, brand, theme toggle).
+    // The old top-right block duplicated the active surface's name — the page
+    // header already carries it — so it is gone entirely.
     const topbar = root.createDiv({ cls: 'bob-app-topbar' });
+    const topLeft = topbar.createDiv({ cls: 'bob-app-topbar-left' });
 
     /* Hamburger — visible only on mobile via CSS, toggles the nav drawer */
-    const burger = topbar.createEl('button', { cls: 'bob-mobile-burger' });
+    const burger = topLeft.createEl('button', { cls: 'bob-mobile-burger' });
     try { obsidian.setIcon(burger, 'menu'); } catch (_) {}
     burger.title = 'Show nav';
     burger.addEventListener('click', () => this._toggleMobileNav());
 
-    const brand = topbar.createDiv({ cls: 'bob-app-brand' });
+    const brand = topLeft.createDiv({ cls: 'bob-app-brand' });
     brand.createSpan({ cls: 'bob-app-brand-mark', text: '◐' });
     brand.createSpan({ cls: 'bob-app-brand-text', text: 'BOB Workspace' });
 
-    const topRight = topbar.createDiv({ cls: 'bob-app-topbar-right' });
-
     /* BOB Workspace dark mode toggle (scoped — does NOT touch Obsidian's mode) */
     const dark = !!this.plugin.settings.bobAppDark;
-    const themeBtn = topRight.createEl('button', { cls: 'bob-topbar-icon-btn' });
+    const themeBtn = topLeft.createEl('button', { cls: 'bob-topbar-icon-btn' });
     try { obsidian.setIcon(themeBtn, dark ? 'sun' : 'moon'); } catch (_) {}
     themeBtn.title = dark ? 'BOB Workspace: switch to light' : 'BOB Workspace: switch to dark';
     themeBtn.addEventListener('click', () => this._toggleBobDark());
-
-    const eyebrow = topRight.createDiv({ cls: 'bob-app-topbar-meta' });
-    eyebrow.setText(active.label.toUpperCase());
 
     /* ── Body: left grouped nav + main content ──────── */
     const body = root.createDiv({ cls: 'bob-app-body' });
@@ -1184,14 +1183,18 @@ export class BobAppView extends obsidian.ItemView {
   _renderPageHeader(root: HTMLElement, title: string, subtitle: string | null, actions?: PageHeaderActionsFn | null, options: PageHeaderOptions = {}) {
     const head = root.createDiv({ cls: 'bob-page-header' });
     const left = head.createDiv({ cls: 'bob-page-header-left' });
-    left.createDiv({ cls: 'bob-eyebrow', text: 'BOB WORKSPACE' });
-    left.createDiv({ cls: 'bob-page-title', text: title });
+    // No "BOB WORKSPACE" eyebrow — the brand already sits in the topbar.
+    // The title row carries an inline slot so compact icon actions (e.g. the
+    // report Save) can sit right next to the title instead of far right.
+    const titleRow = left.createDiv({ cls: 'bob-page-title-row' });
+    titleRow.createDiv({ cls: 'bob-page-title', text: title });
+    const inlineEl = titleRow.createDiv({ cls: 'bob-page-title-actions' });
     if (subtitle) left.createDiv({ cls: 'bob-page-subtitle', text: subtitle });
     const right = head.createDiv({ cls: 'bob-page-header-right' });
     const surfaceId = options.surfaceId || this.mode;
     const renderConfigured = options.configuredActions !== false;
     const configuredActionCount = renderConfigured ? this._configuredHeaderActionCount(surfaceId) : 0;
-    const ctx = { surfaceId, configuredActionCount, hasConfiguredActions: configuredActionCount > 0 };
+    const ctx = { surfaceId, configuredActionCount, hasConfiguredActions: configuredActionCount > 0, inlineEl };
     if (typeof actions === 'function') actions(right, ctx);
     if (renderConfigured) this._renderConfiguredHeaderActions(right, surfaceId);
     return head;
@@ -2137,10 +2140,17 @@ export class BobAppView extends obsidian.ItemView {
         config.subtitle,
         (r, ctx) => {
           if (config.contextFilter === 'client-work') this._renderClientWorkSelector(r);
-          const exportBtn = r.createEl('button', { cls: 'bob-btn', text: 'Save' });
+          // Compact save: an icon inline with the title, not a labelled
+          // button floating at the far right of the content area.
+          const exportBtn = ctx.inlineEl.createEl('button', {
+            cls: 'bob-topbar-icon-btn bob-title-action-btn',
+            attr: { type: 'button', 'aria-label': 'Save report to note' },
+          });
+          exportBtn.title = 'Save report to note';
+          try { obsidian.setIcon(exportBtn, 'save'); } catch (_) {}
           exportBtn.addEventListener('click', async () => {
             exportBtn.disabled = true;
-            exportBtn.textContent = 'Saving…';
+            exportBtn.addClass('is-busy');
             try {
               const path = await this._exportConfigDashboard(surfaceId, config, getWidgetEntities, dashboardContext);
               new obsidian.Notice(`BOB Workspace: saved note to ${path}`, 6000);
@@ -2148,7 +2158,7 @@ export class BobAppView extends obsidian.ItemView {
               new obsidian.Notice(`BOB Workspace: save failed — ${e.message}`, 8000);
             } finally {
               exportBtn.disabled = false;
-              exportBtn.textContent = 'Save';
+              exportBtn.removeClass('is-busy');
             }
           });
         }
