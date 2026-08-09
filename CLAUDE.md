@@ -384,6 +384,7 @@ Obsidian's installer delivers only `main.js`/`manifest.json`/`styles.css` — it
 - DOM: `createDiv()`, `createEl()`, `appendChild()`/`setText()`; keep BEM-style class names prefixed `bob-`/`bob-`; verify light and dark.
 - Events: `registerEvent()` for vault/metadata; standard `addEventListener` for DOM. Use `BobConfirmModal`/`confirmModal()` instead of `window.confirm()`.
 - No `console.log` in shipping code; no unsafe raw `innerHTML` for untrusted vault content.
+- Deliver reviews, findings, and reports as chat/terminal output and/or files in this repo. Never upload or publish repo content to external hosting (claude.ai Artifacts, gists, pastebins, etc.) unless the user explicitly asks for a hosted/shareable page.
 - Respect responsive/mobile behavior for interactive changes.
 - Preserve BOB Workspace branding and compatibility names unless deliberately changing public identity.
 - Keep `vendor/xlsx.mini.min.js` in the repo and re-run `npm run build` after updating it.
