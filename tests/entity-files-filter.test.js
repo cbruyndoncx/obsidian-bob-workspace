@@ -36,6 +36,9 @@ const ENTITIES = {
 
 const { listEntityFiles, isTemplatePath, entityKeyFromFile } = loadMainFunctions(['listEntityFiles', 'isTemplatePath', 'entityKeyFromFile'], {
   ENTITIES,
+  // Collaborators of the per-entity list memo (module-level in src).
+  _entityListMemo: new Map(),
+  _scanVersion: 0,
   scannableMarkdownFiles: () => files,
   entityFolder: (k) => ENTITIES[k].folder || '',
   evaluateBaseFilterNode: () => true,

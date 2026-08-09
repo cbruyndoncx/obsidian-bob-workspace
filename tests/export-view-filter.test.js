@@ -39,6 +39,9 @@ const ENTITIES = {
 
 const sandbox = loadMainFunctions(['listEntityFiles'], {
   ENTITIES,
+  // Collaborators of the per-entity list memo (module-level in src).
+  _entityListMemo: new Map(),
+  _scanVersion: 0,
   scannableMarkdownFiles: () => files,
   entityFolder: () => 'skills',
   readEntity: (app, f) => ({ file: f, frontmatter: f.frontmatter, basename: f.basename }),
@@ -64,6 +67,8 @@ const app = { metadataCache: { getFileCache: (f) => ({ frontmatter: f.frontmatte
   ENTITIES.skill.baseFilters.global = 'DENY';
   const denied = loadMainFunctions(['listEntityFiles'], {
     ENTITIES,
+    _entityListMemo: new Map(),
+    _scanVersion: 0,
     scannableMarkdownFiles: () => files,
     entityFolder: () => 'skills',
     readEntity: (app, f) => ({ file: f }),

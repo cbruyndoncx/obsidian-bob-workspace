@@ -22749,7 +22749,8 @@ function loadBuiltinDashboardDefaults() {
   ["workspace-bob.json", "workspace-cadence.json", "workspace-crm.json"].forEach((fileName) => {
     const raw = BUNDLED_WORKSPACE_TEMPLATES[fileName];
     if (!raw) return;
-    const parsed = migrateWorkspacePlannerConfig(cloneConfig(raw));
+    const { _assets, _template, ...trimmed } = raw;
+    const parsed = migrateWorkspacePlannerConfig(trimmed);
     Object.entries(parsed.dashboards || {}).forEach(([surfaceId, config]) => {
       defaults[surfaceId] = cloneConfig(config);
     });
@@ -22795,7 +22796,11 @@ function applyWorkspaceRegistries(config = {}) {
 }
 
 // src/dashboards.ts
-var BUILTIN_DASHBOARD_DEFAULTS = loadBuiltinDashboardDefaults();
+var _builtinDashboardDefaults = null;
+function builtinDashboardDefaults() {
+  if (!_builtinDashboardDefaults) _builtinDashboardDefaults = loadBuiltinDashboardDefaults();
+  return _builtinDashboardDefaults;
+}
 var PURE_DASHBOARD_WIDGET_TYPES = [
   "list",
   "task-list",
@@ -23076,6 +23081,11 @@ var WORKSPACE_CONFIG = {};
 var WORKSPACE_LOAD_FAILED = false;
 function setWorkspaceConfig(config) {
   WORKSPACE_CONFIG = config || {};
+  bumpWorkspaceConfigEpoch();
+}
+var _workspaceConfigEpoch = 0;
+function bumpWorkspaceConfigEpoch() {
+  _workspaceConfigEpoch++;
 }
 var WORKSPACE_HAS_NAVIGATION = false;
 var CONFIGURED_BASE_ENTITY_KEYS = /* @__PURE__ */ new Set();
@@ -23560,14 +23570,24 @@ function persistedWorkspaceOwnedSettings(settings = {}) {
   });
   return persisted;
 }
+var _lastWrittenWorkspaceJson = null;
 async function saveWorkspaceConfig(app, jsonText, writeBackup = true) {
   const parsed = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(jsonText)));
   const adapter = app.vault.adapter;
+  const serialized = JSON.stringify(parsed, null, 2);
+  if (!writeBackup && serialized === _lastWrittenWorkspaceJson) {
+    WORKSPACE_CONFIG = parsed;
+    WORKSPACE_HAS_NAVIGATION = Array.isArray(parsed.navigation?.groups);
+    WORKSPACE_LOAD_FAILED = false;
+    return parsed;
+  }
   if (writeBackup && await adapter.exists(WORKSPACE_CONFIG_PATH)) {
     await adapter.write(WORKSPACE_BACKUP_PATH, await adapter.read(WORKSPACE_CONFIG_PATH));
   }
-  await adapter.write(WORKSPACE_CONFIG_PATH, JSON.stringify(parsed, null, 2));
+  await adapter.write(WORKSPACE_CONFIG_PATH, serialized);
+  _lastWrittenWorkspaceJson = serialized;
   WORKSPACE_CONFIG = parsed;
+  bumpWorkspaceConfigEpoch();
   WORKSPACE_HAS_NAVIGATION = Array.isArray(parsed.navigation?.groups);
   WORKSPACE_LOAD_FAILED = false;
   return parsed;
@@ -23576,10 +23596,13 @@ async function loadWorkspaceConfig(app) {
   WORKSPACE_CONFIG = {};
   WORKSPACE_HAS_NAVIGATION = false;
   WORKSPACE_LOAD_FAILED = false;
+  _lastWrittenWorkspaceJson = null;
+  bumpWorkspaceConfigEpoch();
   if (!await app.vault.adapter.exists(WORKSPACE_CONFIG_PATH)) return WORKSPACE_CONFIG;
   try {
     WORKSPACE_CONFIG = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(await app.vault.adapter.read(WORKSPACE_CONFIG_PATH))));
     WORKSPACE_HAS_NAVIGATION = Array.isArray(WORKSPACE_CONFIG.navigation?.groups);
+    _lastWrittenWorkspaceJson = JSON.stringify(WORKSPACE_CONFIG, null, 2);
   } catch (e) {
     new obsidian.Notice(`BOB Workspace: workspace.json failed to load and is being left untouched - ${e.message}`, 0);
     WORKSPACE_CONFIG = {};
@@ -23608,7 +23631,17 @@ function collectEntityKeysFromConfigValue(value, keys) {
   addConfiguredEntityKey(keys, value.entity);
   Object.values(value).forEach((item) => collectEntityKeysFromConfigValue(item, keys));
 }
+var _configuredKeysMemo = /* @__PURE__ */ new WeakMap();
 function workspaceConfiguredEntityKeys(config = WORKSPACE_CONFIG, opts = {}) {
+  const variantKey = opts.includeFallback === false ? "strict" : "fallback";
+  const memoizable = !!config && typeof config === "object";
+  if (memoizable) {
+    const memo = _configuredKeysMemo.get(config);
+    if (memo && memo.epoch === _workspaceConfigEpoch) {
+      const hit = memo.variants.get(variantKey);
+      if (hit) return hit;
+    }
+  }
   const keys = /* @__PURE__ */ new Set();
   SCHEMA_ENTITY_KEYS.forEach((key) => addConfiguredEntityKey(keys, key));
   Object.keys(config?.bases || {}).forEach((key) => addConfiguredEntityKey(keys, key));
@@ -23620,6 +23653,14 @@ function workspaceConfiguredEntityKeys(config = WORKSPACE_CONFIG, opts = {}) {
   const hasExplicitConfig = !!(SCHEMA_ENTITY_KEYS.size || config?.schemas || config?.bases || Array.isArray(config?.navigation?.groups) || config?.navigation?.secondaryTabs || config?.navigation?.actions || Array.isArray(config?.workbookGroups) || config?.dashboards);
   if (!keys.size && !hasExplicitConfig && opts.includeFallback !== false) {
     Object.keys(ENTITIES).forEach((key) => addConfiguredEntityKey(keys, key));
+  }
+  if (memoizable) {
+    let memo = _configuredKeysMemo.get(config);
+    if (!memo || memo.epoch !== _workspaceConfigEpoch) {
+      memo = { epoch: _workspaceConfigEpoch, variants: /* @__PURE__ */ new Map() };
+      _configuredKeysMemo.set(config, memo);
+    }
+    memo.variants.set(variantKey, keys);
   }
   return keys;
 }
@@ -23656,10 +23697,16 @@ function resolveSurfaceConfig(surfaceId, config = WORKSPACE_CONFIG) {
   return resolveDashboardConfig(surfaceId, config.dashboards);
 }
 function normalizeDashboardConfigShape(value) {
+  if (!value || typeof value !== "object") return value;
+  if (typeof structuredClone === "function") {
+    try {
+      return structuredClone(value);
+    } catch (_) {
+    }
+  }
   if (Array.isArray(value)) {
     return value.map((item) => normalizeDashboardConfigShape(item));
   }
-  if (!value || typeof value !== "object") return value;
   const out = {};
   Object.entries(value).forEach(([key, child]) => {
     out[key] = normalizeDashboardConfigShape(child);
@@ -23807,6 +23854,7 @@ async function applySchemas(app, settings = {}) {
       await applyEntityDefinitions(app, settings, { [entityKey]: schema.bob });
     }
   }
+  bumpWorkspaceConfigEpoch();
 }
 
 // src/utils.ts
@@ -23987,6 +24035,7 @@ function entityBaseViewName(settings = {}, entityKey) {
 function resetEntityRegistry(settings = {}) {
   CONFIGURED_BASE_ENTITY_KEYS.clear();
   SCHEMA_ENTITY_KEYS.clear();
+  bumpWorkspaceConfigEpoch();
   Object.keys(ENTITIES).forEach((key) => {
     if (!BUILTIN_ENTITY_DEFAULTS[key]) delete ENTITIES[key];
   });
@@ -24109,15 +24158,33 @@ async function applyEntityDefinitions(app, settings = {}, config = {}) {
 
 // src/bases-parse.ts
 var obsidian4 = __toESM(require("obsidian"));
+var _baseYamlCache = /* @__PURE__ */ new Map();
+async function readBaseFileYaml(app, file) {
+  const hit = _baseYamlCache.get(file.path);
+  if (hit && hit.mtime === file.stat.mtime) return hit.yaml;
+  const parsed = obsidian4.parseYaml(await app.vault.cachedRead(file));
+  const yaml = parsed && typeof parsed === "object" ? parsed : null;
+  _baseYamlCache.set(file.path, { mtime: file.stat.mtime, yaml });
+  return yaml;
+}
 async function parseBaseFile(app, basePath, viewName) {
-  if (!await app.vault.adapter.exists(basePath)) return null;
   let yaml;
-  try {
-    const raw = await app.vault.adapter.read(basePath);
-    yaml = obsidian4.parseYaml(raw);
-  } catch (e) {
-    new obsidian4.Notice(`BOB Workspace: failed to parse ${basePath} \u2014 ${e.message}`);
-    return null;
+  const baseFile = app.vault.getAbstractFileByPath(basePath);
+  if (baseFile instanceof obsidian4.TFile) {
+    try {
+      yaml = await readBaseFileYaml(app, baseFile);
+    } catch (e) {
+      new obsidian4.Notice(`BOB Workspace: failed to parse ${basePath} \u2014 ${e.message}`);
+      return null;
+    }
+  } else {
+    if (!await app.vault.adapter.exists(basePath)) return null;
+    try {
+      yaml = obsidian4.parseYaml(await app.vault.adapter.read(basePath));
+    } catch (e) {
+      new obsidian4.Notice(`BOB Workspace: failed to parse ${basePath} \u2014 ${e.message}`);
+      return null;
+    }
   }
   if (!yaml || typeof yaml !== "object") return null;
   const result = {};
@@ -24277,7 +24344,7 @@ function splitBaseExpression(expr, operator) {
       depth = Math.max(0, depth - 1);
       continue;
     }
-    if (depth === 0 && expr.slice(i, i + op.length) === op) {
+    if (depth === 0 && expr.startsWith(op, i)) {
       parts.push(expr.slice(start, i).trim());
       start = i + op.length;
       i = start - 1;
@@ -24356,8 +24423,7 @@ function baseViewRendersInline(type) {
 }
 async function readBaseSummary(app, file) {
   try {
-    const raw = await app.vault.read(file);
-    const yaml = obsidian4.parseYaml(raw);
+    const yaml = await readBaseFileYaml(app, file);
     if (!yaml || typeof yaml !== "object") return null;
     const conditions = collectBaseFilterConditionsForDerivation(yaml.filters);
     const typeFilters = [];
@@ -24454,8 +24520,15 @@ async function applyConfiguredBaseOverrides(app, settings = {}) {
 // src/entity-files.ts
 var obsidian5 = __toESM(require("obsidian"));
 var _scanCache = null;
+var _scanVersion = 0;
+var _entityListMemo = /* @__PURE__ */ new Map();
 function invalidateEntityScanCache() {
   _scanCache = null;
+  _entityListMemo.clear();
+  _scanVersion++;
+}
+function entityScanVersion() {
+  return _scanVersion;
 }
 function scannableMarkdownFiles(app) {
   if (!_scanCache) {
@@ -24466,9 +24539,15 @@ function scannableMarkdownFiles(app) {
 function listEntityFiles(app, entityKey, opts = {}) {
   const def = ENTITIES[entityKey];
   if (!def) return [];
+  const memoKey = `${entityKey}|${opts.ignoreViewFilter ? 1 : 0}`;
+  const folder = entityFolder(entityKey);
+  const memo = _entityListMemo.get(memoKey);
+  if (memo && memo.version === _scanVersion && memo.def === def && memo.folder === folder) {
+    return [...memo.files];
+  }
   const hasPathFilter = Array.isArray(def.folders);
   const useDefaultPath = !def.typeFilter && !hasPathFilter;
-  return scannableMarkdownFiles(app).filter((f) => {
+  const files = scannableMarkdownFiles(app).filter((f) => {
     if (hasPathFilter) {
       if (!def.folders.some((d) => f.path.startsWith(d.replace(/\/$/, "") + "/"))) return false;
     } else if (useDefaultPath) {
@@ -24495,6 +24574,8 @@ function listEntityFiles(app, entityKey, opts = {}) {
     }
     return true;
   });
+  _entityListMemo.set(memoKey, { version: _scanVersion, def, folder, files });
+  return [...files];
 }
 function readEntity(app, file) {
   const cache = app.metadataCache.getFileCache(file) || {};
@@ -24524,60 +24605,98 @@ function evaluateBaseFilterGroup(app, file, op, children) {
   }
   return results.includes(false) ? false : true;
 }
-function evaluateBaseFilterCondition(app, file, raw) {
-  let cond = stripOuterParens(String(raw || "").trim());
-  if (!cond) return true;
-  if (cond.startsWith("!")) {
-    const inner = evaluateBaseFilterCondition(app, file, cond.slice(1));
-    return inner == null ? true : !inner;
-  }
+var _baseConditionParseMemo = /* @__PURE__ */ new Map();
+function parseBaseFilterCondition(raw) {
+  const key = String(raw || "");
+  const hit = _baseConditionParseMemo.get(key);
+  if (hit) return hit;
+  const parsed = buildParsedBaseCondition(key);
+  _baseConditionParseMemo.set(key, parsed);
+  return parsed;
+}
+function buildParsedBaseCondition(rawString) {
+  const cond = stripOuterParens(rawString.trim());
+  if (!cond) return { kind: "true" };
+  if (cond.startsWith("!")) return { kind: "not", inner: cond.slice(1) };
   const orParts = splitBaseExpression(cond, "||");
-  if (orParts) return orParts.some((part) => evaluateBaseFilterCondition(app, file, part) === true);
+  if (orParts) return { kind: "or", parts: orParts };
   const andParts = splitBaseExpression(cond, "&&");
-  if (andParts) return andParts.every((part) => evaluateBaseFilterCondition(app, file, part) !== false);
-  const cache = app.metadataCache.getFileCache(file) || {};
-  const fm = cache.frontmatter || {};
-  const folder = file.parent?.path || file.path.split("/").slice(0, -1).join("/");
-  const frontmatterTags = Array.isArray(fm.tags) ? fm.tags : String(fm.tags || "").split(/[,\s]+/).filter(Boolean);
-  const tags = /* @__PURE__ */ new Set([...frontmatterTags, ...(cache.tags || []).map((t) => t.tag)]);
-  const today = startOfDay(/* @__PURE__ */ new Date());
+  if (andParts) return { kind: "and", parts: andParts };
   const hasTag = cond.match(/^file\.hasTag\(["']#?(.+?)["']\)$/);
-  if (hasTag) {
-    const tag = hasTag[1].replace(/^#/, "");
-    return tags.has(tag) || tags.has(`#${tag}`);
-  }
+  if (hasTag) return { kind: "hasTag", value: hasTag[1].replace(/^#/, "") };
   const folderNe = cond.match(/^file\.folder\s*!=\s*["'](.+?)["']$/);
-  if (folderNe) return folder !== folderNe[1];
+  if (folderNe) return { kind: "folderNe", value: folderNe[1] };
   const pathStarts = cond.match(/^file\.path\.startsWith\(["'](.+?)["']\)$/);
-  if (pathStarts) return file.path.startsWith(pathStarts[1].replace(/\/$/, "") + "/");
+  if (pathStarts) return { kind: "pathStarts", value: pathStarts[1].replace(/\/$/, "") + "/" };
   const pathContains = cond.match(/^file\.path\.contains\(["'](.+?)["']\)$/);
-  if (pathContains) return file.path.includes(pathContains[1]);
+  if (pathContains) return { kind: "pathContains", value: pathContains[1] };
   const contains = cond.match(/^(.+?)\.contains\(["'](.+?)["']\)$/);
-  if (contains) {
-    const value = basePropValue(app, file, fm, contains[1]);
-    if (Array.isArray(value)) return value.map((item) => String(item)).includes(contains[2]);
-    return String(value ?? "").includes(contains[2]);
-  }
+  if (contains) return { kind: "contains", prop: contains[1], value: contains[2] };
   const empty = cond.match(/^(?:date\()?(.+?)\)?\.isEmpty\(\)$/);
-  if (empty) return !hasBaseValue(basePropValue(app, file, fm, empty[1]));
+  if (empty) return { kind: "isEmpty", prop: empty[1] };
   const propEq = cond.match(/^(.+?)\s*(==|!=)\s*(?:(["'])(.*?)\3|null)$/);
   if (propEq) {
-    const actualValue = basePropValue(app, file, fm, propEq[1]);
     const expectedIsNull = propEq[0].trim().endsWith("null");
-    if (expectedIsNull) {
-      const present = hasBaseValue(actualValue);
-      return propEq[2] === "==" ? !present : present;
-    }
-    const actual = String(actualValue ?? "");
-    const expected = propEq[4] ?? "";
-    return propEq[2] === "==" ? actual === expected : actual !== expected;
+    return { kind: "propEq", prop: propEq[1], op: propEq[2], expected: expectedIsNull ? null : propEq[4] ?? "" };
   }
   const dateCompare = cond.match(/^(?:date\()?(.+?)\)?\s*(==|<|<=|>|>=)\s*((?:today|now)\(\)(?:\s*[+-]\s*["']?\d+\s*(?:d|day|days)["']?)?|["']\d{4}-\d{2}-\d{2}["'])$/);
-  if (dateCompare) {
-    const actual = parseBaseDate(basePropValue(app, file, fm, dateCompare[1]));
-    if (!actual) return false;
-    const target = parseTodayExpression(dateCompare[3]) || parseBaseDate(String(dateCompare[3] || "").replace(/^["']|["']$/g, "")) || today;
-    return compareBaseDates(actual, dateCompare[2], target);
+  if (dateCompare) return { kind: "dateCompare", prop: dateCompare[1], op: dateCompare[2], targetRaw: dateCompare[3] };
+  return { kind: "unsupported" };
+}
+function evaluateBaseFilterCondition(app, file, raw) {
+  const parsed = parseBaseFilterCondition(raw);
+  switch (parsed.kind) {
+    case "true":
+      return true;
+    case "not": {
+      const inner = evaluateBaseFilterCondition(app, file, parsed.inner);
+      return inner == null ? true : !inner;
+    }
+    case "or":
+      return parsed.parts.some((part) => evaluateBaseFilterCondition(app, file, part) === true);
+    case "and":
+      return parsed.parts.every((part) => evaluateBaseFilterCondition(app, file, part) !== false);
+    case "unsupported":
+      return null;
+  }
+  const cache = app.metadataCache.getFileCache(file) || {};
+  const fm = cache.frontmatter || {};
+  switch (parsed.kind) {
+    case "hasTag": {
+      const frontmatterTags = Array.isArray(fm.tags) ? fm.tags : String(fm.tags || "").split(/[,\s]+/).filter(Boolean);
+      const tags = /* @__PURE__ */ new Set([...frontmatterTags, ...(cache.tags || []).map((t) => t.tag)]);
+      return tags.has(parsed.value) || tags.has(`#${parsed.value}`);
+    }
+    case "folderNe": {
+      const folder = file.parent?.path || file.path.split("/").slice(0, -1).join("/");
+      return folder !== parsed.value;
+    }
+    case "pathStarts":
+      return file.path.startsWith(parsed.value);
+    case "pathContains":
+      return file.path.includes(parsed.value);
+    case "contains": {
+      const value = basePropValue(app, file, fm, parsed.prop);
+      if (Array.isArray(value)) return value.map((item) => String(item)).includes(parsed.value);
+      return String(value ?? "").includes(parsed.value);
+    }
+    case "isEmpty":
+      return !hasBaseValue(basePropValue(app, file, fm, parsed.prop));
+    case "propEq": {
+      const actualValue = basePropValue(app, file, fm, parsed.prop);
+      if (parsed.expected === null) {
+        const present = hasBaseValue(actualValue);
+        return parsed.op === "==" ? !present : present;
+      }
+      const actual = String(actualValue ?? "");
+      return parsed.op === "==" ? actual === parsed.expected : actual !== parsed.expected;
+    }
+    case "dateCompare": {
+      const actual = parseBaseDate(basePropValue(app, file, fm, parsed.prop));
+      if (!actual) return false;
+      const target = parseTodayExpression(parsed.targetRaw) || parseBaseDate(String(parsed.targetRaw || "").replace(/^["']|["']$/g, "")) || startOfDay(/* @__PURE__ */ new Date());
+      return compareBaseDates(actual, parsed.op, target);
+    }
   }
   return null;
 }
@@ -24623,7 +24742,27 @@ function compareBaseSortValues(a, b) {
   const ad = new Date(a);
   const bd = new Date(b);
   if (!isNaN(ad.getTime()) && !isNaN(bd.getTime())) return ad.getTime() - bd.getTime();
-  return String(a).localeCompare(String(b), void 0, { numeric: true, sensitivity: "base" });
+  return baseSortCollator().compare(String(a), String(b));
+}
+var _baseSortCollator = null;
+function baseSortCollator() {
+  if (!_baseSortCollator) _baseSortCollator = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
+  return _baseSortCollator;
+}
+var _dateFormatter = null;
+function dateFormatter() {
+  if (!_dateFormatter) {
+    const locale = typeof navigator !== "undefined" ? navigator.language || void 0 : void 0;
+    _dateFormatter = new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" });
+  }
+  return _dateFormatter;
+}
+var _currencyFormatter = null;
+function currencyFormatter(currency) {
+  if (!_currencyFormatter || _currencyFormatter.currency !== currency) {
+    _currencyFormatter = { currency, fmt: new Intl.NumberFormat(void 0, { style: "currency", currency, maximumFractionDigits: 0 }) };
+  }
+  return _currencyFormatter.fmt;
 }
 function entityValue(entity, key, def) {
   const fm = entity.frontmatter || {};
@@ -24651,16 +24790,16 @@ function fmtValue(val, type) {
   if (type === "tags" && Array.isArray(val)) return val.map((t) => `#${t}`).join(" ");
   if (type === "date") {
     const d = new Date(val);
-    if (!isNaN(d.getTime())) return d.toLocaleDateString(navigator.language || void 0, { year: "numeric", month: "short", day: "numeric" });
+    if (!isNaN(d.getTime())) return dateFormatter().format(d);
     return String(val);
   }
   if (type === "currency") {
     const n = Number(val);
     if (!isNaN(n)) {
       try {
-        return n.toLocaleString(void 0, { style: "currency", currency: CURRENT_CURRENCY, maximumFractionDigits: 0 });
+        return currencyFormatter(CURRENT_CURRENCY).format(n);
       } catch (_) {
-        return n.toLocaleString(void 0, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+        return currencyFormatter("USD").format(n);
       }
     }
     return String(val);
@@ -25671,7 +25810,23 @@ function entityStatusField(def) {
   if (suffixed) return suffixed.key;
   return "status";
 }
+var _terminalStatusesMemo = /* @__PURE__ */ new WeakMap();
+function terminalStatusInputsKey(def) {
+  const join = (v) => Array.isArray(v) ? v.join("|") : "";
+  return `${join(def?.terminalStatuses)}~${join(def?.wonStages)}~${join(def?.lostStages)}`;
+}
 function entityTerminalStatuses(def) {
+  const memoizable = !!def && typeof def === "object";
+  const inputsKey = terminalStatusInputsKey(def);
+  if (memoizable) {
+    const memo = _terminalStatusesMemo.get(def);
+    if (memo && memo.inputsKey === inputsKey) return memo.statuses;
+  }
+  const statuses = buildEntityTerminalStatuses(def);
+  if (memoizable) _terminalStatusesMemo.set(def, { inputsKey, statuses });
+  return statuses;
+}
+function buildEntityTerminalStatuses(def) {
   const statuses = new Set(["done", "completed", "closed", "cancelled", "canceled", "archived", "paid", "filed", "submitted", "approved", "rejected", "expired", "written-off", "won", "lost"].map(normalizeStatusValue));
   (Array.isArray(def?.terminalStatuses) ? def.terminalStatuses : []).forEach((status) => {
     const normalized = normalizeStatusValue(status);
@@ -25857,7 +26012,7 @@ async function createTaskNote(app, settings, title) {
 function listTodayTaskNotes(app, settings) {
   const folder = (settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").replace(/\/$/, "");
   const todayStr = ymd();
-  return app.vault.getMarkdownFiles().filter((f) => f.path.startsWith(folder + "/")).map((f) => {
+  return scannableMarkdownFiles(app).filter((f) => f.path.startsWith(folder + "/")).map((f) => {
     const fm = (app.metadataCache.getFileCache(f) || {}).frontmatter || {};
     return { file: f, fm };
   }).filter(({ fm }) => {
@@ -25889,7 +26044,7 @@ function listTaskNotesForProductivity(app, settings, start, end) {
   const folders = taskNoteFolders(settings);
   const startTime = startOfDay(start).getTime();
   const endTime = startOfDay(end).getTime();
-  return app.vault.getMarkdownFiles().filter((f) => folders.some((folder) => f.path.startsWith(folder + "/"))).map((file) => {
+  return scannableMarkdownFiles(app).filter((f) => folders.some((folder) => f.path.startsWith(folder + "/"))).map((file) => {
     const fm = (app.metadataCache.getFileCache(file) || {}).frontmatter || {};
     const status = taskNoteStatus(fm);
     const done = status === "done" || status === "completed" || status === "archived";
@@ -26259,12 +26414,14 @@ function renderTemplateDocument(template, context = {}, fallback = null) {
 function reminderId() {
   return "rem_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 }
-function nextRepeat(when, repeat) {
+function nextRepeat(when, repeat, after = Date.now()) {
   if (!when) return null;
   const d = when instanceof Date ? when : new Date(when);
-  if (repeat === "daily") return new Date(d.getTime() + 864e5);
-  if (repeat === "weekly") return new Date(d.getTime() + 7 * 864e5);
-  return null;
+  const period = repeat === "daily" ? 864e5 : repeat === "weekly" ? 7 * 864e5 : 0;
+  if (!period || isNaN(d.getTime())) return null;
+  const base = d.getTime();
+  const periodsBehind = base > after ? 1 : Math.floor((after - base) / period) + 1;
+  return new Date(base + periodsBehind * period);
 }
 function reminderBucket(when) {
   if (!when) return "later";
@@ -27112,12 +27269,23 @@ async function exportEntitiesXLSX(app, entityKeys, suffix = "", settings = {}) {
 async function exportAllEntitiesXLSX(app, settings = {}) {
   return exportEntitiesXLSX(app, null, "", settings);
 }
+var _rowHeaderMaps = /* @__PURE__ */ new WeakMap();
+function rowHeaderMap(row) {
+  let map = _rowHeaderMaps.get(row);
+  if (!map) {
+    map = /* @__PURE__ */ new Map();
+    for (const k of Object.keys(row)) {
+      const normalized = normalizedImportHeader(k);
+      if (!map.has(normalized)) map.set(normalized, k);
+    }
+    _rowHeaderMaps.set(row, map);
+  }
+  return map;
+}
 function rowValue(row, key) {
   const target = normalizedImportHeader(key);
-  for (const [k, v] of Object.entries(row)) {
-    if (normalizedImportHeader(k) === target) return v;
-  }
-  return "";
+  const original = rowHeaderMap(row).get(target);
+  return original === void 0 ? "" : row[original];
 }
 function normalizedImportHeader(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -27877,14 +28045,19 @@ async function bootstrapCanonicalSchemaSources(app, settings = {}, opts = {}) {
   };
 }
 async function bootstrapCanonicalSchemaSourcesIfMissing(app, settings = {}, opts = {}) {
-  const loaded = await loadCanonicalSchemaSources(app, settings);
-  if (loaded.schemas.length) return {
-    folder: loaded.folder,
+  const folder = (WORKSPACE_CONFIG.schemas?.folder || settings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, "");
+  let hasSchemaFiles = false;
+  if (await app.vault.adapter.exists(folder)) {
+    const listed = await app.vault.adapter.list(folder);
+    hasSchemaFiles = (listed.files || []).some((file) => /\.ya?ml$/i.test(file));
+  }
+  if (hasSchemaFiles) return {
+    folder,
     count: 0,
     skipped: 0,
     written: [],
     skippedPaths: [],
-    entityKeys: loaded.schemas.map((item) => item.schema.entity).sort(),
+    entityKeys: [],
     failed: [],
     alreadyPresent: true
   };
@@ -28120,17 +28293,21 @@ async function regenerateSchemaOutputs(app, settings = {}) {
   await ensureFolderSync(app, jsonFolder);
   const expectedFileClasses = /* @__PURE__ */ new Set();
   const expectedJsonSchemas = /* @__PURE__ */ new Set();
+  const writeIfChanged = async (path, content) => {
+    try {
+      if (await app.vault.adapter.exists(path) && await app.vault.adapter.read(path) === content) return;
+    } catch (_) {
+    }
+    await app.vault.adapter.write(path, content);
+  };
   for (const { schema } of loaded.schemas) {
     const fileClassPath = `${fileClassFolder}/${schema.entity}.md`;
     const jsonSchemaPath = `${jsonFolder}/${schema.type_value || schema.entity}.schema.json`;
     expectedFileClasses.add(fileClassPath);
     expectedJsonSchemas.add(jsonSchemaPath);
-    await app.vault.adapter.write(fileClassPath, sourceSchemaToFileClass(schema));
-    await app.vault.adapter.write(
-      jsonSchemaPath,
-      `${JSON.stringify(sourceSchemaToJsonSchema(schema), null, 2)}
-`
-    );
+    await writeIfChanged(fileClassPath, sourceSchemaToFileClass(schema));
+    await writeIfChanged(jsonSchemaPath, `${JSON.stringify(sourceSchemaToJsonSchema(schema), null, 2)}
+`);
   }
   let removed = 0;
   for (const folder of [
@@ -28175,6 +28352,7 @@ async function injectGeneratedSection(app, filePath, beginMarker, endMarker, con
   const endIdx = text.indexOf(endMarker);
   if (beginIdx === -1 || endIdx === -1 || endIdx <= beginIdx) return false;
   const updated = text.slice(0, beginIdx + beginMarker.length) + "\n" + content + "\n" + text.slice(endIdx);
+  if (updated === text) return false;
   await app.vault.adapter.write(filePath, updated);
   return true;
 }
@@ -28301,12 +28479,18 @@ async function seedWorkspaceTemplates(app) {
   } catch (_) {
   }
 }
+var _bundledTemplateJson = /* @__PURE__ */ new Map();
 async function loadWorkspaceTemplates(app) {
   const dir = `${PLUGIN_DIR}/templates`;
   const byName = /* @__PURE__ */ new Map();
   for (const [fileName, tpl] of Object.entries(BUNDLED_WORKSPACE_TEMPLATES)) {
     if (!tpl || !tpl._template) continue;
-    const clone = cloneConfig(tpl);
+    let json = _bundledTemplateJson.get(fileName);
+    if (!json) {
+      json = JSON.stringify(tpl);
+      _bundledTemplateJson.set(fileName, json);
+    }
+    const clone = JSON.parse(json);
     Object.defineProperty(clone, "_templatePath", { value: `${dir}/${fileName}`, enumerable: false });
     byName.set(fileName, clone);
   }
@@ -29331,6 +29515,38 @@ async function readProjectMeta(app, file) {
 
 // src/snapshots.ts
 var obsidian15 = __toESM(require("obsidian"));
+var _dailyStatsMemo = /* @__PURE__ */ new Map();
+async function dailyNoteStatsByDate(app, settings, dates) {
+  const headingsKey = `${settings.tasksHeading || ""}\0${settings.journalHeading || ""}`;
+  const statsByDate = /* @__PURE__ */ new Map();
+  const livePaths = /* @__PURE__ */ new Set();
+  await Promise.all(dates.map(async (d) => {
+    const dateKey = ymd(d);
+    if (statsByDate.has(dateKey)) return;
+    statsByDate.set(dateKey, null);
+    const path = dailyNotePath(settings, d);
+    livePaths.add(path);
+    const f = app.vault.getAbstractFileByPath(path);
+    if (!(f instanceof obsidian15.TFile)) return;
+    const memo = _dailyStatsMemo.get(path);
+    if (memo && memo.mtime === f.stat.mtime && memo.headingsKey === headingsKey) {
+      statsByDate.set(dateKey, memo.stats);
+      return;
+    }
+    const p = parseSections(await app.vault.cachedRead(f), settings);
+    const stats = {
+      open: p.tasks.filter((l) => / \[ \] /.test(l)).length,
+      done: p.tasks.filter((l) => / \[(x|X)\] /.test(l)).length,
+      jChars: (p.journal || "").length
+    };
+    _dailyStatsMemo.set(path, { mtime: f.stat.mtime, headingsKey, stats });
+    statsByDate.set(dateKey, stats);
+  }));
+  for (const path of [..._dailyStatsMemo.keys()]) {
+    if (!livePaths.has(path)) _dailyStatsMemo.delete(path);
+  }
+  return statsByDate;
+}
 async function buildProductivitySnapshot(app, settings = {}) {
   const taskMode = settings.taskMode || "checkbox";
   const includeCheckboxTasks = taskMode === "checkbox" || taskMode === "hybrid";
@@ -29362,22 +29578,27 @@ async function buildProductivitySnapshot(app, settings = {}) {
   let totalOpen = 0, totalDone = 0, totalJournalChars = 0;
   let activeDays = 0;
   let streak = 0, streakBroken = false;
+  const weekWindowDates = [];
+  for (let w = 11; w >= 0; w--) {
+    const ws = addDays(weekStart, -w * 7);
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(ws, i);
+      if (d.getTime() > today.getTime()) break;
+      weekWindowDates.push(d);
+    }
+  }
+  const statsByDate = await dailyNoteStatsByDate(app, settings, [...days, ...weekWindowDates]);
   const perDay = [];
   for (const d of days) {
-    const f = app.vault.getAbstractFileByPath(dailyNotePath(settings, d));
+    const dayStats = statsByDate.get(ymd(d));
     let open = 0, done = 0, jChars = 0, hasNote = false;
-    if (includeCheckboxTasks && f && f instanceof obsidian15.TFile) {
+    if (dayStats) {
       hasNote = true;
-      const c = await app.vault.cachedRead(f);
-      const p = parseSections(c, settings);
-      open = p.tasks.filter((l) => / \[ \] /.test(l)).length;
-      done = p.tasks.filter((l) => / \[(x|X)\] /.test(l)).length;
-      jChars = (p.journal || "").length;
-    } else if (f && f instanceof obsidian15.TFile) {
-      hasNote = true;
-      const c = await app.vault.cachedRead(f);
-      const p = parseSections(c, settings);
-      jChars = (p.journal || "").length;
+      jChars = dayStats.jChars;
+      if (includeCheckboxTasks) {
+        open = dayStats.open;
+        done = dayStats.done;
+      }
     }
     const dayTaskNotes = taskNotesByDate.get(ymd(d)) || [];
     if (includeTaskNotes) {
@@ -29395,10 +29616,11 @@ async function buildProductivitySnapshot(app, settings = {}) {
       else streakBroken = true;
     }
   }
+  const todayStartMs = (/* @__PURE__ */ new Date(`${todayIso}T00:00:00`)).getTime();
   taskNotes.forEach((task) => {
     const dueTime = task.due ? (/* @__PURE__ */ new Date(`${task.due}T00:00:00`)).getTime() : NaN;
     const scheduledTime = task.scheduled ? (/* @__PURE__ */ new Date(`${task.scheduled}T00:00:00`)).getTime() : NaN;
-    const isOverdue = !task.done && (Number.isFinite(dueTime) && dueTime < (/* @__PURE__ */ new Date(`${todayIso}T00:00:00`)).getTime() || Number.isFinite(scheduledTime) && scheduledTime < (/* @__PURE__ */ new Date(`${todayIso}T00:00:00`)).getTime());
+    const isOverdue = !task.done && (Number.isFinite(dueTime) && dueTime < todayStartMs || Number.isFinite(scheduledTime) && scheduledTime < todayStartMs);
     const isHighPriority = !task.done && ["high", "urgent", "critical"].includes(String(task.priority || "").toLowerCase());
     if (isOverdue) overdueTasks.push(task);
     if (isHighPriority) highPriorityTasks.push(task);
@@ -29425,20 +29647,15 @@ async function buildProductivitySnapshot(app, settings = {}) {
   const weeks = [];
   for (let w = 11; w >= 0; w--) {
     const ws = addDays(weekStart, -w * 7);
-    const we = addDays(ws, 7);
     let wd = 0, wo = 0, anyNote = false;
     for (let i = 0; i < 7; i++) {
       const d = addDays(ws, i);
       if (d.getTime() > today.getTime()) break;
-      const f = app.vault.getAbstractFileByPath(dailyNotePath(settings, d));
-      if (includeCheckboxTasks && f && f instanceof obsidian15.TFile) {
+      const dayStats = statsByDate.get(ymd(d));
+      if (includeCheckboxTasks && dayStats) {
         anyNote = true;
-        const c = await app.vault.cachedRead(f);
-        const p = parseSections(c, settings);
-        p.tasks.forEach((l) => {
-          if (/ \[(x|X)\] /.test(l)) wd++;
-          else if (/ \[ \] /.test(l)) wo++;
-        });
+        wd += dayStats.done;
+        wo += dayStats.open;
       }
       if (includeTaskNotes) {
         const dayTaskNotes = taskNotesByDate.get(ymd(d)) || [];
@@ -29496,7 +29713,7 @@ async function buildPlannerSnapshot(app, settings = {}) {
     value: r.when ? new Date(r.when).getTime() : nowMs,
     action: { surface: "planner.inbox" }
   }));
-  const dailyFile = await ensureDailyNote(app, settings).catch(() => null);
+  const dailyFile = app.vault.getAbstractFileByPath(dailyNotePath(settings));
   const todayTasks = dailyFile instanceof obsidian15.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
   const todayRows = (todayTasks.tasks || []).slice(0, 12).map((line, taskIndex) => {
     const done = / \[(x|X)\] /.test(line);
@@ -29605,7 +29822,7 @@ async function buildHomeSnapshot(app, settings = {}) {
     meta: [r.when ? reminderTimeStr(r.when) : "unscheduled", r.project ? projectNameFromPath(app, r.project) || "project" : ""].filter(Boolean).join(" \xB7 "),
     action: { surface: "planner.inbox" }
   }));
-  const dailyFile = await ensureDailyNote(app, settings).catch(() => null);
+  const dailyFile = app.vault.getAbstractFileByPath(dailyNotePath(settings));
   const todayTasks = dailyFile instanceof obsidian15.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
   const todayRows = (todayTasks.tasks || []).slice(0, 8).map((line) => ({
     title: String(line).replace(/^\s*-\s\[(x|X| )\]\s/, ""),
@@ -29619,8 +29836,17 @@ async function buildHomeSnapshot(app, settings = {}) {
     action: { surface: "planner.calendar" }
   }] : [];
   const upcoming = [];
+  const projectMetaByPath = /* @__PURE__ */ new Map();
   if (configuredEntities.has("project")) {
-    for (const e of listEntities(app, "project")) {
+    const projectEntities = listEntities(app, "project");
+    await Promise.all(projectEntities.map(async (e) => {
+      try {
+        projectMetaByPath.set(e.file.path, await readProjectMeta(app, e.file));
+      } catch (_) {
+        projectMetaByPath.set(e.file.path, null);
+      }
+    }));
+    for (const e of projectEntities) {
       const due = entityValue(e, "due", projectDef) || entityValue(e, "deadline", projectDef);
       if (due) {
         const d = new Date(due);
@@ -29628,12 +29854,9 @@ async function buildHomeSnapshot(app, settings = {}) {
           upcoming.push({ date: d, title: entityValue(e, "project_name", projectDef) || entityValue(e, "name", projectDef) || e.basename, type: "Project due", file: e.file });
         }
       }
-      try {
-        const meta = await readProjectMeta(app, e.file);
-        if (meta.next?.date && meta.next.date >= today && meta.next.date <= addDays(today, 7)) {
-          upcoming.push({ date: meta.next.date, title: `${entityValue(e, "project_name", projectDef) || entityValue(e, "name", projectDef) || e.basename} \u2014 ${meta.next.title || "milestone"}`, type: "Milestone", file: e.file });
-        }
-      } catch (_) {
+      const meta = projectMetaByPath.get(e.file.path);
+      if (meta && meta.next?.date && meta.next.date >= today && meta.next.date <= addDays(today, 7)) {
+        upcoming.push({ date: meta.next.date, title: `${entityValue(e, "project_name", projectDef) || entityValue(e, "name", projectDef) || e.basename} \u2014 ${meta.next.title || "milestone"}`, type: "Milestone", file: e.file });
       }
     }
   }
@@ -29668,26 +29891,24 @@ async function buildHomeSnapshot(app, settings = {}) {
     meta: [entityValue(e, "tier", partnerDef), entityValue(e, "status", partnerDef)].filter(Boolean).join(" \xB7 "),
     file: e.file
   })) : [];
-  const projects = configuredEntities.has("project") ? await Promise.all(listEntityFiles(app, "project").slice(0, 3).map(async (f) => {
+  const projects = configuredEntities.has("project") ? listEntityFiles(app, "project").slice(0, 3).map((f) => {
     const title = projectNameFromPath(app, f.path) || f.basename;
-    try {
-      const meta = await readProjectMeta(app, f);
-      return {
-        title,
-        meta: meta.total ? `${meta.done}/${meta.total} milestones \xB7 ${meta.percent}%` : "project",
-        file: f,
-        progress: {
-          value: meta.percent,
-          label: meta.total ? `${meta.done}/${meta.total} milestones` : "No milestones",
-          pct: `${meta.percent}%`
-        }
-      };
-    } catch (_) {
-      return { title, meta: "project", file: f };
-    }
-  })) : [];
+    const meta = projectMetaByPath.get(f.path);
+    if (!meta) return { title, meta: "project", file: f };
+    return {
+      title,
+      meta: meta.total ? `${meta.done}/${meta.total} milestones \xB7 ${meta.percent}%` : "project",
+      file: f,
+      progress: {
+        value: meta.percent,
+        label: meta.total ? `${meta.done}/${meta.total} milestones` : "No milestones",
+        pct: `${meta.percent}%`
+      }
+    };
+  }) : [];
   const deals = configuredEntities.has("deal") ? listEntities(app, "deal") : [];
-  const openDeals = deals.filter((e) => !dealTerminalStages(dealDef).includes(String(entityValue(e, "stage", dealDef))));
+  const terminalStages = new Set(dealTerminalStages(dealDef));
+  const openDeals = deals.filter((e) => !terminalStages.has(String(entityValue(e, "stage", dealDef))));
   const pipelineRows = openDeals.slice(0, 5).map((e) => ({
     title: entityValue(e, "title", dealDef) || e.basename,
     meta: `${entityValue(e, dealStageField(dealDef), dealDef) || "\u2014"} \xB7 ${fmtValue(entityValue(e, dealValueField(dealDef), dealDef), "currency")}`,
@@ -29722,6 +29943,19 @@ async function buildHomeSnapshot(app, settings = {}) {
 
 // src/widgets.ts
 var obsidian16 = __toESM(require("obsidian"));
+var _builtInSnapshotCache = /* @__PURE__ */ new Map();
+function builtInSnapshot(app, name, settings) {
+  const version = entityScanVersion();
+  const hit = _builtInSnapshotCache.get(name);
+  if (hit && hit.version === version) return hit.promise;
+  const promise = name === "productivity" ? buildProductivitySnapshot(app, settings) : name === "planner" ? buildPlannerSnapshot(app, settings) : name === "home" ? buildHomeSnapshot(app, settings) : Promise.resolve(null);
+  promise.catch(() => {
+    const current = _builtInSnapshotCache.get(name);
+    if (current && current.promise === promise) _builtInSnapshotCache.delete(name);
+  });
+  _builtInSnapshotCache.set(name, { version, promise });
+  return promise;
+}
 function normalizeWidgetSourceConfig(source, fallbackEntityKey = null) {
   if (!source) {
     return { entityKey: fallbackEntityKey, mode: "entity", builtIn: null };
@@ -29869,7 +30103,7 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
   if (normalized.mode === "built-in") {
     const builtInName = String(normalized.builtIn || "").trim().toLowerCase();
     const snapshotSettings = Object.assign({}, DEFAULT_SETTINGS, WORKSPACE_CONFIG.settings || {}, settings || {});
-    const builtInData = builtInName === "productivity" ? await buildProductivitySnapshot(app, snapshotSettings) : builtInName === "planner" ? await buildPlannerSnapshot(app, snapshotSettings) : builtInName === "home" ? await buildHomeSnapshot(app, snapshotSettings) : null;
+    const builtInData = await builtInSnapshot(app, builtInName, snapshotSettings);
     return {
       entityKey: normalized.entityKey || null,
       def: normalized.entityKey && ENTITIES[normalized.entityKey] ? ENTITIES[normalized.entityKey] : null,
@@ -29932,6 +30166,7 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
 
 // src/views/app-view.ts
 var obsidian17 = __toESM(require("obsidian"));
+var NUMERIC_COLLATOR = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
 var OVERVIEW_DASHBOARD_ROUTES = /* @__PURE__ */ new Set([
   "client-work.dashboard",
   "finance.gl.overview",
@@ -29942,6 +30177,7 @@ var OVERVIEW_DASHBOARD_ROUTES = /* @__PURE__ */ new Set([
   "crm.campaigns.overview"
 ]);
 var BobAppView = class extends obsidian17.ItemView {
+  /** Optional parsed-base cache cleared on metadata changes (set externally when present). */
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -29991,11 +30227,27 @@ var BobAppView = class extends obsidian17.ItemView {
     return SURFACE_BY_ID[id] ? id : SURFACE_BY_ID.home ? "home" : ALL_SURFACES[0]?.id || "home";
   }
   /* Toggle BOB app dark mode. Scoped to `.bob-app` only —
-     does not affect Obsidian's overall light/dark mode. Persisted in settings. */
+     does not affect Obsidian's overall light/dark mode. Persisted in settings.
+     Pure-DOM state: toggle the class and icon in place instead of a full
+     teardown+rebuild render. */
   async _toggleBobDark() {
-    this.plugin.settings.bobAppDark = !this.plugin.settings.bobAppDark;
+    const dark = !this.plugin.settings.bobAppDark;
+    this.plugin.settings.bobAppDark = dark;
+    const root = this.containerEl.children[1];
+    if (root && typeof root.toggleClass === "function") {
+      root.toggleClass("bob-dark", dark);
+      const themeBtn = root.querySelector(".bob-app-topbar .bob-topbar-icon-btn");
+      if (themeBtn) {
+        try {
+          obsidian17.setIcon(themeBtn, dark ? "sun" : "moon");
+        } catch (_) {
+        }
+        themeBtn.title = dark ? "BOB Workspace: switch to light" : "BOB Workspace: switch to dark";
+      }
+    } else {
+      void this.render();
+    }
     await this.plugin.saveSettings();
-    this.render();
   }
   _visibleNavGroups() {
     const mods = this.plugin.settings.modules || { crm: true, "client-work": true, prm: true, finance: true, procurement: true, planner: true, ai: true };
@@ -30134,36 +30386,50 @@ var BobAppView = class extends obsidian17.ItemView {
   async onOpen() {
     this.containerEl.children[1].empty();
     await this.render();
+    this._renderQueued = false;
+    this._scheduleRender = obsidian17.debounce(() => {
+      if (!this.containerEl.isShown()) {
+        this._renderQueued = true;
+        return;
+      }
+      this._renderQueued = false;
+      void this.render();
+    }, 500, true);
+    this.registerEvent(this.app.workspace.on("active-leaf-change", () => {
+      if (this._renderQueued && this.containerEl.isShown()) {
+        this._renderQueued = false;
+        void this.render();
+      }
+    }));
     this.registerEvent(this.app.vault.on("modify", (file) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
       if (this.canvasFile) return;
       if (this.mode === "planner.today" && this.todayFile && file.path === this.todayFile.path) {
-        return this.render();
+        return this._scheduleRender();
       }
       if (this.mode === "planner.calendar") {
         const days = weekDates(this.plannerAnchor, this.plugin.settings.weekStartsOn);
         const paths = days.map((d) => dailyNotePath(this.plugin.settings, d));
-        if (paths.includes(file.path)) return this.render();
+        if (paths.includes(file.path)) return this._scheduleRender();
       }
-      if (this._modeUsesEntityFolder(file.path)) return this.render();
+      if (this._modeUsesEntityFolder(file.path)) return this._scheduleRender();
     }));
     const entityRefresh = (file) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
       if (this.canvasFile) return;
-      if (this._modeUsesEntityFolder(file && file.path)) this.render();
+      if (this._modeUsesEntityFolder(file && file.path)) this._scheduleRender();
     };
     this.registerEvent(this.app.vault.on("create", entityRefresh));
     this.registerEvent(this.app.vault.on("delete", entityRefresh));
     this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
       if (this.canvasFile) return;
-      if (this._modeUsesEntityFolder(file && file.path) || this._modeUsesEntityFolder(oldPath)) this.render();
+      if (this._modeUsesEntityFolder(file && file.path) || this._modeUsesEntityFolder(oldPath)) this._scheduleRender();
     }));
     this.registerEvent(this.app.metadataCache.on("changed", (file) => {
-      if (this._basesCache) this._basesCache.clear();
       if (this.detailFile && file && file.path === this.detailFile.path) return;
       if (this.canvasFile) return;
-      if (this._modeUsesEntityFolder(file && file.path)) this.render();
+      if (this._modeUsesEntityFolder(file && file.path)) this._scheduleRender();
     }));
   }
   _modeUsesEntityFolder(path) {
@@ -30482,7 +30748,7 @@ var BobAppView = class extends obsidian17.ItemView {
       }
       shown.forEach((f) => this._renderCanvasRow(list, f));
     };
-    search.addEventListener("input", () => draw(search.value));
+    search.addEventListener("input", obsidian17.debounce(() => draw(search.value), 150, true));
     draw("");
   }
   // Phase 2 — generate a canvas from vault data, then open it inline.
@@ -30681,6 +30947,7 @@ var BobAppView = class extends obsidian17.ItemView {
       body.appendChild(viewEl);
       this._canvasLeaf = leaf;
       window.setTimeout(() => {
+        if (this._canvasLeaf !== leaf) return;
         try {
           view?.onResize?.();
           view?.canvas?.requestFrame?.();
@@ -30875,7 +31142,7 @@ var BobAppView = class extends obsidian17.ItemView {
       });
     });
     const sorted = Array.from(groups.entries()).sort(
-      ([a], [b]) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })
+      ([a], [b]) => NUMERIC_COLLATOR.compare(a, b)
     );
     if (groupBy.direction === "DESC") sorted.reverse();
     return sorted;
@@ -31015,15 +31282,18 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         if (av == null) return 1;
         if (bv == null) return -1;
         if (typeof av === "number" && typeof bv === "number") return (av - bv) * dirMul || a.i - b.i;
-        return String(av).localeCompare(String(bv), void 0, { numeric: true, sensitivity: "base" }) * dirMul || a.i - b.i;
+        return NUMERIC_COLLATOR.compare(String(av), String(bv)) * dirMul || a.i - b.i;
       });
       return withIdx.map((x) => x.e);
     };
     let selectAllCb = null;
     let currentArr = [];
     const tbody = table.createEl("tbody");
+    const ROW_CAP = 250;
+    let rowCapActive = true;
     const renderBody = (arr) => {
-      currentArr = arr;
+      const shown = rowCapActive && arr.length > ROW_CAP ? arr.slice(0, ROW_CAP) : arr;
+      currentArr = shown;
       tbody.empty();
       selected.clear();
       updateBulkBar();
@@ -31031,7 +31301,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         selectAllCb.checked = false;
         selectAllCb.indeterminate = false;
       }
-      arr.forEach((e) => {
+      shown.forEach((e) => {
         const tr = tbody.createEl("tr", { cls: "bob-row" });
         tr.addEventListener("dblclick", () => {
           tr.querySelectorAll("td").forEach((cell) => {
@@ -31048,8 +31318,8 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
           tr.toggleClass("bob-row-selected", cb.checked);
           updateBulkBar();
           if (selectAllCb) {
-            selectAllCb.indeterminate = selected.size > 0 && selected.size < arr.length;
-            selectAllCb.checked = selected.size === arr.length;
+            selectAllCb.indeterminate = selected.size > 0 && selected.size < currentArr.length;
+            selectAllCb.checked = selected.size === currentArr.length;
           }
         });
         tdCb.addEventListener("dblclick", (ev) => ev.stopPropagation());
@@ -31068,6 +31338,19 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
           }
         });
       });
+      if (shown.length < arr.length) {
+        const tr = tbody.createEl("tr", { cls: "bob-row-showall" });
+        const td = tr.createEl("td");
+        td.colSpan = cols.length + 1;
+        const btn = td.createEl("button", {
+          cls: "bob-table-showall-btn",
+          text: `Show all ${arr.length} rows (${arr.length - shown.length} more)`
+        });
+        btn.addEventListener("click", () => {
+          rowCapActive = false;
+          renderBody(arr);
+        });
+      }
     };
     const renderHeader = () => {
       trh.empty();
@@ -31315,7 +31598,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       if (seen.has(client.id)) return false;
       seen.add(client.id);
       return true;
-    }).sort((a, b) => a.label.localeCompare(b.label, void 0, { numeric: true, sensitivity: "base" }));
+    }).sort((a, b) => NUMERIC_COLLATOR.compare(a.label, b.label));
   }
   _clientWorkProjectOptions() {
     const seen = /* @__PURE__ */ new Set();
@@ -31330,7 +31613,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       if (seen.has(project.id)) return false;
       seen.add(project.id);
       return true;
-    }).sort((a, b) => a.label.localeCompare(b.label, void 0, { numeric: true, sensitivity: "base" }));
+    }).sort((a, b) => NUMERIC_COLLATOR.compare(a.label, b.label));
   }
   _entityMatchesClient(entity, clientId) {
     if (!clientId) return true;
@@ -31352,11 +31635,11 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     ];
     return values.some((value) => String(value ?? "").trim() === projectId);
   }
-  _renderClientWorkSelector(container) {
+  _renderClientWorkSelector(container, precomputed) {
     const wrap = container.createDiv({ cls: "bob-client-work-filter" });
     const clientSelect = wrap.createEl("select", { cls: "dropdown bob-client-work-client-select" });
     clientSelect.createEl("option", { value: "", text: "All clients" });
-    const clients = this._clientWorkOptions();
+    const clients = precomputed ? precomputed.clients : this._clientWorkOptions();
     clients.forEach((client) => {
       clientSelect.createEl("option", { value: client.id, text: client.label });
     });
@@ -31370,7 +31653,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     });
     const projectSelect = wrap.createEl("select", { cls: "dropdown bob-client-work-project-select" });
     projectSelect.createEl("option", { value: "", text: "All projects" });
-    const projects = this._clientWorkProjectOptions();
+    const projects = precomputed ? precomputed.projects : this._clientWorkProjectOptions();
     projects.forEach((project) => {
       projectSelect.createEl("option", { value: project.id, text: project.label });
     });
@@ -31384,10 +31667,11 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     });
   }
   async renderClientWorkWorkspace(root) {
-    if (this._clientWorkClientId && !this._clientWorkOptions().some((client) => client.id === this._clientWorkClientId)) {
+    const clientWorkOptions = { clients: this._clientWorkOptions(), projects: this._clientWorkProjectOptions() };
+    if (this._clientWorkClientId && !clientWorkOptions.clients.some((client) => client.id === this._clientWorkClientId)) {
       this._clientWorkClientId = "";
     }
-    if (this._clientWorkProjectId && !this._clientWorkProjectOptions().some((project) => project.id === this._clientWorkProjectId)) {
+    if (this._clientWorkProjectId && !clientWorkOptions.projects.some((project) => project.id === this._clientWorkProjectId)) {
       this._clientWorkProjectId = "";
     }
     const selectedClientId = this._clientWorkClientId || "";
@@ -31399,7 +31683,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       filter: (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId),
       forceInternal: true,
       titleSuffix: titleParts.length ? ` \xB7 ${titleParts.join(" \xB7 ")}` : "",
-      renderHeaderControls: (right) => this._renderClientWorkSelector(right),
+      renderHeaderControls: (right) => this._renderClientWorkSelector(right, clientWorkOptions),
       emptyDescription: titleParts.length ? `No records matching ${titleParts.join(" / ")} in this tab.` : null
     });
   }
@@ -31522,6 +31806,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     });
   }
   async renderConfigDashboard(surfaceId, root, opts = {}) {
+    const dashboardRenderSeq = this._renderSeq;
     const config = opts.config || resolveSurfaceConfig(surfaceId);
     if (!config) {
       const surface = SURFACE_BY_ID[surfaceId] || {};
@@ -31679,21 +31964,25 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       this._dashboardStats(root, statItems);
     }
     await prewarmLayout;
+    if (this._renderSeq !== dashboardRenderSeq) return;
     for (const row of config.layout || []) {
       const cols = root.createDiv({ cls: "bob-dash-cols" });
       for (const colDef of row) {
         const col = cols.createDiv({ cls: "bob-dash-col" });
         for (const card of Array.isArray(colDef) ? colDef : [colDef]) {
+          if (this._renderSeq !== dashboardRenderSeq) return;
           await this._renderConfigCard(col, card, getWidgetEntities, dashboardContext);
         }
       }
     }
     for (const cr of config.conditionalRows || []) {
+      if (this._renderSeq !== dashboardRenderSeq) return;
       const resolvedConditions = await Promise.all((cr.condition?.entities || []).map((key) => getWidgetEntities(null, key)));
       const hasData = resolvedConditions.some((resolved) => resolved.entities.length > 0);
       if (!hasData) continue;
       const extra = root.createDiv({ cls: "bob-dash-cols" });
       for (const card of cr.cards) {
+        if (this._renderSeq !== dashboardRenderSeq) return;
         await this._renderConfigCard(extra.createDiv({ cls: "bob-dash-col" }), card, getWidgetEntities, dashboardContext);
       }
     }
@@ -32348,7 +32637,7 @@ ${snippet}` : "- No markdown content");
     if (!embed) throw new Error("Base embed creator returned no embed");
     if (typeof this.addChild === "function") this.addChild(embed);
     await (embed.loadFile?.() ?? embed.load?.());
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 8; i++) {
       await this._waitForBaseEmbedRender();
       if (this._baseEmbedMounted(body, `![[${linktext}]]`, linktext)) return;
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -32453,7 +32742,7 @@ ${snippet}` : "- No markdown content");
     if (!(file instanceof obsidian17.TFile)) return { text: "", sourcePath };
     let content;
     try {
-      content = await this.app.vault.read(file);
+      content = await this.app.vault.cachedRead(file);
     } catch (_) {
       return { text: "", sourcePath: file.path };
     }
@@ -32663,7 +32952,7 @@ ${snippet}` : "- No markdown content");
           if (normalized) values.add(normalized);
         });
       });
-      [...values].sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })).forEach((value) => {
+      [...values].sort((a, b) => NUMERIC_COLLATOR.compare(a, b)).forEach((value) => {
         options.push({ value, label: value, filter: `${fieldKey} == ${JSON.stringify(value)}` });
       });
     }
@@ -33337,7 +33626,7 @@ ${snippet}` : "- No markdown content");
     const path = dailyNotePath(this.plugin.settings);
     const existing = this.app.vault.getAbstractFileByPath(path);
     let current = "";
-    if (existing) current = readSection(await this.app.vault.read(existing));
+    if (existing) current = readSection(await this.app.vault.cachedRead(existing));
     const ta = body.createEl("textarea", { cls: "bob-journal bob-note-section-textarea" });
     ta.value = current;
     ta.spellcheck = false;
@@ -33384,7 +33673,7 @@ ${snippet}` : "- No markdown content");
       if (Array.isArray(fieldDef?.options) && fieldDef.options.length) {
         groups = fieldDef.options.map(normalizeGroup).filter(Boolean);
       } else {
-        groups = [...new Set(entities.map((entity) => String(entityValue(entity, groupBy, def) || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })).map((value) => ({ value, label: value }));
+        groups = [...new Set(entities.map((entity) => String(entityValue(entity, groupBy, def) || "").trim()).filter(Boolean))].sort((a, b) => NUMERIC_COLLATOR.compare(a, b)).map((value) => ({ value, label: value }));
       }
     }
     if (!groups.length) groups = [{ value: "(blank)", label: "(blank)" }];
@@ -33503,7 +33792,7 @@ ${snippet}` : "- No markdown content");
       text: "Use this inventory to compare the shipped dashboards against the widget catalog and see where we still rely on runtime-snapshot-backed sections."
     });
     const grid = section.createDiv({ cls: "bob-dashboard-inventory-grid" });
-    Object.entries(BUILTIN_DASHBOARD_DEFAULTS).forEach(([id, config]) => {
+    Object.entries(builtinDashboardDefaults()).forEach(([id, config]) => {
       const summary = summarizeDashboardBlueprint(id, config);
       const card = grid.createDiv({ cls: "bob-dashboard-inventory-card" });
       const head = card.createDiv({ cls: "bob-dashboard-inventory-head" });
@@ -33719,7 +34008,7 @@ ${snippet}` : "- No markdown content");
     }
     this._renderPageHeader(root, "Surface Designer", "Customize dashboards, reports and widgets");
     this._renderHelpTopic(root, "designer-overview");
-    const builtinIds = Object.keys(BUILTIN_DASHBOARD_DEFAULTS);
+    const builtinIds = Object.keys(builtinDashboardDefaults());
     const builtinPlannerIds = Object.keys(WORKSPACE_CONFIG.planner || {});
     const workspaceDashIds = Object.keys(WORKSPACE_CONFIG.dashboards || {});
     const customOnlyIds = workspaceDashIds.filter((id) => !builtinIds.includes(id) && !builtinPlannerIds.includes(id));
@@ -33781,7 +34070,7 @@ ${snippet}` : "- No markdown content");
       if (plannerConfig) return normalizeDashboardConfigShape(JSON.parse(JSON.stringify(plannerConfig)));
       const ws = (WORKSPACE_CONFIG.dashboards || {})[id];
       if (ws) return normalizeDashboardConfigShape(JSON.parse(JSON.stringify(ws)));
-      const bi = BUILTIN_DASHBOARD_DEFAULTS[id];
+      const bi = builtinDashboardDefaults()[id];
       if (bi) return normalizeDashboardConfigShape(JSON.parse(JSON.stringify(bi)));
       return { title: id, layout: [] };
     };
@@ -33873,7 +34162,7 @@ ${snippet}` : "- No markdown content");
         customizeBtn.addEventListener("click", () => {
           const targetStore = id.startsWith("planner.") ? "planner" : "dashboards";
           if (!WORKSPACE_CONFIG[targetStore]) WORKSPACE_CONFIG[targetStore] = {};
-          WORKSPACE_CONFIG[targetStore][id] = JSON.parse(JSON.stringify(BUILTIN_DASHBOARD_DEFAULTS[id] || getConfig(id)));
+          WORKSPACE_CONFIG[targetStore][id] = JSON.parse(JSON.stringify(builtinDashboardDefaults()[id] || getConfig(id)));
           this._dashEditorDraft = getConfig(id);
           renderEditorPane(id);
           renderPreview(id);
@@ -33893,7 +34182,7 @@ ${snippet}` : "- No markdown content");
             new obsidian17.Notice(`Save failed: ${e.message}`);
           }
         });
-        if (BUILTIN_DASHBOARD_DEFAULTS[id] || id.startsWith("planner.")) {
+        if (builtinDashboardDefaults()[id] || id.startsWith("planner.")) {
           const resetBtn = actions.createEl("button", { cls: "bob-btn bob-btn-danger", text: "Reset to built-in" });
           resetBtn.addEventListener("click", async () => {
             const stores = id.startsWith("planner.") ? ["planner", "dashboards"] : ["dashboards"];
@@ -35491,49 +35780,6 @@ ${snippet}` : "- No markdown content");
       const key = groups[status] !== void 0 ? status : fallbackStatus;
       groups[key].push(p);
     });
-    const grid = root.createDiv({ cls: "bob-proj-grid" });
-    const renderCard = (p) => {
-      const card = grid.createDiv({ cls: "bob-proj-card" });
-      const head = card.createDiv({ cls: "bob-proj-card-head" });
-      const title = head.createEl("a", { cls: "bob-proj-title", text: entityValue(p.entity, "name", def) || p.entity.basename });
-      title.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        this.openEntityDetailFromFile(p.entity.file);
-      });
-      card.classList.add("clickable");
-      card.addEventListener("click", () => this.openEntityDetailFromFile(p.entity.file));
-      const status = String(entityValue(p.entity, "status", def) || "active");
-      const priority = String(entityValue(p.entity, "priority", def) || "");
-      const pillRow = head.createDiv({ cls: "bob-proj-pills" });
-      pillRow.createSpan({ cls: `bob-pill bob-pill-${status.toLowerCase().replace(/\s+/g, "-")}`, text: status });
-      if (priority) pillRow.createSpan({ cls: `bob-pill bob-pill-prio-${priority.toLowerCase()}`, text: priority });
-      const metaRow = card.createDiv({ cls: "bob-proj-meta" });
-      const owner = entityValue(p.entity, "owner", def);
-      const due = entityValue(p.entity, "due", def);
-      if (owner) metaRow.createSpan({ text: `Owner: ${owner}` });
-      if (due) metaRow.createSpan({ text: `Due: ${fmtValue(due, "date")}` });
-      const progWrap = card.createDiv({ cls: "bob-proj-progress-wrap" });
-      progWrap.dataset.pctBand = pctBand(p.meta.percent);
-      const progLabel = progWrap.createDiv({ cls: "bob-proj-progress-label" });
-      progLabel.createSpan({ text: `${p.meta.done}/${p.meta.total} milestones` });
-      progLabel.createSpan({ cls: "bob-proj-progress-pct", text: `${p.meta.percent}%` });
-      const bar = progWrap.createDiv({ cls: "bob-proj-progress-bar" });
-      const fill = bar.createDiv({ cls: "bob-proj-progress-fill" });
-      fill.style.width = `${p.meta.percent}%`;
-      if (p.meta.next) {
-        const nextRow = card.createDiv({ cls: "bob-proj-next" });
-        nextRow.createSpan({ cls: "bob-proj-next-label", text: "NEXT \xB7 " });
-        nextRow.createSpan({ cls: "bob-proj-next-date", text: fmtValue(p.meta.next.date, "date") });
-        if (p.meta.next.title) nextRow.createSpan({ text: ` \u2014 ${p.meta.next.title}` });
-      }
-    };
-    const renderSection = (label, list) => {
-      if (!list.length) return;
-      root.createDiv({ cls: "bob-section-label-lg", text: label });
-      list.forEach(renderCard);
-    };
-    grid.remove();
     const order = ["active", "on_hold", "backlog", "done", "cancelled"];
     const sectionLabels = { active: "ACTIVE", on_hold: "ON HOLD", backlog: "BACKLOG", done: "DONE", cancelled: "CANCELLED" };
     order.forEach((key) => {
@@ -35627,14 +35873,16 @@ ${snippet}` : "- No markdown content");
     if (!projectFiles.length) return;
     const groups = [];
     let totalOpen = 0;
-    for (const file of projectFiles) {
-      let content;
+    const projectContents = await Promise.all(projectFiles.map(async (file) => {
       try {
-        content = await this.app.vault.read(file);
+        return { file, content: await this.app.vault.cachedRead(file) };
       } catch (_) {
-        continue;
+        return null;
       }
-      const sections = parseH2Sections(content);
+    }));
+    for (const entry of projectContents) {
+      if (!entry) continue;
+      const sections = parseH2Sections(entry.content);
       const tasksText = sections["Tasks"] || "";
       if (!tasksText.trim()) continue;
       const tasks = parseTasksList(tasksText);
@@ -35642,8 +35890,8 @@ ${snippet}` : "- No markdown content");
       if (!open.length) continue;
       totalOpen += open.length;
       groups.push({
-        file,
-        name: projectNameFromPath(this.app, file.path),
+        file: entry.file,
+        name: projectNameFromPath(this.app, entry.file.path),
         tasks: open
       });
     }
@@ -36083,7 +36331,7 @@ Saved to ${file.path}`, 4e3);
   async renderTodayPane(root) {
     root.addClass("bob-today");
     this.todayFile = await ensureDailyNote(this.app, this.plugin.settings);
-    const fileContent = await this.app.vault.read(this.todayFile);
+    const fileContent = await this.app.vault.cachedRead(this.todayFile);
     this.todayParsed = parseSections(fileContent, this.plugin.settings);
     const info = dateInfo();
     root.createDiv({ cls: "bob-eyebrow", text: info.weekday.toUpperCase() });
@@ -36287,7 +36535,7 @@ Saved to ${file.path}`, 4e3);
       if (!file || !(file instanceof obsidian17.TFile)) {
         return { date: d, path, exists: false, tasks: [] };
       }
-      const content = await this.app.vault.read(file);
+      const content = await this.app.vault.cachedRead(file);
       const parsed = parseSections(content, settings);
       return { date: d, path, exists: true, file, tasks: parsed.tasks };
     }));
@@ -36459,6 +36707,30 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
+    this._queueSave = obsidian18.debounce(() => {
+      void this.plugin.saveSettings();
+    }, 600, true);
+    this._queueSaveRefresh = obsidian18.debounce(() => {
+      void (async () => {
+        await this.plugin.saveSettings();
+        syncEntityFolders(this.plugin.settings);
+        this.plugin.refreshOpenViews();
+      })();
+    }, 600, true);
+    this._queueSaveReload = obsidian18.debounce(() => {
+      void (async () => {
+        await this.plugin.saveSettings();
+        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        this.plugin.refreshOpenViews();
+      })();
+    }, 800, true);
+    this._queueEntityReload = obsidian18.debounce(() => {
+      void (async () => {
+        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        this.plugin.refreshOpenViews();
+      })();
+    }, 800, true);
+    this._schemaBackupPaths = /* @__PURE__ */ new Set();
     containerEl.createEl("h2", { text: "BOB Workspace" });
     const fork = containerEl.createEl("p", { cls: "setting-item-description" });
     fork.appendText("BOB Workspace is a fork of the ");
@@ -36541,16 +36813,6 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
       workspaceStatus.setText(message);
       workspaceStatus.style.color = ok ? "var(--text-success)" : "var(--text-error)";
     };
-    workspaceTa.addEventListener("input", () => {
-      try {
-        const parsed = validateWorkspaceConfig(JSON.parse(workspaceTa.value));
-        const count = parsed.navigation?.groups?.length || 0;
-        setWorkspaceStatus(`Valid - ${count} navigation group${count === 1 ? "" : "s"}`, true);
-        void renderWorkspaceReview();
-      } catch (e) {
-        setWorkspaceStatus(`Invalid JSON/config: ${e.message}`, false);
-      }
-    });
     const workspaceBtns = workspaceWrap.createDiv({ cls: "bob-settings-entities-btns" });
     workspaceBtns.style.display = "flex";
     workspaceBtns.style.gap = "8px";
@@ -37586,7 +37848,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         });
       });
     };
-    workspaceTa.addEventListener("input", () => {
+    workspaceTa.addEventListener("input", obsidian18.debounce(() => {
       try {
         const parsed = readWorkspaceDraft();
         setWorkspaceConfig(parsed);
@@ -37595,7 +37857,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
       } catch (e) {
         setWorkspaceStatus(`Invalid JSON/config: ${e.message}`, false);
       }
-    });
+    }, 450, true));
     setTimeout(renderWorkspaceDesigners, 0);
     pDash.createEl("h3", { text: "Dashboards" });
     pDash.createEl("p", {
@@ -37697,7 +37959,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         const managedBase = !!configuredBaseDefinition(surface.entityKey);
         if (managedBase) desc.push("Base from workspace.json");
         const hasCustomDash = !!((WORKSPACE_CONFIG.dashboards || {})[surface.id] || (WORKSPACE_CONFIG.planner || {})[surface.id]);
-        const hasBuiltinDash = !!BUILTIN_DASHBOARD_DEFAULTS[surface.id];
+        const hasBuiltinDash = !!builtinDashboardDefaults()[surface.id];
         if (hasCustomDash) desc.push("\u270E custom dashboard");
         else if (hasBuiltinDash) desc.push("built-in dashboard");
         const s = new obsidian18.Setting(panel).setName(level !== "primary" ? `${surface.label} (${levelLabel})` : surface.label).setDesc(desc.join(" \xB7 "));
@@ -37727,13 +37989,11 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         if (surface.folderKey && !overridden) {
           const placeholder = eDef?.folders?.[0] || DEFAULT_SETTINGS[surface.folderKey] || "";
           s.addText((t) => {
-            t.setPlaceholder(placeholder).setValue(this.plugin.settings[surface.folderKey] || "").onChange(async (v) => {
+            t.setPlaceholder(placeholder).setValue(this.plugin.settings[surface.folderKey] || "").onChange((v) => {
               const trimmed = v.trim();
               if (trimmed) this.plugin.settings[surface.folderKey] = trimmed;
               else delete this.plugin.settings[surface.folderKey];
-              await this.plugin.saveSettings();
-              syncEntityFolders(this.plugin.settings);
-              this.plugin.refreshOpenViews();
+              this._queueSaveRefresh();
             });
             if (moduleDisabled) t.setDisabled(true);
           });
@@ -37928,16 +38188,14 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
     });
     new obsidian18.Setting(appPanel).setName("Ignored folders").setDesc('Top-level vault folders to exclude from all entity scans (one per line, e.g. "99-TMP"). Speeds up large vaults by skipping folders that hold no records.').addTextArea((t) => {
       t.inputEl.rows = 4;
-      t.setPlaceholder("99-TMP\nArchive").setValue((this.plugin.settings.ignoredFolders || []).join("\n")).onChange(async (v) => {
+      t.setPlaceholder("99-TMP\nArchive").setValue((this.plugin.settings.ignoredFolders || []).join("\n")).onChange((v) => {
         this.plugin.settings.ignoredFolders = String(v || "").split("\n").map((line) => line.trim().replace(/^\/+|\/+$/g, "")).filter(Boolean);
-        syncEntityFolders(this.plugin.settings);
-        await this.plugin.saveSettings();
-        this.plugin.refreshOpenViews();
+        this._queueSaveRefresh();
       });
     });
-    new obsidian18.Setting(plannerPanel).setName("Daily note folder").setDesc('Folder under which daily notes live, e.g. "daily" or "Journal/Daily".').addText((t) => t.setPlaceholder("daily").setValue(this.plugin.settings.dailyNoteFolder).onChange(async (v) => {
+    new obsidian18.Setting(plannerPanel).setName("Daily note folder").setDesc('Folder under which daily notes live, e.g. "daily" or "Journal/Daily".').addText((t) => t.setPlaceholder("daily").setValue(this.plugin.settings.dailyNoteFolder).onChange((v) => {
       this.plugin.settings.dailyNoteFolder = v;
-      await this.plugin.saveSettings();
+      this._queueSave();
     }));
     const taskModeEl = new obsidian18.Setting(plannerPanel).setName("Task mode").setDesc("How tasks are stored and displayed in the Planner.").addDropdown((d) => d.addOption("checkbox", "Checkbox only \u2014 inline checkboxes in daily notes").addOption("tasknotes", "TaskNotes only \u2014 full markdown note per task").addOption("hybrid", "Hybrid \u2014 checkboxes with Promote \u2191 to TaskNote").setValue(this.plugin.settings.taskMode || "checkbox").onChange(async (v) => {
       this.plugin.settings.taskMode = v;
@@ -37946,22 +38204,22 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
       this.display();
     }));
     if ((this.plugin.settings.taskMode || "checkbox") !== "checkbox") {
-      new obsidian18.Setting(plannerPanel).setName("TaskNotes folder").setDesc("Vault path where TaskNote files are stored.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Tasks").setValue(this.plugin.settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").onChange(async (v) => {
+      new obsidian18.Setting(plannerPanel).setName("TaskNotes folder").setDesc("Vault path where TaskNote files are stored.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Tasks").setValue(this.plugin.settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").onChange((v) => {
         this.plugin.settings.taskNotesFolder = v.trim() || "00-CORE/TaskNotes/Tasks";
-        await this.plugin.saveSettings();
+        this._queueSave();
       }));
-      new obsidian18.Setting(plannerPanel).setName("TaskNotes archive folder").setDesc("Vault path where archived TaskNote files are stored and included in productivity history.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Archive").setValue(this.plugin.settings.taskNotesArchiveFolder || "00-CORE/TaskNotes/Archive").onChange(async (v) => {
+      new obsidian18.Setting(plannerPanel).setName("TaskNotes archive folder").setDesc("Vault path where archived TaskNote files are stored and included in productivity history.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Archive").setValue(this.plugin.settings.taskNotesArchiveFolder || "00-CORE/TaskNotes/Archive").onChange((v) => {
         this.plugin.settings.taskNotesArchiveFolder = v.trim() || "00-CORE/TaskNotes/Archive";
-        await this.plugin.saveSettings();
+        this._queueSave();
       }));
     }
-    new obsidian18.Setting(plannerPanel).setName("Tasks heading").setDesc('The H2 inside each daily note where tasks live. Default "## Today".').addText((t) => t.setValue(this.plugin.settings.tasksHeading).onChange(async (v) => {
+    new obsidian18.Setting(plannerPanel).setName("Tasks heading").setDesc('The H2 inside each daily note where tasks live. Default "## Today".').addText((t) => t.setValue(this.plugin.settings.tasksHeading).onChange((v) => {
       this.plugin.settings.tasksHeading = v;
-      await this.plugin.saveSettings();
+      this._queueSave();
     }));
-    new obsidian18.Setting(plannerPanel).setName("Journal heading").setDesc(`The H2 where today's journal entry lives. Default "## Journal".`).addText((t) => t.setValue(this.plugin.settings.journalHeading).onChange(async (v) => {
+    new obsidian18.Setting(plannerPanel).setName("Journal heading").setDesc(`The H2 where today's journal entry lives. Default "## Journal".`).addText((t) => t.setValue(this.plugin.settings.journalHeading).onChange((v) => {
       this.plugin.settings.journalHeading = v;
-      await this.plugin.saveSettings();
+      this._queueSave();
     }));
     new obsidian18.Setting(appPanel).setName("Currency").setDesc("Used to format money values across Pipeline, Reports and Commissions.").addDropdown((d) => {
       CURRENCY_OPTIONS.forEach((c) => d.addOption(c.code, c.label));
@@ -37999,11 +38257,9 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
     pDm.createEl("h3", { text: "Data model" });
     const basesGroup = pDm.createDiv({ cls: "setting-group bob-settings-section" });
     const basesPanel = basesGroup.createDiv({ cls: "setting-items" });
-    new obsidian18.Setting(basesPanel).setName("Bases folder").setDesc("Vault folder where entity .base files live. Authoritative: changing it relocates where every base is resolved (the filename comes from the entity config, the folder from here).").addText((t) => t.setPlaceholder("00-CORE/Bases").setValue(this.plugin.settings.basesFolder || "00-CORE/Bases").onChange(async (v) => {
+    new obsidian18.Setting(basesPanel).setName("Bases folder").setDesc("Vault folder where entity .base files live. Authoritative: changing it relocates where every base is resolved (the filename comes from the entity config, the folder from here).").addText((t) => t.setPlaceholder("00-CORE/Bases").setValue(this.plugin.settings.basesFolder || "00-CORE/Bases").onChange((v) => {
       this.plugin.settings.basesFolder = v.trim() || "00-CORE/Bases";
-      await this.plugin.saveSettings();
-      await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
-      this.plugin.refreshOpenViews();
+      this._queueSaveReload();
     }));
     new obsidian18.Setting(basesPanel).setName("Generate missing bases").setDesc("Create a .base file (filter + table view) for each entity that does not have one yet, in the Bases folder. Existing files are left untouched.").addButton((button) => button.setButtonText("Generate missing bases").onClick(async () => {
       if (!await confirmModal(this.plugin.app, "Generate .base files for entities that don't have one yet? Existing files are left untouched.", { title: "Generate missing bases", cta: "Generate", danger: false })) return;
@@ -38051,9 +38307,9 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
     new obsidian18.Setting(schemasPanel).setName("Schemas folder").setDesc("Vault path where schema YAML files live (one per entity).").addText((t) => {
       t.setPlaceholder("00-CORE/Schemas/source").setValue(schemaSettings.schemasFolder);
       if (schemasManaged) t.setDisabled(true);
-      return t.onChange(async (v) => {
+      return t.onChange((v) => {
         this.plugin.settings.schemasFolder = v.trim() || "00-CORE/Schemas/source";
-        await this.plugin.saveSettings();
+        this._queueSave();
       });
     });
     new obsidian18.Setting(schemasPanel).setName("Regenerate derived schema outputs").setDesc("Validate canonical YAML sources and regenerate Metadata Menu FileClasses and JSON Schemas.").addButton((button) => button.setButtonText("Regenerate outputs").onClick(async () => {
@@ -38148,8 +38404,9 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
       try {
         const targetPath = await adapter.exists(sourceSchemaPath) ? sourceSchemaPath : renamedPath;
         await ensureFolderSync(this.plugin.app, schemaFolder);
-        if (await adapter.exists(targetPath)) {
+        if (!this._schemaBackupPaths.has(targetPath) && await adapter.exists(targetPath)) {
           await adapter.write(`${targetPath}.backup`, await adapter.read(targetPath));
+          this._schemaBackupPaths.add(targetPath);
         }
         await adapter.write(targetPath, obsidian18.stringifyYaml(sourceSchema));
         sourceSchemaPath = targetPath;
@@ -38158,8 +38415,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         this._schemaDesignerSelectedPath = sourceSchemaPath;
         if (!schemaFiles.includes(sourceSchemaPath)) schemaFiles.push(sourceSchemaPath);
         setSchemaStatus("Saved", true);
-        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
-        this.plugin.refreshOpenViews();
+        this._queueEntityReload();
         await refreshSchemaSelect(sourceSchemaPath);
       } catch (e) {
         setSchemaStatus(`Auto-save failed: ${e.message}`, false);
@@ -38536,13 +38792,13 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
     pData.createEl("h3", { text: "Data import/export" });
     const dataGroup = pData.createDiv({ cls: "setting-group bob-settings-section" });
     const dataPanel = dataGroup.createDiv({ cls: "setting-items" });
-    new obsidian18.Setting(dataPanel).setName("Workbook export folder").setDesc("Vault folder where XLSX workbook exports are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.workbookExportFolder).setValue(this.plugin.settings.workbookExportFolder || DEFAULT_SETTINGS.workbookExportFolder).onChange(async (v) => {
+    new obsidian18.Setting(dataPanel).setName("Workbook export folder").setDesc("Vault folder where XLSX workbook exports are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.workbookExportFolder).setValue(this.plugin.settings.workbookExportFolder || DEFAULT_SETTINGS.workbookExportFolder).onChange((v) => {
       this.plugin.settings.workbookExportFolder = v.trim().replace(/^\/+/, "").replace(/\/+$/, "") || DEFAULT_SETTINGS.workbookExportFolder;
-      await this.plugin.saveSettings();
+      this._queueSave();
     }));
-    new obsidian18.Setting(dataPanel).setName("Canvas folder").setDesc("Vault folder where generated canvases (Context / Process / Pipeline / Agent Audit) are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.canvasFolder).setValue(this.plugin.settings.canvasFolder || DEFAULT_SETTINGS.canvasFolder).onChange(async (v) => {
+    new obsidian18.Setting(dataPanel).setName("Canvas folder").setDesc("Vault folder where generated canvases (Context / Process / Pipeline / Agent Audit) are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.canvasFolder).setValue(this.plugin.settings.canvasFolder || DEFAULT_SETTINGS.canvasFolder).onChange((v) => {
       this.plugin.settings.canvasFolder = v.trim().replace(/^\/+/, "").replace(/\/+$/, "") || DEFAULT_SETTINGS.canvasFolder;
-      await this.plugin.saveSettings();
+      this._queueSave();
     }));
     new obsidian18.Setting(dataPanel).setName("Export & import data").setDesc("Group export (one sheet per entity), import templates, and CSV/XLSX import with column mapping live on the Export and Import screens.").addButton((b) => b.setButtonText("Open Export").onClick(() => this._gotoSurface("misc.export"))).addButton((b) => b.setButtonText("Open Import").onClick(() => this._gotoSurface("misc.import")));
   }
@@ -39022,6 +39278,14 @@ var BobPlugin = class extends obsidian20.Plugin {
     this.settings.collapsedGroups = Object.assign({}, DEFAULT_SETTINGS.collapsedGroups || {}, data?.collapsedGroups || {});
     await loadWorkspaceConfig(this.app);
     this.settings = applyWorkspaceOwnedSettings(this.settings);
+    if (Array.isArray(this.settings.reminders)) {
+      const cutoff = Date.now() - 30 * 864e5;
+      this.settings.reminders = this.settings.reminders.filter((r) => {
+        if (!r?.done) return true;
+        const stamp = new Date(r.when || r.createdAt || 0).getTime();
+        return isNaN(stamp) || stamp >= cutoff;
+      });
+    }
     setCurrentCurrency(this.settings.currency);
     syncEntityFolders(this.settings);
   }

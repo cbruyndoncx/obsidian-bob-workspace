@@ -1,7 +1,7 @@
 import { setWorkspaceConfig } from './workspace-config';
 import { entityBasePath, entityBaseViewName, generateMissingBases } from './bases-config';
 import { baseSummaryCompatibleWithEntity, baseViewRendersInline, readBaseSummary } from './bases-parse';
-import { BUILTIN_DASHBOARD_DEFAULTS, summarizeDashboardBlueprint } from './dashboards';
+import { builtinDashboardDefaults, summarizeDashboardBlueprint } from './dashboards';
 import { HELP_TOPICS } from './help-content';
 import { ENTITIES } from './entities';
 import { BobIconPickerModal, BobPromptModal, confirmModal } from './modals/common';
@@ -173,6 +173,11 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
   declare _dashboardRenderer: SettingsDashboardRenderer;
   declare _schemaDesignerSelectedPath: string;
   declare _openHelpPanels: Set<string> | undefined;
+  declare _queueSave: () => void;
+  declare _queueSaveRefresh: () => void;
+  declare _queueSaveReload: () => void;
+  declare _queueEntityReload: () => void;
+  declare _schemaBackupPaths: Set<string>;
   constructor(app: obsidian.App, plugin: BobPlugin) { super(app, plugin); this.plugin = plugin; this._reviewActiveTab = 'overview'; this._reviewRenderSeq = 0; this._workspaceDraftDirty = false; }
 
   // Reusable toggleable colored help panel (shares .bob-help-* styles with the
@@ -256,6 +261,42 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
+
+    // Obsidian's TextComponent.onChange fires on every `input` event, i.e. per
+    // keystroke. saveSettings() writes data.json AND validates + writes the
+    // whole workspace.json, so text fields must never save synchronously per
+    // character — they assign the setting immediately (cheap) and queue the
+    // save/reload tail through these trailing debouncers.
+    this._queueSave = obsidian.debounce(() => { void this.plugin.saveSettings(); }, 600, true);
+    this._queueSaveRefresh = obsidian.debounce(() => {
+      void (async () => {
+        await this.plugin.saveSettings();
+        syncEntityFolders(this.plugin.settings);
+        this.plugin.refreshOpenViews();
+      })();
+    }, 600, true);
+    this._queueSaveReload = obsidian.debounce(() => {
+      void (async () => {
+        await this.plugin.saveSettings();
+        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        this.plugin.refreshOpenViews();
+      })();
+    }, 800, true);
+    // Reload-only variant for the schema designer's field-blur autosave: the
+    // YAML write itself stays immediate, but the full entity-configuration
+    // reload (re-reads every schema + base file) coalesces across a burst of
+    // edited fields.
+    this._queueEntityReload = obsidian.debounce(() => {
+      void (async () => {
+        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
+        this.plugin.refreshOpenViews();
+      })();
+    }, 800, true);
+    // One .backup per schema file per settings session — the designer wrote a
+    // backup on every field blur, doubling writes and pinning the backup to
+    // the second-most-recent keystroke instead of the pre-editing state.
+    this._schemaBackupPaths = new Set();
+
     containerEl.createEl('h2', { text: 'BOB Workspace' });
 
     const fork = containerEl.createEl('p', { cls: 'setting-item-description' });
@@ -350,16 +391,10 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       workspaceStatus.setText(message);
       workspaceStatus.style.color = ok ? 'var(--text-success)' : 'var(--text-error)';
     };
-    workspaceTa.addEventListener('input', () => {
-      try {
-        const parsed = validateWorkspaceConfig(JSON.parse(workspaceTa.value));
-        const count = parsed.navigation?.groups?.length || 0;
-        setWorkspaceStatus(`Valid - ${count} navigation group${count === 1 ? '' : 's'}`, true);
-        void renderWorkspaceReview();
-      } catch (e) {
-        setWorkspaceStatus(`Invalid JSON/config: ${e.message}`, false);
-      }
-    });
+    // NOTE: live validation/preview for this textarea is handled by a single
+    // debounced 'input' listener registered further down (next to the
+    // designers) — do not add a second listener here: two listeners made every
+    // keystroke re-parse the whole config and re-scan the schema folder twice.
     const workspaceBtns = workspaceWrap.createDiv({ cls: 'bob-settings-entities-btns' });
     workspaceBtns.style.display = 'flex';
     workspaceBtns.style.gap = '8px';
@@ -1419,7 +1454,11 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
         });
       });
     };
-    workspaceTa.addEventListener('input', () => {
+    // Single debounced handler for the workspace.json textarea: parsing +
+    // validating the full config and rebuilding the designers (which also
+    // rebuild the review panel and re-scan schema YAML) is far too expensive
+    // to run per keystroke.
+    workspaceTa.addEventListener('input', obsidian.debounce(() => {
       try {
         const parsed = readWorkspaceDraft();
         setWorkspaceConfig(parsed);
@@ -1428,7 +1467,7 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       } catch (e) {
         setWorkspaceStatus(`Invalid JSON/config: ${e.message}`, false);
       }
-    });
+    }, 450, true));
     setTimeout(renderWorkspaceDesigners, 0);
 
     /* ─── Dashboards ─── */
@@ -1561,7 +1600,7 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
         // Dashboard state: is this surface a configurable dashboard, and is it a
         // custom (workspace.json) config or the bundled built-in default?
         const hasCustomDash = !!((WORKSPACE_CONFIG.dashboards || {})[surface.id] || (WORKSPACE_CONFIG.planner || {})[surface.id]);
-        const hasBuiltinDash = !!BUILTIN_DASHBOARD_DEFAULTS[surface.id];
+        const hasBuiltinDash = !!builtinDashboardDefaults()[surface.id];
         if (hasCustomDash) desc.push('✎ custom dashboard');
         else if (hasBuiltinDash) desc.push('built-in dashboard');
         const s = new obsidian.Setting(panel)
@@ -1603,13 +1642,11 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
           s.addText((t) => {
             t.setPlaceholder(placeholder)
               .setValue((this.plugin.settings[surface.folderKey] as string) || '')
-              .onChange(async (v) => {
+              .onChange((v) => {
                 const trimmed = v.trim();
                 if (trimmed) this.plugin.settings[surface.folderKey] = trimmed;
                 else delete this.plugin.settings[surface.folderKey];
-                await this.plugin.saveSettings();
-                syncEntityFolders(this.plugin.settings);
-                this.plugin.refreshOpenViews();
+                this._queueSaveRefresh();
               });
             if (moduleDisabled) t.setDisabled(true);
           });
@@ -1866,14 +1903,12 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
         t.inputEl.rows = 4;
         t.setPlaceholder('99-TMP\nArchive')
           .setValue((this.plugin.settings.ignoredFolders || []).join('\n'))
-          .onChange(async (v) => {
+          .onChange((v) => {
             this.plugin.settings.ignoredFolders = String(v || '')
               .split('\n')
               .map((line) => line.trim().replace(/^\/+|\/+$/g, ''))
               .filter(Boolean);
-            syncEntityFolders(this.plugin.settings);
-            await this.plugin.saveSettings();
-            this.plugin.refreshOpenViews();
+            this._queueSaveRefresh();
           });
       });
 
@@ -1883,7 +1918,7 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       .addText((t) => t
         .setPlaceholder('daily')
         .setValue(this.plugin.settings.dailyNoteFolder)
-        .onChange(async (v) => { this.plugin.settings.dailyNoteFolder = v; await this.plugin.saveSettings(); }));
+        .onChange((v) => { this.plugin.settings.dailyNoteFolder = v; this._queueSave(); }));
 
     /* ── Task mode ── */
     const taskModeEl = new obsidian.Setting(plannerPanel)
@@ -1908,9 +1943,9 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
         .addText((t) => t
           .setPlaceholder('00-CORE/TaskNotes/Tasks')
           .setValue(this.plugin.settings.taskNotesFolder || '00-CORE/TaskNotes/Tasks')
-          .onChange(async (v) => {
+          .onChange((v) => {
             this.plugin.settings.taskNotesFolder = v.trim() || '00-CORE/TaskNotes/Tasks';
-            await this.plugin.saveSettings();
+            this._queueSave();
           }));
       new obsidian.Setting(plannerPanel)
         .setName('TaskNotes archive folder')
@@ -1918,9 +1953,9 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
         .addText((t) => t
           .setPlaceholder('00-CORE/TaskNotes/Archive')
           .setValue(this.plugin.settings.taskNotesArchiveFolder || '00-CORE/TaskNotes/Archive')
-          .onChange(async (v) => {
+          .onChange((v) => {
             this.plugin.settings.taskNotesArchiveFolder = v.trim() || '00-CORE/TaskNotes/Archive';
-            await this.plugin.saveSettings();
+            this._queueSave();
           }));
     }
 
@@ -1929,14 +1964,14 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       .setDesc('The H2 inside each daily note where tasks live. Default "## Today".')
       .addText((t) => t
         .setValue(this.plugin.settings.tasksHeading)
-        .onChange(async (v) => { this.plugin.settings.tasksHeading = v; await this.plugin.saveSettings(); }));
+        .onChange((v) => { this.plugin.settings.tasksHeading = v; this._queueSave(); }));
 
     new obsidian.Setting(plannerPanel)
       .setName('Journal heading')
       .setDesc('The H2 where today\'s journal entry lives. Default "## Journal".')
       .addText((t) => t
         .setValue(this.plugin.settings.journalHeading)
-        .onChange(async (v) => { this.plugin.settings.journalHeading = v; await this.plugin.saveSettings(); }));
+        .onChange((v) => { this.plugin.settings.journalHeading = v; this._queueSave(); }));
 
     new obsidian.Setting(appPanel)
       .setName('Currency')
@@ -1999,11 +2034,11 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       .addText((t) => t
         .setPlaceholder('00-CORE/Bases')
         .setValue(this.plugin.settings.basesFolder || '00-CORE/Bases')
-        .onChange(async (v) => {
+        .onChange((v) => {
           this.plugin.settings.basesFolder = v.trim() || '00-CORE/Bases';
-          await this.plugin.saveSettings();
-          await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
-          this.plugin.refreshOpenViews();
+          // Reloading entity configuration re-reads every schema YAML and
+          // .base file — far too heavy to run per keystroke.
+          this._queueSaveReload();
         }));
     new obsidian.Setting(basesPanel)
       .setName('Generate missing bases')
@@ -2060,9 +2095,9 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       .addText((t) => {
         t.setPlaceholder('00-CORE/Schemas/source').setValue(schemaSettings.schemasFolder);
         if (schemasManaged) t.setDisabled(true);
-        return t.onChange(async (v) => {
+        return t.onChange((v) => {
           this.plugin.settings.schemasFolder = v.trim() || '00-CORE/Schemas/source';
-          await this.plugin.saveSettings();
+          this._queueSave();
         });
       });
     new obsidian.Setting(schemasPanel)
@@ -2162,8 +2197,9 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       try {
         const targetPath = (await adapter.exists(sourceSchemaPath)) ? sourceSchemaPath : renamedPath;
         await ensureFolderSync(this.plugin.app, schemaFolder);
-        if (await adapter.exists(targetPath)) {
+        if (!this._schemaBackupPaths.has(targetPath) && await adapter.exists(targetPath)) {
           await adapter.write(`${targetPath}.backup`, await adapter.read(targetPath));
+          this._schemaBackupPaths.add(targetPath);
         }
         await adapter.write(targetPath, obsidian.stringifyYaml(sourceSchema));
         sourceSchemaPath = targetPath;
@@ -2172,8 +2208,7 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
         this._schemaDesignerSelectedPath = sourceSchemaPath;
         if (!schemaFiles.includes(sourceSchemaPath)) schemaFiles.push(sourceSchemaPath);
         setSchemaStatus('Saved', true);
-        await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
-        this.plugin.refreshOpenViews();
+        this._queueEntityReload();
         await refreshSchemaSelect(sourceSchemaPath);
       } catch (e) {
         setSchemaStatus(`Auto-save failed: ${e.message}`, false);
@@ -2536,9 +2571,9 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       .addText((t) => t
         .setPlaceholder(DEFAULT_SETTINGS.workbookExportFolder)
         .setValue(this.plugin.settings.workbookExportFolder || DEFAULT_SETTINGS.workbookExportFolder)
-        .onChange(async (v) => {
+        .onChange((v) => {
           this.plugin.settings.workbookExportFolder = v.trim().replace(/^\/+/, '').replace(/\/+$/, '') || DEFAULT_SETTINGS.workbookExportFolder;
-          await this.plugin.saveSettings();
+          this._queueSave();
         }));
     new obsidian.Setting(dataPanel)
       .setName('Canvas folder')
@@ -2546,9 +2581,9 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       .addText((t) => t
         .setPlaceholder(DEFAULT_SETTINGS.canvasFolder)
         .setValue(this.plugin.settings.canvasFolder || DEFAULT_SETTINGS.canvasFolder)
-        .onChange(async (v) => {
+        .onChange((v) => {
           this.plugin.settings.canvasFolder = v.trim().replace(/^\/+/, '').replace(/\/+$/, '') || DEFAULT_SETTINGS.canvasFolder;
-          await this.plugin.saveSettings();
+          this._queueSave();
         }));
     // The full export/import UI (group selection + per-sheet XLSX, import
     // templates, and CSV/XLSX import with column mapping) lives on the Export

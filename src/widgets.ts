@@ -1,6 +1,6 @@
 import { basePropKey, parseBaseFile } from './bases-parse';
 import { ENTITIES } from './entities';
-import { compareEntitiesByBaseSort, entityValue, evaluateBaseFilterNode, listEntities } from './entity-files';
+import { compareEntitiesByBaseSort, entityScanVersion, entityValue, evaluateBaseFilterNode, listEntities } from './entity-files';
 import { buildHomeSnapshot, buildPlannerSnapshot, buildProductivitySnapshot } from './snapshots';
 import { DEFAULT_SETTINGS } from './settings';
 import { WORKSPACE_CONFIG } from './workspace-config';
@@ -93,6 +93,37 @@ type BuiltInSnapshot =
   | Awaited<ReturnType<typeof buildHomeSnapshot>>
   | Awaited<ReturnType<typeof buildPlannerSnapshot>>
   | Awaited<ReturnType<typeof buildProductivitySnapshot>>;
+
+/* One snapshot build per vault state. Home/Planner/Reports cards all point at
+   the same built-in snapshot with different `section` projections, so the
+   per-render widget cache keys them separately — without this memo the same
+   vault-wide snapshot (hundreds of file reads) is rebuilt once per card
+   (6× on Home). Keyed by the entity scan version, which bumps on every
+   vault/metadata mutation and on settings/schema reloads (refreshOpenViews),
+   so a stale snapshot is never served. Callers all pass the live plugin
+   settings, which those same reload paths cover. */
+const _builtInSnapshotCache = new Map<string, { version: number; promise: Promise<BuiltInSnapshot | null> }>();
+
+function builtInSnapshot(app: App, name: string, settings: PartialSettings): Promise<BuiltInSnapshot | null> {
+  const version = entityScanVersion();
+  const hit = _builtInSnapshotCache.get(name);
+  if (hit && hit.version === version) return hit.promise;
+  const promise: Promise<BuiltInSnapshot | null> = name === 'productivity'
+    ? buildProductivitySnapshot(app, settings)
+    : name === 'planner'
+      ? buildPlannerSnapshot(app, settings)
+    : name === 'home'
+      ? buildHomeSnapshot(app, settings)
+      : Promise.resolve(null);
+  // A rejected build must not be pinned for the whole vault state — drop it so
+  // the next render retries.
+  promise.catch(() => {
+    const current = _builtInSnapshotCache.get(name);
+    if (current && current.promise === promise) _builtInSnapshotCache.delete(name);
+  });
+  _builtInSnapshotCache.set(name, { version, promise });
+  return promise;
+}
 
 /* Result of resolveWidgetSource(). */
 interface ResolvedWidgetSource {
@@ -265,13 +296,7 @@ export async function resolveWidgetSource(app: App, source: unknown, fallbackEnt
     // `settings || WORKSPACE_CONFIG.settings` fallback was dead and could pass
     // raw/sparse settings; merge defaults + workspace config + caller settings.
     const snapshotSettings = Object.assign({}, DEFAULT_SETTINGS, WORKSPACE_CONFIG.settings || {}, settings || {});
-    const builtInData = builtInName === 'productivity'
-      ? await buildProductivitySnapshot(app, snapshotSettings)
-      : builtInName === 'planner'
-        ? await buildPlannerSnapshot(app, snapshotSettings)
-      : builtInName === 'home'
-        ? await buildHomeSnapshot(app, snapshotSettings)
-        : null;
+    const builtInData = await builtInSnapshot(app, builtInName, snapshotSettings);
     return {
       entityKey: normalized.entityKey || null,
       def: normalized.entityKey && ENTITIES[normalized.entityKey] ? ENTITIES[normalized.entityKey] : null,

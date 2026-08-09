@@ -1,4 +1,5 @@
 import { ENTITIES } from './entities';
+import { scannableMarkdownFiles } from './entity-files';
 import { normalizeTemplateSpec, renderTemplateDocument } from './settings';
 import { ensureFolderSync, startOfDay, ymd } from './utils';
 import { WORKSPACE_CONFIG } from './workspace-config';
@@ -93,7 +94,9 @@ export async function createTaskNote(app: App, settings: PartialSettings, title:
 export function listTodayTaskNotes(app: App, settings: PartialSettings): { file: TFile; fm: Frontmatter }[] {
   const folder = (settings.taskNotesFolder || '00-CORE/TaskNotes/Tasks').replace(/\/$/, '');
   const todayStr = ymd();
-  return app.vault.getMarkdownFiles()
+  // Route through the shared scan cache so templates/ignored folders are
+  // excluded like every other entity scan and the vault walk is reused.
+  return scannableMarkdownFiles(app)
     .filter((f) => f.path.startsWith(folder + '/'))
     .map((f) => {
       const fm: Frontmatter = (app.metadataCache.getFileCache(f) || {} as CachedMetadata).frontmatter || {};
@@ -131,7 +134,7 @@ export function listTaskNotesForProductivity(app: App, settings: PartialSettings
   const folders = taskNoteFolders(settings);
   const startTime = startOfDay(start).getTime();
   const endTime = startOfDay(end).getTime();
-  return app.vault.getMarkdownFiles()
+  return scannableMarkdownFiles(app)
     .filter((f) => folders.some((folder) => f.path.startsWith(folder + '/')))
     .map((file) => {
       const fm: Frontmatter = (app.metadataCache.getFileCache(file) || {} as CachedMetadata).frontmatter || {};

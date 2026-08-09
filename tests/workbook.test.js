@@ -48,7 +48,10 @@ const wb = loadMainFunctions(
 })();
 
 // ── field-alias import mapping ───────────────────────────────────────────────
-const imp = loadMainFunctions(['normalizedImportHeader', 'rowValue', 'configuredFieldAliases', 'rowValueForField']);
+const imp = loadMainFunctions(['normalizedImportHeader', 'rowHeaderMap', 'rowValue', 'configuredFieldAliases', 'rowValueForField'], {
+  // Collaborator of the per-row header map memo (module-level in src).
+  _rowHeaderMaps: new WeakMap(),
+});
 
 (() => {
   // header normalization: lowercase + strip non-alphanumerics

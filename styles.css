@@ -602,6 +602,14 @@ body.theme-dark .bob-app.bob-dark .bob-btn:hover {
   color: var(--text-normal); vertical-align: top;
 }
 .bob-table tbody tr:hover { background: var(--background-modifier-hover); }
+.bob-table tbody tr.bob-row-showall:hover { background: transparent; }
+.bob-table-showall-btn {
+  width: 100%; padding: 8px 12px; cursor: pointer;
+  background: var(--background-secondary); color: var(--text-muted);
+  border: 1px dashed var(--background-modifier-border); border-radius: 6px;
+  font-size: 12px;
+}
+.bob-table-showall-btn:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
 
 .bob-secondary-tabs {
   display: flex;

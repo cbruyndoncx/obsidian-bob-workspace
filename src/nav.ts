@@ -113,12 +113,19 @@ export function loadBuiltinDashboardDefaults(): Record<string, DashboardConfig> 
   ['workspace-bob.json', 'workspace-cadence.json', 'workspace-crm.json'].forEach((fileName) => {
     const raw = BUNDLED_WORKSPACE_TEMPLATES[fileName];
     if (!raw) return;
+    // Only the dashboards/planner blocks are needed. Drop `_assets` (embedded
+    // schema YAML + .base bodies — ~2/3 of workspace-bob's bytes) BEFORE the
+    // clone, and let migrateWorkspacePlannerConfig do the single deep clone
+    // (it JSON-roundtrips its input); the old cloneConfig(raw) serialized
+    // ~780 KB of template JSON twice at plugin load.
+    const { _assets, _template, ...trimmed } = raw as Record<string, unknown>;
+    void _assets; void _template;
     // Templates author planner surfaces nested under dashboards.planner; unwrap
     // that (as the runtime load does) so planner.today/inbox/... are real default
     // keys instead of being lost under a single bogus 'planner' entry. Without
     // this, "built-in dashboard" detection and the designer's Customize/Reset
     // never see the planner defaults.
-    const parsed = migrateWorkspacePlannerConfig(cloneConfig(raw) as WorkspaceConfig);
+    const parsed = migrateWorkspacePlannerConfig(trimmed as WorkspaceConfig);
     Object.entries(parsed.dashboards || {} as Record<string, DashboardConfig>).forEach(([surfaceId, config]) => {
       defaults[surfaceId] = cloneConfig(config);
     });

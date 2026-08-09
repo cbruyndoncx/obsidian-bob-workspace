@@ -10,6 +10,9 @@ const sandbox = loadMainFunctions([
   WORKSPACE_CONFIG_PATH: 'workspace.json',
   WORKSPACE_CONFIG: {},
   WORKSPACE_HAS_NAVIGATION: false,
+  // Collaborators of the config-epoch memo / skip-identical-writes baseline.
+  bumpWorkspaceConfigEpoch: () => {},
+  _lastWrittenWorkspaceJson: null,
   obsidian: {
     Notice: class Notice {
       constructor(message) {

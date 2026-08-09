@@ -203,15 +203,27 @@ export async function bootstrapCanonicalSchemaSources(app: App, settings: Partia
 }
 
 export async function bootstrapCanonicalSchemaSourcesIfMissing(app: App, settings: PartialSettings = {}, opts: BootstrapOpts = {}) {
-  const loaded = await loadCanonicalSchemaSources(app, settings);
-  if (loaded.schemas.length) return {
-    folder: loaded.folder,
+  // The gate only needs to know whether ANY schema YAML exists — the old
+  // probe read + parsed + validated every schema file, and the reload path
+  // then re-read them all again in applySchemas (double folder scan on every
+  // configuration reload). A cheap filename listing answers the same
+  // question; any .yaml present (even an invalid one) keeps the bootstrap
+  // gated so it never writes the built-in set next to a user's own schemas.
+  // No caller consumes entityKeys from the already-present result.
+  const folder = (WORKSPACE_CONFIG.schemas?.folder || settings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, '');
+  let hasSchemaFiles = false;
+  if (await app.vault.adapter.exists(folder)) {
+    const listed = await app.vault.adapter.list(folder);
+    hasSchemaFiles = (listed.files || []).some((file) => /\.ya?ml$/i.test(file));
+  }
+  if (hasSchemaFiles) return {
+    folder,
     count: 0,
     skipped: 0,
     written: [],
     skippedPaths: [],
-    entityKeys: loaded.schemas.map((item) => item.schema.entity).sort(),
-    failed: [],
+    entityKeys: [] as string[],
+    failed: [] as string[],
     alreadyPresent: true,
   };
   const result = await bootstrapCanonicalSchemaSources(app, settings, opts);
@@ -460,16 +472,24 @@ export async function regenerateSchemaOutputs(app: App, settings: PartialSetting
   await ensureFolderSync(app, jsonFolder);
   const expectedFileClasses = new Set<string>();
   const expectedJsonSchemas = new Set<string>();
+  // The generated outputs are deterministic, so most regenerations are no-ops.
+  // Skip byte-identical writes: every adapter.write fires a vault event that
+  // re-indexes the file in metadataCache and invalidates the plugin's scan
+  // cache — rewriting ~2 files per schema unconditionally churned the whole
+  // vault indexer on every regeneration.
+  const writeIfChanged = async (path: string, content: string) => {
+    try {
+      if (await app.vault.adapter.exists(path) && await app.vault.adapter.read(path) === content) return;
+    } catch (_) { /* unreadable — fall through and rewrite */ }
+    await app.vault.adapter.write(path, content);
+  };
   for (const { schema } of loaded.schemas) {
     const fileClassPath = `${fileClassFolder}/${schema.entity}.md`;
     const jsonSchemaPath = `${jsonFolder}/${schema.type_value || schema.entity}.schema.json`;
     expectedFileClasses.add(fileClassPath);
     expectedJsonSchemas.add(jsonSchemaPath);
-    await app.vault.adapter.write(fileClassPath, sourceSchemaToFileClass(schema));
-    await app.vault.adapter.write(
-      jsonSchemaPath,
-      `${JSON.stringify(sourceSchemaToJsonSchema(schema), null, 2)}\n`
-    );
+    await writeIfChanged(fileClassPath, sourceSchemaToFileClass(schema));
+    await writeIfChanged(jsonSchemaPath, `${JSON.stringify(sourceSchemaToJsonSchema(schema), null, 2)}\n`);
   }
   let removed = 0;
   for (const folder of [
@@ -508,6 +528,7 @@ export async function injectGeneratedSection(app: App, filePath: string, beginMa
   const endIdx = text.indexOf(endMarker);
   if (beginIdx === -1 || endIdx === -1 || endIdx <= beginIdx) return false;
   const updated = text.slice(0, beginIdx + beginMarker.length) + '\n' + content + '\n' + text.slice(endIdx);
+  if (updated === text) return false;
   await app.vault.adapter.write(filePath, updated);
   return true;
 }

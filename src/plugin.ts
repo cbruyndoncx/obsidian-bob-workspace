@@ -480,6 +480,19 @@ export class BobPlugin extends obsidian.Plugin {
     this.settings.collapsedGroups = Object.assign({}, DEFAULT_SETTINGS.collapsedGroups || {}, data?.collapsedGroups || {});
     await loadWorkspaceConfig(this.app);
     this.settings = applyWorkspaceOwnedSettings(this.settings) as BobSettings;
+    // Prune completed reminders older than 30 days: every fired repeat leaves
+    // a row behind, and the whole array is serialized into data.json AND
+    // workspace.json on every save — unbounded growth made each save slower.
+    // Only `done` entries are pruned; unfinished (even long-overdue) reminders
+    // are user-visible items and stay.
+    if (Array.isArray(this.settings.reminders)) {
+      const cutoff = Date.now() - 30 * 86400000;
+      this.settings.reminders = this.settings.reminders.filter((r) => {
+        if (!r?.done) return true;
+        const stamp = new Date(r.when || r.createdAt || 0).getTime();
+        return isNaN(stamp) || stamp >= cutoff;
+      });
+    }
     setCurrentCurrency(this.settings.currency);
     syncEntityFolders(this.settings);
   }

@@ -1,7 +1,7 @@
 import { entityBasePath, entityBaseViewName } from '../bases-config';
 import { baseViewRendersInline, hasBaseValue, parseBaseFile, readBaseSummary } from '../bases-parse';
 import { CANVAS_GENERATORS, buildAgentAuditCanvas, buildEntityContextCanvas, buildProcessCanvas, entityLifecycle, isAgentRunFile, mergeGeneratedCanvas, ownedIdsOf, serializeCanvas, type CanvasData, type CanvasManifest } from '../canvas';
-import { BUILTIN_DASHBOARD_DEFAULTS, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
+import { builtinDashboardDefaults, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
 import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
 import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
@@ -39,6 +39,11 @@ import type {
   SecondaryTab,
   WidgetSourceConfig,
 } from '../types';
+
+/* Shared collator: `localeCompare` with an options object constructs a fresh
+   Intl.Collator per comparison — a full table sort paid that cost tens of
+   thousands of times. */
+const NUMERIC_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 /* ── Module-local types (type-only; erased by esbuild) ─────────── */
 
@@ -336,6 +341,8 @@ export class BobAppView extends obsidian.ItemView {
   declare mobileNavOpen: boolean;
   declare _navScrollTop: number;
   declare _renderSeq: number;
+  declare _scheduleRender: () => void;
+  declare _renderQueued: boolean;
   declare _navEl: HTMLElement | undefined;
   declare _pinDragId: string | null;
   /** Selected sub-tab per parent surface id. */
@@ -354,7 +361,6 @@ export class BobAppView extends obsidian.ItemView {
   /** In-memory dashboard control state per surface id (mirrored to settings.dashboardState). */
   declare _dashboardState: Record<string, DashboardState> | undefined;
   /** Optional parsed-base cache cleared on metadata changes (set externally when present). */
-  declare _basesCache: Map<string, unknown> | undefined;
   constructor(leaf: obsidian.WorkspaceLeaf, plugin: BobPlugin) {
     super(leaf);
     this.plugin = plugin;
@@ -422,11 +428,24 @@ export class BobAppView extends obsidian.ItemView {
   }
 
   /* Toggle BOB app dark mode. Scoped to `.bob-app` only —
-     does not affect Obsidian's overall light/dark mode. Persisted in settings. */
+     does not affect Obsidian's overall light/dark mode. Persisted in settings.
+     Pure-DOM state: toggle the class and icon in place instead of a full
+     teardown+rebuild render. */
   async _toggleBobDark() {
-    this.plugin.settings.bobAppDark = !this.plugin.settings.bobAppDark;
+    const dark = !this.plugin.settings.bobAppDark;
+    this.plugin.settings.bobAppDark = dark;
+    const root = this.containerEl.children[1] as HTMLElement | undefined;
+    if (root && typeof root.toggleClass === 'function') {
+      root.toggleClass('bob-dark', dark);
+      const themeBtn = root.querySelector<HTMLElement>('.bob-app-topbar .bob-topbar-icon-btn');
+      if (themeBtn) {
+        try { obsidian.setIcon(themeBtn, dark ? 'sun' : 'moon'); } catch (_) { /* icon best-effort */ }
+        themeBtn.title = dark ? 'BOB Workspace: switch to light' : 'BOB Workspace: switch to dark';
+      }
+    } else {
+      void this.render();
+    }
     await this.plugin.saveSettings();
-    this.render();
   }
 
   _visibleNavGroups() {
@@ -579,6 +598,29 @@ export class BobAppView extends obsidian.ItemView {
     this.containerEl.children[1].empty();
     await this.render();
 
+    // Vault/metadata events fire in bursts — Obsidian emits `modify` and then
+    // `metadataCache.changed` for the same save, and re-parses metadata every
+    // couple of seconds while the user types in another pane. Rendering
+    // directly from each event caused two full teardown+rebuild renders per
+    // save. Coalesce every event-driven refresh into one trailing debounced
+    // render; if the view isn't visible (background tab), just mark it dirty
+    // and render when it becomes active again.
+    this._renderQueued = false;
+    this._scheduleRender = obsidian.debounce(() => {
+      if (!this.containerEl.isShown()) {
+        this._renderQueued = true;
+        return;
+      }
+      this._renderQueued = false;
+      void this.render();
+    }, 500, true);
+    this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
+      if (this._renderQueued && this.containerEl.isShown()) {
+        this._renderQueued = false;
+        void this.render();
+      }
+    }));
+
     this.registerEvent(this.app.vault.on('modify', (file) => {
       // Skip refresh while the user is editing this exact file in detail view —
       // re-rendering would steal focus from inputs they're still typing in.
@@ -586,33 +628,32 @@ export class BobAppView extends obsidian.ItemView {
       // A hosted canvas saves on every edit; re-rendering would tear it down.
       if (this.canvasFile) return;
       if (this.mode === 'planner.today' && this.todayFile && file.path === this.todayFile.path) {
-        return this.render();
+        return this._scheduleRender();
       }
       if (this.mode === 'planner.calendar') {
         const days = weekDates(this.plannerAnchor, this.plugin.settings.weekStartsOn);
         const paths = days.map((d) => dailyNotePath(this.plugin.settings, d));
-        if (paths.includes(file.path)) return this.render();
+        if (paths.includes(file.path)) return this._scheduleRender();
       }
-      if (this._modeUsesEntityFolder(file.path)) return this.render();
+      if (this._modeUsesEntityFolder(file.path)) return this._scheduleRender();
     }));
 
     const entityRefresh = (file: obsidian.TAbstractFile) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
       if (this.canvasFile) return;
-      if (this._modeUsesEntityFolder(file && file.path)) this.render();
+      if (this._modeUsesEntityFolder(file && file.path)) this._scheduleRender();
     };
     this.registerEvent(this.app.vault.on('create', entityRefresh));
     this.registerEvent(this.app.vault.on('delete', entityRefresh));
     this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
       if (this.canvasFile) return;
-      if (this._modeUsesEntityFolder(file && file.path) || this._modeUsesEntityFolder(oldPath)) this.render();
+      if (this._modeUsesEntityFolder(file && file.path) || this._modeUsesEntityFolder(oldPath)) this._scheduleRender();
     }));
     this.registerEvent(this.app.metadataCache.on('changed', (file) => {
-      if (this._basesCache) this._basesCache.clear();
       if (this.detailFile && file && file.path === this.detailFile.path) return;
       if (this.canvasFile) return;
-      if (this._modeUsesEntityFolder(file && file.path)) this.render();
+      if (this._modeUsesEntityFolder(file && file.path)) this._scheduleRender();
     }));
   }
 
@@ -933,7 +974,7 @@ export class BobAppView extends obsidian.ItemView {
       if (!shown.length) { list.createDiv({ cls: 'bob-empty', text: 'No canvases match.' }); return; }
       shown.forEach((f) => this._renderCanvasRow(list, f));
     };
-    search.addEventListener('input', () => draw(search.value));
+    search.addEventListener('input', obsidian.debounce(() => draw(search.value), 150, true));
     draw('');
   }
 
@@ -1113,8 +1154,11 @@ export class BobAppView extends obsidian.ItemView {
       body.addClass('bob-canvas-stage-live');
       body.appendChild(viewEl);
       this._canvasLeaf = leaf;
-      // The canvas must relayout inside its new parent; kick it once the DOM settles.
+      // The canvas must relayout inside its new parent; kick it once the DOM
+      // settles. Guarded against teardown: if the leaf was detached (user
+      // navigated away within the delay) the kick must not touch the dead view.
       window.setTimeout(() => {
+        if (this._canvasLeaf !== leaf) return;
         try { view?.onResize?.(); view?.canvas?.requestFrame?.(); view?.canvas?.zoomToFit?.(); } catch (_) { /* best effort */ }
       }, 60);
     } catch (err) {
@@ -1321,7 +1365,7 @@ export class BobAppView extends obsidian.ItemView {
       });
     });
     const sorted = Array.from(groups.entries()).sort(([a], [b]) =>
-      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+      NUMERIC_COLLATOR.compare(a, b)
     );
     if (groupBy.direction === 'DESC') sorted.reverse();
     return sorted;
@@ -1471,7 +1515,7 @@ export class BobAppView extends obsidian.ItemView {
         if (av == null) return 1;
         if (bv == null) return -1;
         if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dirMul || (a.i - b.i);
-        return String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' }) * dirMul || (a.i - b.i);
+        return NUMERIC_COLLATOR.compare(String(av), String(bv)) * dirMul || (a.i - b.i);
       });
       return withIdx.map((x) => x.e);
     };
@@ -1479,13 +1523,20 @@ export class BobAppView extends obsidian.ItemView {
     let selectAllCb: HTMLInputElement | null = null;
     let currentArr: EntityRecord[] = [];
     const tbody = table.createEl('tbody');
+    // Row cap: a multi-thousand-row table creates listeners per cell and is
+    // rebuilt on every sort/filter click — render the first rows and let the
+    // user opt into the full set. Select-all/bulk actions operate on the
+    // visible rows, matching the checkboxes actually on screen.
+    const ROW_CAP = 250;
+    let rowCapActive = true;
     const renderBody = (arr: EntityRecord[]) => {
-      currentArr = arr;
+      const shown = rowCapActive && arr.length > ROW_CAP ? arr.slice(0, ROW_CAP) : arr;
+      currentArr = shown;
       tbody.empty();
       selected.clear();
       updateBulkBar();
       if (selectAllCb) { selectAllCb.checked = false; selectAllCb.indeterminate = false; }
-      arr.forEach((e) => {
+      shown.forEach((e) => {
         const tr = tbody.createEl('tr', { cls: 'bob-row' });
         tr.addEventListener('dblclick', () => {
           tr.querySelectorAll('td').forEach((cell: EditableCellEl) => {
@@ -1503,8 +1554,8 @@ export class BobAppView extends obsidian.ItemView {
           tr.toggleClass('bob-row-selected', cb.checked);
           updateBulkBar();
           if (selectAllCb) {
-            selectAllCb.indeterminate = selected.size > 0 && selected.size < arr.length;
-            selectAllCb.checked = selected.size === arr.length;
+            selectAllCb.indeterminate = selected.size > 0 && selected.size < currentArr.length;
+            selectAllCb.checked = selected.size === currentArr.length;
           }
         });
         // Prevent checkbox click from triggering dblclick-to-detail
@@ -1525,6 +1576,19 @@ export class BobAppView extends obsidian.ItemView {
           }
         });
       });
+      if (shown.length < arr.length) {
+        const tr = tbody.createEl('tr', { cls: 'bob-row-showall' });
+        const td = tr.createEl('td');
+        td.colSpan = cols.length + 1;
+        const btn = td.createEl('button', {
+          cls: 'bob-table-showall-btn',
+          text: `Show all ${arr.length} rows (${arr.length - shown.length} more)`,
+        });
+        btn.addEventListener('click', () => {
+          rowCapActive = false;
+          renderBody(arr);
+        });
+      }
     };
 
     const renderHeader = () => {
@@ -1749,7 +1813,7 @@ export class BobAppView extends obsidian.ItemView {
         seen.add(client.id);
         return true;
       })
-      .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }));
+      .sort((a, b) => NUMERIC_COLLATOR.compare(a.label, b.label));
   }
 
   _clientWorkProjectOptions() {
@@ -1769,7 +1833,7 @@ export class BobAppView extends obsidian.ItemView {
         seen.add(project.id);
         return true;
       })
-      .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }));
+      .sort((a, b) => NUMERIC_COLLATOR.compare(a.label, b.label));
   }
 
   _entityMatchesClient(entity: EntityRecord, clientId: string) {
@@ -1794,11 +1858,11 @@ export class BobAppView extends obsidian.ItemView {
     return values.some((value) => String(value ?? '').trim() === projectId);
   }
 
-  _renderClientWorkSelector(container: HTMLElement) {
+  _renderClientWorkSelector(container: HTMLElement, precomputed?: { clients: { id: string; label: string }[]; projects: { id: string; label: string }[] }) {
     const wrap = container.createDiv({ cls: 'bob-client-work-filter' });
     const clientSelect = wrap.createEl('select', { cls: 'dropdown bob-client-work-client-select' });
     clientSelect.createEl('option', { value: '', text: 'All clients' });
-    const clients = this._clientWorkOptions();
+    const clients = precomputed ? precomputed.clients : this._clientWorkOptions();
     clients.forEach((client) => {
       clientSelect.createEl('option', { value: client.id, text: client.label });
     });
@@ -1813,7 +1877,7 @@ export class BobAppView extends obsidian.ItemView {
 
     const projectSelect = wrap.createEl('select', { cls: 'dropdown bob-client-work-project-select' });
     projectSelect.createEl('option', { value: '', text: 'All projects' });
-    const projects = this._clientWorkProjectOptions();
+    const projects = precomputed ? precomputed.projects : this._clientWorkProjectOptions();
     projects.forEach((project) => {
       projectSelect.createEl('option', { value: project.id, text: project.label });
     });
@@ -1828,10 +1892,13 @@ export class BobAppView extends obsidian.ItemView {
   }
 
 	  async renderClientWorkWorkspace(root: HTMLElement) {
-	    if (this._clientWorkClientId && !this._clientWorkOptions().some((client) => client.id === this._clientWorkClientId)) {
+	    // Build both option lists once per render — validation and the header
+	    // selector previously each ran their own scan+sort (4 passes total).
+	    const clientWorkOptions = { clients: this._clientWorkOptions(), projects: this._clientWorkProjectOptions() };
+	    if (this._clientWorkClientId && !clientWorkOptions.clients.some((client) => client.id === this._clientWorkClientId)) {
 	      this._clientWorkClientId = '';
 	    }
-	    if (this._clientWorkProjectId && !this._clientWorkProjectOptions().some((project) => project.id === this._clientWorkProjectId)) {
+	    if (this._clientWorkProjectId && !clientWorkOptions.projects.some((project) => project.id === this._clientWorkProjectId)) {
 	      this._clientWorkProjectId = '';
 	    }
 	    const selectedClientId = this._clientWorkClientId || '';
@@ -1843,7 +1910,7 @@ export class BobAppView extends obsidian.ItemView {
 	      filter: (entity) => this._entityMatchesClient(entity, selectedClientId) && this._entityMatchesProject(entity, selectedProjectId),
 	      forceInternal: true,
 	      titleSuffix: titleParts.length ? ` · ${titleParts.join(' · ')}` : '',
-	      renderHeaderControls: (right) => this._renderClientWorkSelector(right),
+	      renderHeaderControls: (right) => this._renderClientWorkSelector(right, clientWorkOptions),
 	      emptyDescription: titleParts.length
 	        ? `No records matching ${titleParts.join(' / ')} in this tab.`
 	        : null,
@@ -1981,6 +2048,10 @@ export class BobAppView extends obsidian.ItemView {
   }
 
   async renderConfigDashboard(surfaceId: string, root: HTMLElement, opts: DashboardRenderOptions = {}) {
+    // render() bumps _renderSeq before dispatching here. If another render
+    // starts while this one is awaiting widget data, this pass is painting
+    // into a detached tree — stop instead of burning through the layout.
+    const dashboardRenderSeq = this._renderSeq;
     const config = (opts.config || resolveSurfaceConfig(surfaceId)) as DashConfigLike | null;
     if (!config) {
       const surface = SURFACE_BY_ID[surfaceId] || ({} as NavSurface);
@@ -2156,22 +2227,26 @@ export class BobAppView extends obsidian.ItemView {
     }
 
     await prewarmLayout;
+    if (this._renderSeq !== dashboardRenderSeq) return;
     for (const row of config.layout || []) {
       const cols = root.createDiv({ cls: 'bob-dash-cols' });
       for (const colDef of row) {
         const col = cols.createDiv({ cls: 'bob-dash-col' });
         for (const card of (Array.isArray(colDef) ? colDef : [colDef])) {
+          if (this._renderSeq !== dashboardRenderSeq) return;
           await this._renderConfigCard(col, card, getWidgetEntities, dashboardContext);
         }
       }
     }
 
     for (const cr of config.conditionalRows || []) {
+      if (this._renderSeq !== dashboardRenderSeq) return;
       const resolvedConditions = await Promise.all((cr.condition?.entities || []).map((key: string) => getWidgetEntities(null, key)));
       const hasData = resolvedConditions.some((resolved) => resolved.entities.length > 0);
       if (!hasData) continue;
       const extra = root.createDiv({ cls: 'bob-dash-cols' });
       for (const card of cr.cards) {
+        if (this._renderSeq !== dashboardRenderSeq) return;
         await this._renderConfigCard(extra.createDiv({ cls: 'bob-dash-col' }), card, getWidgetEntities, dashboardContext);
       }
     }
@@ -2893,7 +2968,10 @@ export class BobAppView extends obsidian.ItemView {
     await (embed.loadFile?.() ?? embed.load?.());
     // View is applied by the constructor subpath (verified load-bearing).
     // Give it a moment to mount, then confirm an embed wrapper is present.
-    for (let i = 0; i < 20; i++) {
+    // Capped at ~400ms: the dashboard paint loop is sequential, so a widget
+    // that will never mount must fail fast instead of stalling the surface
+    // for a second (each probe also forces a layout pass via textContent).
+    for (let i = 0; i < 8; i++) {
       await this._waitForBaseEmbedRender();
       if (this._baseEmbedMounted(body, `![[${linktext}]]`, linktext)) return;
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -3003,7 +3081,7 @@ export class BobAppView extends obsidian.ItemView {
     const file = this.app.vault.getAbstractFileByPath(sourcePath);
     if (!(file instanceof obsidian.TFile)) return { text: '', sourcePath };
     let content;
-    try { content = await this.app.vault.read(file); }
+    try { content = await this.app.vault.cachedRead(file); }
     catch (_) { return { text: '', sourcePath: file.path }; } // file removed mid-render
     if (!heading) return { text: content, sourcePath: file.path };
 
@@ -3225,7 +3303,7 @@ export class BobAppView extends obsidian.ItemView {
           if (normalized) values.add(normalized);
         });
       });
-      [...values].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).forEach((value) => {
+      [...values].sort((a, b) => NUMERIC_COLLATOR.compare(a, b)).forEach((value) => {
         options.push({ value, label: value, filter: `${fieldKey} == ${JSON.stringify(value)}` });
       });
     }
@@ -3952,7 +4030,7 @@ export class BobAppView extends obsidian.ItemView {
     const path = dailyNotePath(this.plugin.settings);
     const existing = this.app.vault.getAbstractFileByPath(path) as obsidian.TFile | null;
     let current = '';
-    if (existing) current = readSection(await this.app.vault.read(existing));
+    if (existing) current = readSection(await this.app.vault.cachedRead(existing));
     const ta = body.createEl('textarea', { cls: 'bob-journal bob-note-section-textarea' });
     ta.value = current;
     ta.spellcheck = false;
@@ -4002,7 +4080,7 @@ export class BobAppView extends obsidian.ItemView {
         groups = fieldDef.options.map(normalizeGroup).filter(Boolean);
       } else {
         groups = [...new Set(entities.map((entity) => String(entityValue(entity, groupBy, def) || '').trim()).filter(Boolean))]
-          .sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+          .sort((a: string, b: string) => NUMERIC_COLLATOR.compare(a, b))
           .map((value) => ({ value, label: value }));
       }
     }
@@ -4133,7 +4211,7 @@ export class BobAppView extends obsidian.ItemView {
     });
 
     const grid = section.createDiv({ cls: 'bob-dashboard-inventory-grid' });
-    Object.entries(BUILTIN_DASHBOARD_DEFAULTS).forEach(([id, config]) => {
+    Object.entries(builtinDashboardDefaults()).forEach(([id, config]) => {
       const summary = summarizeDashboardBlueprint(id, config as DashboardBlueprint);
       const card = grid.createDiv({ cls: 'bob-dashboard-inventory-card' });
       const head = card.createDiv({ cls: 'bob-dashboard-inventory-head' });
@@ -4363,7 +4441,7 @@ export class BobAppView extends obsidian.ItemView {
 
     this._renderHelpTopic(root, 'designer-overview');
 
-    const builtinIds = Object.keys(BUILTIN_DASHBOARD_DEFAULTS);
+    const builtinIds = Object.keys(builtinDashboardDefaults());
     const builtinPlannerIds = Object.keys(WORKSPACE_CONFIG.planner || {});
     const workspaceDashIds = Object.keys(WORKSPACE_CONFIG.dashboards || {});
     const customOnlyIds = workspaceDashIds.filter(id => !builtinIds.includes(id) && !builtinPlannerIds.includes(id));
@@ -4429,7 +4507,7 @@ export class BobAppView extends obsidian.ItemView {
       if (plannerConfig) return normalizeDashboardConfigShape(JSON.parse(JSON.stringify(plannerConfig)));
       const ws = (WORKSPACE_CONFIG.dashboards || {})[id];
       if (ws) return normalizeDashboardConfigShape(JSON.parse(JSON.stringify(ws)));
-      const bi = BUILTIN_DASHBOARD_DEFAULTS[id];
+      const bi = builtinDashboardDefaults()[id];
       if (bi) return normalizeDashboardConfigShape(JSON.parse(JSON.stringify(bi)));
       return { title: id, layout: [] };
     };
@@ -4524,7 +4602,7 @@ export class BobAppView extends obsidian.ItemView {
         customizeBtn.addEventListener('click', () => {
           const targetStore = id.startsWith('planner.') ? 'planner' : 'dashboards';
           if (!WORKSPACE_CONFIG[targetStore]) WORKSPACE_CONFIG[targetStore] = {};
-          WORKSPACE_CONFIG[targetStore][id] = JSON.parse(JSON.stringify(BUILTIN_DASHBOARD_DEFAULTS[id] || getConfig(id)));
+          WORKSPACE_CONFIG[targetStore][id] = JSON.parse(JSON.stringify(builtinDashboardDefaults()[id] || getConfig(id)));
           this._dashEditorDraft = getConfig(id);
           renderEditorPane(id);
           renderPreview(id);
@@ -4542,7 +4620,7 @@ export class BobAppView extends obsidian.ItemView {
             new obsidian.Notice('Dashboard saved.');
           } catch (e) { new obsidian.Notice(`Save failed: ${e.message}`); }
         });
-        if (BUILTIN_DASHBOARD_DEFAULTS[id] || id.startsWith('planner.')) {
+        if (builtinDashboardDefaults()[id] || id.startsWith('planner.')) {
           const resetBtn = actions.createEl('button', { cls: 'bob-btn bob-btn-danger', text: 'Reset to built-in' });
           resetBtn.addEventListener('click', async () => {
             const stores = id.startsWith('planner.') ? ['planner', 'dashboards'] : ['dashboards'];
@@ -6174,54 +6252,6 @@ export class BobAppView extends obsidian.ItemView {
       groups[key].push(p);
     });
 
-    const grid = root.createDiv({ cls: 'bob-proj-grid' });
-    const renderCard = (p: typeof projects[number]) => {
-      const card = grid.createDiv({ cls: 'bob-proj-card' });
-      const head = card.createDiv({ cls: 'bob-proj-card-head' });
-      const title = head.createEl('a', { cls: 'bob-proj-title', text: entityValue(p.entity, 'name', def) || p.entity.basename });
-      title.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); this.openEntityDetailFromFile(p.entity.file); });
-      card.classList.add('clickable');
-      card.addEventListener('click', () => this.openEntityDetailFromFile(p.entity.file));
-      const status = String(entityValue(p.entity, 'status', def) || 'active');
-      const priority = String(entityValue(p.entity, 'priority', def) || '');
-      const pillRow = head.createDiv({ cls: 'bob-proj-pills' });
-      pillRow.createSpan({ cls: `bob-pill bob-pill-${status.toLowerCase().replace(/\s+/g, '-')}`, text: status });
-      if (priority) pillRow.createSpan({ cls: `bob-pill bob-pill-prio-${priority.toLowerCase()}`, text: priority });
-
-      const metaRow = card.createDiv({ cls: 'bob-proj-meta' });
-      const owner = entityValue(p.entity, 'owner', def);
-      const due = entityValue(p.entity, 'due', def);
-      if (owner) metaRow.createSpan({ text: `Owner: ${owner}` });
-      if (due) metaRow.createSpan({ text: `Due: ${fmtValue(due, 'date')}` });
-
-      // Progress
-      const progWrap = card.createDiv({ cls: 'bob-proj-progress-wrap' });
-      progWrap.dataset.pctBand = pctBand(p.meta.percent);
-      const progLabel = progWrap.createDiv({ cls: 'bob-proj-progress-label' });
-      progLabel.createSpan({ text: `${p.meta.done}/${p.meta.total} milestones` });
-      progLabel.createSpan({ cls: 'bob-proj-progress-pct', text: `${p.meta.percent}%` });
-      const bar = progWrap.createDiv({ cls: 'bob-proj-progress-bar' });
-      const fill = bar.createDiv({ cls: 'bob-proj-progress-fill' });
-      fill.style.width = `${p.meta.percent}%`;
-
-      // Next milestone
-      if (p.meta.next) {
-        const nextRow = card.createDiv({ cls: 'bob-proj-next' });
-        nextRow.createSpan({ cls: 'bob-proj-next-label', text: 'NEXT · ' });
-        nextRow.createSpan({ cls: 'bob-proj-next-date', text: fmtValue(p.meta.next.date, 'date') });
-        if (p.meta.next.title) nextRow.createSpan({ text: ` — ${p.meta.next.title}` });
-      }
-    };
-
-    const renderSection = (label: string, list: typeof projects) => {
-      if (!list.length) return;
-      root.createDiv({ cls: 'bob-section-label-lg', text: label });
-      list.forEach(renderCard);
-    };
-
-    // We render section labels by intercepting renderCard placement
-    // Reset grid: render in groups
-    grid.remove();
     const order = ['active', 'on_hold', 'backlog', 'done', 'cancelled'];
     const sectionLabels: Record<string, string> = { active: 'ACTIVE', on_hold: 'ON HOLD', backlog: 'BACKLOG', done: 'DONE', cancelled: 'CANCELLED' };
     order.forEach((key) => {
@@ -6328,11 +6358,16 @@ export class BobAppView extends obsidian.ItemView {
     /* Read each project's Tasks section + collect open tasks */
     const groups: { file: obsidian.TFile; name: string | null; tasks: ProjectTaskItem[] }[] = [];
     let totalOpen = 0;
-    for (const file of projectFiles) {
-      let content;
-      try { content = await this.app.vault.read(file); }
-      catch (_) { continue; }
-      const sections = parseH2Sections(content);
+    // Read-only display pass over every project note: parallel + cachedRead
+    // (this was a serialized uncached loop — one disk round-trip per project,
+    // re-run on every Inbox render).
+    const projectContents = await Promise.all(projectFiles.map(async (file) => {
+      try { return { file, content: await this.app.vault.cachedRead(file) }; }
+      catch (_) { return null; }
+    }));
+    for (const entry of projectContents) {
+      if (!entry) continue;
+      const sections = parseH2Sections(entry.content);
       const tasksText = sections['Tasks'] || '';
       if (!tasksText.trim()) continue;
       const tasks = parseTasksList(tasksText);
@@ -6340,8 +6375,8 @@ export class BobAppView extends obsidian.ItemView {
       if (!open.length) continue;
       totalOpen += open.length;
       groups.push({
-        file,
-        name: projectNameFromPath(this.app, file.path),
+        file: entry.file,
+        name: projectNameFromPath(this.app, entry.file.path),
         tasks: open,
       });
     }
@@ -6816,7 +6851,7 @@ export class BobAppView extends obsidian.ItemView {
   async renderTodayPane(root: HTMLElement) {
     root.addClass('bob-today');
     this.todayFile = await ensureDailyNote(this.app, this.plugin.settings) as obsidian.TFile;
-    const fileContent = await this.app.vault.read(this.todayFile);
+    const fileContent = await this.app.vault.cachedRead(this.todayFile);
     this.todayParsed = parseSections(fileContent, this.plugin.settings);
 
     const info = dateInfo();
@@ -7031,7 +7066,7 @@ export class BobAppView extends obsidian.ItemView {
       if (!file || !(file instanceof obsidian.TFile)) {
         return { date: d, path, exists: false, tasks: [] };
       }
-      const content = await this.app.vault.read(file);
+      const content = await this.app.vault.cachedRead(file);
       const parsed = parseSections(content, settings);
       return { date: d, path, exists: true, file, tasks: parsed.tasks };
     }));

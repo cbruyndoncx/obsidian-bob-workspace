@@ -806,7 +806,29 @@ export function entityStatusField(def: EntityDef): string {
   if (suffixed) return suffixed.key;
   return 'status';
 }
+/* entityTerminalStatuses is called inside .filter() over full entity arrays
+   (stat cards, kanban, reports), and building the Set runs 15+ regex
+   normalizations per call — memoize per def object (WeakMap: defs are
+   replaced on schema/Base reloads, so entries never leak). The entry also
+   revalidates against the three source arrays, so even an in-place def
+   mutation mid-reload can't serve a stale Set. */
+const _terminalStatusesMemo = new WeakMap<object, { inputsKey: string; statuses: Set<string> }>();
+function terminalStatusInputsKey(def: EntityDef): string {
+  const join = (v: unknown) => (Array.isArray(v) ? v.join('|') : '');
+  return `${join(def?.terminalStatuses)}~${join(def?.wonStages)}~${join(def?.lostStages)}`;
+}
 export function entityTerminalStatuses(def: EntityDef): Set<string> {
+  const memoizable = !!def && typeof def === 'object';
+  const inputsKey = terminalStatusInputsKey(def);
+  if (memoizable) {
+    const memo = _terminalStatusesMemo.get(def);
+    if (memo && memo.inputsKey === inputsKey) return memo.statuses;
+  }
+  const statuses = buildEntityTerminalStatuses(def);
+  if (memoizable) _terminalStatusesMemo.set(def, { inputsKey, statuses });
+  return statuses;
+}
+function buildEntityTerminalStatuses(def: EntityDef): Set<string> {
   const statuses = new Set(['done', 'completed', 'closed', 'cancelled', 'canceled', 'archived', 'paid', 'filed', 'submitted', 'approved', 'rejected', 'expired', 'written-off', 'won', 'lost'].map(normalizeStatusValue));
   (Array.isArray(def?.terminalStatuses) ? def.terminalStatuses : []).forEach((status) => {
     const normalized = normalizeStatusValue(status);

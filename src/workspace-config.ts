@@ -33,6 +33,15 @@ export let WORKSPACE_LOAD_FAILED = false;
 // ES module imports are read-only live bindings.
 export function setWorkspaceConfig(config: WorkspaceConfig) {
   WORKSPACE_CONFIG = config || {};
+  bumpWorkspaceConfigEpoch();
+}
+
+/* Epoch for memoized derivations of the active config (see
+   workspaceConfiguredEntityKeys). Bumped whenever WORKSPACE_CONFIG is
+   replaced or the schema/entity key sets are rebuilt. */
+let _workspaceConfigEpoch = 0;
+export function bumpWorkspaceConfigEpoch(): void {
+  _workspaceConfigEpoch++;
 }
 export let WORKSPACE_HAS_NAVIGATION = false;
 export let CONFIGURED_BASE_ENTITY_KEYS = new Set<string>();
@@ -556,6 +565,10 @@ export function persistedWorkspaceOwnedSettings(settings: PartialSettings = {}):
   return persisted;
 }
 
+// Serialized form of the last workspace.json this session wrote (or loaded),
+// used by saveWorkspaceConfig to skip byte-identical incidental writes.
+let _lastWrittenWorkspaceJson: string | null = null;
+
 // `writeBackup` snapshots the current file into workspace.backup.json before
 // overwriting. Deliberate structural edits (the settings editor, template apply)
 // pass true; incidental settings-only saves (saveSettings — reminder ticks,
@@ -564,11 +577,24 @@ export function persistedWorkspaceOwnedSettings(settings: PartialSettings = {}):
 export async function saveWorkspaceConfig(app: App, jsonText: string, writeBackup = true): Promise<WorkspaceConfig> {
   const parsed = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(jsonText)) as WorkspaceConfig);
   const adapter = app.vault.adapter;
+  const serialized = JSON.stringify(parsed, null, 2);
+  // Incidental saves (saveSettings on every toggle/reminder tick) very often
+  // re-serialize an unchanged config. Skip the disk write in that case — each
+  // workspace.json write fires a vault event that invalidates caches and
+  // re-renders open views. Explicit saves (writeBackup=true) always write.
+  if (!writeBackup && serialized === _lastWrittenWorkspaceJson) {
+    WORKSPACE_CONFIG = parsed;
+    WORKSPACE_HAS_NAVIGATION = Array.isArray(parsed.navigation?.groups);
+    WORKSPACE_LOAD_FAILED = false;
+    return parsed;
+  }
   if (writeBackup && await adapter.exists(WORKSPACE_CONFIG_PATH)) {
     await adapter.write(WORKSPACE_BACKUP_PATH, await adapter.read(WORKSPACE_CONFIG_PATH));
   }
-  await adapter.write(WORKSPACE_CONFIG_PATH, JSON.stringify(parsed, null, 2));
+  await adapter.write(WORKSPACE_CONFIG_PATH, serialized);
+  _lastWrittenWorkspaceJson = serialized;
   WORKSPACE_CONFIG = parsed;
+  bumpWorkspaceConfigEpoch();
   WORKSPACE_HAS_NAVIGATION = Array.isArray(parsed.navigation?.groups);
   // Explicit user-driven save succeeded — the on-disk file is valid again, so
   // clear the load-failed guard and let incidental saves resume.
@@ -580,10 +606,15 @@ export async function loadWorkspaceConfig(app: App): Promise<WorkspaceConfig> {
   WORKSPACE_CONFIG = {};
   WORKSPACE_HAS_NAVIGATION = false;
   WORKSPACE_LOAD_FAILED = false;
+  _lastWrittenWorkspaceJson = null;
+  bumpWorkspaceConfigEpoch();
   if (!(await app.vault.adapter.exists(WORKSPACE_CONFIG_PATH))) return WORKSPACE_CONFIG;
   try {
     WORKSPACE_CONFIG = validateWorkspaceConfig(migrateWorkspacePlannerConfig(JSON.parse(await app.vault.adapter.read(WORKSPACE_CONFIG_PATH))) as WorkspaceConfig);
     WORKSPACE_HAS_NAVIGATION = Array.isArray(WORKSPACE_CONFIG.navigation?.groups);
+    // Seed the skip-identical-writes baseline: if the first incidental save
+    // after load serializes to exactly what's on disk, it can be skipped.
+    _lastWrittenWorkspaceJson = JSON.stringify(WORKSPACE_CONFIG, null, 2);
   } catch (e) {
     // Keep the on-disk file untouched: mark the load failed so saveSettings
     // skips its incidental write (see saveSettings in plugin.ts). Sticky notice
@@ -620,7 +651,23 @@ export function collectEntityKeysFromConfigValue(value: unknown, keys: Set<strin
   Object.values(value).forEach((item) => collectEntityKeysFromConfigValue(item, keys));
 }
 
+/* Memo: this deep-walks the whole navigation + dashboards config and was
+   recomputed per header action button per render. Keyed on the config object
+   (WeakMap) and revalidated against the config epoch, which bumps on config
+   replacement and schema/entity-key set rebuilds. The returned Set is shared —
+   callers must treat it as read-only. */
+const _configuredKeysMemo = new WeakMap<object, { epoch: number; variants: Map<string, Set<string>> }>();
+
 export function workspaceConfiguredEntityKeys(config: WorkspaceConfig = WORKSPACE_CONFIG, opts: { includeFallback?: boolean } = {}): Set<string> {
+  const variantKey = opts.includeFallback === false ? 'strict' : 'fallback';
+  const memoizable = !!config && typeof config === 'object';
+  if (memoizable) {
+    const memo = _configuredKeysMemo.get(config);
+    if (memo && memo.epoch === _workspaceConfigEpoch) {
+      const hit = memo.variants.get(variantKey);
+      if (hit) return hit;
+    }
+  }
   const keys = new Set<string>();
   SCHEMA_ENTITY_KEYS.forEach((key) => addConfiguredEntityKey(keys, key));
   Object.keys(config?.bases || {}).forEach((key) => addConfiguredEntityKey(keys, key));
@@ -642,6 +689,14 @@ export function workspaceConfiguredEntityKeys(config: WorkspaceConfig = WORKSPAC
   );
   if (!keys.size && !hasExplicitConfig && opts.includeFallback !== false) {
     Object.keys(ENTITIES).forEach((key) => addConfiguredEntityKey(keys, key));
+  }
+  if (memoizable) {
+    let memo = _configuredKeysMemo.get(config);
+    if (!memo || memo.epoch !== _workspaceConfigEpoch) {
+      memo = { epoch: _workspaceConfigEpoch, variants: new Map() };
+      _configuredKeysMemo.set(config, memo);
+    }
+    memo.variants.set(variantKey, keys);
   }
   return keys;
 }
@@ -689,11 +744,18 @@ export function resolveSurfaceConfig(surfaceId: string, config: WorkspaceConfig 
   return resolveDashboardConfig(surfaceId, config.dashboards);
 }
 
+/* Defensive copy of a dashboard config before it is handed to renderers
+   (which may annotate/mutate it). structuredClone is far cheaper than the
+   old recursive per-key rebuild, which ran on every surface render; the
+   recursive path remains as a fallback for environments without it. */
 export function normalizeDashboardConfigShape<T>(value: T): T {
+  if (!value || typeof value !== 'object') return value;
+  if (typeof structuredClone === 'function') {
+    try { return structuredClone(value); } catch (_) { /* non-cloneable member — fall through */ }
+  }
   if (Array.isArray(value)) {
     return value.map((item) => normalizeDashboardConfigShape(item)) as unknown as T;
   }
-  if (!value || typeof value !== 'object') return value;
   const out: Record<string, unknown> = {};
   Object.entries(value).forEach(([key, child]) => {
     out[key] = normalizeDashboardConfigShape(child);

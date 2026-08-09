@@ -21,6 +21,10 @@ export async function seedWorkspaceTemplates(app: App): Promise<void> {
   try { await adapter.mkdir(dir); } catch (_) {}
 }
 
+/* Serialized bundled templates, cached at first use (see the bundled loop
+   below). */
+const _bundledTemplateJson = new Map<string, string>();
+
 export async function loadWorkspaceTemplates(app: App): Promise<WorkspaceTemplate[]> {
   const dir = `${PLUGIN_DIR}/templates`;
   const byName = new Map<string, WorkspaceTemplate>();
@@ -29,7 +33,15 @@ export async function loadWorkspaceTemplates(app: App): Promise<WorkspaceTemplat
   // Obsidian store installer). Bundled names are authoritative.
   for (const [fileName, tpl] of Object.entries(BUNDLED_WORKSPACE_TEMPLATES)) {
     if (!tpl || !tpl._template) continue;
-    const clone = cloneConfig(tpl);
+    // Bundled templates are immutable inputs; cache their serialized form so
+    // repeated loads (the settings tab calls this on every display()) pay one
+    // JSON.parse instead of a full stringify+parse of ~415 KB of templates.
+    let json = _bundledTemplateJson.get(fileName);
+    if (!json) {
+      json = JSON.stringify(tpl);
+      _bundledTemplateJson.set(fileName, json);
+    }
+    const clone = JSON.parse(json) as WorkspaceTemplate;
     Object.defineProperty(clone, '_templatePath', { value: `${dir}/${fileName}`, enumerable: false });
     byName.set(fileName, clone);
   }

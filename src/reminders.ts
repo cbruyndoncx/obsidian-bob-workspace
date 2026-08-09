@@ -4,12 +4,18 @@ import type { App, TFile } from 'obsidian';
 import type { PartialSettings, Reminder } from './types';
 export function reminderId(): string { return 'rem_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); }
 
-export function nextRepeat(when: string | Date | null | undefined, repeat: string): Date | null {
+export function nextRepeat(when: string | Date | null | undefined, repeat: string, after: number = Date.now()): Date | null {
   if (!when) return null;
   const d = when instanceof Date ? when : new Date(when);
-  if (repeat === 'daily')  return new Date(d.getTime() + 86400000);
-  if (repeat === 'weekly') return new Date(d.getTime() + 7 * 86400000);
-  return null;
+  const period = repeat === 'daily' ? 86400000 : repeat === 'weekly' ? 7 * 86400000 : 0;
+  if (!period || isNaN(d.getTime())) return null;
+  // Advance past `after` in ONE step. Advancing a single period at a time made
+  // a daily reminder missed for N days replay N times — one Notice + settings
+  // save + full view refresh per 30s tick — a "catch-up storm" after any
+  // absence. The next occurrence is always strictly in the future.
+  const base = d.getTime();
+  const periodsBehind = base > after ? 1 : Math.floor((after - base) / period) + 1;
+  return new Date(base + periodsBehind * period);
 }
 
 export function reminderBucket(when: string | null | undefined): string {

@@ -13,10 +13,14 @@ class TFile {
 const sandbox = loadMainFunctions([
   'normalizeWidgetSourceConfig',
   'filterEntitiesByBaseConfig',
+  'builtInSnapshot',
   'resolveWidgetSource',
   'dashboardProviderRowValue',
 ], {
   obsidian: { TFile },
+  // Collaborators of builtInSnapshot (the built-in snapshot memo).
+  entityScanVersion: () => 0,
+  _builtInSnapshotCache: new Map(),
   ENTITIES: {
     deal: {
       label: 'Deal',

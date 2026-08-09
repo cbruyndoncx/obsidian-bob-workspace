@@ -3,7 +3,7 @@ import { BUILTIN_ENTITY_DEFAULTS, ENTITIES } from './entities';
 import { pluralizeEntityLabel } from './schemas';
 import { DEFAULT_SETTINGS, ENTITY_FOLDERS, syncEntityFolders } from './settings';
 import { ensureFolderSync } from './utils';
-import { CONFIGURED_BASE_ENTITY_KEYS, SCHEMA_ENTITY_KEYS, WORKSPACE_CONFIG, configuredBaseDefinition } from './workspace-config';
+import { CONFIGURED_BASE_ENTITY_KEYS, SCHEMA_ENTITY_KEYS, WORKSPACE_CONFIG, bumpWorkspaceConfigEpoch, configuredBaseDefinition } from './workspace-config';
 import * as obsidian from 'obsidian';
 import type { EntityDef, EntityField, EntityRegistry, PartialSettings } from './types';
 
@@ -157,6 +157,7 @@ export function entityBaseViewName(settings: PartialSettings = {}, entityKey: st
 export function resetEntityRegistry(settings: PartialSettings = {}): void {
   CONFIGURED_BASE_ENTITY_KEYS.clear();
   SCHEMA_ENTITY_KEYS.clear();
+  bumpWorkspaceConfigEpoch();
   Object.keys(ENTITIES).forEach((key) => {
     if (!BUILTIN_ENTITY_DEFAULTS[key]) delete ENTITIES[key];
   });

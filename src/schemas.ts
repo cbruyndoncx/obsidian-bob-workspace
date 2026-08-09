@@ -1,7 +1,7 @@
 import { applyEntityDefinitions } from './bases-config';
 import { ENTITIES, type BobEntityDef, type BobEntityField } from './entities';
 import { cloneConfig } from './nav';
-import { SCHEMA_ENTITY_KEYS } from './workspace-config';
+import { SCHEMA_ENTITY_KEYS, bumpWorkspaceConfigEpoch } from './workspace-config';
 import * as obsidian from 'obsidian';
 import type { JsonValue, PartialSettings } from './types';
 
@@ -197,6 +197,8 @@ export async function applySchemas(app: obsidian.App, settings: PartialSettings 
       await applyEntityDefinitions(app, settings, { [entityKey]: schema.bob });
     }
   }
+  // SCHEMA_ENTITY_KEYS and ENTITIES changed — invalidate config-derived memos.
+  bumpWorkspaceConfigEpoch();
 }
 
 /* ─── Base file config parser ───────────────────────────────────────────────

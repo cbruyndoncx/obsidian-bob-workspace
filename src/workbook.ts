@@ -161,12 +161,28 @@ export async function exportAllEntitiesXLSX(app: App, settings: PartialSettings 
   return exportEntitiesXLSX(app, null, '', settings);
 }
 
+/* Normalized-header lookup, built once per row object (WeakMap — rows are
+   short-lived import data). The naive scan re-ran the normalizing regex over
+   every column for every field lookup: a 5,000-row × 20-field × 20-column
+   import approached millions of regex executions. */
+const _rowHeaderMaps = new WeakMap<object, Map<string, string>>();
+function rowHeaderMap(row: Record<string, unknown>): Map<string, string> {
+  let map = _rowHeaderMaps.get(row);
+  if (!map) {
+    map = new Map();
+    for (const k of Object.keys(row)) {
+      const normalized = normalizedImportHeader(k);
+      if (!map.has(normalized)) map.set(normalized, k);
+    }
+    _rowHeaderMaps.set(row, map);
+  }
+  return map;
+}
+
 export function rowValue(row: Record<string, unknown>, key: unknown) {
   const target = normalizedImportHeader(key);
-  for (const [k, v] of Object.entries(row)) {
-    if (normalizedImportHeader(k) === target) return v;
-  }
-  return '';
+  const original = rowHeaderMap(row).get(target);
+  return original === undefined ? '' : row[original];
 }
 
 export function normalizedImportHeader(value: unknown) {

@@ -14,13 +14,21 @@ const sandbox = loadMainFunctions([
   'collectBaseFilterConditions',
   'collectBaseFilterConditionsForDerivation',
   'evaluateBaseFilterGroup',
+  'buildParsedBaseCondition',
+  'parseBaseFilterCondition',
   'evaluateBaseFilterCondition',
   'evaluateBaseFilterNode',
   'normalizeStatusValue',
   'entityStatusField',
+  'terminalStatusInputsKey',
+  'buildEntityTerminalStatuses',
   'entityTerminalStatuses',
   'isOpenEntityRecord',
 ], {
+  // Collaborator of the entityTerminalStatuses memo (module-level in src).
+  _terminalStatusesMemo: new WeakMap(),
+  // Collaborator of the base-condition parse memo (module-level in src).
+  _baseConditionParseMemo: new Map(),
   startOfDay: (d) => {
     const date = new Date(d);
     date.setHours(0, 0, 0, 0);

@@ -1,6 +1,14 @@
 import { loadBuiltinDashboardDefaults } from './nav';
 import type { DashboardCard, DashboardConfig, WidgetSourceConfig } from './types';
-export const BUILTIN_DASHBOARD_DEFAULTS: Record<string, DashboardConfig> = loadBuiltinDashboardDefaults();
+
+/* Lazy: building the defaults parses the bundled templates, which is pure
+   startup jank when done at module import (the module is imported by the
+   plugin entry). Built on first dashboard/designer use instead. */
+let _builtinDashboardDefaults: Record<string, DashboardConfig> | null = null;
+export function builtinDashboardDefaults(): Record<string, DashboardConfig> {
+  if (!_builtinDashboardDefaults) _builtinDashboardDefaults = loadBuiltinDashboardDefaults();
+  return _builtinDashboardDefaults;
+}
 
 export const PURE_DASHBOARD_WIDGET_TYPES = [
   'list',

@@ -70,15 +70,45 @@ export interface ParsedBaseConfig {
   _baseViews?: string[];
 }
 
+/* Parsed-YAML cache for .base files, validated by the file's mtime — so it
+   needs no external invalidation wiring and can never serve a stale parse.
+   Base files are read once per widget per render without this; a dashboard
+   with several base-backed widgets re-read and re-parsed the same file many
+   times per paint. Consumers must treat the returned YAML as read-only
+   (parseBaseFile builds a fresh result object per call; only the raw YAML
+   tree is shared). Parse errors are not cached, so a broken file is retried
+   (and re-noticed) on the next use. */
+const _baseYamlCache = new Map<string, { mtime: number; yaml: BaseFileYaml | null }>();
+
+async function readBaseFileYaml(app: obsidian.App, file: obsidian.TFile): Promise<BaseFileYaml | null> {
+  const hit = _baseYamlCache.get(file.path);
+  if (hit && hit.mtime === file.stat.mtime) return hit.yaml;
+  const parsed = obsidian.parseYaml(await app.vault.cachedRead(file)) as BaseFileYaml | null;
+  const yaml = parsed && typeof parsed === 'object' ? parsed : null;
+  _baseYamlCache.set(file.path, { mtime: file.stat.mtime, yaml });
+  return yaml;
+}
+
 export async function parseBaseFile(app: obsidian.App, basePath: string, viewName?: string): Promise<ParsedBaseConfig | null> {
-  if (!await app.vault.adapter.exists(basePath)) return null;
-  let yaml: BaseFileYaml;
-  try {
-    const raw = await app.vault.adapter.read(basePath);
-    yaml = obsidian.parseYaml(raw);
-  } catch (e) {
-    new obsidian.Notice(`BOB Workspace: failed to parse ${basePath} — ${e.message}`);
-    return null;
+  let yaml: BaseFileYaml | null;
+  const baseFile = app.vault.getAbstractFileByPath(basePath);
+  if (baseFile instanceof obsidian.TFile) {
+    try {
+      yaml = await readBaseFileYaml(app, baseFile);
+    } catch (e) {
+      new obsidian.Notice(`BOB Workspace: failed to parse ${basePath} — ${e.message}`);
+      return null;
+    }
+  } else {
+    // Path not in the vault index (e.g. under a hidden folder) — keep the
+    // original raw-adapter fallback, uncached.
+    if (!await app.vault.adapter.exists(basePath)) return null;
+    try {
+      yaml = obsidian.parseYaml(await app.vault.adapter.read(basePath));
+    } catch (e) {
+      new obsidian.Notice(`BOB Workspace: failed to parse ${basePath} — ${e.message}`);
+      return null;
+    }
   }
   if (!yaml || typeof yaml !== 'object') return null;
 
@@ -252,7 +282,7 @@ export function splitBaseExpression(expr: string, operator: string): string[] | 
     if (ch === '"' || ch === "'") { quote = ch; continue; }
     if (ch === '(') { depth++; continue; }
     if (ch === ')') { depth = Math.max(0, depth - 1); continue; }
-    if (depth === 0 && expr.slice(i, i + op.length) === op) {
+    if (depth === 0 && expr.startsWith(op, i)) {
       parts.push(expr.slice(start, i).trim());
       start = i + op.length;
       i = start - 1;
@@ -364,8 +394,7 @@ export function baseViewRendersInline(type: string | undefined | null): boolean 
 
 export async function readBaseSummary(app: obsidian.App, file: obsidian.TFile): Promise<BaseSummary | null> {
   try {
-    const raw = await app.vault.read(file);
-    const yaml = obsidian.parseYaml(raw) as BaseFileYaml | null;
+    const yaml = await readBaseFileYaml(app, file);
     if (!yaml || typeof yaml !== 'object') return null;
     const conditions = collectBaseFilterConditionsForDerivation(yaml.filters);
     const typeFilters: string[] = [];

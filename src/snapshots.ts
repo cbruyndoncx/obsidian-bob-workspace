@@ -1,7 +1,7 @@
 import type { TAbstractFile } from 'obsidian';
 import { ENTITIES, activityDate, activityTitle, dealStageField, dealTerminalStages, dealValueField } from './entities';
 import { entityValue, fmtValue, listEntities, listEntityFiles } from './entity-files';
-import { ensureDailyNote, parseSections } from './notes';
+import { parseSections } from './notes';
 import { readProjectMeta } from './project-notes';
 import { projectNameFromPath, reminderTimeStr } from './reminders';
 import { listTaskNotesForProductivity } from './task-notes';
@@ -18,6 +18,51 @@ interface ProductivityBucket {
   value: number;
   values: { open: number; done: number; total: number };
   meta: string;
+}
+
+/* ── Daily-note history memo ──────────────────────────────────────────────
+   The productivity history covers ~30 days + 12 weeks of daily notes, but
+   past notes are effectively immutable — re-reading and re-parsing all of
+   them on every snapshot build wasted ~114 serialized reads (with the last
+   ~30 days parsed twice, once per loop). Entries are keyed by path and
+   reused while the file's mtime and the two headings parseSections()
+   depends on are unchanged, so a typical rebuild parses only today's note.
+   Entries that slide out of the history window are pruned each build. */
+interface DailyNoteStats { open: number; done: number; jChars: number }
+const _dailyStatsMemo = new Map<string, { mtime: number; headingsKey: string; stats: DailyNoteStats }>();
+
+async function dailyNoteStatsByDate(app: App, settings: PartialSettings, dates: Date[]): Promise<Map<string, DailyNoteStats | null>> {
+  const headingsKey = `${settings.tasksHeading || ''}\u0000${settings.journalHeading || ''}`;
+  const statsByDate = new Map<string, DailyNoteStats | null>();
+  const livePaths = new Set<string>();
+  await Promise.all(dates.map(async (d) => {
+    const dateKey = ymd(d);
+    // Dedup runs in the synchronous prefix of each callback, so overlapping
+    // dates (the 30-day window sits inside the 12-week one) parse once.
+    if (statsByDate.has(dateKey)) return;
+    statsByDate.set(dateKey, null);
+    const path = dailyNotePath(settings, d);
+    livePaths.add(path);
+    const f = app.vault.getAbstractFileByPath(path);
+    if (!(f instanceof obsidian.TFile)) return;
+    const memo = _dailyStatsMemo.get(path);
+    if (memo && memo.mtime === f.stat.mtime && memo.headingsKey === headingsKey) {
+      statsByDate.set(dateKey, memo.stats);
+      return;
+    }
+    const p = parseSections(await app.vault.cachedRead(f), settings);
+    const stats: DailyNoteStats = {
+      open: p.tasks.filter((l) => / \[ \] /.test(l)).length,
+      done: p.tasks.filter((l) => / \[(x|X)\] /.test(l)).length,
+      jChars: (p.journal || '').length,
+    };
+    _dailyStatsMemo.set(path, { mtime: f.stat.mtime, headingsKey, stats });
+    statsByDate.set(dateKey, stats);
+  }));
+  for (const path of [..._dailyStatsMemo.keys()]) {
+    if (!livePaths.has(path)) _dailyStatsMemo.delete(path);
+  }
+  return statsByDate;
 }
 
 export async function buildProductivitySnapshot(app: App, settings: PartialSettings = {}) {
@@ -51,22 +96,30 @@ export async function buildProductivitySnapshot(app: App, settings: PartialSetti
   let totalOpen = 0, totalDone = 0, totalJournalChars = 0;
   let activeDays = 0;
   let streak = 0, streakBroken = false;
+  // Resolve every daily note both history loops need (30-day + 12-week
+  // windows) in one parallel, memoized pass; the loops below are then
+  // synchronous map lookups.
+  const weekWindowDates: Date[] = [];
+  for (let w = 11; w >= 0; w--) {
+    const ws = addDays(weekStart, -w * 7);
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(ws, i);
+      if (d.getTime() > today.getTime()) break;
+      weekWindowDates.push(d);
+    }
+  }
+  const statsByDate = await dailyNoteStatsByDate(app, settings, [...days, ...weekWindowDates]);
   const perDay = [];
   for (const d of days) {
-    const f = app.vault.getAbstractFileByPath(dailyNotePath(settings, d));
+    const dayStats = statsByDate.get(ymd(d));
     let open = 0, done = 0, jChars = 0, hasNote = false;
-    if (includeCheckboxTasks && f && f instanceof obsidian.TFile) {
+    if (dayStats) {
       hasNote = true;
-      const c = await app.vault.cachedRead(f);
-      const p = parseSections(c, settings);
-      open = p.tasks.filter((l) => / \[ \] /.test(l)).length;
-      done = p.tasks.filter((l) => / \[(x|X)\] /.test(l)).length;
-      jChars = (p.journal || '').length;
-    } else if (f && f instanceof obsidian.TFile) {
-      hasNote = true;
-      const c = await app.vault.cachedRead(f);
-      const p = parseSections(c, settings);
-      jChars = (p.journal || '').length;
+      jChars = dayStats.jChars;
+      if (includeCheckboxTasks) {
+        open = dayStats.open;
+        done = dayStats.done;
+      }
     }
     const dayTaskNotes = taskNotesByDate.get(ymd(d)) || [];
     if (includeTaskNotes) {
@@ -83,10 +136,11 @@ export async function buildProductivitySnapshot(app: App, settings: PartialSetti
     }
   }
 
+  const todayStartMs = new Date(`${todayIso}T00:00:00`).getTime();
   taskNotes.forEach((task) => {
     const dueTime = task.due ? new Date(`${task.due}T00:00:00`).getTime() : NaN;
     const scheduledTime = task.scheduled ? new Date(`${task.scheduled}T00:00:00`).getTime() : NaN;
-    const isOverdue = !task.done && ((Number.isFinite(dueTime) && dueTime < new Date(`${todayIso}T00:00:00`).getTime()) || (Number.isFinite(scheduledTime) && scheduledTime < new Date(`${todayIso}T00:00:00`).getTime()));
+    const isOverdue = !task.done && ((Number.isFinite(dueTime) && dueTime < todayStartMs) || (Number.isFinite(scheduledTime) && scheduledTime < todayStartMs));
     const isHighPriority = !task.done && ['high', 'urgent', 'critical'].includes(String(task.priority || '').toLowerCase());
     if (isOverdue) overdueTasks.push(task);
     if (isHighPriority) highPriorityTasks.push(task);
@@ -112,17 +166,15 @@ export async function buildProductivitySnapshot(app: App, settings: PartialSetti
   const weeks = [];
   for (let w = 11; w >= 0; w--) {
     const ws = addDays(weekStart, -w * 7);
-    const we = addDays(ws, 7);
     let wd = 0, wo = 0, anyNote = false;
     for (let i = 0; i < 7; i++) {
       const d = addDays(ws, i);
       if (d.getTime() > today.getTime()) break;
-      const f = app.vault.getAbstractFileByPath(dailyNotePath(settings, d));
-      if (includeCheckboxTasks && f && f instanceof obsidian.TFile) {
+      const dayStats = statsByDate.get(ymd(d));
+      if (includeCheckboxTasks && dayStats) {
         anyNote = true;
-        const c = await app.vault.cachedRead(f);
-        const p = parseSections(c, settings);
-        p.tasks.forEach((l) => { if (/ \[(x|X)\] /.test(l)) wd++; else if (/ \[ \] /.test(l)) wo++; });
+        wd += dayStats.done;
+        wo += dayStats.open;
       }
       if (includeTaskNotes) {
         const dayTaskNotes = taskNotesByDate.get(ymd(d)) || [];
@@ -190,7 +242,12 @@ export async function buildPlannerSnapshot(app: App, settings: PartialSettings =
       action: { surface: 'planner.inbox' },
     }));
 
-  const dailyFile = await ensureDailyNote(app, settings).catch((): TAbstractFile | null => null);
+  // Read-only: snapshots render dashboards and must never mutate the vault.
+  // Creating the daily note here fired a vault `create` event mid-render,
+  // which invalidated the scan cache and re-triggered rendering (and the
+  // concurrent snapshot builds raced to create the same file). If today's
+  // note doesn't exist yet, the task list is simply empty.
+  const dailyFile: TAbstractFile | null = app.vault.getAbstractFileByPath(dailyNotePath(settings));
   const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] as string[] };
   const todayRows = (todayTasks.tasks || [])
     .slice(0, 12)
@@ -313,7 +370,12 @@ export async function buildHomeSnapshot(app: App, settings: PartialSettings = {}
       action: { surface: 'planner.inbox' },
     }));
 
-  const dailyFile = await ensureDailyNote(app, settings).catch((): TAbstractFile | null => null);
+  // Read-only: snapshots render dashboards and must never mutate the vault.
+  // Creating the daily note here fired a vault `create` event mid-render,
+  // which invalidated the scan cache and re-triggered rendering (and the
+  // concurrent snapshot builds raced to create the same file). If today's
+  // note doesn't exist yet, the task list is simply empty.
+  const dailyFile: TAbstractFile | null = app.vault.getAbstractFileByPath(dailyNotePath(settings));
   const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] as string[] };
   const todayRows = (todayTasks.tasks || [])
     .slice(0, 8)
@@ -330,8 +392,22 @@ export async function buildHomeSnapshot(app: App, settings: PartialSettings = {}
   }] : [];
 
   const upcoming: { date: Date; title: string; type: string; file: TFile }[] = [];
+  // Milestone discovery needs every project's note body; read them in one
+  // parallel pass (they were serialized before) and keep the results so the
+  // projects card below reuses them instead of re-reading its first three.
+  const projectMetaByPath = new Map<string, Awaited<ReturnType<typeof readProjectMeta>> | null>();
   if (configuredEntities.has('project')) {
-    for (const e of listEntities(app, 'project')) {
+    const projectEntities = listEntities(app, 'project');
+    await Promise.all(projectEntities.map(async (e) => {
+      try {
+        projectMetaByPath.set(e.file.path, await readProjectMeta(app, e.file));
+      } catch (_) {
+        // A project whose milestone metadata won't parse is skipped; the
+        // widgets still render the rest.
+        projectMetaByPath.set(e.file.path, null);
+      }
+    }));
+    for (const e of projectEntities) {
       const due = entityValue(e, 'due', projectDef) || entityValue(e, 'deadline', projectDef);
       if (due) {
         const d = new Date(due);
@@ -339,12 +415,10 @@ export async function buildHomeSnapshot(app: App, settings: PartialSettings = {}
           upcoming.push({ date: d, title: entityValue(e, 'project_name', projectDef) || entityValue(e, 'name', projectDef) || e.basename, type: 'Project due', file: e.file });
         }
       }
-      try {
-        const meta = await readProjectMeta(app, e.file);
-        if (meta.next?.date && meta.next.date >= today && meta.next.date <= addDays(today, 7)) {
-          upcoming.push({ date: meta.next.date, title: `${entityValue(e, 'project_name', projectDef) || entityValue(e, 'name', projectDef) || e.basename} — ${meta.next.title || 'milestone'}`, type: 'Milestone', file: e.file });
-        }
-      } catch (_) { /* skip a project whose milestone metadata won't parse; widget still renders the rest */ }
+      const meta = projectMetaByPath.get(e.file.path);
+      if (meta && meta.next?.date && meta.next.date >= today && meta.next.date <= addDays(today, 7)) {
+        upcoming.push({ date: meta.next.date, title: `${entityValue(e, 'project_name', projectDef) || entityValue(e, 'name', projectDef) || e.basename} — ${meta.next.title || 'milestone'}`, type: 'Milestone', file: e.file });
+      }
     }
   }
   if (configuredEntities.has('registration')) {
@@ -379,26 +453,24 @@ export async function buildHomeSnapshot(app: App, settings: PartialSettings = {}
     meta: [entityValue(e, 'tier', partnerDef), entityValue(e, 'status', partnerDef)].filter(Boolean).join(' · '),
     file: e.file,
   })) : [];
-  const projects = configuredEntities.has('project') ? await Promise.all(listEntityFiles(app, 'project').slice(0, 3).map(async (f) => {
+  const projects = configuredEntities.has('project') ? listEntityFiles(app, 'project').slice(0, 3).map((f) => {
     const title = projectNameFromPath(app, f.path) || f.basename;
-    try {
-      const meta = await readProjectMeta(app, f);
-      return {
-        title,
-        meta: meta.total ? `${meta.done}/${meta.total} milestones · ${meta.percent}%` : 'project',
-        file: f,
-        progress: {
-          value: meta.percent,
-          label: meta.total ? `${meta.done}/${meta.total} milestones` : 'No milestones',
-          pct: `${meta.percent}%`,
-        },
-      };
-    } catch (_) {
-      return { title, meta: 'project', file: f };
-    }
-  })) : [];
+    const meta = projectMetaByPath.get(f.path);
+    if (!meta) return { title, meta: 'project', file: f };
+    return {
+      title,
+      meta: meta.total ? `${meta.done}/${meta.total} milestones · ${meta.percent}%` : 'project',
+      file: f,
+      progress: {
+        value: meta.percent,
+        label: meta.total ? `${meta.done}/${meta.total} milestones` : 'No milestones',
+        pct: `${meta.percent}%`,
+      },
+    };
+  }) : [];
   const deals = configuredEntities.has('deal') ? listEntities(app, 'deal') : [];
-  const openDeals = deals.filter((e) => !dealTerminalStages(dealDef).includes(String(entityValue(e, 'stage', dealDef))));
+  const terminalStages = new Set(dealTerminalStages(dealDef));
+  const openDeals = deals.filter((e) => !terminalStages.has(String(entityValue(e, 'stage', dealDef))));
   const pipelineRows = openDeals.slice(0, 5).map((e) => ({
     title: entityValue(e, 'title', dealDef) || e.basename,
     meta: `${entityValue(e, dealStageField(dealDef), dealDef) || '—'} · ${fmtValue(entityValue(e, dealValueField(dealDef), dealDef), 'currency')}`,

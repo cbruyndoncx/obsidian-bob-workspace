@@ -35,9 +35,28 @@ interface ParsedBaseSortSpec {
    refreshOpenViews). Between those, the vault is unchanged, so it is safe for
    all callers (dashboards, snapshots, exports). */
 let _scanCache: TFile[] | null = null;
+let _scanVersion = 0;
+
+/* Per-entity layer on top of the scan cache: the vault-wide walk was cached,
+   but every widget still re-filtered all N files per entity (with a
+   metadataCache lookup per file for type-filtered entities) — ~15 entities ×
+   3,000 notes per dashboard render. Entries additionally pin the exact def
+   object and resolved folder, so a schema/Base reload that swaps either is
+   never served stale even if it raced the version bump. Callers get a copy —
+   the cached array must never be mutated. */
+const _entityListMemo = new Map<string, { version: number; def: unknown; folder: string; files: TFile[] }>();
 
 export function invalidateEntityScanCache(): void {
   _scanCache = null;
+  _entityListMemo.clear();
+  _scanVersion++;
+}
+
+/* Monotonic counter bumped by every invalidation. Lets derived caches (e.g.
+   the built-in snapshot memo in widgets.ts) reuse results for as long as the
+   scannable vault state is unchanged, without holding file references. */
+export function entityScanVersion(): number {
+  return _scanVersion;
 }
 
 export function scannableMarkdownFiles(app: App): TFile[] {
@@ -59,10 +78,17 @@ export function listEntityFiles(app: App, entityKey: string, opts: ListEntityOpt
   const def = ENTITIES[entityKey] as BobEntityDef & { baseFilters?: ParsedBaseFilters };
   if (!def) return [];
 
+  const memoKey = `${entityKey}|${opts.ignoreViewFilter ? 1 : 0}`;
+  const folder = entityFolder(entityKey);
+  const memo = _entityListMemo.get(memoKey);
+  if (memo && memo.version === _scanVersion && memo.def === def && memo.folder === folder) {
+    return [...memo.files];
+  }
+
   const hasPathFilter = Array.isArray(def.folders);
   const useDefaultPath = !def.typeFilter && !hasPathFilter;
 
-  return scannableMarkdownFiles(app).filter((f) => {
+  const files = scannableMarkdownFiles(app).filter((f) => {
     // Path filter (OR within folders array; AND with type)
     if (hasPathFilter) {
       if (!def.folders.some((d) => f.path.startsWith(d.replace(/\/$/, '') + '/'))) return false;
@@ -93,6 +119,8 @@ export function listEntityFiles(app: App, entityKey: string, opts: ListEntityOpt
     }
     return true;
   });
+  _entityListMemo.set(memoKey, { version: _scanVersion, def, folder, files });
+  return [...files];
 }
 
 export function readEntity(app: App, file: TFile): EntityRecord {
@@ -126,71 +154,125 @@ export function evaluateBaseFilterGroup(app: App, file: TFile, op: string, child
   return results.includes(false) ? false : true;
 }
 
-export function evaluateBaseFilterCondition(app: App, file: TFile, raw: unknown): boolean | null {
-  let cond = stripOuterParens(String(raw || '').trim());
-  if (!cond) return true;
-  if (cond.startsWith('!')) {
-    const inner = evaluateBaseFilterCondition(app, file, cond.slice(1));
-    return inner == null ? true : !inner;
-  }
-  const orParts = splitBaseExpression(cond, '||');
-  if (orParts) return orParts.some((part) => evaluateBaseFilterCondition(app, file, part) === true);
-  const andParts = splitBaseExpression(cond, '&&');
-  if (andParts) return andParts.every((part) => evaluateBaseFilterCondition(app, file, part) !== false);
+/* Compiled condition shapes: the condition STRING is parsed once (regex
+   cascade, paren stripping, or/and splitting) and memoized, so evaluating a
+   filter over 3,000 files runs the regexes once per distinct condition
+   instead of once per file. The or/and parts stay as strings — recursion
+   re-enters through the same memo. Per-file allocations (tags Set, folder
+   string, today Date) moved into the only branches that need them. */
+interface ParsedBaseCondition {
+  kind: 'true' | 'not' | 'or' | 'and' | 'hasTag' | 'folderNe' | 'pathStarts' | 'pathContains' | 'contains' | 'isEmpty' | 'propEq' | 'dateCompare' | 'unsupported';
+  inner?: string;
+  parts?: string[];
+  prop?: string;
+  op?: string;
+  value?: string;
+  /** propEq: null means comparison against literal `null`. */
+  expected?: string | null;
+  targetRaw?: string;
+}
 
-  const cache = app.metadataCache.getFileCache(file) || {} as CachedMetadata;
-  const fm: Frontmatter = cache.frontmatter || {};
-  const folder = file.parent?.path || file.path.split('/').slice(0, -1).join('/');
-  const frontmatterTags = Array.isArray(fm.tags) ? fm.tags : String(fm.tags || '').split(/[,\s]+/).filter(Boolean);
-  const tags = new Set([...frontmatterTags, ...(cache.tags || []).map((t) => t.tag)]);
-  const today = startOfDay(new Date());
+const _baseConditionParseMemo = new Map<string, ParsedBaseCondition>();
+
+export function parseBaseFilterCondition(raw: unknown): ParsedBaseCondition {
+  const key = String(raw || '');
+  const hit = _baseConditionParseMemo.get(key);
+  if (hit) return hit;
+  const parsed = buildParsedBaseCondition(key);
+  _baseConditionParseMemo.set(key, parsed);
+  return parsed;
+}
+
+export function buildParsedBaseCondition(rawString: string): ParsedBaseCondition {
+  const cond = stripOuterParens(rawString.trim());
+  if (!cond) return { kind: 'true' };
+  if (cond.startsWith('!')) return { kind: 'not', inner: cond.slice(1) };
+  const orParts = splitBaseExpression(cond, '||');
+  if (orParts) return { kind: 'or', parts: orParts };
+  const andParts = splitBaseExpression(cond, '&&');
+  if (andParts) return { kind: 'and', parts: andParts };
 
   const hasTag = cond.match(/^file\.hasTag\(["']#?(.+?)["']\)$/);
-  if (hasTag) {
-    const tag = hasTag[1].replace(/^#/, '');
-    return tags.has(tag) || tags.has(`#${tag}`);
-  }
+  if (hasTag) return { kind: 'hasTag', value: hasTag[1].replace(/^#/, '') };
 
   const folderNe = cond.match(/^file\.folder\s*!=\s*["'](.+?)["']$/);
-  if (folderNe) return folder !== folderNe[1];
+  if (folderNe) return { kind: 'folderNe', value: folderNe[1] };
 
   const pathStarts = cond.match(/^file\.path\.startsWith\(["'](.+?)["']\)$/);
-  if (pathStarts) return file.path.startsWith(pathStarts[1].replace(/\/$/, '') + '/');
+  if (pathStarts) return { kind: 'pathStarts', value: pathStarts[1].replace(/\/$/, '') + '/' };
 
   const pathContains = cond.match(/^file\.path\.contains\(["'](.+?)["']\)$/);
-  if (pathContains) return file.path.includes(pathContains[1]);
+  if (pathContains) return { kind: 'pathContains', value: pathContains[1] };
 
   const contains = cond.match(/^(.+?)\.contains\(["'](.+?)["']\)$/);
-  if (contains) {
-    const value = basePropValue(app, file, fm, contains[1]);
-    if (Array.isArray(value)) return value.map((item) => String(item)).includes(contains[2]);
-    return String(value ?? '').includes(contains[2]);
-  }
+  if (contains) return { kind: 'contains', prop: contains[1], value: contains[2] };
 
   const empty = cond.match(/^(?:date\()?(.+?)\)?\.isEmpty\(\)$/);
-  if (empty) return !hasBaseValue(basePropValue(app, file, fm, empty[1]));
+  if (empty) return { kind: 'isEmpty', prop: empty[1] };
 
   const propEq = cond.match(/^(.+?)\s*(==|!=)\s*(?:(["'])(.*?)\3|null)$/);
   if (propEq) {
-    const actualValue = basePropValue(app, file, fm, propEq[1]);
     const expectedIsNull = propEq[0].trim().endsWith('null');
-    if (expectedIsNull) {
-      const present = hasBaseValue(actualValue);
-      return propEq[2] === '==' ? !present : present;
-    }
-    const actual = String(actualValue ?? '');
-    const expected = propEq[4] ?? '';
-    return propEq[2] === '==' ? actual === expected : actual !== expected;
+    return { kind: 'propEq', prop: propEq[1], op: propEq[2], expected: expectedIsNull ? null : (propEq[4] ?? '') };
   }
 
   const dateCompare = cond.match(/^(?:date\()?(.+?)\)?\s*(==|<|<=|>|>=)\s*((?:today|now)\(\)(?:\s*[+-]\s*["']?\d+\s*(?:d|day|days)["']?)?|["']\d{4}-\d{2}-\d{2}["'])$/);
-  if (dateCompare) {
-    const actual = parseBaseDate(basePropValue(app, file, fm, dateCompare[1]));
-    if (!actual) return false;
-    const target = parseTodayExpression(dateCompare[3]) || parseBaseDate(String(dateCompare[3] || '').replace(/^["']|["']$/g, '')) || today;
-    return compareBaseDates(actual, dateCompare[2], target);
+  if (dateCompare) return { kind: 'dateCompare', prop: dateCompare[1], op: dateCompare[2], targetRaw: dateCompare[3] };
+
+  return { kind: 'unsupported' };
+}
+
+export function evaluateBaseFilterCondition(app: App, file: TFile, raw: unknown): boolean | null {
+  const parsed = parseBaseFilterCondition(raw);
+  switch (parsed.kind) {
+    case 'true': return true;
+    case 'not': {
+      const inner = evaluateBaseFilterCondition(app, file, parsed.inner);
+      return inner == null ? true : !inner;
+    }
+    case 'or': return parsed.parts.some((part) => evaluateBaseFilterCondition(app, file, part) === true);
+    case 'and': return parsed.parts.every((part) => evaluateBaseFilterCondition(app, file, part) !== false);
+    case 'unsupported': return null;
   }
 
+  const cache = app.metadataCache.getFileCache(file) || {} as CachedMetadata;
+  const fm: Frontmatter = cache.frontmatter || {};
+  switch (parsed.kind) {
+    case 'hasTag': {
+      const frontmatterTags = Array.isArray(fm.tags) ? fm.tags : String(fm.tags || '').split(/[,\s]+/).filter(Boolean);
+      const tags = new Set([...frontmatterTags, ...(cache.tags || []).map((t) => t.tag)]);
+      return tags.has(parsed.value) || tags.has(`#${parsed.value}`);
+    }
+    case 'folderNe': {
+      const folder = file.parent?.path || file.path.split('/').slice(0, -1).join('/');
+      return folder !== parsed.value;
+    }
+    case 'pathStarts': return file.path.startsWith(parsed.value);
+    case 'pathContains': return file.path.includes(parsed.value);
+    case 'contains': {
+      const value = basePropValue(app, file, fm, parsed.prop);
+      if (Array.isArray(value)) return value.map((item) => String(item)).includes(parsed.value);
+      return String(value ?? '').includes(parsed.value);
+    }
+    case 'isEmpty': return !hasBaseValue(basePropValue(app, file, fm, parsed.prop));
+    case 'propEq': {
+      const actualValue = basePropValue(app, file, fm, parsed.prop);
+      if (parsed.expected === null) {
+        const present = hasBaseValue(actualValue);
+        return parsed.op === '==' ? !present : present;
+      }
+      const actual = String(actualValue ?? '');
+      return parsed.op === '==' ? actual === parsed.expected : actual !== parsed.expected;
+    }
+    case 'dateCompare': {
+      const actual = parseBaseDate(basePropValue(app, file, fm, parsed.prop));
+      if (!actual) return false;
+      const target = parseTodayExpression(parsed.targetRaw)
+        || parseBaseDate(String(parsed.targetRaw || '').replace(/^["']|["']$/g, ''))
+        || startOfDay(new Date());
+      return compareBaseDates(actual, parsed.op, target);
+    }
+  }
   return null;
 }
 
@@ -240,7 +322,33 @@ export function compareBaseSortValues(a: unknown, b: unknown): number {
   const ad = new Date(a as string | number);
   const bd = new Date(b as string | number);
   if (!isNaN(ad.getTime()) && !isNaN(bd.getTime())) return ad.getTime() - bd.getTime();
-  return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+  return baseSortCollator().compare(String(a), String(b));
+}
+
+/* Intl singletons: `localeCompare`/`toLocaleString` with an options object
+   construct a fresh Collator/format object on every call — sorting a
+   3,000-row table meant ~34k collator constructions on the main thread.
+   Lazily created (navigator isn't available in the test sandbox); the
+   currency formatter re-creates itself when the configured currency changes. */
+let _baseSortCollator: Intl.Collator | null = null;
+function baseSortCollator(): Intl.Collator {
+  if (!_baseSortCollator) _baseSortCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  return _baseSortCollator;
+}
+let _dateFormatter: Intl.DateTimeFormat | null = null;
+function dateFormatter(): Intl.DateTimeFormat {
+  if (!_dateFormatter) {
+    const locale = typeof navigator !== 'undefined' ? (navigator.language || undefined) : undefined;
+    _dateFormatter = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+  return _dateFormatter;
+}
+let _currencyFormatter: { currency: string; fmt: Intl.NumberFormat } | null = null;
+function currencyFormatter(currency: string): Intl.NumberFormat {
+  if (!_currencyFormatter || _currencyFormatter.currency !== currency) {
+    _currencyFormatter = { currency, fmt: new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 0 }) };
+  }
+  return _currencyFormatter.fmt;
 }
 
 /* Returns raw frontmatter values — `any` by design at the YAML boundary
@@ -274,16 +382,16 @@ export function fmtValue(val: unknown, type?: string): string {
   if (type === 'tags' && Array.isArray(val)) return val.map((t) => `#${t}`).join(' ');
   if (type === 'date') {
     const d = new Date(val as string | number);
-    if (!isNaN(d.getTime())) return d.toLocaleDateString(navigator.language || undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    if (!isNaN(d.getTime())) return dateFormatter().format(d);
     return String(val);
   }
   if (type === 'currency') {
     const n = Number(val);
     if (!isNaN(n)) {
       try {
-        return n.toLocaleString(undefined, { style: 'currency', currency: CURRENT_CURRENCY, maximumFractionDigits: 0 });
+        return currencyFormatter(CURRENT_CURRENCY).format(n);
       } catch (_) {
-        return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+        return currencyFormatter('USD').format(n);
       }
     }
     return String(val);
