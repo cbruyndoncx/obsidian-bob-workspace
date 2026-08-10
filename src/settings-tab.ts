@@ -2354,7 +2354,7 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
         nameInput.addEventListener('input', () => { field.name = nameInput.value.trim(); markSchemaDirty(); });
         nameInput.addEventListener('blur', () => { if (schemaDirty) autoSaveSchema(); });
         const typeSelect = row.createEl('select', { cls: 'dropdown bob-schema-field-type' });
-        [['string', 'Text'], ['number', 'Number'], ['integer', 'Integer'], ['boolean', 'Boolean'], ['array', 'Array'], ['date', 'Date'], ['datetime', 'Date/time'], ['enum', 'Enum']].forEach(([value, label]) => {
+        [['string', 'Text'], ['number', 'Number'], ['integer', 'Integer'], ['boolean', 'Boolean'], ['array', 'Array'], ['object', 'Object'], ['date', 'Date'], ['datetime', 'Date/time'], ['enum', 'Enum']].forEach(([value, label]) => {
           typeSelect.createEl('option', { value, text: label });
         });
         typeSelect.value = editableSchemaFieldType(field);

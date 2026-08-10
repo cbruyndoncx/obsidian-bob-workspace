@@ -21,6 +21,8 @@ export interface SourceSchemaField {
   enum?: JsonValue[];
   default?: JsonValue;
   bob_type?: string;
+  /** Explicit item schema for array fields; absent means "any item shape". */
+  items?: Record<string, JsonValue>;
 }
 
 export interface SourceSchema {
@@ -250,7 +252,10 @@ export function validateSourceSchemaDefinition(schema: SourceSchema): SourceSche
     if (!name) throw new Error(`Field ${index + 1} needs a name`);
     if (fieldNames.has(name)) throw new Error(`Duplicate field "${name}"`);
     fieldNames.add(name);
-    if (!['string', 'number', 'integer', 'boolean', 'array'].includes(field.type)) {
+    // `object` is legal in the canonical vault datamodel (kpi.thresholds,
+    // model-card.certification_evidence, …) — rejecting it made regeneration
+    // fail against a healthy vault. Metadata Menu edits it as raw Input.
+    if (!['string', 'number', 'integer', 'boolean', 'array', 'object'].includes(field.type)) {
       throw new Error(`Field "${name}" has unsupported type "${field.type}"`);
     }
     if (field.enum != null && !Array.isArray(field.enum)) {
@@ -406,7 +411,12 @@ export function sourceSchemaToJsonSchema(schema: SourceSchema) {
     if (Array.isArray(field.enum) && field.enum.length) property.enum = field.enum;
     if (field.description) property.description = field.description;
     if (Object.prototype.hasOwnProperty.call(field, 'default')) property.default = field.default;
-    if (field.type === 'array') property.items = { type: 'string' };
+    // Only constrain array items when the SOURCE says so. Defaulting to
+    // {type:'string'} silently narrowed every array in the vault: steps, flows,
+    // blockedBy, authors and line_items all hold objects, so a regeneration
+    // turned 33 healthy notes invalid at once. An array with no declared item
+    // schema accepts any item shape — same as regenerate.py.
+    if (field.type === 'array' && field.items) property.items = field.items;
     properties[field.name] = property;
     if (field.required) required.push(field.name);
   });
@@ -434,15 +444,13 @@ export function sourceSchemaToJsonSchema(schema: SourceSchema) {
 }
 
 export function sourceSchemaToFileClass(schema: SourceSchema): string {
-  const filesPaths = String(schema.location_pattern || '')
-    .split(/\s+or\s+/i)
-    .map((item) => String(item || '').trim().replace(/^['"]|['"]$/g, ''))
-    .filter(Boolean);
   const fields = (schema.fields || []).map((field) => {
     const config: { name: string; type: string; id: string; path: string; options?: Array<Record<string, JsonValue>>; required?: boolean } = {
       name: field.name,
       type: metadataMenuFieldType(field),
-      id: stableSchemaId(`${schema.entity}:${field.name}`),
+      // Keyed by type_value to match the vault generator's field ids — do not
+      // fall back to entity here or merged/divergent types get different ids.
+      id: stableSchemaId(`${schema.type_value || schema.entity}:${field.name}`),
       path: '',
     };
     if (Array.isArray(field.enum) && field.enum.length) {
@@ -452,14 +460,61 @@ export function sourceSchemaToFileClass(schema: SourceSchema): string {
     return config;
   });
   const yaml = {
-    fileClass: schema.entity,
+    fileClass: schema.type_value || schema.entity,
     version: '1.0',
     mapWithTag: false,
-    filesPaths: filesPaths.length ? filesPaths : [schema.location_pattern],
+    // Deliberately empty — Metadata Menu binds via fileClassAlias "type", not by
+    // path. location_pattern holds placeholders and "A or B" alternatives meant
+    // for routing validation, not literal path matching, and a broad prefix like
+    // `20-COMPANY/` would attach a fallback FileClass to every child note.
+    filesPaths: [] as string[],
     fields,
     ...(schema.description ? { description: schema.description } : {}),
   };
   return `---\n${obsidian.stringifyYaml(yaml)}---\n\n# ${schema.label}\n\nGenerated from canonical schema source. Edit the source YAML in BOB Workspace settings.\n`;
+}
+
+/**
+ * Merge the schemas that share one note-facing `type:` value into a single
+ * synthetic SourceSchema, keyed by that value.
+ *
+ * Generated outputs (fileClass + JSON Schema) must be named by `type_value`:
+ * that is how every consumer resolves them — frontmatter validators load
+ * `{type}.schema.json`, and Metadata Menu with `fileClassAlias: "type"` binds a
+ * note to `fileClasses/{type}.md`. Keying by entity left divergent entities'
+ * fileClasses unreachable, and entities sharing a type (research +
+ * regional-context) silently clobbered each other's outputs last-wins.
+ *
+ * Merge semantics mirror the vault's regenerate.py: first schema wins per
+ * field, `required` only where required in every schema of the group,
+ * locations unioned. Discriminator constants are dropped for merged groups —
+ * a shared-type schema must accept every subtype.
+ */
+export function mergedSchemaForKey(key: string, schemas: SourceSchema[]): SourceSchema {
+  if (schemas.length === 1 && schemas[0].entity === key) return schemas[0];
+  const requiredInAll = (name: string) =>
+    schemas.every((s) => (s.fields || []).some((f) => f.name === name && f.required));
+  const fields: SourceSchemaField[] = [];
+  const seen = new Set<string>();
+  for (const s of schemas) {
+    for (const f of s.fields || []) {
+      if (seen.has(f.name)) continue;
+      seen.add(f.name);
+      fields.push({ ...f, required: requiredInAll(f.name) });
+    }
+  }
+  const locations = [...new Set(schemas.map((s) => String(s.location_pattern || '').trim()).filter(Boolean))];
+  return {
+    ...schemas[0],
+    entity: key,
+    type_value: key,
+    label: [...new Set(schemas.map((s) => s.label || s.entity))].sort().join(' / '),
+    description: schemas.find((s) => s.description)?.description,
+    location_pattern: locations.join(' or '),
+    fields,
+    discriminator: schemas.length > 1 ? undefined : schemas[0].discriminator,
+    co_required: schemas.flatMap((s) => (Array.isArray(s.co_required) ? s.co_required : [])),
+  };
 }
 
 export async function regenerateSchemaOutputs(app: App, settings: PartialSettings = {}) {
@@ -483,13 +538,21 @@ export async function regenerateSchemaOutputs(app: App, settings: PartialSetting
     } catch (_) { /* unreadable — fall through and rewrite */ }
     await app.vault.adapter.write(path, content);
   };
+  // Group by the note-facing `type:` value — all generated outputs are keyed by
+  // it (see mergedSchemaForKey). Entities sharing a type merge into one output.
+  const byType = new Map<string, SourceSchema[]>();
   for (const { schema } of loaded.schemas) {
-    const fileClassPath = `${fileClassFolder}/${schema.entity}.md`;
-    const jsonSchemaPath = `${jsonFolder}/${schema.type_value || schema.entity}.schema.json`;
+    const key = schema.type_value || schema.entity;
+    byType.set(key, [...(byType.get(key) || []), schema]);
+  }
+  for (const [key, group] of byType) {
+    const merged = mergedSchemaForKey(key, group);
+    const fileClassPath = `${fileClassFolder}/${key}.md`;
+    const jsonSchemaPath = `${jsonFolder}/${key}.schema.json`;
     expectedFileClasses.add(fileClassPath);
     expectedJsonSchemas.add(jsonSchemaPath);
-    await writeIfChanged(fileClassPath, sourceSchemaToFileClass(schema));
-    await writeIfChanged(jsonSchemaPath, `${JSON.stringify(sourceSchemaToJsonSchema(schema), null, 2)}\n`);
+    await writeIfChanged(fileClassPath, sourceSchemaToFileClass(merged));
+    await writeIfChanged(jsonSchemaPath, `${JSON.stringify(sourceSchemaToJsonSchema(merged), null, 2)}\n`);
   }
   let removed = 0;
   for (const folder of [

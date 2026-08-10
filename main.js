@@ -28084,7 +28084,7 @@ function validateSourceSchemaDefinition(schema) {
     if (!name) throw new Error(`Field ${index + 1} needs a name`);
     if (fieldNames.has(name)) throw new Error(`Duplicate field "${name}"`);
     fieldNames.add(name);
-    if (!["string", "number", "integer", "boolean", "array"].includes(field.type)) {
+    if (!["string", "number", "integer", "boolean", "array", "object"].includes(field.type)) {
       throw new Error(`Field "${name}" has unsupported type "${field.type}"`);
     }
     if (field.enum != null && !Array.isArray(field.enum)) {
@@ -28228,7 +28228,7 @@ function sourceSchemaToJsonSchema(schema) {
     if (Array.isArray(field.enum) && field.enum.length) property.enum = field.enum;
     if (field.description) property.description = field.description;
     if (Object.prototype.hasOwnProperty.call(field, "default")) property.default = field.default;
-    if (field.type === "array") property.items = { type: "string" };
+    if (field.type === "array" && field.items) property.items = field.items;
     properties[field.name] = property;
     if (field.required) required.push(field.name);
   });
@@ -28253,12 +28253,13 @@ function sourceSchemaToJsonSchema(schema) {
   };
 }
 function sourceSchemaToFileClass(schema) {
-  const filesPaths = String(schema.location_pattern || "").split(/\s+or\s+/i).map((item) => String(item || "").trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
   const fields = (schema.fields || []).map((field) => {
     const config = {
       name: field.name,
       type: metadataMenuFieldType(field),
-      id: stableSchemaId(`${schema.entity}:${field.name}`),
+      // Keyed by type_value to match the vault generator's field ids — do not
+      // fall back to entity here or merged/divergent types get different ids.
+      id: stableSchemaId(`${schema.type_value || schema.entity}:${field.name}`),
       path: ""
     };
     if (Array.isArray(field.enum) && field.enum.length) {
@@ -28268,10 +28269,14 @@ function sourceSchemaToFileClass(schema) {
     return config;
   });
   const yaml = {
-    fileClass: schema.entity,
+    fileClass: schema.type_value || schema.entity,
     version: "1.0",
     mapWithTag: false,
-    filesPaths: filesPaths.length ? filesPaths : [schema.location_pattern],
+    // Deliberately empty — Metadata Menu binds via fileClassAlias "type", not by
+    // path. location_pattern holds placeholders and "A or B" alternatives meant
+    // for routing validation, not literal path matching, and a broad prefix like
+    // `20-COMPANY/` would attach a fallback FileClass to every child note.
+    filesPaths: [],
     fields,
     ...schema.description ? { description: schema.description } : {}
   };
@@ -28282,6 +28287,31 @@ ${obsidian11.stringifyYaml(yaml)}---
 
 Generated from canonical schema source. Edit the source YAML in BOB Workspace settings.
 `;
+}
+function mergedSchemaForKey(key, schemas) {
+  if (schemas.length === 1 && schemas[0].entity === key) return schemas[0];
+  const requiredInAll = (name) => schemas.every((s) => (s.fields || []).some((f) => f.name === name && f.required));
+  const fields = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const s of schemas) {
+    for (const f of s.fields || []) {
+      if (seen.has(f.name)) continue;
+      seen.add(f.name);
+      fields.push({ ...f, required: requiredInAll(f.name) });
+    }
+  }
+  const locations = [...new Set(schemas.map((s) => String(s.location_pattern || "").trim()).filter(Boolean))];
+  return {
+    ...schemas[0],
+    entity: key,
+    type_value: key,
+    label: [...new Set(schemas.map((s) => s.label || s.entity))].sort().join(" / "),
+    description: schemas.find((s) => s.description)?.description,
+    location_pattern: locations.join(" or "),
+    fields,
+    discriminator: schemas.length > 1 ? void 0 : schemas[0].discriminator,
+    co_required: schemas.flatMap((s) => Array.isArray(s.co_required) ? s.co_required : [])
+  };
 }
 async function regenerateSchemaOutputs(app, settings = {}) {
   const loaded = await loadCanonicalSchemaSources(app, settings);
@@ -28300,13 +28330,19 @@ async function regenerateSchemaOutputs(app, settings = {}) {
     }
     await app.vault.adapter.write(path, content);
   };
+  const byType = /* @__PURE__ */ new Map();
   for (const { schema } of loaded.schemas) {
-    const fileClassPath = `${fileClassFolder}/${schema.entity}.md`;
-    const jsonSchemaPath = `${jsonFolder}/${schema.type_value || schema.entity}.schema.json`;
+    const key = schema.type_value || schema.entity;
+    byType.set(key, [...byType.get(key) || [], schema]);
+  }
+  for (const [key, group] of byType) {
+    const merged = mergedSchemaForKey(key, group);
+    const fileClassPath = `${fileClassFolder}/${key}.md`;
+    const jsonSchemaPath = `${jsonFolder}/${key}.schema.json`;
     expectedFileClasses.add(fileClassPath);
     expectedJsonSchemas.add(jsonSchemaPath);
-    await writeIfChanged(fileClassPath, sourceSchemaToFileClass(schema));
-    await writeIfChanged(jsonSchemaPath, `${JSON.stringify(sourceSchemaToJsonSchema(schema), null, 2)}
+    await writeIfChanged(fileClassPath, sourceSchemaToFileClass(merged));
+    await writeIfChanged(jsonSchemaPath, `${JSON.stringify(sourceSchemaToJsonSchema(merged), null, 2)}
 `);
   }
   let removed = 0;
@@ -38585,7 +38621,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
           if (schemaDirty) autoSaveSchema();
         });
         const typeSelect = row.createEl("select", { cls: "dropdown bob-schema-field-type" });
-        [["string", "Text"], ["number", "Number"], ["integer", "Integer"], ["boolean", "Boolean"], ["array", "Array"], ["date", "Date"], ["datetime", "Date/time"], ["enum", "Enum"]].forEach(([value, label]) => {
+        [["string", "Text"], ["number", "Number"], ["integer", "Integer"], ["boolean", "Boolean"], ["array", "Array"], ["object", "Object"], ["date", "Date"], ["datetime", "Date/time"], ["enum", "Enum"]].forEach(([value, label]) => {
           typeSelect.createEl("option", { value, text: label });
         });
         typeSelect.value = editableSchemaFieldType(field);

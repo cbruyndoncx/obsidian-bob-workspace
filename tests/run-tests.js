@@ -18,6 +18,7 @@ require('./workbook.test');
 require('./widget-source.test');
 require('./workspace-config.test');
 require('./plugin-load.test');
+require('./schema-type-key.test');
 require('./build-freshness.test');
 // Print success only once the event loop drains — i.e. after async IIFE tests
 // have settled — so it can never precede an async failure.
