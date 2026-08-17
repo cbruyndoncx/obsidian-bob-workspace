@@ -40,6 +40,17 @@ export interface SourceSchema {
   status_lifecycle?: string[];
   description?: string;
   scope?: string;
+  /**
+   * Free prose rendered inside the entity's DATAMODEL-FULL block, after the field table.
+   * Some statements are about the entity as a whole and no field row can carry them --
+   * `payment-card` documents that PAN/CVV/PIN are never stored, which is a security
+   * boundary, not a property of any one field.
+   *
+   * Must stay in step with the vault-side generator (`00-CORE/Schemas/regenerate.py`,
+   * `Entity.notes`). Both write the same ENTITY DEFINITIONS block, so a key one renders
+   * and the other does not means whichever ran last silently deletes the other's output.
+   */
+  notes?: string;
   bob?: Record<string, JsonValue>;
 }
 
@@ -517,7 +528,8 @@ export function mergedSchemaForKey(key: string, schemas: SourceSchema[]): Source
   };
 }
 
-export async function regenerateSchemaOutputs(app: App, settings: PartialSettings = {}) {
+export async function regenerateSchemaOutputs(app: App, settings: PartialSettings = {}, opts: { allowLossy?: boolean } = {}) {
+  const allowLossy = opts.allowLossy === true;
   const loaded = await loadCanonicalSchemaSources(app, settings);
   if (loaded.errors.length) throw new Error(`Schema validation failed: ${loaded.errors.join('; ')}`);
   const root = loaded.folder.replace(/\/source$/, '');
@@ -572,16 +584,57 @@ export async function regenerateSchemaOutputs(app: App, settings: PartialSetting
   if (await injectGeneratedSection(app, 'DATAMODEL.md',
     '<!-- BEGIN GENERATED: ENTITY TYPES -->', '<!-- END GENERATED: ENTITY TYPES -->',
     generateEntityTypesTable(sortedSchemas))) datamodelUpdated++;
-  if (await injectGeneratedSection(app, 'DATAMODEL-FULL.md',
+
+  // DATAMODEL-FULL.md is guarded: refuse to write when the existing block holds an
+  // authored line the source cannot reproduce. Mirrors `datamodel_full_losses()` in
+  // 00-CORE/Schemas/regenerate.py -- see the note on that function for why the block
+  // is not purely generated despite its markers. Without this, Regenerate silently
+  // deletes documentation (including the payment-card "never stored" security note).
+  const fullDefinitions = generateEntityDefinitionsSection(sortedSchemas);
+  const datamodelFullLosses = allowLossy ? [] : await generatedSectionLosses(
+    app, 'DATAMODEL-FULL.md',
     '<!-- BEGIN GENERATED: ENTITY DEFINITIONS -->', '<!-- END GENERATED: ENTITY DEFINITIONS -->',
-    generateEntityDefinitionsSection(sortedSchemas))) datamodelUpdated++;
+    fullDefinitions);
+  if (!datamodelFullLosses.length
+    && await injectGeneratedSection(app, 'DATAMODEL-FULL.md',
+      '<!-- BEGIN GENERATED: ENTITY DEFINITIONS -->', '<!-- END GENERATED: ENTITY DEFINITIONS -->',
+      fullDefinitions)) datamodelUpdated++;
   return {
     count: loaded.schemas.length,
     removed,
     fileClassFolder,
     jsonFolder,
     datamodelUpdated,
+    datamodelFullLosses,
   };
+}
+
+/** Structural table scaffolding carries no authored content, so its churn is not a loss. */
+const GENERATED_SECTION_STRUCTURAL_LINES = new Set([
+  '', '---', '| Attribute | Value |', '|-----------|-------|',
+  '| Field | Required | Type | Allowed Values / Notes |',
+  '|-------|----------|------|------------------------|',
+]);
+
+export function generatedSectionLossLines(oldBlock: string, newBlock: string): string[] {
+  const contentLines = (block: string) => new Set(
+    block.split('\n').map((line) => line.trim())
+      .filter((line) => !GENERATED_SECTION_STRUCTURAL_LINES.has(line)));
+  const fresh = contentLines(newBlock);
+  return [...contentLines(oldBlock)].filter((line) => !fresh.has(line)).sort();
+}
+
+/**
+ * Lines the file's current generated block has that regenerating would drop.
+ * Empty when the file or its markers are missing -- nothing to lose in that case.
+ */
+export async function generatedSectionLosses(app: App, filePath: string, beginMarker: string, endMarker: string, content: string): Promise<string[]> {
+  if (!await app.vault.adapter.exists(filePath)) return [];
+  const text = await app.vault.adapter.read(filePath);
+  const beginIdx = text.indexOf(beginMarker);
+  const endIdx = text.indexOf(endMarker);
+  if (beginIdx === -1 || endIdx === -1 || endIdx <= beginIdx) return [];
+  return generatedSectionLossLines(text.slice(beginIdx + beginMarker.length, endIdx), content);
 }
 
 export async function injectGeneratedSection(app: App, filePath: string, beginMarker: string, endMarker: string, content: string): Promise<boolean> {
@@ -654,6 +707,12 @@ export function generateEntityDefinitionsSection(schemas: LoadedSchemaSource[]):
     }
     if (Array.isArray(schema.status_lifecycle) && schema.status_lifecycle.length) {
       extra += `\n\n**Lifecycle**: ${schema.status_lifecycle.map((s) => `\`${s}\``).join(' → ')}`;
+    }
+    // Entity-level prose. Order matters: regenerate.py appends notes after the lifecycle
+    // line, so rendering it anywhere else makes the two generators disagree and each
+    // regenerate would rewrite the block the other just wrote.
+    if (typeof schema.notes === 'string' && schema.notes.trim()) {
+      extra += `\n\n${schema.notes}`;
     }
 
     return `### ${label}\n\n${attrTable}${fieldTable}${extra}\n\n---`;

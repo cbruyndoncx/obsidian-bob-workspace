@@ -2109,6 +2109,11 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
           try {
             const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
             new obsidian.Notice(`BOB Workspace: generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s)${result.datamodelUpdated ? `; updated ${result.datamodelUpdated} DATAMODEL section(s)` : ''}.`);
+            if (result.datamodelFullLosses.length) {
+              // Failing loudly is the point: the alternative is deleting authored lines.
+              new obsidian.Notice(`BOB Workspace: DATAMODEL-FULL.md NOT regenerated - ${result.datamodelFullLosses.length} authored line(s) would be deleted, first: ${result.datamodelFullLosses[0].slice(0, 120)}`, 15000);
+              console.warn('BOB Workspace: DATAMODEL-FULL.md regeneration refused; authored lines not reproducible from source:', result.datamodelFullLosses);
+            }
             await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
             this.plugin.refreshOpenViews();
           } catch (e) {
@@ -2527,6 +2532,7 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
         if (regenerate) {
           const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
           outputText = ` Generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s)${result.datamodelUpdated ? `; updated ${result.datamodelUpdated} DATAMODEL section(s)` : ''}.`;
+          if (result.datamodelFullLosses.length) outputText += ` DATAMODEL-FULL.md not regenerated (${result.datamodelFullLosses.length} authored line(s) would be lost).`;
         }
         schemaDirty = false;
         this._schemaDesignerSelectedPath = sourceSchemaPath;

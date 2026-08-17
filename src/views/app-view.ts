@@ -3784,6 +3784,9 @@ export class BobAppView extends obsidian.ItemView {
             fm[groupBy] = group.value;
           });
           new obsidian.Notice(`Moved to ${group.label}`);
+          // A deal reaching a won stage is the trigger for partner commission.
+          // Fire-and-report: a failure here must not make the move look failed.
+          await this._maybeCreateCommissionForWonDeal(file, groupBy, String(group.value));
         } catch (e) {
           new obsidian.Notice(`Failed to move: ${e.message}`);
         }
@@ -6684,6 +6687,256 @@ export class BobAppView extends obsidian.ItemView {
     const convBar = convWrap.createDiv({ cls: 'bob-proj-progress-bar' });
     const convFill = convBar.createDiv({ cls: 'bob-proj-progress-fill' });
     convFill.style.width = `${conv}%`;
+
+    /* ── Per-partner pipeline ──
+     * Partner reviews need one place that answers "what does this partner have
+     * with us": open deals, value, win rate. Built as a table on the analytics
+     * surface rather than a new partner-detail route — the calculations already
+     * exist here, and a second navigation surface is a bigger change than the
+     * question warrants. */
+    if (partners.length && partnerSourced.length) {
+      const stageField = dealStageField(dealDef);
+      const perPartner = new Map<string, { open: EntityRecord[]; won: EntityRecord[]; lost: EntityRecord[] }>();
+      partnerSourced.forEach((d) => {
+        const key = String(entityValue(d, 'partner', dealDef) || '(unnamed)');
+        if (!perPartner.has(key)) perPartner.set(key, { open: [], won: [], lost: [] });
+        const bucket = perPartner.get(key)!;
+        const stage = String(entityValue(d, stageField, dealDef));
+        if (dealWonStages(dealDef).includes(stage)) bucket.won.push(d);
+        else if (dealLostStages(dealDef).includes(stage)) bucket.lost.push(d);
+        else bucket.open.push(d);
+      });
+
+      root.createDiv({ cls: 'bob-section-label-lg', text: 'PIPELINE BY PARTNER' });
+      const ppCard = root.createDiv({ cls: 'bob-dash-card' });
+      ppCard.style.margin = '0 36px 18px 36px';
+      const ppBody = ppCard.createDiv({ cls: 'bob-dash-card-body' });
+      const table = ppBody.createEl('table', { cls: 'bob-table' });
+      const thead = table.createEl('thead').createEl('tr');
+      ['Partner', 'Open', 'Open value', 'Won', 'Won value', 'Win rate'].forEach((h) => thead.createEl('th', { text: h }));
+      const tbody = table.createEl('tbody');
+
+      [...perPartner.entries()]
+        .sort((a, b) => sumVal(b[1].won) - sumVal(a[1].won) || b[1].open.length - a[1].open.length)
+        .forEach(([name, b]) => {
+          const decided = b.won.length + b.lost.length;
+          // Win rate over DECIDED deals only — counting open deals as losses
+          // makes an active partner with a full pipeline look like a bad one.
+          const wr = decided === 0 ? null : Math.round((b.won.length / decided) * 100);
+          const tr = tbody.createEl('tr');
+          const nameCell = tr.createEl('td', { text: name });
+          const partnerRec = partnerByName.get(name);
+          if (partnerRec?.file) {
+            nameCell.addClass('clickable');
+            nameCell.onclick = () => this.app.workspace.getLeaf(false).openFile(partnerRec.file);
+          }
+          tr.createEl('td', { text: String(b.open.length) });
+          tr.createEl('td', { text: fmtValue(sumVal(b.open), 'currency') });
+          tr.createEl('td', { text: String(b.won.length) });
+          tr.createEl('td', { text: fmtValue(sumVal(b.won), 'currency') });
+          tr.createEl('td', { text: wr === null ? '—' : `${wr}%` });
+        });
+    }
+
+    /* ── Programme health: payouts, registration efficiency, renewal pipeline ──
+     * The stats above answer "what is the partner pipe worth". These answer
+     * "is the programme being run well", which is what a partner review needs.
+     * Each block renders only when its entity has records, so a vault that does
+     * not run a partner programme sees no empty cards. */
+    const commissions = listEntities(this.app, 'commission');
+    const registrations = listEntities(this.app, 'registration');
+    const certifications = listEntities(this.app, 'certification');
+
+    const daysUntil = (raw: unknown): number | null => {
+      const v = String(raw || '').slice(0, 10);
+      if (!v) return null;
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return Math.round((d.getTime() - today.getTime()) / 86400000);
+    };
+
+    if (commissions.length || registrations.length || certifications.length) {
+      root.createDiv({ cls: 'bob-section-label-lg', text: 'PROGRAMME HEALTH' });
+      const healthGrid = root.createDiv({ cls: 'bob-stat-grid' });
+      const healthStat = (label: string, value: string | number, sub: string, accent: string) => {
+        const c = healthGrid.createDiv({ cls: 'bob-stat-card' });
+        if (accent) c.dataset.accent = accent;
+        c.createDiv({ cls: 'bob-stat-label', text: label });
+        c.createDiv({ cls: 'bob-stat-value', text: String(value) });
+        if (sub) c.createDiv({ cls: 'bob-stat-sub', text: sub });
+      };
+
+      /* Commission earned vs paid — cash health of payouts.
+       * 'earned' is owed and not yet out the door; 'paid' has settled. Pending is
+       * deliberately excluded from owed: it is not yet a liability. */
+      if (commissions.length) {
+        const commDef = ENTITIES.commission;
+        const amountOf = (e: EntityRecord) => Number(entityValue(e, 'amount', commDef)) || 0;
+        const byStatus = (st: string) => commissions.filter((e) => String(entityValue(e, 'status', commDef) || '') === st);
+        const earned = byStatus('earned');
+        const paid = byStatus('paid');
+        const disputed = byStatus('disputed');
+        const owed = earned.reduce((s, e) => s + amountOf(e), 0);
+        const settled = paid.reduce((s, e) => s + amountOf(e), 0);
+        healthStat('COMMISSION OWED', fmtValue(owed, 'currency'), `${earned.length} earned, unpaid`, owed > 0 ? 'warn' : 'mint');
+        healthStat('COMMISSION PAID', fmtValue(settled, 'currency'), `${paid.length} settled`, 'emerald');
+        if (disputed.length) {
+          healthStat('DISPUTED', fmtValue(disputed.reduce((s, e) => s + amountOf(e), 0), 'currency'), `${disputed.length} in dispute`, 'rose');
+        }
+      }
+
+      /* Registration approval rate — programme efficiency.
+       * Denominator is decided registrations only (approved + rejected). Counting
+       * still-submitted ones as failures would make a healthy programme with a
+       * busy queue look broken. */
+      if (registrations.length) {
+        const regDef = ENTITIES.registration;
+        const regStatus = (e: EntityRecord) => String(entityValue(e, 'status', regDef) || '');
+        const approved = registrations.filter((e) => regStatus(e) === 'approved').length;
+        const rejected = registrations.filter((e) => regStatus(e) === 'rejected').length;
+        const decided = approved + rejected;
+        const rate = decided === 0 ? null : Math.round((approved / decided) * 100);
+        healthStat('APPROVAL RATE', rate === null ? '—' : `${rate}%`,
+          decided === 0 ? 'no decisions yet' : `${approved}/${decided} decided`,
+          rate === null ? 'sky' : rate >= 70 ? 'emerald' : 'warn');
+
+        /* Registrations expiring — a lapsed registration loses the partner their
+         * commission protection and makes the account contestable. */
+        const regExpiring = registrations
+          .filter((e) => !['expired', 'rejected'].includes(regStatus(e)))
+          .map((e) => ({ e, d: daysUntil(entityValue(e, 'expires_date', regDef)) }))
+          .filter((r) => r.d !== null && (r.d as number) <= 30)
+          .sort((a, b) => (a.d as number) - (b.d as number));
+        if (regExpiring.length) {
+          const lapsed = regExpiring.filter((r) => (r.d as number) < 0).length;
+          healthStat('REGISTRATIONS EXPIRING', regExpiring.length,
+            lapsed ? `${lapsed} already lapsed` : `soonest in ${regExpiring[0].d}d`,
+            lapsed ? 'rose' : 'warn');
+        }
+      }
+
+      /* Certifications expiring — renewal pipeline. An expired cert can silently
+       * disqualify a partner from a tier or a deal. */
+      if (certifications.length) {
+        const certDef = ENTITIES.certification;
+        const certStatus = (e: EntityRecord) => String(entityValue(e, 'status', certDef) || '');
+        const certExpiring = certifications
+          .filter((e) => !['expired', 'revoked'].includes(certStatus(e)))
+          .map((e) => ({ e, d: daysUntil(entityValue(e, 'expires_date', certDef)) }))
+          .filter((r) => r.d !== null && (r.d as number) <= 60)
+          .sort((a, b) => (a.d as number) - (b.d as number));
+        const lapsedCerts = certExpiring.filter((r) => (r.d as number) < 0).length;
+        healthStat('CERTS EXPIRING', certExpiring.length,
+          certExpiring.length === 0 ? 'none within 60 days'
+            : lapsedCerts ? `${lapsedCerts} already lapsed`
+            : `soonest in ${certExpiring[0].d}d`,
+          certExpiring.length === 0 ? 'mint' : lapsedCerts ? 'rose' : 'warn');
+
+        if (certExpiring.length) {
+          /* Use the shared row renderer so these rows pick up the same styling,
+           * click behaviour and truncation as every other list in the app. */
+          const renewalRows = certExpiring.slice(0, 10).map(({ e, d }) => {
+            const name = String(entityValue(e, 'name', certDef) || e.basename);
+            const partner = String(entityValue(e, 'partner_ref', certDef) || '');
+            const days = d as number;
+            return {
+              title: partner ? `${name} — ${partner}` : name,
+              meta: days < 0 ? `expired ${Math.abs(days)}d ago` : `${days}d left`,
+              file: e.file,
+            };
+          });
+          this._dashCardSection(root, 'RENEWAL PIPELINE · certifications within 60 days', renewalRows, 'Nothing expiring.');
+        }
+      }
+    }
+  }
+
+  /** Create a commission record when a partner-sourced deal reaches a won stage.
+   *
+   * Commissions were previously created by hand after every won deal, which is
+   * exactly the kind of step that gets skipped in a busy week — and an unrecorded
+   * commission is a partner-trust problem, not a bookkeeping one.
+   *
+   * Deliberately conservative:
+   *  - only fires when the changed field is the deal's stage field
+   *  - only for a won stage, and only when the deal names a partner
+   *  - never creates a second commission for the same deal (idempotent on re-drag)
+   *  - status is `earned`, not `paid` — this records the liability, it does not settle it
+   *  - a rate is only applied when the partner declares one; no invented default,
+   *    because a wrong rate is worse than a blank one somebody has to fill in
+   */
+  async _maybeCreateCommissionForWonDeal(file: obsidian.TFile, changedField: string, newValue: string) {
+    try {
+      const dealDef = ENTITIES.deal;
+      const commDef = ENTITIES.commission;
+      if (!dealDef || !commDef) return;
+      if (changedField !== dealStageField(dealDef)) return;
+      if (!dealWonStages(dealDef).includes(newValue)) return;
+
+      const deal = readEntity(this.app, file);
+      const partnerName = String(entityValue(deal, 'partner', dealDef) || entityValue(deal, 'partner_ref', dealDef) || '').trim();
+      if (!partnerName) return;
+
+      // Idempotency: if any commission already references this deal, stop.
+      const dealKey = file.basename;
+      const existing = listEntities(this.app, 'commission')
+        .some((c) => String(entityValue(c, 'deal_ref', commDef) || '').includes(dealKey));
+      if (existing) return;
+
+      const value = Number(entityValue(deal, dealValueField(dealDef), dealDef)) || 0;
+      // Partner's primary field is `partner_name`; `name` falls back to basename
+      // in entityValue, so match on either rather than only one.
+      const partner = listEntities(this.app, 'partner').find((pt) => {
+        const pn = String(entityValue(pt, 'partner_name', ENTITIES.partner) || '').trim();
+        return pn === partnerName || pt.basename === partnerName;
+      });
+      // `commission_rate` is NOT a declared partner field — entityValue reads it
+      // straight from frontmatter if an operator has added it. When absent the
+      // amount stays 0 and the note says so, which is the safe direction: a wrong
+      // commission figure is worse than a blank one somebody has to fill in.
+      const rate = partner ? Number(entityValue(partner, 'commission_rate', ENTITIES.partner)) : NaN;
+      const amount = Number.isFinite(rate) && rate > 0 ? Math.round(value * (rate / 100)) : 0;
+
+      const today = new Date().toISOString().slice(0, 10);
+      const period = today.slice(0, 7);
+      const folder = `${commDef.folder}/COMMISSIONS`;
+      if (!this.app.vault.getAbstractFileByPath(folder)) {
+        await this.app.vault.createFolder(folder).catch(() => {});
+      }
+      const safe = `${partnerName}-${dealKey}`.replace(/[\\/:*?"<>|]/g, '-').slice(0, 80);
+      const path = `${folder}/commission-${safe}.md`;
+      if (this.app.vault.getAbstractFileByPath(path)) return;
+
+      const fm = [
+        '---',
+        'type: commission',
+        `reference: commission-${safe}`,
+        `partner_ref: "[[${partnerName}]]"`,
+        `deal_ref: "[[${dealKey}]]"`,
+        `amount: ${amount}`,
+        'status: earned',
+        `period: ${period}`,
+        `earned_date: ${today}`,
+        '---',
+        '',
+        `# Commission — ${partnerName}`,
+        '',
+        `Auto-created when [[${dealKey}]] reached stage \`${newValue}\`.`,
+        '',
+        amount > 0
+          ? `Amount computed from deal value ${value} at the partner's declared rate of ${rate}%.`
+          : `**Amount not computed** — the partner record declares no \`commission_rate\`. Set the amount by hand, or add a rate to the partner and delete this note to have it regenerate.`,
+        '',
+      ].join('\n');
+
+      await this.app.vault.create(path, fm);
+      new obsidian.Notice(`Commission recorded for ${partnerName}`);
+    } catch (e) {
+      // Never let this break the stage change the user actually asked for.
+      new obsidian.Notice(`Deal moved, but commission was not created: ${e.message}`);
+    }
   }
 
   /* ── Team (configurable People categories) ─ */

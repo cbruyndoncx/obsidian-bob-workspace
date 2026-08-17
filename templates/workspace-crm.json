@@ -1459,102 +1459,100 @@
     "reports.productivity": {
       "kind": "report",
       "title": "Productivity",
-      "subtitle": "Task and project momentum",
+      "subtitle": "Backlog health and 30-day flow",
       "stats": [
         {
-          "label": "DONE",
+          "label": "BACKLOG",
           "entity": "task",
-          "field": "totalDone",
+          "field": "backlogOpen",
           "source": {
             "mode": "built-in",
             "builtIn": "productivity"
           },
-          "sub": "tasks completed",
-          "accent": "emerald"
-        },
-        {
-          "label": "OPEN",
-          "entity": "task",
-          "field": "totalOpen",
-          "source": {
-            "mode": "built-in",
-            "builtIn": "productivity"
-          },
-          "sub": "open tasks",
+          "sub": "open tasks, all time",
           "accent": "sky"
         },
         {
-          "label": "COMPLETE",
+          "label": "CREATED",
           "entity": "task",
-          "field": "completion",
+          "field": "createdInWindow",
           "source": {
             "mode": "built-in",
             "builtIn": "productivity"
           },
-          "sub": "completion rate",
-          "accent": "mint"
-        },
-        {
-          "label": "STREAK",
-          "entity": "task",
-          "field": "streak",
-          "source": {
-            "mode": "built-in",
-            "builtIn": "productivity"
-          },
-          "sub": "active days",
-          "accent": "warn"
-        },
-        {
-          "label": "ACTIVE DAYS",
-          "entity": "task",
-          "field": "activeDays",
-          "source": {
-            "mode": "built-in",
-            "builtIn": "productivity"
-          },
-          "sub": "days with activity",
-          "accent": "warn"
-        },
-        {
-          "label": "JOURNAL",
-          "entity": "task",
-          "field": "totalJournalChars",
-          "source": {
-            "mode": "built-in",
-            "builtIn": "productivity"
-          },
-          "sub": "chars written",
+          "sub": "new in last 30d",
           "accent": "rose"
+        },
+        {
+          "label": "CLOSED",
+          "entity": "task",
+          "field": "closedInWindow",
+          "source": {
+            "mode": "built-in",
+            "builtIn": "productivity"
+          },
+          "sub": "closed in last 30d",
+          "accent": "emerald"
+        },
+        {
+          "label": "NET",
+          "entity": "task",
+          "field": "netBacklogChange",
+          "source": {
+            "mode": "built-in",
+            "builtIn": "productivity"
+          },
+          "sub": "backlog change, 30d",
+          "accent": "warn"
+        },
+        {
+          "label": "OVERDUE",
+          "entity": "task",
+          "field": "backlogOverdue",
+          "source": {
+            "mode": "built-in",
+            "builtIn": "productivity"
+          },
+          "sub": "past due or scheduled",
+          "accent": "rose"
+        },
+        {
+          "label": "STALE",
+          "entity": "task",
+          "field": "backlogStale",
+          "source": {
+            "mode": "built-in",
+            "builtIn": "productivity"
+          },
+          "sub": "open, older than 30d",
+          "accent": "warn"
         }
       ],
       "layout": [
         [
           {
             "kind": "gauge",
-            "title": "COMPLETION SCORE",
+            "title": "BURN-DOWN RATE",
             "source": {
               "mode": "built-in",
               "builtIn": "productivity"
             },
-            "field": "completion",
-            "max": 100,
+            "field": "burnRate",
+            "max": 200,
             "suffix": "%",
-            "caption": "done rate",
-            "sub": "Done tasks divided by done plus open tasks"
+            "caption": "closed vs created",
+            "sub": "Tasks closed divided by tasks created over the last 30 days. Above 100% the backlog is shrinking."
           },
           {
-            "kind": "progress",
-            "title": "ACTIVE DAYS BUILT",
+            "kind": "bar-chart",
+            "title": "CREATED PER WEEK — LAST 12 WEEKS",
             "source": {
               "mode": "built-in",
-              "builtIn": "productivity"
+              "builtIn": "productivity",
+              "section": "weeks"
             },
-            "field": "activeDays",
-            "max": 30,
-            "suffix": "/30",
-            "label": "Days with activity",
-            "sub": "Activity coverage in the current 30-day window"
+            "field": "created",
+            "limit": 12
           }
         ],
         [
@@ -1574,13 +1572,13 @@
           },
           {
             "kind": "bar-chart",
-            "title": "COMPLETION TREND — LAST 12 WEEKS",
+            "title": "CLOSED PER WEEK — LAST 12 WEEKS",
             "source": {
               "mode": "built-in",
               "builtIn": "productivity",
               "section": "weeks"
             },
-            "field": "done",
+            "field": "closed",
             "limit": 12
           }
         ],
@@ -1636,8 +1634,8 @@
           {
             "kind": "markdown",
             "title": "PRODUCTIVITY NOTES",
-            "subtitle": "How the time window and completion rate are read",
-            "body": "## What this measures\n- The snapshot covers the last 30 days of daily notes plus the last 12 weeks of TaskNotes rollups.\n- Completion rate is done tasks divided by done plus open tasks in the snapshot window.\n- Task splits by project and context come from TaskNotes metadata when those frontmatter fields are present.\n- Overdue and high-priority lists are driven by TaskNotes due/scheduled dates and priority values.\n\n## Notes\n- The current list is the evidence trail behind the charts rather than a ranked task queue."
+            "subtitle": "How backlog and flow are separated",
+            "body": "## What this measures\n- BACKLOG, OVERDUE and STALE are point-in-time totals over every TaskNote, with no date window applied.\n- CREATED, CLOSED and NET cover the last 30 days only. NET is created minus closed, so a positive number means the backlog grew.\n- BURN-DOWN RATE is closed divided by created over the same 30 days. Above 100% you are closing faster than you add.\n- The heatmap and the project/context splits remain windowed views of recent activity, not backlog totals.\n\n## Notes\n- A task with no explicit created date falls back to file creation time; a closed task with no completion date falls back to last-modified.\n- Cancelled tasks are excluded everywhere."
           }
         ]
       ]

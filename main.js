@@ -14688,102 +14688,100 @@ var workspace_bob_default = {
     "reports.productivity": {
       kind: "report",
       title: "Productivity",
-      subtitle: "Task and project momentum",
+      subtitle: "Backlog health and 30-day flow",
       stats: [
         {
-          label: "DONE",
+          label: "BACKLOG",
           entity: "task",
-          field: "totalDone",
+          field: "backlogOpen",
           source: {
             mode: "built-in",
             builtIn: "productivity"
           },
-          sub: "tasks completed",
-          accent: "emerald"
-        },
-        {
-          label: "OPEN",
-          entity: "task",
-          field: "totalOpen",
-          source: {
-            mode: "built-in",
-            builtIn: "productivity"
-          },
-          sub: "open tasks",
+          sub: "open tasks, all time",
           accent: "sky"
         },
         {
-          label: "COMPLETE",
+          label: "CREATED",
           entity: "task",
-          field: "completion",
+          field: "createdInWindow",
           source: {
             mode: "built-in",
             builtIn: "productivity"
           },
-          sub: "completion rate",
-          accent: "mint"
-        },
-        {
-          label: "STREAK",
-          entity: "task",
-          field: "streak",
-          source: {
-            mode: "built-in",
-            builtIn: "productivity"
-          },
-          sub: "active days",
-          accent: "warn"
-        },
-        {
-          label: "ACTIVE DAYS",
-          entity: "task",
-          field: "activeDays",
-          source: {
-            mode: "built-in",
-            builtIn: "productivity"
-          },
-          sub: "days with activity",
-          accent: "warn"
-        },
-        {
-          label: "JOURNAL",
-          entity: "task",
-          field: "totalJournalChars",
-          source: {
-            mode: "built-in",
-            builtIn: "productivity"
-          },
-          sub: "chars written",
+          sub: "new in last 30d",
           accent: "rose"
+        },
+        {
+          label: "CLOSED",
+          entity: "task",
+          field: "closedInWindow",
+          source: {
+            mode: "built-in",
+            builtIn: "productivity"
+          },
+          sub: "closed in last 30d",
+          accent: "emerald"
+        },
+        {
+          label: "NET",
+          entity: "task",
+          field: "netBacklogChange",
+          source: {
+            mode: "built-in",
+            builtIn: "productivity"
+          },
+          sub: "backlog change, 30d",
+          accent: "warn"
+        },
+        {
+          label: "OVERDUE",
+          entity: "task",
+          field: "backlogOverdue",
+          source: {
+            mode: "built-in",
+            builtIn: "productivity"
+          },
+          sub: "past due or scheduled",
+          accent: "rose"
+        },
+        {
+          label: "STALE",
+          entity: "task",
+          field: "backlogStale",
+          source: {
+            mode: "built-in",
+            builtIn: "productivity"
+          },
+          sub: "open, older than 30d",
+          accent: "warn"
         }
       ],
       layout: [
         [
           {
             kind: "gauge",
-            title: "COMPLETION SCORE",
+            title: "BURN-DOWN RATE",
             source: {
               mode: "built-in",
               builtIn: "productivity"
             },
-            field: "completion",
-            max: 100,
+            field: "burnRate",
+            max: 200,
             suffix: "%",
-            caption: "done rate",
-            sub: "Done tasks divided by done plus open tasks"
+            caption: "closed vs created",
+            sub: "Tasks closed divided by tasks created over the last 30 days. Above 100% the backlog is shrinking."
           },
           {
-            kind: "progress",
-            title: "ACTIVE DAYS BUILT",
+            kind: "bar-chart",
+            title: "CREATED PER WEEK \u2014 LAST 12 WEEKS",
             source: {
               mode: "built-in",
-              builtIn: "productivity"
+              builtIn: "productivity",
+              section: "weeks"
             },
-            field: "activeDays",
-            max: 30,
-            suffix: "/30",
-            label: "Days with activity",
-            sub: "Activity coverage in the current 30-day window"
+            field: "created",
+            limit: 12
           }
         ],
         [
@@ -14803,13 +14801,13 @@ var workspace_bob_default = {
           },
           {
             kind: "bar-chart",
-            title: "COMPLETION TREND \u2014 LAST 12 WEEKS",
+            title: "CLOSED PER WEEK \u2014 LAST 12 WEEKS",
             source: {
               mode: "built-in",
               builtIn: "productivity",
               section: "weeks"
             },
-            field: "done",
+            field: "closed",
             limit: 12
           }
         ],
@@ -14865,8 +14863,8 @@ var workspace_bob_default = {
           {
             kind: "markdown",
             title: "PRODUCTIVITY NOTES",
-            subtitle: "How the time window and completion rate are read",
-            body: "## What this measures\n- The snapshot covers the last 30 days of daily notes plus the last 12 weeks of TaskNotes rollups.\n- Completion rate is done tasks divided by done plus open tasks in the snapshot window.\n- Task splits by project and context come from TaskNotes metadata when those frontmatter fields are present.\n- Overdue and high-priority lists are driven by TaskNotes due/scheduled dates and priority values.\n\n## Notes\n- The current list is the evidence trail behind the charts rather than a ranked task queue."
+            subtitle: "How backlog and flow are separated",
+            body: "## What this measures\n- BACKLOG, OVERDUE and STALE are point-in-time totals over every TaskNote, with no date window applied.\n- CREATED, CLOSED and NET cover the last 30 days only. NET is created minus closed, so a positive number means the backlog grew.\n- BURN-DOWN RATE is closed divided by created over the same 30 days. Above 100% you are closing faster than you add.\n- The heatmap and the project/context splits remain windowed views of recent activity, not backlog totals.\n\n## Notes\n- A task with no explicit created date falls back to file creation time; a closed task with no completion date falls back to last-modified.\n- Cancelled tasks are excluded everywhere."
           }
         ]
       ]
@@ -21961,102 +21959,100 @@ var workspace_crm_default = {
     "reports.productivity": {
       kind: "report",
       title: "Productivity",
-      subtitle: "Task and project momentum",
+      subtitle: "Backlog health and 30-day flow",
       stats: [
         {
-          label: "DONE",
+          label: "BACKLOG",
           entity: "task",
-          field: "totalDone",
+          field: "backlogOpen",
           source: {
             mode: "built-in",
             builtIn: "productivity"
           },
-          sub: "tasks completed",
-          accent: "emerald"
-        },
-        {
-          label: "OPEN",
-          entity: "task",
-          field: "totalOpen",
-          source: {
-            mode: "built-in",
-            builtIn: "productivity"
-          },
-          sub: "open tasks",
+          sub: "open tasks, all time",
           accent: "sky"
         },
         {
-          label: "COMPLETE",
+          label: "CREATED",
           entity: "task",
-          field: "completion",
+          field: "createdInWindow",
           source: {
             mode: "built-in",
             builtIn: "productivity"
           },
-          sub: "completion rate",
-          accent: "mint"
-        },
-        {
-          label: "STREAK",
-          entity: "task",
-          field: "streak",
-          source: {
-            mode: "built-in",
-            builtIn: "productivity"
-          },
-          sub: "active days",
-          accent: "warn"
-        },
-        {
-          label: "ACTIVE DAYS",
-          entity: "task",
-          field: "activeDays",
-          source: {
-            mode: "built-in",
-            builtIn: "productivity"
-          },
-          sub: "days with activity",
-          accent: "warn"
-        },
-        {
-          label: "JOURNAL",
-          entity: "task",
-          field: "totalJournalChars",
-          source: {
-            mode: "built-in",
-            builtIn: "productivity"
-          },
-          sub: "chars written",
+          sub: "new in last 30d",
           accent: "rose"
+        },
+        {
+          label: "CLOSED",
+          entity: "task",
+          field: "closedInWindow",
+          source: {
+            mode: "built-in",
+            builtIn: "productivity"
+          },
+          sub: "closed in last 30d",
+          accent: "emerald"
+        },
+        {
+          label: "NET",
+          entity: "task",
+          field: "netBacklogChange",
+          source: {
+            mode: "built-in",
+            builtIn: "productivity"
+          },
+          sub: "backlog change, 30d",
+          accent: "warn"
+        },
+        {
+          label: "OVERDUE",
+          entity: "task",
+          field: "backlogOverdue",
+          source: {
+            mode: "built-in",
+            builtIn: "productivity"
+          },
+          sub: "past due or scheduled",
+          accent: "rose"
+        },
+        {
+          label: "STALE",
+          entity: "task",
+          field: "backlogStale",
+          source: {
+            mode: "built-in",
+            builtIn: "productivity"
+          },
+          sub: "open, older than 30d",
+          accent: "warn"
         }
       ],
       layout: [
         [
           {
             kind: "gauge",
-            title: "COMPLETION SCORE",
+            title: "BURN-DOWN RATE",
             source: {
               mode: "built-in",
               builtIn: "productivity"
             },
-            field: "completion",
-            max: 100,
+            field: "burnRate",
+            max: 200,
             suffix: "%",
-            caption: "done rate",
-            sub: "Done tasks divided by done plus open tasks"
+            caption: "closed vs created",
+            sub: "Tasks closed divided by tasks created over the last 30 days. Above 100% the backlog is shrinking."
           },
           {
-            kind: "progress",
-            title: "ACTIVE DAYS BUILT",
+            kind: "bar-chart",
+            title: "CREATED PER WEEK \u2014 LAST 12 WEEKS",
             source: {
               mode: "built-in",
-              builtIn: "productivity"
+              builtIn: "productivity",
+              section: "weeks"
             },
-            field: "activeDays",
-            max: 30,
-            suffix: "/30",
-            label: "Days with activity",
-            sub: "Activity coverage in the current 30-day window"
+            field: "created",
+            limit: 12
           }
         ],
         [
@@ -22076,13 +22072,13 @@ var workspace_crm_default = {
           },
           {
             kind: "bar-chart",
-            title: "COMPLETION TREND \u2014 LAST 12 WEEKS",
+            title: "CLOSED PER WEEK \u2014 LAST 12 WEEKS",
             source: {
               mode: "built-in",
               builtIn: "productivity",
               section: "weeks"
             },
-            field: "done",
+            field: "closed",
             limit: 12
           }
         ],
@@ -22138,8 +22134,8 @@ var workspace_crm_default = {
           {
             kind: "markdown",
             title: "PRODUCTIVITY NOTES",
-            subtitle: "How the time window and completion rate are read",
-            body: "## What this measures\n- The snapshot covers the last 30 days of daily notes plus the last 12 weeks of TaskNotes rollups.\n- Completion rate is done tasks divided by done plus open tasks in the snapshot window.\n- Task splits by project and context come from TaskNotes metadata when those frontmatter fields are present.\n- Overdue and high-priority lists are driven by TaskNotes due/scheduled dates and priority values.\n\n## Notes\n- The current list is the evidence trail behind the charts rather than a ranked task queue."
+            subtitle: "How backlog and flow are separated",
+            body: "## What this measures\n- BACKLOG, OVERDUE and STALE are point-in-time totals over every TaskNote, with no date window applied.\n- CREATED, CLOSED and NET cover the last 30 days only. NET is created minus closed, so a positive number means the backlog grew.\n- BURN-DOWN RATE is closed divided by created over the same 30 days. Above 100% you are closing faster than you add.\n- The heatmap and the project/context splits remain windowed views of recent activity, not backlog totals.\n\n## Notes\n- A task with no explicit created date falls back to file creation time; a closed task with no completion date falls back to last-modified.\n- Cancelled tasks are excluded everywhere."
           }
         ]
       ]
@@ -26040,10 +26036,21 @@ function taskNoteDateValue(file, fm, done) {
   if (file?.stat?.mtime) return ymd(new Date(file.stat.mtime));
   return "";
 }
-function listTaskNotesForProductivity(app, settings, start, end) {
+function taskNoteCreatedValue(file, fm) {
+  const raw = fm.dateCreated || fm.created;
+  if (raw) return String(raw).slice(0, 10);
+  if (file?.stat?.ctime) return ymd(new Date(file.stat.ctime));
+  return "";
+}
+function taskNoteClosedValue(file, fm, done) {
+  if (!done) return "";
+  const raw = fm.dateCompleted || fm.completedDate || fm.completed || fm.dateModified || fm.modified;
+  if (raw) return String(raw).slice(0, 10);
+  if (file?.stat?.mtime) return ymd(new Date(file.stat.mtime));
+  return "";
+}
+function listAllTaskNotes(app, settings) {
   const folders = taskNoteFolders(settings);
-  const startTime = startOfDay(start).getTime();
-  const endTime = startOfDay(end).getTime();
   return scannableMarkdownFiles(app).filter((f) => folders.some((folder) => f.path.startsWith(folder + "/"))).map((file) => {
     const fm = (app.metadataCache.getFileCache(file) || {}).frontmatter || {};
     const status = taskNoteStatus(fm);
@@ -26055,16 +26062,15 @@ function listTaskNotesForProductivity(app, settings, start, end) {
       status,
       done,
       date,
+      created: taskNoteCreatedValue(file, fm),
+      closed: taskNoteClosedValue(file, fm, done),
       priority: String(fm.priority || "").trim().toLowerCase(),
       due: fm.due ? String(fm.due).slice(0, 10) : "",
       scheduled: fm.scheduled ? String(fm.scheduled).slice(0, 10) : "",
       projects: Array.isArray(fm.projects) ? fm.projects : String(fm.projects || "").split(/[,\n]/).map((item) => item.trim()).filter(Boolean),
       contexts: Array.isArray(fm.contexts) ? fm.contexts : String(fm.contexts || "").split(/[,\n]/).map((item) => item.trim()).filter(Boolean)
     };
-  }).filter((item) => {
-    const time = item.date ? (/* @__PURE__ */ new Date(item.date + "T00:00:00")).getTime() : NaN;
-    return !taskNoteIgnored(item.status) && Number.isFinite(time) && time >= startTime && time <= endTime;
-  });
+  }).filter((item) => !taskNoteIgnored(item.status));
 }
 async function toggleTaskNoteStatus(app, file, done) {
   await app.fileManager.processFrontMatter(file, (fm) => {
@@ -28313,7 +28319,8 @@ function mergedSchemaForKey(key, schemas) {
     co_required: schemas.flatMap((s) => Array.isArray(s.co_required) ? s.co_required : [])
   };
 }
-async function regenerateSchemaOutputs(app, settings = {}) {
+async function regenerateSchemaOutputs(app, settings = {}, opts = {}) {
+  const allowLossy = opts.allowLossy === true;
   const loaded = await loadCanonicalSchemaSources(app, settings);
   if (loaded.errors.length) throw new Error(`Schema validation failed: ${loaded.errors.join("; ")}`);
   const root = loaded.folder.replace(/\/source$/, "");
@@ -28366,20 +28373,52 @@ async function regenerateSchemaOutputs(app, settings = {}) {
     "<!-- END GENERATED: ENTITY TYPES -->",
     generateEntityTypesTable(sortedSchemas)
   )) datamodelUpdated++;
-  if (await injectGeneratedSection(
+  const fullDefinitions = generateEntityDefinitionsSection(sortedSchemas);
+  const datamodelFullLosses = allowLossy ? [] : await generatedSectionLosses(
     app,
     "DATAMODEL-FULL.md",
     "<!-- BEGIN GENERATED: ENTITY DEFINITIONS -->",
     "<!-- END GENERATED: ENTITY DEFINITIONS -->",
-    generateEntityDefinitionsSection(sortedSchemas)
+    fullDefinitions
+  );
+  if (!datamodelFullLosses.length && await injectGeneratedSection(
+    app,
+    "DATAMODEL-FULL.md",
+    "<!-- BEGIN GENERATED: ENTITY DEFINITIONS -->",
+    "<!-- END GENERATED: ENTITY DEFINITIONS -->",
+    fullDefinitions
   )) datamodelUpdated++;
   return {
     count: loaded.schemas.length,
     removed,
     fileClassFolder,
     jsonFolder,
-    datamodelUpdated
+    datamodelUpdated,
+    datamodelFullLosses
   };
+}
+var GENERATED_SECTION_STRUCTURAL_LINES = /* @__PURE__ */ new Set([
+  "",
+  "---",
+  "| Attribute | Value |",
+  "|-----------|-------|",
+  "| Field | Required | Type | Allowed Values / Notes |",
+  "|-------|----------|------|------------------------|"
+]);
+function generatedSectionLossLines(oldBlock, newBlock) {
+  const contentLines = (block) => new Set(
+    block.split("\n").map((line) => line.trim()).filter((line) => !GENERATED_SECTION_STRUCTURAL_LINES.has(line))
+  );
+  const fresh = contentLines(newBlock);
+  return [...contentLines(oldBlock)].filter((line) => !fresh.has(line)).sort();
+}
+async function generatedSectionLosses(app, filePath, beginMarker, endMarker, content) {
+  if (!await app.vault.adapter.exists(filePath)) return [];
+  const text = await app.vault.adapter.read(filePath);
+  const beginIdx = text.indexOf(beginMarker);
+  const endIdx = text.indexOf(endMarker);
+  if (beginIdx === -1 || endIdx === -1 || endIdx <= beginIdx) return [];
+  return generatedSectionLossLines(text.slice(beginIdx + beginMarker.length, endIdx), content);
 }
 async function injectGeneratedSection(app, filePath, beginMarker, endMarker, content) {
   if (!await app.vault.adapter.exists(filePath)) return false;
@@ -28451,6 +28490,11 @@ function generateEntityDefinitionsSection(schemas) {
       extra += `
 
 **Lifecycle**: ${schema.status_lifecycle.map((s) => `\`${s}\``).join(" \u2192 ")}`;
+    }
+    if (typeof schema.notes === "string" && schema.notes.trim()) {
+      extra += `
+
+${schema.notes}`;
     }
     return `### ${label}
 
@@ -29593,7 +29637,15 @@ async function buildProductivitySnapshot(app, settings = {}) {
   const weekStart = startOfWeek(today, settings.weekStartsOn);
   const oldestWeekStart = addDays(weekStart, -11 * 7);
   const taskNoteStart = oldestWeekStart.getTime() < oldestDay.getTime() ? oldestWeekStart : oldestDay;
-  const taskNotes = includeTaskNotes ? listTaskNotesForProductivity(app, settings, taskNoteStart, today) : [];
+  const allTaskNotes = includeTaskNotes ? listAllTaskNotes(app, settings) : [];
+  const windowStartMs = startOfDay(taskNoteStart).getTime();
+  const windowEndMs = startOfDay(today).getTime();
+  const inWindow = (iso) => {
+    if (!iso) return false;
+    const t = (/* @__PURE__ */ new Date(iso + "T00:00:00")).getTime();
+    return Number.isFinite(t) && t >= windowStartMs && t <= windowEndMs;
+  };
+  const taskNotes = allTaskNotes.filter((task) => inWindow(task.date));
   const taskNotesByDate = /* @__PURE__ */ new Map();
   taskNotes.forEach((task) => {
     if (!taskNotesByDate.has(task.date)) taskNotesByDate.set(task.date, []);
@@ -29680,10 +29732,36 @@ async function buildProductivitySnapshot(app, settings = {}) {
     });
   });
   const completion = totalOpen + totalDone === 0 ? 0 : Math.round(totalDone / (totalOpen + totalDone) * 100);
+  const flowStartMs = startOfDay(oldestDay).getTime();
+  const inFlowWindow = (iso) => {
+    if (!iso) return false;
+    const t = (/* @__PURE__ */ new Date(iso + "T00:00:00")).getTime();
+    return Number.isFinite(t) && t >= flowStartMs && t <= windowEndMs;
+  };
+  const backlogTasks = allTaskNotes.filter((task) => !task.done);
+  const backlogOpen = backlogTasks.length;
+  const backlogOverdue = backlogTasks.filter((task) => {
+    const ref = task.due || task.scheduled;
+    if (!ref) return false;
+    const t = (/* @__PURE__ */ new Date(ref + "T00:00:00")).getTime();
+    return Number.isFinite(t) && t < todayStartMs;
+  }).length;
+  const backlogStale = backlogTasks.filter((task) => task.created && !inFlowWindow(task.created)).length;
+  const createdInWindow = allTaskNotes.filter((task) => inFlowWindow(task.created)).length;
+  const closedInWindow = allTaskNotes.filter((task) => inFlowWindow(task.closed)).length;
+  const netBacklogChange = createdInWindow - closedInWindow;
+  const burnRate = createdInWindow === 0 ? closedInWindow > 0 ? 200 : 0 : Math.min(200, Math.round(closedInWindow / createdInWindow * 100));
+  const createdByDate = /* @__PURE__ */ new Map();
+  const closedByDate = /* @__PURE__ */ new Map();
+  allTaskNotes.forEach((task) => {
+    if (task.created) createdByDate.set(task.created, (createdByDate.get(task.created) || 0) + 1);
+    if (task.closed) closedByDate.set(task.closed, (closedByDate.get(task.closed) || 0) + 1);
+  });
   const weeks = [];
   for (let w = 11; w >= 0; w--) {
     const ws = addDays(weekStart, -w * 7);
     let wd = 0, wo = 0, anyNote = false;
+    let wCreated = 0, wClosed = 0;
     for (let i = 0; i < 7; i++) {
       const d = addDays(ws, i);
       if (d.getTime() > today.getTime()) break;
@@ -29699,8 +29777,20 @@ async function buildProductivitySnapshot(app, settings = {}) {
         wo += dayTaskNotes.filter((task) => !task.done).length;
         if (dayTaskNotes.length) anyNote = true;
       }
+      const iso = ymd(d);
+      wCreated += createdByDate.get(iso) || 0;
+      wClosed += closedByDate.get(iso) || 0;
     }
-    weeks.push({ start: ws, done: wd, open: wo, any: anyNote, label: ws.toLocaleDateString(void 0, { month: "short", day: "numeric" }) });
+    weeks.push({
+      start: ws,
+      done: wd,
+      open: wo,
+      created: wCreated,
+      closed: wClosed,
+      net: wCreated - wClosed,
+      any: anyNote,
+      label: ws.toLocaleDateString(void 0, { month: "short", day: "numeric" })
+    });
   }
   const wsOn = settings.weekStartsOn;
   const dayBuckets = Array.from({ length: 7 }, () => ({ done: 0, open: 0 }));
@@ -29725,7 +29815,15 @@ async function buildProductivitySnapshot(app, settings = {}) {
     activeDays,
     streak,
     completion,
+    backlogOpen,
+    backlogOverdue,
+    backlogStale,
+    createdInWindow,
+    closedInWindow,
+    netBacklogChange,
+    burnRate,
     taskNotes,
+    allTaskNotes,
     projectBuckets: [...projectBuckets.values()].sort((a, b) => b.value - a.value),
     contextBuckets: [...contextBuckets.values()].sort((a, b) => b.value - a.value),
     overdueTasks: overdueTasks.sort((a, b) => String(a.due || a.scheduled || "9999-12-31").localeCompare(String(b.due || b.scheduled || "9999-12-31"))),
@@ -33424,6 +33522,7 @@ ${snippet}` : "- No markdown content");
             fm[groupBy] = group.value;
           });
           new obsidian17.Notice(`Moved to ${group.label}`);
+          await this._maybeCreateCommissionForWonDeal(file, groupBy, String(group.value));
         } catch (e) {
           new obsidian17.Notice(`Failed to move: ${e.message}`);
         }
@@ -36207,6 +36306,199 @@ ${snippet}` : "- No markdown content");
     const convBar = convWrap.createDiv({ cls: "bob-proj-progress-bar" });
     const convFill = convBar.createDiv({ cls: "bob-proj-progress-fill" });
     convFill.style.width = `${conv}%`;
+    if (partners.length && partnerSourced.length) {
+      const stageField = dealStageField(dealDef);
+      const perPartner = /* @__PURE__ */ new Map();
+      partnerSourced.forEach((d) => {
+        const key = String(entityValue(d, "partner", dealDef) || "(unnamed)");
+        if (!perPartner.has(key)) perPartner.set(key, { open: [], won: [], lost: [] });
+        const bucket = perPartner.get(key);
+        const stage = String(entityValue(d, stageField, dealDef));
+        if (dealWonStages(dealDef).includes(stage)) bucket.won.push(d);
+        else if (dealLostStages(dealDef).includes(stage)) bucket.lost.push(d);
+        else bucket.open.push(d);
+      });
+      root.createDiv({ cls: "bob-section-label-lg", text: "PIPELINE BY PARTNER" });
+      const ppCard = root.createDiv({ cls: "bob-dash-card" });
+      ppCard.style.margin = "0 36px 18px 36px";
+      const ppBody = ppCard.createDiv({ cls: "bob-dash-card-body" });
+      const table = ppBody.createEl("table", { cls: "bob-table" });
+      const thead = table.createEl("thead").createEl("tr");
+      ["Partner", "Open", "Open value", "Won", "Won value", "Win rate"].forEach((h) => thead.createEl("th", { text: h }));
+      const tbody = table.createEl("tbody");
+      [...perPartner.entries()].sort((a, b) => sumVal(b[1].won) - sumVal(a[1].won) || b[1].open.length - a[1].open.length).forEach(([name, b]) => {
+        const decided = b.won.length + b.lost.length;
+        const wr = decided === 0 ? null : Math.round(b.won.length / decided * 100);
+        const tr = tbody.createEl("tr");
+        const nameCell = tr.createEl("td", { text: name });
+        const partnerRec = partnerByName.get(name);
+        if (partnerRec?.file) {
+          nameCell.addClass("clickable");
+          nameCell.onclick = () => this.app.workspace.getLeaf(false).openFile(partnerRec.file);
+        }
+        tr.createEl("td", { text: String(b.open.length) });
+        tr.createEl("td", { text: fmtValue(sumVal(b.open), "currency") });
+        tr.createEl("td", { text: String(b.won.length) });
+        tr.createEl("td", { text: fmtValue(sumVal(b.won), "currency") });
+        tr.createEl("td", { text: wr === null ? "\u2014" : `${wr}%` });
+      });
+    }
+    const commissions = listEntities(this.app, "commission");
+    const registrations = listEntities(this.app, "registration");
+    const certifications = listEntities(this.app, "certification");
+    const daysUntil = (raw) => {
+      const v = String(raw || "").slice(0, 10);
+      if (!v) return null;
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return null;
+      const today = /* @__PURE__ */ new Date();
+      today.setHours(0, 0, 0, 0);
+      return Math.round((d.getTime() - today.getTime()) / 864e5);
+    };
+    if (commissions.length || registrations.length || certifications.length) {
+      root.createDiv({ cls: "bob-section-label-lg", text: "PROGRAMME HEALTH" });
+      const healthGrid = root.createDiv({ cls: "bob-stat-grid" });
+      const healthStat = (label, value, sub, accent) => {
+        const c = healthGrid.createDiv({ cls: "bob-stat-card" });
+        if (accent) c.dataset.accent = accent;
+        c.createDiv({ cls: "bob-stat-label", text: label });
+        c.createDiv({ cls: "bob-stat-value", text: String(value) });
+        if (sub) c.createDiv({ cls: "bob-stat-sub", text: sub });
+      };
+      if (commissions.length) {
+        const commDef = ENTITIES.commission;
+        const amountOf = (e) => Number(entityValue(e, "amount", commDef)) || 0;
+        const byStatus = (st) => commissions.filter((e) => String(entityValue(e, "status", commDef) || "") === st);
+        const earned = byStatus("earned");
+        const paid = byStatus("paid");
+        const disputed = byStatus("disputed");
+        const owed = earned.reduce((s, e) => s + amountOf(e), 0);
+        const settled = paid.reduce((s, e) => s + amountOf(e), 0);
+        healthStat("COMMISSION OWED", fmtValue(owed, "currency"), `${earned.length} earned, unpaid`, owed > 0 ? "warn" : "mint");
+        healthStat("COMMISSION PAID", fmtValue(settled, "currency"), `${paid.length} settled`, "emerald");
+        if (disputed.length) {
+          healthStat("DISPUTED", fmtValue(disputed.reduce((s, e) => s + amountOf(e), 0), "currency"), `${disputed.length} in dispute`, "rose");
+        }
+      }
+      if (registrations.length) {
+        const regDef = ENTITIES.registration;
+        const regStatus = (e) => String(entityValue(e, "status", regDef) || "");
+        const approved = registrations.filter((e) => regStatus(e) === "approved").length;
+        const rejected = registrations.filter((e) => regStatus(e) === "rejected").length;
+        const decided = approved + rejected;
+        const rate = decided === 0 ? null : Math.round(approved / decided * 100);
+        healthStat(
+          "APPROVAL RATE",
+          rate === null ? "\u2014" : `${rate}%`,
+          decided === 0 ? "no decisions yet" : `${approved}/${decided} decided`,
+          rate === null ? "sky" : rate >= 70 ? "emerald" : "warn"
+        );
+        const regExpiring = registrations.filter((e) => !["expired", "rejected"].includes(regStatus(e))).map((e) => ({ e, d: daysUntil(entityValue(e, "expires_date", regDef)) })).filter((r) => r.d !== null && r.d <= 30).sort((a, b) => a.d - b.d);
+        if (regExpiring.length) {
+          const lapsed = regExpiring.filter((r) => r.d < 0).length;
+          healthStat(
+            "REGISTRATIONS EXPIRING",
+            regExpiring.length,
+            lapsed ? `${lapsed} already lapsed` : `soonest in ${regExpiring[0].d}d`,
+            lapsed ? "rose" : "warn"
+          );
+        }
+      }
+      if (certifications.length) {
+        const certDef = ENTITIES.certification;
+        const certStatus = (e) => String(entityValue(e, "status", certDef) || "");
+        const certExpiring = certifications.filter((e) => !["expired", "revoked"].includes(certStatus(e))).map((e) => ({ e, d: daysUntil(entityValue(e, "expires_date", certDef)) })).filter((r) => r.d !== null && r.d <= 60).sort((a, b) => a.d - b.d);
+        const lapsedCerts = certExpiring.filter((r) => r.d < 0).length;
+        healthStat(
+          "CERTS EXPIRING",
+          certExpiring.length,
+          certExpiring.length === 0 ? "none within 60 days" : lapsedCerts ? `${lapsedCerts} already lapsed` : `soonest in ${certExpiring[0].d}d`,
+          certExpiring.length === 0 ? "mint" : lapsedCerts ? "rose" : "warn"
+        );
+        if (certExpiring.length) {
+          const renewalRows = certExpiring.slice(0, 10).map(({ e, d }) => {
+            const name = String(entityValue(e, "name", certDef) || e.basename);
+            const partner = String(entityValue(e, "partner_ref", certDef) || "");
+            const days = d;
+            return {
+              title: partner ? `${name} \u2014 ${partner}` : name,
+              meta: days < 0 ? `expired ${Math.abs(days)}d ago` : `${days}d left`,
+              file: e.file
+            };
+          });
+          this._dashCardSection(root, "RENEWAL PIPELINE \xB7 certifications within 60 days", renewalRows, "Nothing expiring.");
+        }
+      }
+    }
+  }
+  /** Create a commission record when a partner-sourced deal reaches a won stage.
+   *
+   * Commissions were previously created by hand after every won deal, which is
+   * exactly the kind of step that gets skipped in a busy week — and an unrecorded
+   * commission is a partner-trust problem, not a bookkeeping one.
+   *
+   * Deliberately conservative:
+   *  - only fires when the changed field is the deal's stage field
+   *  - only for a won stage, and only when the deal names a partner
+   *  - never creates a second commission for the same deal (idempotent on re-drag)
+   *  - status is `earned`, not `paid` — this records the liability, it does not settle it
+   *  - a rate is only applied when the partner declares one; no invented default,
+   *    because a wrong rate is worse than a blank one somebody has to fill in
+   */
+  async _maybeCreateCommissionForWonDeal(file, changedField, newValue) {
+    try {
+      const dealDef = ENTITIES.deal;
+      const commDef = ENTITIES.commission;
+      if (!dealDef || !commDef) return;
+      if (changedField !== dealStageField(dealDef)) return;
+      if (!dealWonStages(dealDef).includes(newValue)) return;
+      const deal = readEntity(this.app, file);
+      const partnerName = String(entityValue(deal, "partner", dealDef) || entityValue(deal, "partner_ref", dealDef) || "").trim();
+      if (!partnerName) return;
+      const dealKey = file.basename;
+      const existing = listEntities(this.app, "commission").some((c) => String(entityValue(c, "deal_ref", commDef) || "").includes(dealKey));
+      if (existing) return;
+      const value = Number(entityValue(deal, dealValueField(dealDef), dealDef)) || 0;
+      const partner = listEntities(this.app, "partner").find((pt) => {
+        const pn = String(entityValue(pt, "partner_name", ENTITIES.partner) || "").trim();
+        return pn === partnerName || pt.basename === partnerName;
+      });
+      const rate = partner ? Number(entityValue(partner, "commission_rate", ENTITIES.partner)) : NaN;
+      const amount = Number.isFinite(rate) && rate > 0 ? Math.round(value * (rate / 100)) : 0;
+      const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const period = today.slice(0, 7);
+      const folder = `${commDef.folder}/COMMISSIONS`;
+      if (!this.app.vault.getAbstractFileByPath(folder)) {
+        await this.app.vault.createFolder(folder).catch(() => {
+        });
+      }
+      const safe = `${partnerName}-${dealKey}`.replace(/[\\/:*?"<>|]/g, "-").slice(0, 80);
+      const path = `${folder}/commission-${safe}.md`;
+      if (this.app.vault.getAbstractFileByPath(path)) return;
+      const fm = [
+        "---",
+        "type: commission",
+        `reference: commission-${safe}`,
+        `partner_ref: "[[${partnerName}]]"`,
+        `deal_ref: "[[${dealKey}]]"`,
+        `amount: ${amount}`,
+        "status: earned",
+        `period: ${period}`,
+        `earned_date: ${today}`,
+        "---",
+        "",
+        `# Commission \u2014 ${partnerName}`,
+        "",
+        `Auto-created when [[${dealKey}]] reached stage \`${newValue}\`.`,
+        "",
+        amount > 0 ? `Amount computed from deal value ${value} at the partner's declared rate of ${rate}%.` : `**Amount not computed** \u2014 the partner record declares no \`commission_rate\`. Set the amount by hand, or add a rate to the partner and delete this note to have it regenerate.`,
+        ""
+      ].join("\n");
+      await this.app.vault.create(path, fm);
+      new obsidian17.Notice(`Commission recorded for ${partnerName}`);
+    } catch (e) {
+      new obsidian17.Notice(`Deal moved, but commission was not created: ${e.message}`);
+    }
   }
   /* ── Team (configurable People categories) ─ */
   async renderTeam(root) {
@@ -38359,6 +38651,10 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
       try {
         const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
         new obsidian18.Notice(`BOB Workspace: generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s)${result.datamodelUpdated ? `; updated ${result.datamodelUpdated} DATAMODEL section(s)` : ""}.`);
+        if (result.datamodelFullLosses.length) {
+          new obsidian18.Notice(`BOB Workspace: DATAMODEL-FULL.md NOT regenerated - ${result.datamodelFullLosses.length} authored line(s) would be deleted, first: ${result.datamodelFullLosses[0].slice(0, 120)}`, 15e3);
+          console.warn("BOB Workspace: DATAMODEL-FULL.md regeneration refused; authored lines not reproducible from source:", result.datamodelFullLosses);
+        }
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
       } catch (e) {
@@ -38798,6 +39094,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         if (regenerate) {
           const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
           outputText = ` Generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s)${result.datamodelUpdated ? `; updated ${result.datamodelUpdated} DATAMODEL section(s)` : ""}.`;
+          if (result.datamodelFullLosses.length) outputText += ` DATAMODEL-FULL.md not regenerated (${result.datamodelFullLosses.length} authored line(s) would be lost).`;
         }
         schemaDirty = false;
         this._schemaDesignerSelectedPath = sourceSchemaPath;
@@ -38962,6 +39259,12 @@ var BobPlugin = class extends obsidian20.Plugin {
     this.registerEvent(this.app.vault.on("delete", dropScanCache));
     this.registerEvent(this.app.vault.on("rename", dropScanCache));
     this.registerEvent(this.app.metadataCache.on("changed", dropScanCache));
+    this.app.workspace.onLayoutReady(() => {
+      void this.refreshPartnerExpiryStatuses();
+    });
+    this.registerEvent(this.app.metadataCache.on("changed", (file) => {
+      if (file instanceof obsidian20.TFile) void this.refreshPartnerExpiryStatuses(file);
+    }));
     if (typeof this.registerBasesView === "function") {
       this.registerBasesView(PLAYBOOK_RUNNER_VIEW_TYPE, {
         name: "Playbook Runner",
@@ -39292,6 +39595,59 @@ var BobPlugin = class extends obsidian20.Plugin {
           new Notification("BOB Workspace reminder", { body: r.text });
         }
       } catch (_) {
+      }
+    }
+  }
+  /** Recompute `status` on partner certifications and registrations from their
+   * `expires_date`.
+   *
+   * These records rot quietly — the expiry date is in frontmatter and nothing
+   * reads it, so a certification lapses and the partner is silently ineligible
+   * for the tier or deal it gated.
+   *
+   * Rules, deliberately narrow:
+   *  - certifications: >60 days out or no date → `active`; within 60 → `expiring-soon`; past → `expired`
+   *  - registrations: only ever escalate an `approved` one to `expired` once the
+   *    date has passed. There is no `expiring-soon` in the registration lifecycle,
+   *    so nothing is invented; the warning surface is PRM analytics.
+   *  - manual terminal states are never overwritten: `renewed` / `revoked` for
+   *    certifications, `rejected` for registrations. A human decision outranks a date.
+   */
+  async refreshPartnerExpiryStatuses(only) {
+    const DAY = 864e5;
+    const today = /* @__PURE__ */ new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysUntil = (raw) => {
+      const v = String(raw || "").slice(0, 10);
+      if (!v) return null;
+      const d = new Date(v);
+      return Number.isNaN(d.getTime()) ? null : Math.round((d.getTime() - today.getTime()) / DAY);
+    };
+    const candidates = only ? [only] : this.app.vault.getMarkdownFiles();
+    for (const file of candidates) {
+      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if (!fm) continue;
+      const type = String(fm.type || "");
+      if (type !== "certification" && type !== "registration") continue;
+      const current = String(fm.status || "");
+      const d = daysUntil(fm.expires_date);
+      let next = null;
+      if (type === "certification") {
+        if (["renewed", "revoked"].includes(current)) continue;
+        if (d === null) next = "active";
+        else if (d < 0) next = "expired";
+        else if (d <= 60) next = "expiring-soon";
+        else next = "active";
+      } else {
+        if (current !== "approved") continue;
+        if (d !== null && d < 0) next = "expired";
+      }
+      if (!next || next === current) continue;
+      try {
+        await this.app.fileManager.processFrontMatter(file, (front) => {
+          front.status = next;
+        });
+      } catch {
       }
     }
   }

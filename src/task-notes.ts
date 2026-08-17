@@ -12,7 +12,12 @@ export interface ProductivityTaskNote {
   fm: Frontmatter;
   status: string;
   done: boolean;
+  /** Single date used to place the task on the 30-day/12-week activity timeline. */
   date: string;
+  /** When the task entered the backlog. Drives the "created in window" flow metric. */
+  created: string;
+  /** When the task left the backlog; empty while still open. Drives "closed in window". */
+  closed: string;
   priority: string;
   due: string;
   scheduled: string;
@@ -130,10 +135,27 @@ export function taskNoteDateValue(file: TFile, fm: Frontmatter, done: boolean): 
   if (file?.stat?.mtime) return ymd(new Date(file.stat.mtime));
   return '';
 }
-export function listTaskNotesForProductivity(app: App, settings: PartialSettings, start: Date | string | number, end: Date | string | number): ProductivityTaskNote[] {
+/** When the task entered the backlog. Never falls back to a mutable date. */
+export function taskNoteCreatedValue(file: TFile, fm: Frontmatter): string {
+  const raw = fm.dateCreated || fm.created;
+  if (raw) return String(raw).slice(0, 10);
+  if (file?.stat?.ctime) return ymd(new Date(file.stat.ctime));
+  return '';
+}
+/** When the task left the backlog; empty while it is still open. */
+export function taskNoteClosedValue(file: TFile, fm: Frontmatter, done: boolean): string {
+  if (!done) return '';
+  const raw = fm.dateCompleted || fm.completedDate || fm.completed || fm.dateModified || fm.modified;
+  if (raw) return String(raw).slice(0, 10);
+  if (file?.stat?.mtime) return ymd(new Date(file.stat.mtime));
+  return '';
+}
+/**
+ * Every TaskNote in the configured folders, with no date window applied.
+ * This is the backlog view: what is open right now regardless of age.
+ */
+export function listAllTaskNotes(app: App, settings: PartialSettings): ProductivityTaskNote[] {
   const folders = taskNoteFolders(settings);
-  const startTime = startOfDay(start).getTime();
-  const endTime = startOfDay(end).getTime();
   return scannableMarkdownFiles(app)
     .filter((f) => folders.some((folder) => f.path.startsWith(folder + '/')))
     .map((file) => {
@@ -147,6 +169,8 @@ export function listTaskNotesForProductivity(app: App, settings: PartialSettings
         status,
         done,
         date,
+        created: taskNoteCreatedValue(file, fm),
+        closed: taskNoteClosedValue(file, fm, done),
         priority: String(fm.priority || '').trim().toLowerCase(),
         due: fm.due ? String(fm.due).slice(0, 10) : '',
         scheduled: fm.scheduled ? String(fm.scheduled).slice(0, 10) : '',
@@ -158,10 +182,16 @@ export function listTaskNotesForProductivity(app: App, settings: PartialSettings
           : String(fm.contexts || '').split(/[,\n]/).map((item) => item.trim()).filter(Boolean),
       };
     })
-    .filter((item) => {
-      const time = item.date ? new Date(item.date + 'T00:00:00').getTime() : NaN;
-      return !taskNoteIgnored(item.status) && Number.isFinite(time) && time >= startTime && time <= endTime;
-    });
+    .filter((item) => !taskNoteIgnored(item.status));
+}
+/** The subset of {@link listAllTaskNotes} whose timeline date falls inside the window. */
+export function listTaskNotesForProductivity(app: App, settings: PartialSettings, start: Date | string | number, end: Date | string | number): ProductivityTaskNote[] {
+  const startTime = startOfDay(start).getTime();
+  const endTime = startOfDay(end).getTime();
+  return listAllTaskNotes(app, settings).filter((item) => {
+    const time = item.date ? new Date(item.date + 'T00:00:00').getTime() : NaN;
+    return Number.isFinite(time) && time >= startTime && time <= endTime;
+  });
 }
 
 export async function toggleTaskNoteStatus(app: App, file: TFile, done: boolean): Promise<void> {

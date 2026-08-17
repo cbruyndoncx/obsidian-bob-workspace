@@ -4,7 +4,7 @@ import { entityValue, fmtValue, listEntities, listEntityFiles } from './entity-f
 import { parseSections } from './notes';
 import { readProjectMeta } from './project-notes';
 import { projectNameFromPath, reminderTimeStr } from './reminders';
-import { listTaskNotesForProductivity } from './task-notes';
+import { listAllTaskNotes } from './task-notes';
 import { addDays, dailyNotePath, startOfDay, startOfWeek, weekDates, ymd } from './utils';
 import { WORKSPACE_CONFIG, workspaceConfiguredEntityKeys } from './workspace-config';
 import * as obsidian from 'obsidian';
@@ -75,7 +75,18 @@ export async function buildProductivitySnapshot(app: App, settings: PartialSetti
   const weekStart = startOfWeek(today, settings.weekStartsOn);
   const oldestWeekStart = addDays(weekStart, -11 * 7);
   const taskNoteStart = oldestWeekStart.getTime() < oldestDay.getTime() ? oldestWeekStart : oldestDay;
-  const taskNotes = includeTaskNotes ? listTaskNotesForProductivity(app, settings, taskNoteStart, today) : [];
+  // Two distinct readings of the same corpus:
+  //  - allTaskNotes: the standing backlog, no date window at all.
+  //  - taskNotes:    the activity window, used by the timeline/heatmap/buckets.
+  const allTaskNotes = includeTaskNotes ? listAllTaskNotes(app, settings) : [];
+  const windowStartMs = startOfDay(taskNoteStart).getTime();
+  const windowEndMs = startOfDay(today).getTime();
+  const inWindow = (iso: string) => {
+    if (!iso) return false;
+    const t = new Date(iso + 'T00:00:00').getTime();
+    return Number.isFinite(t) && t >= windowStartMs && t <= windowEndMs;
+  };
+  const taskNotes = allTaskNotes.filter((task) => inWindow(task.date));
   const taskNotesByDate = new Map<string, ProductivityTaskNote[]>();
   taskNotes.forEach((task) => {
     if (!taskNotesByDate.has(task.date)) taskNotesByDate.set(task.date, []);
@@ -163,10 +174,48 @@ export async function buildProductivitySnapshot(app: App, settings: PartialSetti
   });
 
   const completion = totalOpen + totalDone === 0 ? 0 : Math.round((totalDone / (totalOpen + totalDone)) * 100);
+
+  // Backlog + flow. The stats above answer "how much activity happened in the
+  // window"; these answer "is the backlog growing or shrinking", which is the
+  // question a 30-day activity count structurally cannot answer.
+  const flowStartMs = startOfDay(oldestDay).getTime();
+  const inFlowWindow = (iso: string) => {
+    if (!iso) return false;
+    const t = new Date(iso + 'T00:00:00').getTime();
+    return Number.isFinite(t) && t >= flowStartMs && t <= windowEndMs;
+  };
+  const backlogTasks = allTaskNotes.filter((task) => !task.done);
+  const backlogOpen = backlogTasks.length;
+  const backlogOverdue = backlogTasks.filter((task) => {
+    const ref = task.due || task.scheduled;
+    if (!ref) return false;
+    const t = new Date(ref + 'T00:00:00').getTime();
+    return Number.isFinite(t) && t < todayStartMs;
+  }).length;
+  const backlogStale = backlogTasks.filter((task) => task.created && !inFlowWindow(task.created)).length;
+  const createdInWindow = allTaskNotes.filter((task) => inFlowWindow(task.created)).length;
+  const closedInWindow = allTaskNotes.filter((task) => inFlowWindow(task.closed)).length;
+  // Positive = backlog grew over the window, negative = it shrank.
+  const netBacklogChange = createdInWindow - closedInWindow;
+  // >100 means more was closed than created, i.e. the backlog is burning down.
+  const burnRate = createdInWindow === 0
+    ? (closedInWindow > 0 ? 200 : 0)
+    : Math.min(200, Math.round((closedInWindow / createdInWindow) * 100));
+
+  // Per-week created/closed counts, so the trend chart can show flow rather
+  // than a raw activity count. Keyed by ISO date for O(1) lookup per week.
+  const createdByDate = new Map<string, number>();
+  const closedByDate = new Map<string, number>();
+  allTaskNotes.forEach((task) => {
+    if (task.created) createdByDate.set(task.created, (createdByDate.get(task.created) || 0) + 1);
+    if (task.closed) closedByDate.set(task.closed, (closedByDate.get(task.closed) || 0) + 1);
+  });
+
   const weeks = [];
   for (let w = 11; w >= 0; w--) {
     const ws = addDays(weekStart, -w * 7);
     let wd = 0, wo = 0, anyNote = false;
+    let wCreated = 0, wClosed = 0;
     for (let i = 0; i < 7; i++) {
       const d = addDays(ws, i);
       if (d.getTime() > today.getTime()) break;
@@ -182,8 +231,20 @@ export async function buildProductivitySnapshot(app: App, settings: PartialSetti
         wo += dayTaskNotes.filter((task) => !task.done).length;
         if (dayTaskNotes.length) anyNote = true;
       }
+      const iso = ymd(d);
+      wCreated += createdByDate.get(iso) || 0;
+      wClosed += closedByDate.get(iso) || 0;
     }
-    weeks.push({ start: ws, done: wd, open: wo, any: anyNote, label: ws.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) });
+    weeks.push({
+      start: ws,
+      done: wd,
+      open: wo,
+      created: wCreated,
+      closed: wClosed,
+      net: wCreated - wClosed,
+      any: anyNote,
+      label: ws.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    });
   }
   const wsOn = settings.weekStartsOn;
   const dayBuckets = Array.from({ length: 7 }, () => ({ done: 0, open: 0 }));
@@ -209,7 +270,15 @@ export async function buildProductivitySnapshot(app: App, settings: PartialSetti
     activeDays,
     streak,
     completion,
+    backlogOpen,
+    backlogOverdue,
+    backlogStale,
+    createdInWindow,
+    closedInWindow,
+    netBacklogChange,
+    burnRate,
     taskNotes,
+    allTaskNotes,
     projectBuckets: [...projectBuckets.values()].sort((a, b) => b.value - a.value),
     contextBuckets: [...contextBuckets.values()].sort((a, b) => b.value - a.value),
     overdueTasks: overdueTasks.sort((a, b) => String(a.due || a.scheduled || '9999-12-31').localeCompare(String(b.due || b.scheduled || '9999-12-31'))),

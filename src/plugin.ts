@@ -79,6 +79,15 @@ export class BobPlugin extends obsidian.Plugin {
     this.registerEvent(this.app.vault.on('rename', dropScanCache));
     this.registerEvent(this.app.metadataCache.on('changed', dropScanCache));
 
+    // Partner certifications/registrations expire silently: the date sits in
+    // frontmatter and nothing ever looks at it, so a partner drops out of a tier
+    // or loses commission protection with no signal. Recompute the derived status
+    // once on load, and whenever one of those notes is edited.
+    this.app.workspace.onLayoutReady(() => { void this.refreshPartnerExpiryStatuses(); });
+    this.registerEvent(this.app.metadataCache.on('changed', (file) => {
+      if (file instanceof obsidian.TFile) void this.refreshPartnerExpiryStatuses(file);
+    }));
+
     // Register playbook runner as a Bases custom view type (used in Playbooks.base Runner tabs)
     if (typeof this.registerBasesView === 'function') {
       this.registerBasesView(PLAYBOOK_RUNNER_VIEW_TYPE, {
@@ -446,6 +455,65 @@ export class BobPlugin extends obsidian.Plugin {
           new Notification('BOB Workspace reminder', { body: r.text });
         }
       } catch (_) {}
+    }
+  }
+
+  /** Recompute `status` on partner certifications and registrations from their
+   * `expires_date`.
+   *
+   * These records rot quietly — the expiry date is in frontmatter and nothing
+   * reads it, so a certification lapses and the partner is silently ineligible
+   * for the tier or deal it gated.
+   *
+   * Rules, deliberately narrow:
+   *  - certifications: >60 days out or no date → `active`; within 60 → `expiring-soon`; past → `expired`
+   *  - registrations: only ever escalate an `approved` one to `expired` once the
+   *    date has passed. There is no `expiring-soon` in the registration lifecycle,
+   *    so nothing is invented; the warning surface is PRM analytics.
+   *  - manual terminal states are never overwritten: `renewed` / `revoked` for
+   *    certifications, `rejected` for registrations. A human decision outranks a date.
+   */
+  async refreshPartnerExpiryStatuses(only?: obsidian.TFile) {
+    const DAY = 86400000;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const daysUntil = (raw: unknown): number | null => {
+      const v = String(raw || '').slice(0, 10);
+      if (!v) return null;
+      const d = new Date(v);
+      return Number.isNaN(d.getTime()) ? null : Math.round((d.getTime() - today.getTime()) / DAY);
+    };
+
+    const candidates: obsidian.TFile[] = only
+      ? [only]
+      : this.app.vault.getMarkdownFiles();
+
+    for (const file of candidates) {
+      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if (!fm) continue;
+      const type = String(fm.type || '');
+      if (type !== 'certification' && type !== 'registration') continue;
+
+      const current = String(fm.status || '');
+      const d = daysUntil(fm.expires_date);
+      let next: string | null = null;
+
+      if (type === 'certification') {
+        if (['renewed', 'revoked'].includes(current)) continue;
+        if (d === null) next = 'active';
+        else if (d < 0) next = 'expired';
+        else if (d <= 60) next = 'expiring-soon';
+        else next = 'active';
+      } else {
+        if (current !== 'approved') continue;
+        if (d !== null && d < 0) next = 'expired';
+      }
+
+      if (!next || next === current) continue;
+      try {
+        await this.app.fileManager.processFrontMatter(file, (front) => { front.status = next; });
+      } catch {
+        // A single unwritable note must not stop the sweep.
+      }
     }
   }
 
