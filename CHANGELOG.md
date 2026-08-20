@@ -4,6 +4,44 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [1.2.0] — 2026-08-20
+
+### Added
+- **Nav sections take an Expanded / Collapsed / Hidden setting** (Settings →
+  Modules) in place of the on/off toggle. It composes the existing `modules`
+  and `collapsedGroups` settings, so the pill and the sidebar's own group
+  headers stay in sync rather than fighting over a separate "default".
+- Every labelled nav group can now be hidden. Groups authored in a vault's
+  `workspace.json` previously could not be — see Changed.
+
+### Fixed
+- **Bar charts saturated near the top of the scale.** A bar's percentage height
+  resolved against the whole column, label and value rows included, so tall
+  bars overflowed and were flex-shrunk into the leftover space. Values
+  96/128/96 rendered 120px/123px/120px; they now render 96px/128px/96px.
+  Affects every bar chart, not just the productivity report.
+- **"Created per week" and "closed per week" drew identical bars.** The weeks
+  row mapper never exposed the created/closed/net counts the snapshot already
+  computed, and an unknown field silently fell back to the `done` tally. A card
+  naming a field its section doesn't provide now resolves to 0 instead of
+  quietly plotting a different series.
+- **The content cadence heatmap was blank by construction.** It counted
+  characters in each daily note's `## Journal` section, which is empty in any
+  vault that doesn't write journal prose. The BOB template now charts
+  marketing-content activity; the CRM template, which ships no bases, charts
+  task flow.
+
+### Changed
+- **Group-level `module` removed from `navigation.groups`.** It never held
+  anything but the group's own id, and groups authored later omitted it — which
+  left them with no entry in `modules` and therefore no way to be hidden.
+  Groups are keyed by id. A legacy `module` key is migrated onto the id at
+  load, so a hidden group stays hidden; no action needed on existing vaults.
+  **Item-level `module` is unchanged** and still names the module a surface's
+  data depends on (`reports.pipeline` → `crm`).
+- Entity `typeFilter` derives from the entity name; `type_value` is dropped
+  from schema YAML.
+
 ## [1.0.0] — 2026-07-16
 
 ### Added
