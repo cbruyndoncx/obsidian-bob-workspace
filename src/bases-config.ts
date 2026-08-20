@@ -251,7 +251,7 @@ export async function applyEntityDefinitions(app: obsidian.App, settings: Partia
 /* ─── Schema YAML config loader ─────────────────────────────────────────────
    Reads 00-CORE/Schemas/source/*.yaml files (Metadata Menu schema source) and
    derives entity config from them. Each schema YAML has:
-     entity, label, type_value, location_pattern, key_fields, fields,
+     entity, label, location_pattern, key_fields, fields,
      status_lifecycle (enum values for status/stage)
 
    Schema entity names don't always match plugin entity keys (person→contact,

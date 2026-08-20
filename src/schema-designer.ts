@@ -30,7 +30,6 @@ export interface SourceSchema {
   label?: string;
   plural?: string;
   icon?: string;
-  type_value?: string;
   location_pattern?: string;
   key_fields?: string[];
   fields?: SourceSchemaField[];
@@ -149,8 +148,6 @@ export function schemaSourceFromEntityDefinition(entityKey: string, def: BobEnti
     location_pattern: entityLocationPattern(def, entityKey),
     fields,
   };
-  const typeValue = def.filenameFilter ? '' : String(def.typeFilter || entityKey || '').trim();
-  if (typeValue) schema.type_value = typeValue;
   if (primaryField) schema.key_fields = [primaryField];
   if (def.desc || def.description) schema.description = def.desc || def.description;
   if (def.fieldAliases && Object.keys(def.fieldAliases).length) schema.field_aliases = cloneConfig(def.fieldAliases);
@@ -250,10 +247,6 @@ export function validateSourceSchemaDefinition(schema: SourceSchema): SourceSche
   (['entity', 'label', 'location_pattern'] as const).forEach((key) => {
     if (!String(schema[key] || '').trim()) throw new Error(`Schema needs ${key}`);
   });
-  const entityKey = SCHEMA_TO_ENTITY_KEY[schema.entity] || schema.entity;
-  if (!String(schema.type_value || '').trim() && !ENTITIES[entityKey]?.filenameFilter) {
-    throw new Error('Schema needs type_value unless the record type is filename-backed');
-  }
   if (!Array.isArray(schema.fields) || !schema.fields.length) {
     throw new Error('Schema needs at least one field');
   }
@@ -413,7 +406,7 @@ export function metadataMenuFieldType(field: SourceSchemaField): string {
 }
 
 export function sourceSchemaToJsonSchema(schema: SourceSchema) {
-  const schemaId = schema.type_value || schema.entity;
+  const schemaId = schema.entity;
   const properties: Record<string, Record<string, JsonValue>> = {};
   const required: string[] = [];
   (schema.fields || []).forEach((field) => {
@@ -431,7 +424,7 @@ export function sourceSchemaToJsonSchema(schema: SourceSchema) {
     properties[field.name] = property;
     if (field.required) required.push(field.name);
   });
-  if (schema.type_value && properties.type) properties.type = { const: schema.type_value };
+  if (properties.type) properties.type = { const: schema.entity };
   if (schema.discriminator) Object.entries(schema.discriminator).forEach(([key, value]) => {
     properties[key] = Object.assign({}, properties[key] || { type: 'string' }, { const: value });
     if (!required.includes(key)) required.push(key);
@@ -459,9 +452,8 @@ export function sourceSchemaToFileClass(schema: SourceSchema): string {
     const config: { name: string; type: string; id: string; path: string; options?: Array<Record<string, JsonValue>>; required?: boolean } = {
       name: field.name,
       type: metadataMenuFieldType(field),
-      // Keyed by type_value to match the vault generator's field ids — do not
-      // fall back to entity here or merged/divergent types get different ids.
-      id: stableSchemaId(`${schema.type_value || schema.entity}:${field.name}`),
+      // Keyed by the entity name, matching the vault generator's field ids.
+      id: stableSchemaId(`${schema.entity}:${field.name}`),
       path: '',
     };
     if (Array.isArray(field.enum) && field.enum.length) {
@@ -471,7 +463,7 @@ export function sourceSchemaToFileClass(schema: SourceSchema): string {
     return config;
   });
   const yaml = {
-    fileClass: schema.type_value || schema.entity,
+    fileClass: schema.entity,
     version: '1.0',
     mapWithTag: false,
     // Deliberately empty — Metadata Menu binds via fileClassAlias "type", not by
@@ -486,15 +478,14 @@ export function sourceSchemaToFileClass(schema: SourceSchema): string {
 }
 
 /**
- * Merge the schemas that share one note-facing `type:` value into a single
+ * Merge schemas that share one note-facing `type:` value into a single
  * synthetic SourceSchema, keyed by that value.
  *
- * Generated outputs (fileClass + JSON Schema) must be named by `type_value`:
- * that is how every consumer resolves them — frontmatter validators load
- * `{type}.schema.json`, and Metadata Menu with `fileClassAlias: "type"` binds a
- * note to `fileClasses/{type}.md`. Keying by entity left divergent entities'
- * fileClasses unreachable, and entities sharing a type (research +
- * regional-context) silently clobbered each other's outputs last-wins.
+ * Since 2026-08-20 an entity's `type:` IS its name, so the key is the entity and
+ * a merge group is normally a single schema. The merge path is kept because
+ * generated outputs must still be named by the note-facing type — frontmatter
+ * validators load `{type}.schema.json`, and Metadata Menu with
+ * `fileClassAlias: "type"` binds a note to `fileClasses/{type}.md`.
  *
  * Merge semantics mirror the vault's regenerate.py: first schema wins per
  * field, `required` only where required in every schema of the group,
@@ -518,7 +509,6 @@ export function mergedSchemaForKey(key: string, schemas: SourceSchema[]): Source
   return {
     ...schemas[0],
     entity: key,
-    type_value: key,
     label: [...new Set(schemas.map((s) => s.label || s.entity))].sort().join(' / '),
     description: schemas.find((s) => s.description)?.description,
     location_pattern: locations.join(' or '),
@@ -554,7 +544,7 @@ export async function regenerateSchemaOutputs(app: App, settings: PartialSetting
   // it (see mergedSchemaForKey). Entities sharing a type merge into one output.
   const byType = new Map<string, SourceSchema[]>();
   for (const { schema } of loaded.schemas) {
-    const key = schema.type_value || schema.entity;
+    const key = schema.entity;
     byType.set(key, [...(byType.get(key) || []), schema]);
   }
   for (const [key, group] of byType) {
@@ -661,7 +651,7 @@ export function generateEntityTypesTable(schemas: LoadedSchemaSource[]): string 
   const header = '| Entity | `type:` value | Location | Key Fields |\n|--------|--------------|----------|------------|';
   const rows = schemas.map(({ schema }) => {
     const label = schema.label || schema.entity;
-    const typeValue = schema.type_value ? `\`${schema.type_value}\`` : '_(filename-backed)_';
+    const typeValue = `\`${schema.entity}\``;
     const location = schema.location_pattern || '—';
     const keyFields = (schema.key_fields || []).map((k) => `\`${k}\``).join(', ') || '—';
     return `| ${label} | ${typeValue} | ${location} | ${keyFields} |`;
@@ -672,7 +662,7 @@ export function generateEntityTypesTable(schemas: LoadedSchemaSource[]): string 
 export function generateEntityDefinitionsSection(schemas: LoadedSchemaSource[]): string {
   return schemas.map(({ schema }) => {
     const label = schema.label || schema.entity;
-    const typeValue = schema.type_value || '_(filename-backed)_';
+    const typeValue = schema.entity;
     const location = schema.location_pattern || '—';
     const definition = schema.description || '—';
     const scope = schema.scope || '';

@@ -23,7 +23,6 @@ interface SchemaYaml {
   label?: string;
   plural?: string;
   icon?: string;
-  type_value?: string;
   location_pattern?: string;
   key_fields?: string[];
   fields?: SchemaYamlField[];
@@ -132,7 +131,7 @@ export async function applySchemas(app: obsidian.App, settings: PartialSettings 
       const schemaFields = fieldsFromSchema(schema, []) || [];
       ENTITIES[entityKey] = {
         folder: '',
-        typeFilter: schema.type_value || entityKey,
+        typeFilter: entityKey,
         label,
         plural: schema.plural || pluralizeEntityLabel(label),
         icon: schema.icon || 'file-text',
@@ -171,8 +170,8 @@ export async function applySchemas(app: obsidian.App, settings: PartialSettings 
       }
     }
 
-    // typeFilter from type_value — skip if entity uses filenameFilter (matched by filename, not type field)
-    if (schema.type_value && !ENTITIES[entityKey].filenameFilter) ENTITIES[entityKey].typeFilter = schema.type_value;
+    // typeFilter is the entity name — skip if the entity is matched by filename, not by a type field
+    if (!ENTITIES[entityKey].filenameFilter) ENTITIES[entityKey].typeFilter = entityKey;
 
     // Enrich fields from schema.fields (preserve existing labels where present)
     if (Array.isArray(schema.fields) && ENTITIES[entityKey].fields) {
