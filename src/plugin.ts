@@ -548,6 +548,7 @@ export class BobPlugin extends obsidian.Plugin {
     this.settings.collapsedGroups = Object.assign({}, DEFAULT_SETTINGS.collapsedGroups || {}, data?.collapsedGroups || {});
     await loadWorkspaceConfig(this.app);
     this.settings = applyWorkspaceOwnedSettings(this.settings) as BobSettings;
+    this.migrateLegacyGroupModuleKeys();
     // Prune completed reminders older than 30 days: every fired repeat leaves
     // a row behind, and the whole array is serialized into data.json AND
     // workspace.json on every save — unbounded growth made each save slower.
@@ -591,9 +592,32 @@ export class BobPlugin extends obsidian.Plugin {
   // onto plugin.settings BEFORE rebuilding registries — so a manual workspace.json
   // edit or a Settings "Save and apply" is reflected in this.settings and not
   // reverted by the next saveSettings(). Mirrors the tail of loadSettings().
+  /** Carry a legacy group-level `module` on/off state onto the group id.
+   *
+   *  Nav groups used to be gated by a `module` field naming one of a fixed set
+   *  of shipped modules; they are now gated by their own id (navGroupModuleKey).
+   *  In every template and vault seen, `module` was already identical to `id`,
+   *  so this is a no-op — but a config where they differ would otherwise lose a
+   *  hidden group's hidden state on upgrade, silently putting the group back in
+   *  the sidebar. Only seeds ids with no explicit setting, so it can never
+   *  override a deliberate choice, and only copies `false` (the state that would
+   *  actually be lost). */
+  migrateLegacyGroupModuleKeys() {
+    const groups = WORKSPACE_CONFIG.navigation?.groups;
+    if (!Array.isArray(groups)) return;
+    const modules = this.settings.modules || (this.settings.modules = {});
+    groups.forEach((group: { id?: string; module?: string }) => {
+      const id = String(group?.id || '').trim();
+      const legacy = String(group?.module || '').trim();
+      if (!id || !legacy || legacy === id) return;
+      if (modules[id] == null && modules[legacy] === false) modules[id] = false;
+    });
+  }
+
   async reloadWorkspaceConfiguration() {
     await loadWorkspaceConfig(this.app);
     this.settings = applyWorkspaceOwnedSettings(this.settings) as BobSettings;
+    this.migrateLegacyGroupModuleKeys();
     setCurrentCurrency(this.settings.currency);
     await reloadEntityConfiguration(this.app, this.settings);
   }

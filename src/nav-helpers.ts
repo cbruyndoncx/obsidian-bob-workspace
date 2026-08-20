@@ -14,6 +14,28 @@ export interface NavSurfaceItem extends NavSurface {
   placement?: string;
 }
 
+/** Settings key under `modules` that switches a nav group on/off.
+ *
+ *  This is the group id. Groups used to carry a separate `module` field naming
+ *  one of a fixed set of shipped modules (crm, finance, …), but it never held
+ *  anything other than the group's own id, and groups authored later in a
+ *  vault's workspace.json simply omitted it — leaving them with no entry in
+ *  `modules` and therefore no way to be hidden at all. Keying on the id, which
+ *  every group has and which is unique within navigation.groups, gives builtin
+ *  and vault-authored groups the same capabilities.
+ *
+ *  Item-level `module` is a different, still-live concept and is untouched: a
+ *  surface can name the module whose data it depends on (reports.pipeline →
+ *  crm), so disabling CRM drops that report from the Reports group without
+ *  hiding the group. See the item filter in AppView._visibleNavGroups.
+ *
+ *  Legacy group-level `module` keys are migrated onto the id in
+ *  BobPlugin.loadSettings, so a pre-existing hidden group stays hidden. */
+export function navGroupModuleKey(group: { id?: string } | null | undefined): string {
+  if (!group) return '';
+  return String(group.id || '').trim();
+}
+
 export function surfaceMatchesTab(surface: NavSurface | null | undefined, tab: SecondaryTab | null | undefined) {
   return !!surface && !!tab && (
     (tab.entityKey && surface.entityKey === tab.entityKey) ||

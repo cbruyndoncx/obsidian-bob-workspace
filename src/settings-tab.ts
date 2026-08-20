@@ -6,7 +6,7 @@ import { HELP_TOPICS } from './help-content';
 import { ENTITIES } from './entities';
 import { BobIconPickerModal, BobPromptModal, confirmModal } from './modals/common';
 import { NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_BOB_APP, migrateWorkspacePlannerConfig } from './nav';
-import { isTabBackedSurface, makeNavigationSurfacePrimary, navigationSurfaceFromTab, normalizeStandaloneNavigationSurfaces, removeSurfaceFromGroups, surfaceMatchesTab } from './nav-helpers';
+import { isTabBackedSurface, makeNavigationSurfacePrimary, navGroupModuleKey, navigationSurfaceFromTab, normalizeStandaloneNavigationSurfaces, removeSurfaceFromGroups, surfaceMatchesTab } from './nav-helpers';
 import { reloadEntityConfiguration, workspaceConfigTemplate } from './runtime-config';
 import { applyEditableSchemaFieldDefault, applyEditableSchemaFieldType, bootstrapCanonicalSchemaSources, bootstrapCanonicalSchemaSourcesIfMissing, editableSchemaFieldDefault, editableSchemaFieldType, loadCanonicalSchemaSources, regenerateSchemaOutputs, validateSourceSchemaDefinition, type SourceSchema, type SourceSchemaField } from './schema-designer';
 import { SCHEMA_FOLDER_DEFAULT, SCHEMA_TO_ENTITY_KEY, pluralizeEntityLabel } from './schemas';
@@ -46,12 +46,11 @@ interface DraftNavSurface extends NavSurface {
   placement?: string;
 }
 
-/** Nav group inside the workspace.json draft (adds module/icon over NavGroup). */
+/** Nav group inside the workspace.json draft (adds icon over NavGroup). */
 interface DraftNavGroup {
   id: string;
   label: string;
   icon?: string;
-  module?: string;
   items: DraftNavSurface[];
 }
 
@@ -126,11 +125,13 @@ interface WorkspaceTemplate extends WorkspaceConfig {
   _templatePath?: string;
 }
 
-/** NAV_GROUPS registry entry (runtime nav groups carry module/icon too). */
+/** NAV_GROUPS registry entry (runtime nav groups carry an icon too). */
 interface NavGroupConfig extends NavGroup {
-  module?: string;
   icon?: string;
 }
+
+/** How a nav group starts out in the sidebar (Modules tab visibility pill). */
+type NavGroupVisibility = 'expanded' | 'collapsed' | 'hidden';
 
 /** Canonical schema field with the designer-edited extras. */
 type DesignerSchemaField = SourceSchemaField;
@@ -1028,8 +1029,12 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       } else {
         return false;
       }
-      if (target.module) surface.module = target.module;
-      else delete surface.module;
+      // Leave `surface.module` alone. It used to be overwritten with the target
+      // group's module, which was always that group's id and so said nothing the
+      // group membership didn't already say. Item module now means only "this
+      // surface needs module X's data" (reports.partners → prm), which survives
+      // the surface being dragged to another group.
+
       if (!Array.isArray(target.items)) target.items = [];
       if (targetItemIndex == null || targetItemIndex > target.items.length) target.items.push(surface);
       else target.items.splice(Math.max(0, targetItemIndex), 0, surface);
@@ -1114,7 +1119,7 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
         let id = seed;
         let suffix = 2;
         while (groups.some((group) => group.id === id)) id = `${seed}-${suffix++}`;
-        const group: DraftNavGroup = { id, label, module: id, items: [] };
+        const group: DraftNavGroup = { id, label, items: [] };
         if (newGroupIcon) group.icon = newGroupIcon;
         groups.push(group);
         updateWorkspaceDraft(config, `${label} group added - click Save and apply`);
@@ -1488,7 +1493,7 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
 
     /* ─── Modules (consolidated: toggle + surfaces + folders + base files) ─── */
     pMod.createEl('p', {
-      text: 'Each module groups its toggle, the surfaces it contains, and the folders/.base files that back them. Disable a module to hide its whole section; disable an individual surface to hide just that nav item.',
+      text: 'Each module groups its visibility control, the surfaces it contains, and the folders/.base files that back them. Set a module to Expanded, Collapsed or Hidden to choose how its whole section appears in the sidebar; disable an individual surface to hide just that nav item.',
       cls: 'setting-item-description',
     });
 
@@ -1499,8 +1504,12 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       if (this.plugin.settings.modules['client-work'] == null) this.plugin.settings.modules['client-work'] = true;
       if (this.plugin.settings.modules.finance == null) this.plugin.settings.modules.finance = true;
       if (this.plugin.settings.modules.procurement == null) this.plugin.settings.modules.procurement = true;
-      NAV_GROUPS.filter((group: NavGroupConfig) => group.module).forEach((group: NavGroupConfig) => {
-        if (this.plugin.settings.modules[group.module] == null) this.plugin.settings.modules[group.module] = true;
+      // Seed every labelled group — including vault-authored ones with no
+      // declared `module` — so each has a real on/off entry to drive Hidden.
+      NAV_GROUPS.forEach((group: NavGroupConfig) => {
+        const key = navGroupModuleKey(group);
+        if (!key || !group.label) return;
+        if (this.plugin.settings.modules[key] == null) this.plugin.settings.modules[key] = true;
       });
       return this.plugin.settings.modules;
     };
@@ -1525,34 +1534,62 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
     NAV_GROUPS.forEach((group: NavGroupConfig) => {
       const items = group.items.filter((s) => !['home', 'team', 'settings'].includes(s.id));
       if (!items.length) return;
-      // Skip the empty-id 'misc' group and Reports/Workflow without a module
-      const isModuleGroup = !!group.module;
-      const headingText = group.label || (isModuleGroup ? group.id.toUpperCase() : '');
-      if (!headingText) return;
+      // Skip the unlabelled 'misc'/home groups — anything with a label gets a card.
+      const moduleKey = navGroupModuleKey(group);
+      const headingText = group.label || '';
+      if (!headingText || !moduleKey) return;
 
-      const moduleDisabled = isModuleGroup && ensureMods()[group.module] === false;
+      const moduleDisabled = ensureMods()[moduleKey] === false;
 
-      const cardKey = group.module || group.id;
+      const cardKey = moduleKey;
       const isCollapsed = this._collapsedModules.has(cardKey);
       const card = pMod.createDiv({ cls: 'bob-module-card' + (moduleDisabled ? ' is-off' : '') + (isCollapsed ? ' is-collapsed' : '') });
       const cardHead = card.createDiv({ cls: 'bob-module-card-head' });
       cardHead.createSpan({ text: headingText, cls: 'bob-module-card-label' });
       const headRight = cardHead.createDiv({ cls: 'bob-module-card-head-right' });
-      // Module enable/disable toggle lives in the HEADER so it's usable while the
-      // card is collapsed. stopPropagation stops toggling it from also collapsing
-      // the card (the header row's own click handler toggles collapse).
-      if (isModuleGroup) {
-        const toggleWrap = headRight.createDiv({ cls: 'bob-module-card-toggle' });
-        toggleWrap.setAttribute('aria-label', ensureMods()[group.module] !== false ? `Disable ${headingText}` : `Enable ${headingText}`);
-        toggleWrap.addEventListener('click', (e) => e.stopPropagation());
-        new obsidian.ToggleComponent(toggleWrap)
-          .setValue(ensureMods()[group.module] !== false)
-          .onChange(async (v) => {
-            ensureMods()[group.module] = v;
+      // Nav visibility control lives in the HEADER so it's usable while the card
+      // is collapsed. stopPropagation stops clicking it from also collapsing the
+      // card (the header row's own click handler toggles collapse).
+      //
+      // Three states, composed from two existing settings rather than a new key:
+      //   expanded  → modules[group.id] = true,  collapsedGroups[group.id] = false
+      //   collapsed → modules[group.id] = true,  collapsedGroups[group.id] = true
+      //   hidden    → modules[group.id] = false
+      // collapsedGroups is the same store the nav's own group headers write to
+      // (app-view toggleGroup), so this sets the persisted state directly and the
+      // two entry points stay in sync.
+      {
+        const groupCollapsed = this.plugin.settings.collapsedGroups || (this.plugin.settings.collapsedGroups = {});
+        const hidden = ensureMods()[moduleKey] === false;
+        const current: NavGroupVisibility = hidden ? 'hidden' : (groupCollapsed[group.id] ? 'collapsed' : 'expanded');
+        const options: { value: NavGroupVisibility; label: string; title: string }[] = [
+          { value: 'expanded', label: 'Expanded', title: `Show ${headingText} with its items open` },
+          { value: 'collapsed', label: 'Collapsed', title: `Show ${headingText} collapsed to its header` },
+          { value: 'hidden', label: 'Hidden', title: `Hide ${headingText} from navigation` },
+        ];
+
+        const pill = headRight.createDiv({ cls: 'bob-module-card-visibility', attr: { role: 'radiogroup' } });
+        pill.setAttribute('aria-label', `${headingText} navigation visibility`);
+        pill.addEventListener('click', (e) => e.stopPropagation());
+        options.forEach((option) => {
+          const btn = pill.createEl('button', {
+            cls: 'bob-module-card-visibility-option' + (option.value === current ? ' is-active' : ''),
+            text: option.label,
+            attr: { type: 'button', role: 'radio', 'aria-checked': String(option.value === current) },
+          });
+          btn.title = option.title;
+          btn.addEventListener('click', async () => {
+            if (option.value === current) return;
+            ensureMods()[moduleKey] = option.value !== 'hidden';
+            if (option.value !== 'hidden') {
+              const groups = this.plugin.settings.collapsedGroups || (this.plugin.settings.collapsedGroups = {});
+              groups[group.id] = option.value === 'collapsed';
+            }
             await this.plugin.saveSettings();
             this.plugin.refreshOpenViews();
             this.display();   // re-render to update surface row enabled state
           });
+        });
       }
       const chevron = headRight.createSpan({ cls: 'bob-module-card-chevron', text: isCollapsed ? '›' : '⌄' });
       cardHead.addEventListener('click', () => {
@@ -1570,10 +1607,11 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
       const settingGroup = cardBody.createDiv({ cls: 'setting-group' + (moduleDisabled ? ' bob-settings-panel-off' : '') });
       const panel = settingGroup.createDiv({ cls: 'setting-items' });
 
-      // Module description (the enable toggle itself now lives in the header).
-      if (isModuleGroup) {
-        panel.createDiv({ cls: 'setting-item-description bob-module-card-desc', text: moduleLabels[group.module] || `${headingText} module defined in workspace.json.` });
-      }
+      // Module description (the visibility pill itself now lives in the header).
+      panel.createDiv({
+        cls: 'setting-item-description bob-module-card-desc',
+        text: moduleLabels[moduleKey] || `${headingText} section defined in workspace.json.`,
+      });
 
       // One row per surface: visibility toggle + folder text input + base file dropdown
       const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
@@ -2304,7 +2342,6 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
         renderSchemaIcon();
       }).open());
       renderSchemaIcon();
-      textControl(identity, 'Type value', sourceSchema.type_value, (value) => { sourceSchema.type_value = value.trim(); });
       textControl(identity, 'Location pattern', sourceSchema.location_pattern, (value) => { sourceSchema.location_pattern = value.trim(); });
       textControl(identity, 'Definition', sourceSchema.description, (value) => { sourceSchema.description = value; }, true);
       textControl(identity, 'Scope', sourceSchema.scope, (value) => {
@@ -2493,7 +2530,6 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
           sourceSchema = {
             entity,
             label: entity.split('-').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
-            type_value: entity,
             location_pattern: `20-COMPANY/${entity.toUpperCase()}/`,
             description: '',
             key_fields: [],

@@ -10,7 +10,7 @@ import { BobPromptModal, confirmModal } from '../modals/common';
 import { BobEntityCreateModal } from '../modals/entity-create';
 import { BobImportModal } from '../modals/import';
 import { ALL_SURFACES, NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_BOB_APP, cloneConfig, reorderPinnedList } from '../nav';
-import { isTabBackedSurface, surfaceMatchesTab } from '../nav-helpers';
+import { isTabBackedSurface, navGroupModuleKey, surfaceMatchesTab } from '../nav-helpers';
 import { createEntity, ensureDailyNote, parseSections, replaceSection } from '../notes';
 import { parseH2Sections, parseTasksList, readProjectMeta, stringifyMilestones, stringifyTasks } from '../project-notes';
 import { findProjectTaskReminder, projectNameFromPath, reminderBucket, reminderTimeStr } from '../reminders';
@@ -456,7 +456,7 @@ export class BobAppView extends obsidian.ItemView {
     return NAV_GROUPS
       .map((g: NavGroupLike) => {
         if (!Array.isArray(g.items)) return g; // separator group — pass through as-is
-        if (g.module && mods[g.module] === false) return null;
+        if (navGroupModuleKey(g) && mods[navGroupModuleKey(g)] === false) return null;
         const items = g.items.filter((it) => {
           if (it.module && mods[it.module] === false) return false;
           if (disabled.has(it.id)) return false;
@@ -2595,6 +2595,15 @@ export class BobAppView extends obsidian.ItemView {
           done: Number(item.done) || 0,
           open: Number(item.open) || 0,
           total: (Number(item.done) || 0) + (Number(item.open) || 0),
+          // buildProductivitySnapshot computes per-week flow (created/closed/net)
+          // alongside the done/open activity tally. Omitting them here didn't make
+          // a "created per week" card render empty — dashboardProviderRowValue
+          // falls back to row.value for an unknown field — it made it silently
+          // render the `done` series, so the created and closed charts drew
+          // identical bars.
+          created: Number(item.created) || 0,
+          closed: Number(item.closed) || 0,
+          net: Number(item.net) || 0,
         },
       }));
     }
@@ -4147,7 +4156,14 @@ export class BobAppView extends obsidian.ItemView {
     chartValues.forEach((entry) => {
       labels.set(entry.group.value, entry.group.label);
       const col = chart.createDiv({ cls: 'bob-bar-col' });
-      const bar = col.createDiv({ cls: 'bob-bar' });
+      // The bar gets its own track. Its height is a percentage, and a percentage
+      // resolves against the parent — so hanging it directly off the column made
+      // it a share of the WHOLE column, label and value text included. Anything
+      // tall enough to overflow was then flex-shrunk back to the same residual
+      // space, which flattened every bar above ~80% of max to one height: 96 and
+      // 128 drew identical. The track is the only thing the percentage sees.
+      const track = col.createDiv({ cls: 'bob-bar-track' });
+      const bar = track.createDiv({ cls: 'bob-bar' });
       bar.style.height = `${(Number(entry.value) / max) * 100}%`;
       const ratio = Number(entry.value) / max;
       bar.dataset.band = Number(entry.value) === 0 ? 'empty' : ratio < 0.34 ? 'low' : ratio < 0.67 ? 'mid' : 'high';

@@ -26,7 +26,6 @@
       {
         "id": "planner",
         "label": "Planner",
-        "module": "planner",
         "items": [
           {
             "id": "planner.inbox",
@@ -72,7 +71,6 @@
       {
         "id": "crm",
         "label": "CRM",
-        "module": "crm",
         "items": [
           {
             "id": "crm.dashboard",
@@ -140,7 +138,6 @@
       {
         "id": "prm",
         "label": "PRM",
-        "module": "prm",
         "items": [
           {
             "id": "prm.partners",
@@ -156,7 +153,6 @@
       {
         "id": "client-work",
         "label": "Client Work",
-        "module": "client-work",
         "items": [
           {
             "id": "client-work.overview",

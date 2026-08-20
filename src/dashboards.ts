@@ -305,6 +305,13 @@ export function dashboardProviderRowValue(row: ProviderRow, field = ''): number 
   if (key && Object.prototype.hasOwnProperty.call(row, key)) {
     return Number(row[key]) || 0;
   }
+  // A card that names a field the row doesn't carry gets 0, NOT row.value. The
+  // old fallback meant a missing field drew the row's default series instead:
+  // "created per week" and "closed per week" both asked the weeks section for
+  // fields it didn't expose, so both silently rendered `done` and looked
+  // identical. Wrong-but-plausible numbers are worse than visibly-empty ones —
+  // an empty chart gets reported, a plausible one gets trusted.
+  if (key) return 0;
   if (row.value != null) return Number(row.value) || 0;
   if (row.values) {
     for (const candidate of ['value', 'done', 'count', 'total', 'pct', 'open']) {

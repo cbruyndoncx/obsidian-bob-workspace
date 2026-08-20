@@ -26,7 +26,6 @@
       {
         "id": "planner",
         "label": "Planner",
-        "module": "planner",
         "items": [
           {
             "id": "planner.inbox",
@@ -56,7 +55,6 @@
       {
         "id": "crm",
         "label": "CRM",
-        "module": "crm",
         "items": [
           {
             "id": "crm.dashboard",
@@ -1558,17 +1556,17 @@
         [
           {
             "kind": "heatmap",
-            "title": "CONTENT CADENCE",
+            "title": "TASK CADENCE",
             "source": {
               "mode": "built-in",
               "builtIn": "productivity",
               "section": "per-day"
             },
             "dateField": "date",
-            "field": "journal",
-            "days": 35,
+            "field": "total",
+            "days": 28,
             "columns": 7,
-            "empty": "No daily note activity yet."
+            "empty": "No task activity yet."
           },
           {
             "kind": "bar-chart",

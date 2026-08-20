@@ -1241,6 +1241,39 @@ select.bob-create-input {
   display: flex;
   align-items: center;
 }
+.bob-module-card-visibility {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--background-primary);
+}
+.bob-module-card-visibility-option {
+  appearance: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bob-module-card-visibility-option + .bob-module-card-visibility-option {
+  border-left: 1px solid var(--background-modifier-border);
+}
+.bob-module-card-visibility-option:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.bob-module-card-visibility-option.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
 .bob-module-card-desc {
   padding: 8px 16px 4px;
 }
@@ -2438,9 +2471,22 @@ select.bob-form-input {
 .bob-bar-col {
   flex: 1; display: flex; flex-direction: column; align-items: center;
   height: 100%; justify-content: flex-end; gap: 4px;
+  min-width: 0;
+}
+/* The plotting area, and the only box a bar's percentage height resolves
+   against. It takes whatever vertical space the label and value rows leave, so
+   a 100% bar fills the track exactly instead of overflowing the column and
+   being flex-shrunk down onto the same height as its shorter neighbours. */
+.bob-bar-track {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  position: relative;
 }
 .bob-bar {
-  width: 100%; min-height: 2px;
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  min-height: 2px;
   background: oklch(0.78 0.12 155);
   border-radius: 3px 3px 0 0;
   transition: opacity 100ms ease, background 100ms ease;
@@ -2452,6 +2498,14 @@ select.bob-form-input {
 .bob-bar-label {
   font-size: 10px; color: var(--text-faint);
   font-family: var(--font-monospace);
+  text-align: center;
+}
+/* Was unstyled, so it inherited the body font size and ate plotting height. */
+.bob-bar-value {
+  font-size: 11px; color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 /* ─────────── Dashboard gamification widgets ─────────── */

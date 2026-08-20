@@ -136,7 +136,6 @@ export interface NavGroup {
   label: string;
   items: NavSurface[];
   icon?: string;
-  module?: string;
 }
 
 export interface SecondaryTab {
@@ -337,7 +336,6 @@ export interface SchemaSource {
   label?: string;
   plural?: string;
   icon?: string;
-  type_value?: string;
   location_pattern?: string;
   key_fields?: string[];
   fields?: SchemaField[];
