@@ -16,7 +16,7 @@ import { parseH2Sections, parseTasksList, readProjectMeta, stringifyMilestones, 
 import { findProjectTaskReminder, projectNameFromPath, reminderBucket, reminderTimeStr } from '../reminders';
 import { reloadEntityConfiguration } from '../runtime-config';
 import { DEFAULT_SETTINGS, applyDashboardContext, entityFolder, isIgnoredPath } from '../settings';
-import { buildProductivitySnapshot } from '../snapshots';
+import { buildProductivitySnapshot, PER_DAY_WINDOW } from '../snapshots';
 import { createTaskNote, listTodayTaskNotes, toggleTaskNoteStatus } from '../task-notes';
 import { addDays, dailyNotePath, dateInfo, ensureFolderSync, greeting, isTemplatePath, pctBand, sameDay, startOfDay, startOfWeek, weekDates, ymd } from '../utils';
 import { filterEntitiesByBaseConfig, normalizeWidgetSortSpec, normalizeWidgetSourceConfig, resolveWidgetSource } from '../widgets';
@@ -3606,7 +3606,19 @@ export class BobAppView extends obsidian.ItemView {
   }
 
   async _resolveHeatmapBuckets(card: CardLike, getWidgetEntities: GetWidgetEntities): Promise<HeatmapBucket[]> {
-    const days = Math.max(7, Math.min(371, Number(card.days || 35) || 35));
+    const requestedDays = Math.max(7, Math.min(371, Number(card.days || 28) || 28));
+    // Only the built-in productivity provider is window-limited: it serves exactly
+    // PER_DAY_WINDOW days of history, so a card asking for more got silently short rows.
+    // Base- and entity-backed heatmaps bucket their own rows and honour any window.
+    const builtInSpec = this._widgetSourceSpec(card, card.entity);
+    const isProductivityPerDay = String(builtInSpec?.builtIn || '').trim().toLowerCase() === 'productivity';
+    const days = isProductivityPerDay ? Math.min(requestedDays, PER_DAY_WINDOW) : requestedDays;
+    if (days < requestedDays) {
+      console.warn(
+        `[bob-workspace] heatmap "${card.title || ''}" requested days: ${requestedDays}, `
+        + `clamped to ${PER_DAY_WINDOW} — the built-in productivity provider only has that much history.`,
+      );
+    }
     const end = startOfDay(new Date());
     const start = addDays(end, -(days - 1));
     const buckets = new Map<string, HeatmapBucket>();
@@ -5153,7 +5165,8 @@ export class BobAppView extends obsidian.ItemView {
       }
       if (type === 'heatmap') {
         if (!card.dateField) card.dateField = 'date';
-        if (card.days == null) card.days = 35;
+        // 28 = 4 clean rows of 7, and inside the built-in provider's PER_DAY_WINDOW.
+        if (card.days == null) card.days = 28;
         if (card.columns == null) card.columns = 7;
         if (builtInName === 'productivity') {
           card.field = 'journal';

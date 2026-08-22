@@ -14788,7 +14788,7 @@ var workspace_bob_default = {
             },
             dateField: "date",
             field: "status",
-            days: 35,
+            days: 28,
             columns: 7,
             empty: "No content published in this window yet.",
             entity: "marketing-content",
@@ -29581,6 +29581,7 @@ async function readProjectMeta(app, file) {
 
 // src/snapshots.ts
 var obsidian15 = __toESM(require("obsidian"));
+var PER_DAY_WINDOW = 30;
 var _dailyStatsMemo = /* @__PURE__ */ new Map();
 async function dailyNoteStatsByDate(app, settings, dates) {
   const headingsKey = `${settings.tasksHeading || ""}\0${settings.journalHeading || ""}`;
@@ -29618,7 +29619,7 @@ async function buildProductivitySnapshot(app, settings = {}) {
   const includeCheckboxTasks = taskMode === "checkbox" || taskMode === "hybrid";
   const includeTaskNotes = taskMode === "tasknotes" || taskMode === "hybrid";
   const today = startOfDay(/* @__PURE__ */ new Date());
-  const days = Array.from({ length: 30 }, (_, i) => addDays(today, -i));
+  const days = Array.from({ length: PER_DAY_WINDOW }, (_, i) => addDays(today, -i));
   const oldestDay = days[days.length - 1];
   const weekStart = startOfWeek(today, settings.weekStartsOn);
   const oldestWeekStart = addDays(weekStart, -11 * 7);
@@ -33347,7 +33348,15 @@ ${snippet}` : "- No markdown content");
     return dashboardProviderRowValue(row, "");
   }
   async _resolveHeatmapBuckets(card, getWidgetEntities) {
-    const days = Math.max(7, Math.min(371, Number(card.days || 35) || 35));
+    const requestedDays = Math.max(7, Math.min(371, Number(card.days || 28) || 28));
+    const builtInSpec = this._widgetSourceSpec(card, card.entity);
+    const isProductivityPerDay = String(builtInSpec?.builtIn || "").trim().toLowerCase() === "productivity";
+    const days = isProductivityPerDay ? Math.min(requestedDays, PER_DAY_WINDOW) : requestedDays;
+    if (days < requestedDays) {
+      console.warn(
+        `[bob-workspace] heatmap "${card.title || ""}" requested days: ${requestedDays}, clamped to ${PER_DAY_WINDOW} \u2014 the built-in productivity provider only has that much history.`
+      );
+    }
     const end = startOfDay(/* @__PURE__ */ new Date());
     const start = addDays(end, -(days - 1));
     const buckets = /* @__PURE__ */ new Map();
@@ -34893,7 +34902,7 @@ ${snippet}` : "- No markdown content");
       }
       if (type === "heatmap") {
         if (!card.dateField) card.dateField = "date";
-        if (card.days == null) card.days = 35;
+        if (card.days == null) card.days = 28;
         if (card.columns == null) card.columns = 7;
         if (builtInName === "productivity") {
           card.field = "journal";

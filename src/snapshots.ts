@@ -12,6 +12,10 @@ import type { App, TFile } from 'obsidian';
 import type { ProductivityTaskNote } from './task-notes';
 import type { PartialSettings } from './types';
 
+/** Number of days of per-day history buildProductivitySnapshot emits. Heatmap card
+ *  `days` configs are clamped to this; see _resolveHeatmapBuckets in views/app-view.ts. */
+export const PER_DAY_WINDOW = 30;
+
 /** Open/done tally bucket for the Productivity report (per project/context). */
 interface ProductivityBucket {
   title: string;
@@ -70,7 +74,11 @@ export async function buildProductivitySnapshot(app: App, settings: PartialSetti
   const includeCheckboxTasks = taskMode === 'checkbox' || taskMode === 'hybrid';
   const includeTaskNotes = taskMode === 'tasknotes' || taskMode === 'hybrid';
   const today = startOfDay(new Date());
-  const days = Array.from({ length: 30 }, (_, i) => addDays(today, -i));
+  // The per-day window a heatmap card can render. Cards declare their own `days`,
+  // but nothing beyond this exists in the snapshot, so a card asking for more used to
+  // truncate silently (a shipped `days: 35` card rendered 30). Card configs are clamped
+  // to this at resolve time instead — see _resolveHeatmapBuckets in views/app-view.ts.
+  const days = Array.from({ length: PER_DAY_WINDOW }, (_, i) => addDays(today, -i));
   const oldestDay = days[days.length - 1];
   const weekStart = startOfWeek(today, settings.weekStartsOn);
   const oldestWeekStart = addDays(weekStart, -11 * 7);

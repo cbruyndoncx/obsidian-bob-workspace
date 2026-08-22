@@ -3017,7 +3017,7 @@
             },
             "dateField": "date",
             "field": "status",
-            "days": 35,
+            "days": 28,
             "columns": 7,
             "empty": "No content published in this window yet.",
             "entity": "marketing-content",
