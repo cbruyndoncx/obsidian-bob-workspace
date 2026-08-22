@@ -4,6 +4,27 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [1.2.1] — 2026-08-22
+
+### Fixed
+- **A heatmap card could ask for more history than exists and silently get
+  less.** The built-in productivity provider emits exactly 30 days of per-day
+  data, so a card configured with `days: 35` rendered 30 with no error
+  anywhere — the shipped `CONTENT CADENCE` card was truncated this way and
+  looked correct. That window is now exported as `PER_DAY_WINDOW` and card
+  `days` is clamped against it, with a console warning naming both the
+  requested and the clamped value.
+
+  The clamp applies only to the built-in provider. Base- and entity-backed
+  heatmaps bucket their own rows and honour any window, so clamping those
+  would have wrongly shrunk cards that render correctly today.
+
+### Changed
+- **Heatmap cards default to 28 days instead of 35** — four clean rows of
+  seven, and inside the provider's window. The `workspace-bob` template's
+  `CONTENT CADENCE` card moves to 28 to match; `workspace-crm` was already
+  there as a workaround for the truncation above.
+
 ## [1.2.0] — 2026-08-20
 
 ### Added
