@@ -1,6 +1,5 @@
 import { ENTITIES, primaryFieldKey } from '../entities';
-import { resolveEntityFieldDefault } from '../entity-files';
-import { attachRequiredValidation } from './capture';
+import { listEntities, entityValue, resolveEntityFieldDefault } from '../entity-files';
 import * as obsidian from 'obsidian';
 import type { App } from 'obsidian';
 import type { BobEntityDef, BobEntityField } from '../entities';
@@ -41,7 +40,9 @@ export class BobEntityCreateModal extends obsidian.Modal {
     const form = contentEl.createDiv({ cls: 'bob-create-form' });
     const inputs: CreateFormControl[] = [];
 
-    const requiredInputs: CreateFormControl[] = [];
+    const baseRequired: CreateFormControl[] = [];
+    const labelFor: Record<string, { el: HTMLElement; text: string }> = {};
+    const inputFor: Record<string, CreateFormControl> = {};
 
     const primaryKey = primaryFieldKey(this.def);
     this.def.fields.forEach((f) => {
@@ -50,6 +51,7 @@ export class BobEntityCreateModal extends obsidian.Modal {
       const row = form.createDiv({ cls: 'bob-create-row' });
       const label = row.createDiv({ cls: 'bob-create-label' });
       label.setText(f.label.toUpperCase() + (isRequired ? ' *' : ''));
+      labelFor[f.key] = { el: label, text: f.label.toUpperCase() };
 
       let input: CreateFormControl;
       const fieldType = f.type || 'text';
@@ -73,6 +75,10 @@ export class BobEntityCreateModal extends obsidian.Modal {
       } else {
         input = row.createEl('input', { type: 'text', cls: 'bob-create-input' });
         input.placeholder = this._placeholderFor(f, isPrimary);
+        // Reference fields are picked from what exists rather than typed from
+        // memory: a mistyped `[[link]]` silently fails to resolve, and an
+        // unresolvable partner ref is exactly the attribution gap this guards.
+        if (f.refEntity) this._attachRefDatalist(row, input as HTMLInputElement, f.refEntity);
       }
       const defaultValue = resolveEntityFieldDefault(f);
       if (!isPrimary && defaultValue !== undefined) {
@@ -82,8 +88,9 @@ export class BobEntityCreateModal extends obsidian.Modal {
       input.dataset.fieldType = fieldType;
       if (isRequired) {
         input.required = true;
-        requiredInputs.push(input);
+        baseRequired.push(input);
       }
+      inputFor[f.key] = input;
       inputs.push(input);
     });
 
@@ -95,7 +102,41 @@ export class BobEntityCreateModal extends obsidian.Modal {
 
     const submitBtn = actions.createEl('button', { cls: 'bob-btn primary', text: `Create ${this.def.label}` });
     submitBtn.type = 'button';
-    attachRequiredValidation(submitBtn, requiredInputs);
+
+    /* Conditional requirements are re-evaluated on every edit, not fixed at open:
+     * the rule "source = partner ⇒ partner_ref required" only binds once the user
+     * has chosen that source, and must unbind again if they change their mind. */
+    const rules = this.def.conditionalRequired || [];
+    const syncRequired = () => {
+      const active = new Set(baseRequired);
+      const conditional = new Set<string>();
+      rules.forEach((rule) => {
+        const matches = Object.entries(rule.when || {})
+          .every(([k, v]) => String(inputFor[k]?.value ?? '').trim() === String(v));
+        if (!matches) return;
+        (rule.require || []).forEach((key) => {
+          const el = inputFor[key];
+          if (el) { active.add(el); conditional.add(key); }
+        });
+      });
+      // Reflect the requirement in the label and in `required`, so the form says
+      // why the button is disabled instead of just being disabled.
+      Object.entries(labelFor).forEach(([key, lbl]) => {
+        const el = inputFor[key];
+        const req = el ? active.has(el) : false;
+        if (el) el.required = req;
+        lbl.el.setText(lbl.text + (req ? ' *' : ''));
+        lbl.el.toggleClass('bob-create-label-conditional', conditional.has(key));
+      });
+      const filled = [...active].every((el) => (el.value || '').trim().length > 0);
+      submitBtn.disabled = !filled;
+      submitBtn.classList.toggle('bob-btn-disabled', !filled);
+    };
+    inputs.forEach((el) => {
+      el.addEventListener('input', syncRequired);
+      el.addEventListener('change', syncRequired);
+    });
+    syncRequired();
 
     const submit = () => {
       const values: Record<string, string | number | string[]> = {};
@@ -120,6 +161,14 @@ export class BobEntityCreateModal extends obsidian.Modal {
         if (primaryInput) primaryInput.focus();
         return;
       }
+      // Enter-to-submit bypasses the disabled button, so re-check the rules here.
+      for (const rule of rules) {
+        const matches = Object.entries(rule.when || {})
+          .every(([k, v]) => String(inputFor[k]?.value ?? '').trim() === String(v));
+        if (!matches) continue;
+        const missing = (rule.require || []).find((key) => !String(inputFor[key]?.value ?? '').trim());
+        if (missing) { inputFor[missing]?.focus(); return; }
+      }
       this._submitted = true;
       this.close();
       this.onSubmit({ name: primaryValue, values });
@@ -135,6 +184,25 @@ export class BobEntityCreateModal extends obsidian.Modal {
     });
 
     setTimeout(() => { if (inputs[0]) { inputs[0].focus(); } }, 0);
+  }
+
+  /** Back a text input with a datalist of an entity's records, offered as the
+   * `[[wikilink]]` the frontmatter field actually stores. */
+  _attachRefDatalist(row: HTMLElement, input: HTMLInputElement, entityKey: string) {
+    const def = ENTITIES[entityKey];
+    if (!def) return;
+    const primary = primaryFieldKey(def);
+    const names = listEntities(this.app, entityKey)
+      .map((e) => String(entityValue(e, primary, def) || e.basename).trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+    if (!names.length) return;
+    const listId = `bob-ref-${entityKey}-${Math.random().toString(36).slice(2, 8)}`;
+    const list = row.createEl('datalist');
+    list.id = listId;
+    names.forEach((n) => list.createEl('option', { value: `[[${n}]]` }));
+    input.setAttr('list', listId);
+    input.placeholder = `e.g. [[${names[0]}]]`;
   }
 
   _placeholderFor(field: BobEntityField, isPrimary: boolean): string {

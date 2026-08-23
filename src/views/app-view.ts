@@ -8,6 +8,7 @@ import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, l
 import { BobReminderEditModal } from '../modals/capture';
 import { BobPromptModal, confirmModal } from '../modals/common';
 import { BobEntityCreateModal } from '../modals/entity-create';
+import { CERT_WARN_DAYS, REG_WARN_DAYS, dealAtRisk, dealPartnerName, daysUntil, maybeCreateCommissionForWonDeal, nakedRef } from '../partner-automation';
 import { BobImportModal } from '../modals/import';
 import { ALL_SURFACES, NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_BOB_APP, cloneConfig, reorderPinnedList } from '../nav';
 import { isTabBackedSurface, navGroupModuleKey, surfaceMatchesTab } from '../nav-helpers';
@@ -130,6 +131,9 @@ interface ProviderRow extends Frontmatter {
   value?: number;
   values?: Record<string, number>;
   progress?: ProgressLike;
+  /** Inline buttons on the row. Kept off `action` (a dashboard-config concept)
+   * because these are code-owned handlers, not configurable widget actions. */
+  rowActions?: Array<{ label: string; title?: string; run: () => void | Promise<void> }>;
 }
 
 /** Normalized action spec for dashboard/header actions (authored JSON). */
@@ -5867,12 +5871,168 @@ export class BobAppView extends obsidian.ItemView {
       }
     });
 
+    // Partner-scoped pipeline lens. Everything above this point is the generic
+    // entity form; this is the "what does this partner have with us" panel a
+    // partner review needs, and it renders below the fields rather than replacing
+    // them so the record stays editable on the same page.
+    if (entityKey === 'partner') await this._renderPartnerPipeline(root, file);
+
     // Body section — link out for full editing
     const bodyHint = root.createDiv({ cls: 'bob-detail-body-hint' });
     bodyHint.createDiv({ cls: 'bob-eyebrow', text: 'NOTE BODY' });
     bodyHint.createDiv({ cls: 'bob-detail-body-desc', text: 'Brief, milestones, notes and any other markdown lives in the note body.' });
     const openBody = bodyHint.createEl('button', { cls: 'bob-btn primary', text: 'Open as note for full editing' });
     openBody.addEventListener('click', () => this.app.workspace.openLinkText(file.path, '', false));
+  }
+
+  /** Per-partner pipeline, registrations, commissions and certifications.
+   *
+   * Answers the four questions a partner review asks — how many open deals, what
+   * is the pipeline worth, what is the win rate on their referrals, which deals
+   * are at risk — scoped to one partner. Every number here is computed with the
+   * same helpers PRM analytics uses (`dealPartnerName`, `dealAtRisk`, the won and
+   * lost stage lists), so the partner page and the cross-partner table cannot
+   * report different figures for the same partner.
+   */
+  async _renderPartnerPipeline(root: HTMLElement, file: obsidian.TFile) {
+    const partnerDef = ENTITIES.partner;
+    const dealDef = ENTITIES.deal;
+    if (!partnerDef || !dealDef) return;
+
+    const partner = readEntity(this.app, file);
+    // Match on every name this partner is known by. Deals reference partners by
+    // display name, by id, or by note basename depending on who wrote them, and a
+    // page that silently shows zero deals is worse than no page.
+    const names = new Set([
+      String(entityValue(partner, 'partner_name', partnerDef) || '').trim(),
+      String(entityValue(partner, 'partner_id', partnerDef) || '').trim(),
+      file.path.startsWith('20-COMPANY/35-PARTNERS/') ? file.path.split('/')[2] : '',
+      file.basename,
+    ].filter(Boolean).map((n) => n.toLowerCase()));
+    const isOurs = (raw: unknown) => {
+      const n = nakedRef(raw).toLowerCase();
+      return !!n && names.has(n);
+    };
+
+    const stageField = dealStageField(dealDef);
+    const valueOf = (e: EntityRecord) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
+    const sumOf = (arr: EntityRecord[]) => arr.reduce((s, e) => s + valueOf(e), 0);
+
+    const deals = listEntities(this.app, 'deal').filter((d) => names.has(dealPartnerName(d, dealDef).toLowerCase()));
+    const won: EntityRecord[] = [], lost: EntityRecord[] = [], open: EntityRecord[] = [];
+    deals.forEach((d) => {
+      const stage = String(entityValue(d, stageField, dealDef));
+      if (dealWonStages(dealDef).includes(stage)) won.push(d);
+      else if (dealLostStages(dealDef).includes(stage)) lost.push(d);
+      else open.push(d);
+    });
+    const atRisk = open.filter((d) => dealAtRisk(d, dealDef));
+
+    const registrations = listEntities(this.app, 'registration')
+      .filter((e) => isOurs(entityValue(e, 'partner_ref', ENTITIES.registration)));
+    const commissions = listEntities(this.app, 'commission')
+      .filter((e) => isOurs(entityValue(e, 'partner_ref', ENTITIES.commission)));
+    const certifications = listEntities(this.app, 'certification')
+      .filter((e) => isOurs(entityValue(e, 'partner_ref', ENTITIES.certification)));
+
+    root.createDiv({ cls: 'bob-section-label-lg', text: 'PIPELINE WITH THIS PARTNER' });
+
+    const grid = root.createDiv({ cls: 'bob-stat-grid' });
+    const stat = (label: string, value: string | number, sub: string, accent: string) => {
+      const c = grid.createDiv({ cls: 'bob-stat-card' });
+      if (accent) c.dataset.accent = accent;
+      c.createDiv({ cls: 'bob-stat-label', text: label });
+      c.createDiv({ cls: 'bob-stat-value', text: String(value) });
+      if (sub) c.createDiv({ cls: 'bob-stat-sub', text: sub });
+    };
+    const decided = won.length + lost.length;
+    // Win rate over decided deals only. Counting open deals as losses makes an
+    // active partner with a full pipeline look like a bad one — same correction
+    // applied to the cross-partner table and to registration approval rate.
+    const winRate = decided === 0 ? null : Math.round((won.length / decided) * 100);
+    const avg = deals.length === 0 ? 0 : Math.round(sumOf(deals) / deals.length);
+    const activeRegs = registrations.filter((e) =>
+      String(entityValue(e, 'status', ENTITIES.registration) || '') === 'approved').length;
+    const expiringCerts = certifications.filter((e) => {
+      const status = String(entityValue(e, 'status', ENTITIES.certification) || '');
+      if (['expired', 'revoked'].includes(status)) return false;
+      const d = daysUntil(entityValue(e, 'expires_date', ENTITIES.certification));
+      return d !== null && d <= CERT_WARN_DAYS;
+    }).length;
+
+    stat('OPEN DEALS', open.length, fmtValue(sumOf(open), 'currency'), 'mint');
+    stat('WON', won.length, fmtValue(sumOf(won), 'currency'), 'emerald');
+    stat('WIN RATE', winRate === null ? '—' : `${winRate}%`,
+      decided === 0 ? 'no decided deals yet' : `${won.length}/${decided} decided`,
+      winRate === null ? 'sky' : winRate >= 50 ? 'emerald' : 'warn');
+    stat('AVG DEAL SIZE', deals.length ? fmtValue(avg, 'currency') : '—',
+      deals.length ? `across ${deals.length} deals` : 'no deals yet', 'sky');
+    stat('AT RISK', atRisk.length || '—',
+      atRisk.length ? 'stalled or overdue' : 'nothing stalled', atRisk.length ? 'rose' : 'mint');
+    stat('ACTIVE REGISTRATIONS', activeRegs || '—',
+      registrations.length ? `${registrations.length} total` : 'none', activeRegs ? 'sky' : 'mint');
+    stat('CERTS EXPIRING', expiringCerts || '—',
+      `within ${CERT_WARN_DAYS} days`, expiringCerts ? 'warn' : 'mint');
+
+    /* ── Deals table ── */
+    const dealsCard = root.createDiv({ cls: 'bob-dash-card' });
+    const dealsBody = dealsCard.createDiv({ cls: 'bob-dash-card-body' });
+    if (!deals.length) {
+      dealsBody.createDiv({ cls: 'bob-empty', text: 'No deals attributed to this partner yet.' });
+    } else {
+      const table = dealsBody.createEl('table', { cls: 'bob-table' });
+      const thead = table.createEl('thead').createEl('tr');
+      ['Deal', 'Stage', 'Value', 'Client', 'Expected close', 'Last contact', 'Risk']
+        .forEach((h) => thead.createEl('th', { text: h }));
+      const tbody = table.createEl('tbody');
+      const byClose = (e: EntityRecord) => String(entityValue(e, dealDef.closeByField || 'expected_close', dealDef) || '9999');
+      [...open, ...won, ...lost].sort((a, b) => byClose(a).localeCompare(byClose(b))).forEach((d) => {
+        const tr = tbody.createEl('tr');
+        const nameCell = tr.createEl('td', { text: String(entityValue(d, 'title', dealDef) || d.basename) });
+        nameCell.addClass('clickable');
+        nameCell.onclick = () => this.openEntityDetail('deal', d.file);
+        tr.createEl('td', { text: String(entityValue(d, stageField, dealDef) || '') });
+        tr.createEl('td', { text: valueOf(d) ? fmtValue(valueOf(d), 'currency') : '—' });
+        // A partner-scoped deal has no client_id by design; '—' is the correct
+        // reading, not missing data.
+        tr.createEl('td', { text: String(entityValue(d, 'client_id', dealDef) || '—') });
+        tr.createEl('td', { text: String(entityValue(d, dealDef.closeByField || 'expected_close', dealDef) || '—') });
+        tr.createEl('td', { text: String(entityValue(d, 'last_contact', dealDef) || '—') });
+        const reason = dealAtRisk(d, dealDef);
+        const riskCell = tr.createEl('td', { text: reason || '—' });
+        if (reason) riskCell.dataset.accent = 'rose';
+      });
+    }
+
+    /* ── Registrations, commissions, certifications ──
+     * Counts plus the rows themselves: a count with no way to reach the record is
+     * a prompt to go and search, which is the friction the page exists to remove.
+     * Each renders only when the partner has records of that kind. */
+    const miniRows = (records: EntityRecord[], def: EntityDef, title: string, meta: (e: EntityRecord) => string) => {
+      if (!records.length) return;
+      this._dashCardSection(root, title, records.slice(0, 10).map((e) => ({
+        title: String(entityValue(e, 'title', def) || entityValue(e, 'name', def) || e.basename),
+        meta: meta(e),
+        file: e.file,
+      })), 'None.');
+    };
+    const commDef = ENTITIES.commission;
+    const owed = commissions
+      .filter((e) => String(entityValue(e, 'status', commDef) || '') === 'earned')
+      .reduce((s, e) => s + (Number(entityValue(e, 'amount', commDef)) || 0), 0);
+    miniRows(registrations, ENTITIES.registration,
+      `REGISTRATIONS · ${registrations.length}`,
+      (e) => `${entityValue(e, 'status', ENTITIES.registration) || '—'} · expires ${entityValue(e, 'expires_date', ENTITIES.registration) || '—'}`);
+    miniRows(commissions, commDef,
+      `COMMISSIONS · ${commissions.length}${owed ? ` · ${fmtValue(owed, 'currency')} owed` : ''}`,
+      (e) => `${entityValue(e, 'status', commDef) || '—'} · ${fmtValue(Number(entityValue(e, 'amount', commDef)) || 0, 'currency')}`);
+    miniRows(certifications, ENTITIES.certification,
+      `CERTIFICATIONS · ${certifications.length}`,
+      (e) => {
+        const d = daysUntil(entityValue(e, 'expires_date', ENTITIES.certification));
+        return d === null ? String(entityValue(e, 'status', ENTITIES.certification) || '—')
+          : d < 0 ? `expired ${Math.abs(d)}d ago` : `${d}d left`;
+      });
   }
 
   /* ── Project DETAIL view (real PM surface) ─────── */
@@ -6580,6 +6740,13 @@ export class BobAppView extends obsidian.ItemView {
       const row = body.createDiv({ cls: 'bob-dash-row' });
       row.createDiv({ cls: 'bob-dash-row-title', text: r.title });
       row.createDiv({ cls: 'bob-dash-row-meta', text: r.meta });
+      (r.rowActions || []).forEach((a) => {
+        const btn = row.createEl('button', { cls: 'bob-dash-row-action', text: a.label });
+        btn.type = 'button';
+        if (a.title) btn.title = a.title;
+        // The row itself opens the note; an action button must not also do that.
+        btn.addEventListener('click', (e) => { e.stopPropagation(); void a.run(); });
+      });
       if (r.file) row.addEventListener('click', () => {
         if (r.entityKey) {
           this.openEntityDetail(r.entityKey, r.file);
@@ -6588,6 +6755,141 @@ export class BobAppView extends obsidian.ItemView {
         this.openEntityDetailFromFile(r.file);
       });
     });
+  }
+
+  /** Turn an approved registration into the deal it was protecting.
+   *
+   * The deal is created **under the partner**, at
+   * `20-COMPANY/35-PARTNERS/{partner-id}/01-DEALS/`, not under a client. A
+   * partner-sourced registration for a prospect has no client folder to be created
+   * in, and filing it beside the partner's registrations, certifications and
+   * commissions keeps one partner's records in one place — which is also what makes
+   * the won-deal commission automation resolvable without a client detour.
+   * (Owner decision, 2026-08-23; the `deal` entity's location pattern and the
+   * validator's R7/P4 rules were widened to match.)
+   *
+   * Refuses rather than guesses when the partner cannot be resolved: a deal filed
+   * under the wrong partner is worse than one not filed yet.
+   */
+  async _convertRegistrationToDeal(reg: EntityRecord) {
+    const regDef = ENTITIES.registration;
+    try {
+      const rawRef = String(entityValue(reg, 'partner_ref', regDef) || '').trim();
+      const naked = rawRef.replace(/^\[\[|\]\]$/g, '').split('|')[0].trim();
+      if (!naked) {
+        new obsidian.Notice('This registration names no partner, so there is no partner folder to file a deal under.');
+        return;
+      }
+      // The partner id is the FOLDER the partner profile lives in, not a
+      // frontmatter field: the folder is what the validator's location rule
+      // matches on, so deriving it any other way could file a valid-looking deal
+      // at a path that fails validation.
+      const partner = listEntities(this.app, 'partner').find((pt) => {
+        const pn = String(entityValue(pt, 'partner_name', ENTITIES.partner) || '').trim();
+        const pid = String(entityValue(pt, 'partner_id', ENTITIES.partner) || '').trim();
+        return pn === naked || pid === naked || pt.basename === naked;
+      });
+      const partnerId = partner?.file.path.startsWith('20-COMPANY/35-PARTNERS/')
+        ? partner.file.path.split('/')[2]
+        : null;
+      if (!partnerId) {
+        new obsidian.Notice(`No partner folder found for "${naked}" under 20-COMPANY/35-PARTNERS/. Create the partner record first.`);
+        return;
+      }
+
+      const title = String(entityValue(reg, 'title', regDef) || reg.basename);
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || reg.basename;
+      const folder = `20-COMPANY/35-PARTNERS/${partnerId}/01-DEALS`;
+      const path = `${folder}/${slug}.md`;
+      const existing = this.app.vault.getAbstractFileByPath(path);
+      if (existing instanceof obsidian.TFile) {
+        // Idempotent: a second click links to what the first one made rather than
+        // failing on a name clash or silently creating a near-duplicate.
+        await this.app.fileManager.processFrontMatter(reg.file, (fm) => { fm.deal_ref = `[[${slug}]]`; });
+        new obsidian.Notice(`Deal already exists — linked ${reg.basename} to it.`);
+        void this.app.workspace.getLeaf(false).openFile(existing);
+        return;
+      }
+      if (!this.app.vault.getAbstractFileByPath(folder)) {
+        await this.app.vault.createFolder(folder).catch(() => {});
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      const value = Number(entityValue(reg, 'value', regDef)) || 0;
+      const expires = String(entityValue(reg, 'expires_date', regDef) || '').slice(0, 10);
+      const body = [
+        '---',
+        'type: deal',
+        `title: "${title.replace(/"/g, "'")}"`,
+        // `qualified`, not `lead`: an approved registration is an accepted claim on
+        // a named opportunity, which is past the lead stage by definition.
+        'stage: qualified',
+        `partner_ref: "[[${naked}]]"`,
+        `company_id: ${partnerId}`,
+        'company_type: partner',
+        ...(value ? [`deal_value: ${value}`] : []),
+        'deal_source: partner',
+        // The registration's expiry is the date the protection lapses, which is the
+        // only close-by date the registration actually asserts.
+        ...(expires ? [`expected_close: ${expires}`] : []),
+        `created: ${today}`,
+        'tags: [deal, partner]',
+        '---',
+        '',
+        `# ${title}`,
+        '',
+        `Converted from registration [[${reg.basename}]] on ${today}.`,
+        '',
+      ].join('\n');
+
+      const file = await this.app.vault.create(path, body);
+      await this.app.fileManager.processFrontMatter(reg.file, (fm) => { fm.deal_ref = `[[${slug}]]`; });
+      new obsidian.Notice(`Deal created under ${partnerId}`);
+      this.render();
+      void this.app.workspace.getLeaf(false).openFile(file);
+    } catch (e) {
+      new obsidian.Notice(`Could not convert registration: ${e.message}`);
+    }
+  }
+
+  /** Prompt for a new expiry date and write it, with an optional status reset.
+   *
+   * The alert surfaces were read-only, so acting on a warning meant opening the
+   * note and editing frontmatter by hand — the friction that let these lapse in
+   * the first place. The date is asked for rather than assumed: a renewal term is
+   * a fact about the certificate or the registration, not something to guess.
+   */
+  _promptNewExpiry(file: obsidian.TFile, opts: { title: string; cta: string; currentExpiry: string; status?: string }) {
+    const suggested = (() => {
+      const d = new Date(opts.currentExpiry);
+      if (Number.isNaN(d.getTime())) return '';
+      d.setFullYear(d.getFullYear() + 1);
+      return d.toISOString().slice(0, 10);
+    })();
+    new BobPromptModal(this.app, {
+      title: opts.title,
+      placeholder: 'YYYY-MM-DD',
+      defaultValue: suggested,
+      cta: opts.cta,
+      onSubmit: async (value) => {
+        const next = String(value || '').trim();
+        if (!next) return;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(next) || Number.isNaN(new Date(next).getTime())) {
+          new obsidian.Notice(`Not a date: ${next}. Use YYYY-MM-DD.`);
+          return;
+        }
+        try {
+          await this.app.fileManager.processFrontMatter(file, (fm) => {
+            fm.expires_date = next;
+            if (opts.status) fm.status = opts.status;
+          });
+          new obsidian.Notice(`${file.basename} now expires ${next}`);
+          this.render();
+        } catch (e) {
+          new obsidian.Notice(`Could not update ${file.basename}: ${e.message}`);
+        }
+      },
+    }).open();
   }
 
   /* ── Reports: Productivity (over daily notes) ── */
@@ -6600,7 +6902,7 @@ export class BobAppView extends obsidian.ItemView {
     const deals = listEntities(this.app, 'deal');
     const dealValue = (e: EntityRecord) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
     const sumVal = (arr: EntityRecord[]) => arr.reduce((s, e) => s + dealValue(e), 0);
-    const partnerSourced = deals.filter((e) => entityValue(e, 'partner', dealDef));
+    const partnerSourced = deals.filter((e) => dealPartnerName(e, dealDef));
     const partnerWon = partnerSourced.filter((e) => dealWonStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
 
     this._renderPageHeader(root, 'PRM analytics', 'Partner programme health, tier mix and revenue contribution');
@@ -6633,7 +6935,7 @@ export class BobAppView extends obsidian.ItemView {
     const partnerByName = new Map();
     partners.forEach((p) => partnerByName.set(String(entityValue(p, 'name', partnerDef) || p.basename), p));
     partnerWon.forEach((d) => {
-      const pname = String(entityValue(d, 'partner', dealDef) || '');
+      const pname = dealPartnerName(d, dealDef);
       const partner = partnerByName.get(pname);
       if (!partner) return;
       const tier = String(entityValue(partner, 'tier', partnerDef) || 'Untiered');
@@ -6725,15 +7027,22 @@ export class BobAppView extends obsidian.ItemView {
      * question warrants. */
     if (partners.length && partnerSourced.length) {
       const stageField = dealStageField(dealDef);
-      const perPartner = new Map<string, { open: EntityRecord[]; won: EntityRecord[]; lost: EntityRecord[] }>();
+      /* "Which deals are at risk?" — the fourth question a partner review asks.
+       * The rule is shared with the partner detail page so the two surfaces can
+       * never disagree about which deals are stalled. */
+      const atRisk = (d: EntityRecord) => dealAtRisk(d, dealDef);
+      const perPartner = new Map<string, { open: EntityRecord[]; won: EntityRecord[]; lost: EntityRecord[]; risk: EntityRecord[] }>();
       partnerSourced.forEach((d) => {
-        const key = String(entityValue(d, 'partner', dealDef) || '(unnamed)');
-        if (!perPartner.has(key)) perPartner.set(key, { open: [], won: [], lost: [] });
+        const key = dealPartnerName(d, dealDef) || '(unnamed)';
+        if (!perPartner.has(key)) perPartner.set(key, { open: [], won: [], lost: [], risk: [] });
         const bucket = perPartner.get(key)!;
         const stage = String(entityValue(d, stageField, dealDef));
         if (dealWonStages(dealDef).includes(stage)) bucket.won.push(d);
         else if (dealLostStages(dealDef).includes(stage)) bucket.lost.push(d);
-        else bucket.open.push(d);
+        else {
+          bucket.open.push(d);
+          if (atRisk(d)) bucket.risk.push(d);
+        }
       });
 
       root.createDiv({ cls: 'bob-section-label-lg', text: 'PIPELINE BY PARTNER' });
@@ -6742,7 +7051,7 @@ export class BobAppView extends obsidian.ItemView {
       const ppBody = ppCard.createDiv({ cls: 'bob-dash-card-body' });
       const table = ppBody.createEl('table', { cls: 'bob-table' });
       const thead = table.createEl('thead').createEl('tr');
-      ['Partner', 'Open', 'Open value', 'Won', 'Won value', 'Win rate'].forEach((h) => thead.createEl('th', { text: h }));
+      ['Partner', 'Open', 'Open value', 'At risk', 'Won', 'Won value', 'Win rate'].forEach((h) => thead.createEl('th', { text: h }));
       const tbody = table.createEl('tbody');
 
       [...perPartner.entries()]
@@ -6757,10 +7066,21 @@ export class BobAppView extends obsidian.ItemView {
           const partnerRec = partnerByName.get(name);
           if (partnerRec?.file) {
             nameCell.addClass('clickable');
-            nameCell.onclick = () => this.app.workspace.getLeaf(false).openFile(partnerRec.file);
+            // Route to the partner detail page rather than the raw note: that page
+            // is this row expanded — the same figures plus the deals behind them.
+            nameCell.onclick = () => this.openEntityDetail('partner', partnerRec.file);
           }
           tr.createEl('td', { text: String(b.open.length) });
           tr.createEl('td', { text: fmtValue(sumVal(b.open), 'currency') });
+          const riskCell = tr.createEl('td', { text: b.risk.length ? String(b.risk.length) : '—' });
+          if (b.risk.length) {
+            riskCell.dataset.accent = 'rose';
+            // The count alone says nothing actionable; the tooltip names the deals
+            // and why each one is flagged, which is what the review needs.
+            riskCell.title = b.risk
+              .map((d) => `${String(entityValue(d, 'title', dealDef) || d.basename)} — ${atRisk(d)}`)
+              .join('\n');
+          }
           tr.createEl('td', { text: String(b.won.length) });
           tr.createEl('td', { text: fmtValue(sumVal(b.won), 'currency') });
           tr.createEl('td', { text: wr === null ? '—' : `${wr}%` });
@@ -6775,16 +7095,6 @@ export class BobAppView extends obsidian.ItemView {
     const commissions = listEntities(this.app, 'commission');
     const registrations = listEntities(this.app, 'registration');
     const certifications = listEntities(this.app, 'certification');
-
-    const daysUntil = (raw: unknown): number | null => {
-      const v = String(raw || '').slice(0, 10);
-      if (!v) return null;
-      const d = new Date(v);
-      if (Number.isNaN(d.getTime())) return null;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return Math.round((d.getTime() - today.getTime()) / 86400000);
-    };
 
     if (commissions.length || registrations.length || certifications.length) {
       root.createDiv({ cls: 'bob-section-label-lg', text: 'PROGRAMME HEALTH' });
@@ -6836,13 +7146,59 @@ export class BobAppView extends obsidian.ItemView {
         const regExpiring = registrations
           .filter((e) => !['expired', 'rejected'].includes(regStatus(e)))
           .map((e) => ({ e, d: daysUntil(entityValue(e, 'expires_date', regDef)) }))
-          .filter((r) => r.d !== null && (r.d as number) <= 30)
+          .filter((r) => r.d !== null && (r.d as number) <= REG_WARN_DAYS)
           .sort((a, b) => (a.d as number) - (b.d as number));
         if (regExpiring.length) {
           const lapsed = regExpiring.filter((r) => (r.d as number) < 0).length;
           healthStat('REGISTRATIONS EXPIRING', regExpiring.length,
             lapsed ? `${lapsed} already lapsed` : `soonest in ${regExpiring[0].d}d`,
             lapsed ? 'rose' : 'warn');
+          /* The stat says how many; the list says which, and clicks straight into
+           * the registration so it can be extended or converted. Without the rows
+           * the number is a prompt to go and grep. */
+          this._dashCardSection(
+            root,
+            `REGISTRATIONS AT RISK · within ${REG_WARN_DAYS} days`,
+            regExpiring.slice(0, 10).map(({ e, d }) => {
+              const title = String(entityValue(e, 'title', regDef) || e.basename);
+              const partner = String(entityValue(e, 'partner_ref', regDef) || '').replace(/^\[\[|\]\]$/g, '');
+              const deal = String(entityValue(e, 'deal_ref', regDef) || '');
+              const days = d as number;
+              const dealFile = deal
+                ? this.app.metadataCache.getFirstLinkpathDest(deal.replace(/^\[\[|\]\]$/g, '').split('|')[0], e.file.path)
+                : null;
+              return {
+                title: partner ? `${title} — ${partner}` : title,
+                meta: `${days < 0 ? `lapsed ${Math.abs(days)}d ago` : `${days}d left`}${deal ? '' : ' · no deal linked'}`,
+                file: e.file,
+                rowActions: [
+                  {
+                    label: 'Extend',
+                    title: 'Push the registration expiry out',
+                    // Status stays `approved`: extending a live registration is not
+                    // a new approval decision, it is the same one with more runway.
+                    run: () => this._promptNewExpiry(e.file, {
+                      title: `Extend ${title}`,
+                      cta: 'Extend',
+                      currentExpiry: String(entityValue(e, 'expires_date', regDef) || ''),
+                    }),
+                  },
+                  dealFile
+                    ? {
+                        label: 'Open deal',
+                        title: 'Open the deal this registration protects',
+                        run: () => { void this.app.workspace.getLeaf(false).openFile(dealFile); },
+                      }
+                    : {
+                        label: 'Convert to deal',
+                        title: 'Create the partner-scoped deal this registration becomes',
+                        run: () => this._convertRegistrationToDeal(e),
+                      },
+                ],
+              };
+            }),
+            'Nothing expiring.',
+          );
         }
       }
 
@@ -6854,11 +7210,11 @@ export class BobAppView extends obsidian.ItemView {
         const certExpiring = certifications
           .filter((e) => !['expired', 'revoked'].includes(certStatus(e)))
           .map((e) => ({ e, d: daysUntil(entityValue(e, 'expires_date', certDef)) }))
-          .filter((r) => r.d !== null && (r.d as number) <= 60)
+          .filter((r) => r.d !== null && (r.d as number) <= CERT_WARN_DAYS)
           .sort((a, b) => (a.d as number) - (b.d as number));
         const lapsedCerts = certExpiring.filter((r) => (r.d as number) < 0).length;
         healthStat('CERTS EXPIRING', certExpiring.length,
-          certExpiring.length === 0 ? 'none within 60 days'
+          certExpiring.length === 0 ? `none within ${CERT_WARN_DAYS} days`
             : lapsedCerts ? `${lapsedCerts} already lapsed`
             : `soonest in ${certExpiring[0].d}d`,
           certExpiring.length === 0 ? 'mint' : lapsedCerts ? 'rose' : 'warn');
@@ -6874,96 +7230,42 @@ export class BobAppView extends obsidian.ItemView {
               title: partner ? `${name} — ${partner}` : name,
               meta: days < 0 ? `expired ${Math.abs(days)}d ago` : `${days}d left`,
               file: e.file,
+              rowActions: [{
+                label: 'Renew',
+                title: 'Set a new expiry date',
+                // Back to `active`, not `renewed`: `renewed` is the sweep's
+                // permanent opt-out, and a certificate with a real new date should
+                // be managed by that date again like any other.
+                run: () => this._promptNewExpiry(e.file, {
+                  title: `Renew ${name}`,
+                  cta: 'Renew',
+                  currentExpiry: String(entityValue(e, 'expires_date', certDef) || ''),
+                  status: 'active',
+                }),
+              }],
             };
           });
-          this._dashCardSection(root, 'RENEWAL PIPELINE · certifications within 60 days', renewalRows, 'Nothing expiring.');
+          this._dashCardSection(root, `RENEWAL PIPELINE · certifications within ${CERT_WARN_DAYS} days`, renewalRows, 'Nothing expiring.');
         }
       }
     }
   }
 
-  /** Create a commission record when a partner-sourced deal reaches a won stage.
+  /** Kanban-drop path into the shared commission automation.
    *
-   * Commissions were previously created by hand after every won deal, which is
-   * exactly the kind of step that gets skipped in a busy week — and an unrecorded
-   * commission is a partner-trust problem, not a bookkeeping one.
-   *
-   * Deliberately conservative:
-   *  - only fires when the changed field is the deal's stage field
-   *  - only for a won stage, and only when the deal names a partner
-   *  - never creates a second commission for the same deal (idempotent on re-drag)
-   *  - status is `earned`, not `paid` — this records the liability, it does not settle it
-   *  - a rate is only applied when the partner declares one; no invented default,
-   *    because a wrong rate is worse than a blank one somebody has to fill in
+   * The same rule also runs from the plugin's metadata-cache watcher, which
+   * covers stage changes made outside the board. This wrapper exists so the
+   * Notice lands against the drop the user just made, and so a commission
+   * failure never makes the stage change itself look failed.
    */
   async _maybeCreateCommissionForWonDeal(file: obsidian.TFile, changedField: string, newValue: string) {
     try {
       const dealDef = ENTITIES.deal;
-      const commDef = ENTITIES.commission;
-      if (!dealDef || !commDef) return;
+      if (!dealDef) return;
       if (changedField !== dealStageField(dealDef)) return;
-      if (!dealWonStages(dealDef).includes(newValue)) return;
-
-      const deal = readEntity(this.app, file);
-      const partnerName = String(entityValue(deal, 'partner', dealDef) || entityValue(deal, 'partner_ref', dealDef) || '').trim();
-      if (!partnerName) return;
-
-      // Idempotency: if any commission already references this deal, stop.
-      const dealKey = file.basename;
-      const existing = listEntities(this.app, 'commission')
-        .some((c) => String(entityValue(c, 'deal_ref', commDef) || '').includes(dealKey));
-      if (existing) return;
-
-      const value = Number(entityValue(deal, dealValueField(dealDef), dealDef)) || 0;
-      // Partner's primary field is `partner_name`; `name` falls back to basename
-      // in entityValue, so match on either rather than only one.
-      const partner = listEntities(this.app, 'partner').find((pt) => {
-        const pn = String(entityValue(pt, 'partner_name', ENTITIES.partner) || '').trim();
-        return pn === partnerName || pt.basename === partnerName;
-      });
-      // `commission_rate` is NOT a declared partner field — entityValue reads it
-      // straight from frontmatter if an operator has added it. When absent the
-      // amount stays 0 and the note says so, which is the safe direction: a wrong
-      // commission figure is worse than a blank one somebody has to fill in.
-      const rate = partner ? Number(entityValue(partner, 'commission_rate', ENTITIES.partner)) : NaN;
-      const amount = Number.isFinite(rate) && rate > 0 ? Math.round(value * (rate / 100)) : 0;
-
-      const today = new Date().toISOString().slice(0, 10);
-      const period = today.slice(0, 7);
-      const folder = `${commDef.folder}/COMMISSIONS`;
-      if (!this.app.vault.getAbstractFileByPath(folder)) {
-        await this.app.vault.createFolder(folder).catch(() => {});
-      }
-      const safe = `${partnerName}-${dealKey}`.replace(/[\\/:*?"<>|]/g, '-').slice(0, 80);
-      const path = `${folder}/commission-${safe}.md`;
-      if (this.app.vault.getAbstractFileByPath(path)) return;
-
-      const fm = [
-        '---',
-        'type: commission',
-        `reference: commission-${safe}`,
-        `partner_ref: "[[${partnerName}]]"`,
-        `deal_ref: "[[${dealKey}]]"`,
-        `amount: ${amount}`,
-        'status: earned',
-        `period: ${period}`,
-        `earned_date: ${today}`,
-        '---',
-        '',
-        `# Commission — ${partnerName}`,
-        '',
-        `Auto-created when [[${dealKey}]] reached stage \`${newValue}\`.`,
-        '',
-        amount > 0
-          ? `Amount computed from deal value ${value} at the partner's declared rate of ${rate}%.`
-          : `**Amount not computed** — the partner record declares no \`commission_rate\`. Set the amount by hand, or add a rate to the partner and delete this note to have it regenerate.`,
-        '',
-      ].join('\n');
-
-      await this.app.vault.create(path, fm);
-      new obsidian.Notice(`Commission recorded for ${partnerName}`);
+      if (this.plugin.settings.autoCommissionOnWon === false) return;
+      await maybeCreateCommissionForWonDeal(this.app, file, newValue);
     } catch (e) {
-      // Never let this break the stage change the user actually asked for.
       new obsidian.Notice(`Deal moved, but commission was not created: ${e.message}`);
     }
   }

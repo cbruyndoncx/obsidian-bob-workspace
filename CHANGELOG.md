@@ -4,6 +4,72 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [1.3.0] — 2026-08-24
+
+Partner programme automation: the PRM surfaces now act rather than only report.
+
+### Added
+- **A won partner deal creates its commission record.** When a deal naming a
+  partner reaches a won stage, an `earned` commission is written under that
+  partner. It fires on the stage *transition*, from the kanban board, the entity
+  form or a hand edit of frontmatter alike, and never creates a second
+  commission for the same deal. `status` is `earned`, never `paid` — this
+  records the liability, it does not settle it.
+
+  The amount is computed from the partner's `commission_rate`. When a partner
+  leaves that blank the amount stays `0` and the note says why, rather than a
+  default rate being invented — a wrong commission figure is worse than a blank
+  one somebody has to fill in. Settings → Modules → PRM has an off switch;
+  turning it off stops new commissions and leaves existing ones alone.
+- **One-time inbox reminders for expiring certifications and registrations.**
+  Certifications inside their 60-day window and approved registrations inside
+  their 30-day window raise a reminder scheduled ahead of the expiry date.
+  Seen-tracking is keyed on path *and* expiry date, so re-saving a note raises
+  nothing while renewing to a new date correctly raises a fresh reminder. A
+  record already inside its lead window surfaces now rather than being scheduled
+  into the past where no inbox bucket would show it.
+- **Quick actions on the expiry rows.** `Renew` on a certification and `Extend`
+  on a registration both prompt for a new expiry date; `Convert to deal` turns
+  an approved registration into a partner-scoped deal and links it back, and
+  `Open deal` appears once one is linked. Registrations now render as a list,
+  not just a count.
+- **A partner detail page.** Clicking a partner opens per-partner open/won
+  counts and value, win rate, average deal size, at-risk count, active
+  registrations and expiring certifications, plus the deals behind them and the
+  partner's registrations, commissions and certifications. Every figure is
+  computed with the same helpers as the cross-partner table, so the two cannot
+  disagree.
+- **An At risk column in `PIPELINE BY PARTNER`.** An open deal is flagged when
+  its expected close has passed or it has had no contact for over 30 days;
+  hovering names the deals and the reason for each. `probability` is
+  deliberately not an input — it is the opinion a partner review is meant to
+  produce.
+- **Value-conditional required fields on the create form.** An entity can
+  declare `conditionalRequired`, and `lead` uses it: choosing `source: partner`
+  makes `partner_ref` required, and changing the source away releases it. The
+  label gains its asterisk at the moment the rule binds, so the form says why
+  the button is disabled. Reference fields can declare a `refEntity` and are
+  backed by a datalist of that entity's records, offered as the `[[wikilink]]`
+  the frontmatter stores.
+
+### Fixed
+- **Partner attribution missed every deal using the declared field.** PRM
+  analytics resolved a deal's partner by reading a `partner` frontmatter key,
+  but the declared field is `partner_ref` — what the entity form and every
+  automation actually write. Sourced counts, partner revenue, partner share,
+  tier revenue and the per-partner table all silently excluded those deals.
+  Resolution now goes through one shared helper that reads `partner_ref` first
+  and falls back to `partner` for older notes.
+
+### Changed
+- The certification (60-day) and registration (30-day) warning windows are
+  exported constants read by the analytics cards, the reminder logic and the
+  settings descriptions, instead of literals repeated per call site. Two copies
+  of a threshold is how a card and an alert start disagreeing about what
+  "expiring" means.
+- `partner` gained a `commission_rate` field and `deal` gained `partner_ref` in
+  the entity definitions, matching schema sources that declare them.
+
 ## [1.2.1] — 2026-08-22
 
 ### Fixed

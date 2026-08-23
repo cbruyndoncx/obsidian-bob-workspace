@@ -23062,8 +23062,581 @@ function dashboardProviderRowValue(row, field = "") {
   return 0;
 }
 
-// src/workspace-config.ts
+// src/utils.ts
+var CURRENCY_OPTIONS = [
+  { code: "USD", label: "USD \u2014 US Dollar" },
+  { code: "EUR", label: "EUR \u2014 Euro" },
+  { code: "GBP", label: "GBP \u2014 British Pound" },
+  { code: "ZAR", label: "ZAR \u2014 South African Rand" },
+  { code: "AUD", label: "AUD \u2014 Australian Dollar" },
+  { code: "CAD", label: "CAD \u2014 Canadian Dollar" },
+  { code: "CHF", label: "CHF \u2014 Swiss Franc" },
+  { code: "JPY", label: "JPY \u2014 Japanese Yen" },
+  { code: "INR", label: "INR \u2014 Indian Rupee" },
+  { code: "BRL", label: "BRL \u2014 Brazilian Real" },
+  { code: "AED", label: "AED \u2014 UAE Dirham" }
+];
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+function ymd(d = /* @__PURE__ */ new Date()) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function dailyNotePath(settings, date = /* @__PURE__ */ new Date()) {
+  const folder = (settings.dailyNoteFolder || "").replace(/\/$/, "");
+  const name = ymd(date);
+  return folder ? `${folder}/${name}.md` : `${name}.md`;
+}
+function greeting() {
+  const h = (/* @__PURE__ */ new Date()).getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+function dateInfo(d = /* @__PURE__ */ new Date()) {
+  return {
+    weekday: d.toLocaleDateString(void 0, { weekday: "long" }),
+    day: d.getDate(),
+    month: d.toLocaleDateString(void 0, { month: "long" }),
+    year: d.getFullYear()
+  };
+}
+function startOfDay(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+function addDays(d, n) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+function startOfWeek(d, weekStartsOn = 1) {
+  const x = startOfDay(d);
+  const diff = (x.getDay() - weekStartsOn + 7) % 7;
+  return addDays(x, -diff);
+}
+function weekDates(anchor, weekStartsOn = 1) {
+  const start = startOfWeek(anchor, weekStartsOn);
+  return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+}
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function pctBand(pct) {
+  if (pct < 25) return "rose";
+  if (pct < 50) return "warn";
+  if (pct < 75) return "mint";
+  return "emerald";
+}
+function ensureFolderSync(app, path) {
+  const parts = path.split("/").filter(Boolean);
+  let cur = "";
+  const promises = [];
+  for (const p of parts) {
+    cur = cur ? `${cur}/${p}` : p;
+    if (!app.vault.getAbstractFileByPath(cur)) {
+      promises.push(app.vault.createFolder(cur).catch(() => {
+      }));
+    }
+  }
+  return Promise.all(promises);
+}
+function isTemplatePath(path) {
+  return String(path || "").split("/").slice(0, -1).some((segment) => ["template", "templates"].includes(segment.toLowerCase()));
+}
+
+// src/task-notes.ts
+function taskNoteTemplate(title) {
+  const template = normalizeTemplateSpec(WORKSPACE_CONFIG?.templates?.taskNote || ENTITIES.task?.template);
+  if (template) {
+    return renderTemplateDocument(template, {
+      title,
+      name: title,
+      today: ymd(),
+      entityKey: "task",
+      label: "Task",
+      plural: "Tasks"
+    }, {
+      frontmatter: {
+        title,
+        type: "task",
+        status: "open",
+        priority: "normal",
+        size: "M",
+        due: "",
+        scheduled: "",
+        dateCreated: ymd(),
+        dateModified: ymd(),
+        tags: [],
+        assignee: [],
+        cluster: ""
+      },
+      body: [
+        `# ${title}`,
+        "",
+        "## Scope",
+        "",
+        "## Notes",
+        ""
+      ]
+    });
+  }
+  const now = ymd();
+  return [
+    "---",
+    `title: ${title}`,
+    "type: task",
+    "status: open",
+    "priority: normal",
+    "size: M",
+    "due:",
+    "scheduled:",
+    `dateCreated: ${now}`,
+    `dateModified: ${now}`,
+    "tags: []",
+    "assignee: []",
+    "cluster:",
+    "---",
+    "",
+    `# ${title}`,
+    "",
+    "## Scope",
+    "",
+    "## Notes",
+    ""
+  ].join("\n");
+}
+async function createTaskNote(app, settings, title) {
+  const folder = (settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").replace(/\/$/, "");
+  await ensureFolderSync(app, folder);
+  const safe = title.replace(/[\\/:*?"<>|]/g, "-").trim() || "Untitled Task";
+  let path = `${folder}/${safe}.md`;
+  let n = 2;
+  while (app.vault.getAbstractFileByPath(path)) {
+    path = `${folder}/${safe} ${n++}.md`;
+  }
+  return app.vault.create(path, taskNoteTemplate(title));
+}
+function listTodayTaskNotes(app, settings) {
+  const folder = (settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").replace(/\/$/, "");
+  const todayStr = ymd();
+  return scannableMarkdownFiles(app).filter((f) => f.path.startsWith(folder + "/")).map((f) => {
+    const fm = (app.metadataCache.getFileCache(f) || {}).frontmatter || {};
+    return { file: f, fm };
+  }).filter(({ fm }) => {
+    if (fm.status === "done") return false;
+    const due = fm.due ? String(fm.due).slice(0, 10) : null;
+    const sched = fm.scheduled ? String(fm.scheduled).slice(0, 10) : null;
+    return due === todayStr || sched === todayStr;
+  });
+}
+function taskNoteStatus(fm) {
+  return String(fm?.status || "open").toLowerCase().replace(/[\s_]+/g, "-");
+}
+function taskNoteIgnored(status) {
+  return status === "cancelled" || status === "canceled";
+}
+function taskNoteFolders(settings) {
+  const active = (settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").replace(/\/$/, "");
+  const fallbackArchive = active.replace(/\/Tasks$/, "/Archive");
+  const archive = (settings.taskNotesArchiveFolder || fallbackArchive || "00-CORE/TaskNotes/Archive").replace(/\/$/, "");
+  return [...new Set([active, archive].filter(Boolean))];
+}
+function taskNoteDateValue(file, fm, done) {
+  const raw = done ? fm.dateCompleted || fm.completedDate || fm.completed || fm.dateModified || fm.modified || fm.due || fm.scheduled || fm.dateCreated || fm.created : fm.due || fm.scheduled || fm.dateCreated || fm.created || fm.dateModified || fm.modified;
+  if (raw) return String(raw).slice(0, 10);
+  if (file?.stat?.mtime) return ymd(new Date(file.stat.mtime));
+  return "";
+}
+function taskNoteCreatedValue(file, fm) {
+  const raw = fm.dateCreated || fm.created;
+  if (raw) return String(raw).slice(0, 10);
+  if (file?.stat?.ctime) return ymd(new Date(file.stat.ctime));
+  return "";
+}
+function taskNoteClosedValue(file, fm, done) {
+  if (!done) return "";
+  const raw = fm.dateCompleted || fm.completedDate || fm.completed || fm.dateModified || fm.modified;
+  if (raw) return String(raw).slice(0, 10);
+  if (file?.stat?.mtime) return ymd(new Date(file.stat.mtime));
+  return "";
+}
+function listAllTaskNotes(app, settings) {
+  const folders = taskNoteFolders(settings);
+  return scannableMarkdownFiles(app).filter((f) => folders.some((folder) => f.path.startsWith(folder + "/"))).map((file) => {
+    const fm = (app.metadataCache.getFileCache(file) || {}).frontmatter || {};
+    const status = taskNoteStatus(fm);
+    const done = status === "done" || status === "completed" || status === "archived";
+    const date = taskNoteDateValue(file, fm, done);
+    return {
+      file,
+      fm,
+      status,
+      done,
+      date,
+      created: taskNoteCreatedValue(file, fm),
+      closed: taskNoteClosedValue(file, fm, done),
+      priority: String(fm.priority || "").trim().toLowerCase(),
+      due: fm.due ? String(fm.due).slice(0, 10) : "",
+      scheduled: fm.scheduled ? String(fm.scheduled).slice(0, 10) : "",
+      projects: Array.isArray(fm.projects) ? fm.projects : String(fm.projects || "").split(/[,\n]/).map((item) => item.trim()).filter(Boolean),
+      contexts: Array.isArray(fm.contexts) ? fm.contexts : String(fm.contexts || "").split(/[,\n]/).map((item) => item.trim()).filter(Boolean)
+    };
+  }).filter((item) => !taskNoteIgnored(item.status));
+}
+async function toggleTaskNoteStatus(app, file, done) {
+  await app.fileManager.processFrontMatter(file, (fm) => {
+    fm.status = done ? "done" : "open";
+    fm.dateModified = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  });
+}
+
+// src/settings.ts
 var obsidian = __toESM(require("obsidian"));
+var DEFAULT_SETTINGS = {
+  dailyNoteFolder: "daily",
+  journalHeading: "## Journal",
+  tasksHeading: "## Today",
+  weekStartsOn: 1,
+  // 0 = Sunday, 1 = Monday
+  defaultTab: "home",
+  openOnStartup: false,
+  activeWorkspaceTemplate: "",
+  collapsedGroups: {},
+  // { [groupId]: true }
+  pinnedSurfaces: [],
+  // [surfaceId]
+  dashboardState: {},
+  // { [surfaceId]: { [controlKey]: value } }
+  currency: "USD",
+  bobAppDark: false,
+  taskProjectLinks: {},
+  // { "dailyPath::taskText": "Cadence/Projects/X.md" }
+  modules: { crm: false, "client-work": false, prm: false, finance: false, procurement: false, planner: false, ai: false },
+  disabledSurfaces: [],
+  // surface IDs hidden from nav regardless of module toggle
+  showSecondaryNav: false,
+  showSetupNav: false,
+  inlineNativeViews: false,
+  teamPersonCategories: ["employee", "freelancer", "contractor"],
+  desktopNotifications: false,
+  reminders: [],
+  // [{ id, text, when (ISO|null), repeat ('none'|'daily'|'weekly'), notified, done, createdAt }]
+  // Partner programme automation. Both default on: the failure they prevent
+  // (a forgotten commission, a lapsed registration) is silent, and the thing
+  // they produce is a record or an inbox row, neither of which is destructive.
+  autoCommissionOnWon: true,
+  partnerExpiryReminders: true,
+  expiryReminderSeen: {},
+  // Task mode
+  taskMode: "checkbox",
+  // 'checkbox' | 'tasknotes' | 'hybrid'
+  taskNotesFolder: "00-CORE/TaskNotes/Tasks",
+  taskNotesArchiveFolder: "00-CORE/TaskNotes/Archive",
+  workbookExportFolder: "BOB Workspace/Exports",
+  canvasFolder: "BOB Workspace/Canvases",
+  // Entity folder locations (all configurable)
+  folderContacts: "10-ME/10-PEOPLE",
+  folderCompanies: "20-COMPANY/00-PROFILE",
+  folderClients: "30-CLIENTS",
+  folderSuppliers: "20-COMPANY/30-SUPPLIERS",
+  folderPipeline: "30-CLIENTS",
+  folderPartners: "20-COMPANY/35-PARTNERS",
+  folderRegistrations: "20-COMPANY/35-PARTNERS",
+  folderCommissions: "20-COMPANY/35-PARTNERS",
+  folderLeads: "20-COMPANY/55-LEADS",
+  folderCertifications: "20-COMPANY/35-PARTNERS",
+  folderActivities: "30-CLIENTS",
+  folderSequences: "20-COMPANY/60-SALES/SEQUENCES",
+  folderCampaigns: "20-COMPANY/60-SALES/CAMPAIGNS",
+  folderProjects: "30-CLIENTS",
+  folderPlaybooks: "00-CORE/Playbooks",
+  folderSkills: "00-CORE/Agents/skills",
+  projectFolders: [],
+  // extra folders to scan; first non-empty = default for new projects
+  ignoredFolders: [],
+  // folders excluded from every entity scan (e.g. ['99-TMP']) — speeds up large vaults
+  baseFiles: {
+    contact: "00-CORE/Bases/People.base",
+    client: "00-CORE/Bases/Clients.base",
+    company: "00-CORE/Bases/Companies.base",
+    deal: "00-CORE/Bases/Pipeline.base",
+    activity: "00-CORE/Bases/Activities.base",
+    lead: "00-CORE/Bases/Sales-Leads.base",
+    partner: "00-CORE/Bases/Partners.base",
+    registration: "00-CORE/Bases/Partner-Registrations.base",
+    commission: "00-CORE/Bases/Partner-Commissions.base",
+    certification: "00-CORE/Bases/Partner-Certifications.base",
+    campaign: "00-CORE/Bases/Campaigns.base",
+    sequence: "00-CORE/Bases/Sequences.base",
+    meeting: "00-CORE/Bases/Meetings.base",
+    "comms-thread": "00-CORE/Bases/Comms.base",
+    deliverable: "00-CORE/Bases/Deliverables.base",
+    feedback: "00-CORE/Bases/Feedback.base",
+    survey: "00-CORE/Bases/Surveys.base",
+    testimonial: "00-CORE/Bases/Testimonials.base",
+    decision: "00-CORE/Bases/Decisions.base",
+    project: "00-CORE/Bases/Projects.base",
+    supplier: "00-CORE/Bases/Suppliers.base",
+    "accounting-period": "00-CORE/Bases/Accounting-Periods.base",
+    "bank-account": "00-CORE/Bases/Bank-Accounts.base",
+    "bank-reconciliation": "00-CORE/Bases/Bank-Reconciliations.base",
+    "chart-of-accounts": "00-CORE/Bases/Chart-of-Accounts.base",
+    "financial-statement": "00-CORE/Bases/Financial-Statements.base",
+    "fs-notes": "00-CORE/Bases/FS-Notes.base",
+    "fx-rates-table": "00-CORE/Bases/FX-Rates-Tables.base",
+    inventory: "00-CORE/Bases/Inventory.base",
+    invoice: "00-CORE/Bases/AR.base",
+    "journal-entry": "00-CORE/Bases/Journal-Entries.base",
+    "purchase-requisition": "00-CORE/Bases/Purchase-Requisitions.base",
+    "purchase-order": "00-CORE/Bases/Purchase-Orders.base",
+    "supplier-invoice": "00-CORE/Bases/Supplier-Invoices.base",
+    "trial-balance": "00-CORE/Bases/Trial-Balances.base",
+    "vat-return": "00-CORE/Bases/VAT-Returns.base",
+    "corporate-tax-return": "00-CORE/Bases/Corporate-Tax-Returns.base",
+    "deferred-tax": "00-CORE/Bases/Deferred-Tax.base",
+    "transfer-pricing": "00-CORE/Bases/Transfer-Pricing.base",
+    "free-zone-status": "00-CORE/Bases/Free-Zone-Status.base",
+    "legal-rule": "00-CORE/Bases/Legal-Rules.base",
+    "document-retention": "00-CORE/Bases/Document-Retention.base"
+  },
+  // { [entityKey]: 'path/to/entity.base' }
+  baseViews: {},
+  // { [entityKey]: 'View name inside selected .base' }
+  basesFolder: "00-CORE/Bases",
+  // vault folder where entity .base files live (authoritative; baseFiles supplies the filename)
+  schemasFolder: "00-CORE/Schemas/source",
+  // Metadata Menu schema source folder
+  useSchemas: false
+  // toggle: read entity defs from schema YAML files
+};
+var CURRENT_CURRENCY = "USD";
+function setCurrentCurrency(currency) {
+  CURRENT_CURRENCY = currency || "USD";
+}
+var IGNORED_FOLDERS = [];
+function setIgnoredFolders(folders) {
+  IGNORED_FOLDERS = (Array.isArray(folders) ? folders : []).map((f) => String(f ?? "").trim().replace(/^\/+|\/+$/g, "")).filter(Boolean);
+}
+function isIgnoredPath(path) {
+  if (!IGNORED_FOLDERS.length) return false;
+  const p = String(path || "");
+  return IGNORED_FOLDERS.some((folder) => p === folder || p.startsWith(folder + "/"));
+}
+var ENTITY_FOLDERS = {
+  contact: "10-ME/10-PEOPLE",
+  company: "20-COMPANY/00-PROFILE",
+  client: "30-CLIENTS",
+  supplier: "20-COMPANY/30-SUPPLIERS",
+  deal: "30-CLIENTS",
+  partner: "20-COMPANY/35-PARTNERS",
+  registration: "20-COMPANY/35-PARTNERS",
+  commission: "20-COMPANY/35-PARTNERS",
+  lead: "20-COMPANY/55-LEADS",
+  certification: "20-COMPANY/35-PARTNERS",
+  activity: "30-CLIENTS",
+  sequence: "20-COMPANY/60-SALES/SEQUENCES",
+  campaign: "20-COMPANY/60-SALES/CAMPAIGNS",
+  project: "30-CLIENTS"
+};
+function syncEntityFolders(settings) {
+  ENTITY_FOLDERS.contact = (settings.folderContacts || "").trim() || "10-ME/10-PEOPLE";
+  ENTITY_FOLDERS.company = (settings.folderCompanies || "").trim() || "20-COMPANY/00-PROFILE";
+  ENTITY_FOLDERS.client = (settings.folderClients || "").trim() || "30-CLIENTS";
+  ENTITY_FOLDERS.supplier = (settings.folderSuppliers || "").trim() || "20-COMPANY/30-SUPPLIERS";
+  ENTITY_FOLDERS.deal = (settings.folderPipeline || "").trim() || "30-CLIENTS";
+  ENTITY_FOLDERS.partner = (settings.folderPartners || "").trim() || "20-COMPANY/35-PARTNERS";
+  ENTITY_FOLDERS.registration = (settings.folderRegistrations || "").trim() || "20-COMPANY/35-PARTNERS";
+  ENTITY_FOLDERS.commission = (settings.folderCommissions || "").trim() || "20-COMPANY/35-PARTNERS";
+  ENTITY_FOLDERS.lead = (settings.folderLeads || "").trim() || "20-COMPANY/55-LEADS";
+  ENTITY_FOLDERS.certification = (settings.folderCertifications || "").trim() || "20-COMPANY/35-PARTNERS";
+  ENTITY_FOLDERS.activity = (settings.folderActivities || "").trim() || "30-CLIENTS";
+  ENTITY_FOLDERS.sequence = (settings.folderSequences || "").trim() || "20-COMPANY/60-SALES/SEQUENCES";
+  ENTITY_FOLDERS.campaign = (settings.folderCampaigns || "").trim() || "20-COMPANY/60-SALES/CAMPAIGNS";
+  ENTITY_FOLDERS.playbook = (settings.folderPlaybooks || "").trim() || "00-CORE/Playbooks";
+  ENTITY_FOLDERS.skill = (settings.folderSkills || "").trim() || "00-CORE/Agents/skills";
+  const extraProjectFolders = (settings.projectFolders || []).filter((f) => f && f.trim());
+  const allProjectFolders = [
+    (settings.folderProjects || "").trim() || "30-CLIENTS",
+    ...extraProjectFolders
+  ];
+  ENTITY_FOLDERS.project = allProjectFolders[0];
+  ENTITIES.project.folders = allProjectFolders.length > 1 ? allProjectFolders : void 0;
+  if (!ENTITIES.project.folders) delete ENTITIES.project.folders;
+  ENTITY_FOLDERS.task = (settings.taskNotesFolder || "").trim() || "00-CORE/TaskNotes/Tasks";
+  ENTITIES.task.folder = ENTITY_FOLDERS.task;
+  ENTITIES.task.folders = taskNoteFolders(settings);
+  setIgnoredFolders(settings.ignoredFolders);
+}
+function entityFolder(entityKey) {
+  if (ENTITIES[entityKey]?.folders?.[0]) return ENTITIES[entityKey].folders[0];
+  return ENTITY_FOLDERS[entityKey] || ENTITIES[entityKey]?.folder || "";
+}
+function normalizePathSegment(value) {
+  return String(value ?? "").replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim();
+}
+function normalizedLookupKey(value) {
+  return String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+function normalizeProjectId(value) {
+  return String(value ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-+/g, "-").toLowerCase();
+}
+function humanizeProjectName(value) {
+  const text = String(value ?? "").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  return text.split(" ").map((part) => {
+    if (!part) return "";
+    if (/^[A-Z0-9]{2,}$/.test(part)) return part;
+    return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+  }).join(" ");
+}
+function buildEntityCreateValueMap(def, context = {}) {
+  const values = Object.assign({}, context.values || {});
+  const map = /* @__PURE__ */ new Map();
+  const add = (key, value) => {
+    if (value == null || value === "") return;
+    const normalized = normalizedLookupKey(key);
+    if (normalized) map.set(normalized, value);
+  };
+  Object.entries(values).forEach(([key, value]) => add(key, value));
+  if (context.rawName) {
+    const primaryKey = primaryFieldKey(def);
+    if (primaryKey) add(primaryKey, context.rawName);
+    add("name", context.rawName);
+    add("title", context.rawName);
+  }
+  if (context.filePath) {
+    add("file_path", context.filePath);
+    add("path", context.filePath);
+  }
+  return map;
+}
+function lookupCreateValue(name, valueMap) {
+  const key = normalizedLookupKey(name);
+  if (!key) return "";
+  if (valueMap.has(key)) return valueMap.get(key);
+  return "";
+}
+function resolveLocationPatternFolder(pattern, def, context = {}) {
+  if (!pattern) return "";
+  const valueMap = buildEntityCreateValueMap(def, context);
+  const candidates = String(pattern).split(/\s+or\s+/i).map((part) => part.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
+  const resolvedPaths = [];
+  for (const candidate of candidates) {
+    const segments = candidate.split("/").map((segment) => segment.trim()).filter(Boolean);
+    const pathSegments = [];
+    let blocked = false;
+    let hadPlaceholder = false;
+    for (const segment of segments) {
+      if (!segment.includes("{")) {
+        const clean2 = normalizePathSegment(segment);
+        if (clean2) pathSegments.push(clean2);
+        continue;
+      }
+      hadPlaceholder = true;
+      let segmentResolved = segment;
+      let unresolved = false;
+      segmentResolved = segmentResolved.replace(/\{([^}]+)\}/g, (_, placeholder) => {
+        const value = lookupCreateValue(placeholder, valueMap);
+        if (value === "") {
+          unresolved = true;
+          return "";
+        }
+        return normalizePathSegment(value);
+      });
+      if (unresolved) {
+        blocked = true;
+        break;
+      }
+      const clean = normalizePathSegment(segmentResolved);
+      if (clean) pathSegments.push(clean);
+    }
+    resolvedPaths.push({
+      path: pathSegments.join("/"),
+      depth: pathSegments.length,
+      fullyResolved: !blocked && (!hadPlaceholder || pathSegments.length === segments.length)
+    });
+  }
+  const fullMatch = resolvedPaths.filter((item) => item.path && item.fullyResolved).sort((a, b) => b.depth - a.depth)[0];
+  if (fullMatch) return fullMatch.path;
+  const bestPartial = resolvedPaths.filter((item) => item.path).sort((a, b) => b.depth - a.depth)[0];
+  return bestPartial?.path || "";
+}
+function resolveEntityCreateFolder(entityKey, rawName, context = {}) {
+  const def = ENTITIES[entityKey];
+  if (!def) return entityFolder(entityKey);
+  const pattern = def.locationPattern || def.location_pattern || "";
+  const resolved = resolveLocationPatternFolder(pattern, def, Object.assign({}, context, { rawName }));
+  return resolved || entityFolder(entityKey);
+}
+function normalizeTemplateSpec(template) {
+  if (!template) return null;
+  if (typeof template === "string") return { body: template };
+  if (typeof template === "object" && !Array.isArray(template)) return template;
+  return null;
+}
+function applyTemplatePlaceholders(value, context = {}) {
+  if (typeof value !== "string") return value;
+  return value.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
+    const lookup = String(key || "").trim();
+    if (!lookup) return "";
+    const candidates = [lookup, lookup.toLowerCase(), lookup.replace(/\s+/g, "_").toLowerCase()];
+    for (const candidate of candidates) {
+      if (Object.prototype.hasOwnProperty.call(context, candidate) && context[candidate] != null) {
+        return String(context[candidate]);
+      }
+    }
+    return "";
+  });
+}
+function applyDashboardContext(value, context = {}) {
+  if (typeof value === "string") return applyTemplatePlaceholders(value, context);
+  if (Array.isArray(value)) return value.map((item) => applyDashboardContext(item, context));
+  if (value && typeof value === "object") {
+    const out = {};
+    Object.entries(value).forEach(([key, item]) => {
+      out[key] = applyDashboardContext(item, context);
+    });
+    return out;
+  }
+  return value;
+}
+function renderTemplateFrontmatter(frontmatter, context = {}) {
+  const result = {};
+  Object.entries(frontmatter || {}).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      result[key] = value.map((item) => applyTemplatePlaceholders(item, context));
+      return;
+    }
+    if (value && typeof value === "object") {
+      result[key] = renderTemplateFrontmatter(value, context);
+      return;
+    }
+    result[key] = applyTemplatePlaceholders(value, context);
+  });
+  return result;
+}
+function renderTemplateBody(body, context = {}) {
+  const lines = Array.isArray(body) ? body : String(body || "").split("\n");
+  return lines.map((line) => applyTemplatePlaceholders(line, context)).join("\n");
+}
+function renderTemplateDocument(template, context = {}, fallback = null) {
+  const spec = normalizeTemplateSpec(template);
+  const body = spec?.body != null ? spec.body : fallback?.body;
+  const frontmatter = spec?.frontmatter != null ? spec.frontmatter : fallback?.frontmatter;
+  const fm = renderTemplateFrontmatter(frontmatter || {}, context);
+  const fmLines = ["---"];
+  Object.entries(fm).forEach(([key, value]) => {
+    fmLines.push(obsidian.stringifyYaml({ [key]: value }).trim() || `${key}:`);
+  });
+  fmLines.push("---", "");
+  const renderedBody = renderTemplateBody(body != null ? body : "", context);
+  return [fmLines.join("\n"), renderedBody].filter(Boolean).join("\n");
+}
+
+// src/workspace-config.ts
+var obsidian2 = __toESM(require("obsidian"));
 var PLUGIN_DIR = "";
 var WORKSPACE_CONFIG_PATH = "Cadence/workspace.json";
 var WORKSPACE_BACKUP_PATH = "Cadence/workspace.backup.json";
@@ -23594,7 +24167,7 @@ async function loadWorkspaceConfig(app) {
     WORKSPACE_HAS_NAVIGATION = Array.isArray(WORKSPACE_CONFIG.navigation?.groups);
     _lastWrittenWorkspaceJson = JSON.stringify(WORKSPACE_CONFIG, null, 2);
   } catch (e) {
-    new obsidian.Notice(`BOB Workspace: workspace.json failed to load and is being left untouched - ${e.message}`, 0);
+    new obsidian2.Notice(`BOB Workspace: workspace.json failed to load and is being left untouched - ${e.message}`, 0);
     WORKSPACE_CONFIG = {};
     WORKSPACE_LOAD_FAILED = true;
   }
@@ -23705,7 +24278,7 @@ function normalizeDashboardConfigShape(value) {
 }
 
 // src/schemas.ts
-var obsidian2 = __toESM(require("obsidian"));
+var obsidian3 = __toESM(require("obsidian"));
 var SCHEMA_FOLDER_DEFAULT = "00-CORE/Schemas/source";
 var SCHEMA_TO_ENTITY_KEY = {
   person: "contact"
@@ -23787,7 +24360,7 @@ async function applySchemas(app, settings = {}) {
     let schema;
     try {
       const raw = await app.vault.adapter.read(filePath);
-      schema = obsidian2.parseYaml(raw);
+      schema = obsidian3.parseYaml(raw);
     } catch (e) {
       continue;
     }
@@ -23847,92 +24420,8 @@ async function applySchemas(app, settings = {}) {
   bumpWorkspaceConfigEpoch();
 }
 
-// src/utils.ts
-var CURRENCY_OPTIONS = [
-  { code: "USD", label: "USD \u2014 US Dollar" },
-  { code: "EUR", label: "EUR \u2014 Euro" },
-  { code: "GBP", label: "GBP \u2014 British Pound" },
-  { code: "ZAR", label: "ZAR \u2014 South African Rand" },
-  { code: "AUD", label: "AUD \u2014 Australian Dollar" },
-  { code: "CAD", label: "CAD \u2014 Canadian Dollar" },
-  { code: "CHF", label: "CHF \u2014 Swiss Franc" },
-  { code: "JPY", label: "JPY \u2014 Japanese Yen" },
-  { code: "INR", label: "INR \u2014 Indian Rupee" },
-  { code: "BRL", label: "BRL \u2014 Brazilian Real" },
-  { code: "AED", label: "AED \u2014 UAE Dirham" }
-];
-function pad(n) {
-  return String(n).padStart(2, "0");
-}
-function ymd(d = /* @__PURE__ */ new Date()) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-function dailyNotePath(settings, date = /* @__PURE__ */ new Date()) {
-  const folder = (settings.dailyNoteFolder || "").replace(/\/$/, "");
-  const name = ymd(date);
-  return folder ? `${folder}/${name}.md` : `${name}.md`;
-}
-function greeting() {
-  const h = (/* @__PURE__ */ new Date()).getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
-}
-function dateInfo(d = /* @__PURE__ */ new Date()) {
-  return {
-    weekday: d.toLocaleDateString(void 0, { weekday: "long" }),
-    day: d.getDate(),
-    month: d.toLocaleDateString(void 0, { month: "long" }),
-    year: d.getFullYear()
-  };
-}
-function startOfDay(d) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-function addDays(d, n) {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-}
-function startOfWeek(d, weekStartsOn = 1) {
-  const x = startOfDay(d);
-  const diff = (x.getDay() - weekStartsOn + 7) % 7;
-  return addDays(x, -diff);
-}
-function weekDates(anchor, weekStartsOn = 1) {
-  const start = startOfWeek(anchor, weekStartsOn);
-  return Array.from({ length: 7 }, (_, i) => addDays(start, i));
-}
-function sameDay(a, b) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-function pctBand(pct) {
-  if (pct < 25) return "rose";
-  if (pct < 50) return "warn";
-  if (pct < 75) return "mint";
-  return "emerald";
-}
-function ensureFolderSync(app, path) {
-  const parts = path.split("/").filter(Boolean);
-  let cur = "";
-  const promises = [];
-  for (const p of parts) {
-    cur = cur ? `${cur}/${p}` : p;
-    if (!app.vault.getAbstractFileByPath(cur)) {
-      promises.push(app.vault.createFolder(cur).catch(() => {
-      }));
-    }
-  }
-  return Promise.all(promises);
-}
-function isTemplatePath(path) {
-  return String(path || "").split("/").slice(0, -1).some((segment) => ["template", "templates"].includes(segment.toLowerCase()));
-}
-
 // src/bases-config.ts
-var obsidian3 = __toESM(require("obsidian"));
+var obsidian4 = __toESM(require("obsidian"));
 function resolveBasesFolder(settings = {}) {
   return String(settings.basesFolder || DEFAULT_SETTINGS.basesFolder || "00-CORE/Bases").replace(/\/+$/, "");
 }
@@ -24010,7 +24499,7 @@ async function generateMissingBases(app, settings = {}) {
       const dir = path.split("/").slice(0, -1).join("/");
       if (dir) await ensureFolderSync(app, dir);
       const base = baseFileFromEntityDefinition(entityKey, def);
-      await app.vault.adapter.write(path, obsidian3.stringifyYaml(base));
+      await app.vault.adapter.write(path, obsidian4.stringifyYaml(base));
       written.push(path);
     } catch (e) {
       failed.push(`${path}: ${e.message}`);
@@ -24147,12 +24636,12 @@ async function applyEntityDefinitions(app, settings = {}, config = {}) {
 }
 
 // src/bases-parse.ts
-var obsidian4 = __toESM(require("obsidian"));
+var obsidian5 = __toESM(require("obsidian"));
 var _baseYamlCache = /* @__PURE__ */ new Map();
 async function readBaseFileYaml(app, file) {
   const hit = _baseYamlCache.get(file.path);
   if (hit && hit.mtime === file.stat.mtime) return hit.yaml;
-  const parsed = obsidian4.parseYaml(await app.vault.cachedRead(file));
+  const parsed = obsidian5.parseYaml(await app.vault.cachedRead(file));
   const yaml = parsed && typeof parsed === "object" ? parsed : null;
   _baseYamlCache.set(file.path, { mtime: file.stat.mtime, yaml });
   return yaml;
@@ -24160,19 +24649,19 @@ async function readBaseFileYaml(app, file) {
 async function parseBaseFile(app, basePath, viewName) {
   let yaml;
   const baseFile = app.vault.getAbstractFileByPath(basePath);
-  if (baseFile instanceof obsidian4.TFile) {
+  if (baseFile instanceof obsidian5.TFile) {
     try {
       yaml = await readBaseFileYaml(app, baseFile);
     } catch (e) {
-      new obsidian4.Notice(`BOB Workspace: failed to parse ${basePath} \u2014 ${e.message}`);
+      new obsidian5.Notice(`BOB Workspace: failed to parse ${basePath} \u2014 ${e.message}`);
       return null;
     }
   } else {
     if (!await app.vault.adapter.exists(basePath)) return null;
     try {
-      yaml = obsidian4.parseYaml(await app.vault.adapter.read(basePath));
+      yaml = obsidian5.parseYaml(await app.vault.adapter.read(basePath));
     } catch (e) {
-      new obsidian4.Notice(`BOB Workspace: failed to parse ${basePath} \u2014 ${e.message}`);
+      new obsidian5.Notice(`BOB Workspace: failed to parse ${basePath} \u2014 ${e.message}`);
       return null;
     }
   }
@@ -24508,7 +24997,7 @@ async function applyConfiguredBaseOverrides(app, settings = {}) {
 }
 
 // src/entity-files.ts
-var obsidian5 = __toESM(require("obsidian"));
+var obsidian6 = __toESM(require("obsidian"));
 var _scanCache = null;
 var _scanVersion = 0;
 var _entityListMemo = /* @__PURE__ */ new Map();
@@ -24812,7 +25301,7 @@ function templateFieldValue(field, isPrimary, name) {
   return "";
 }
 function yamlTemplateLine(key, value) {
-  const serialized = obsidian5.stringifyYaml({ [key]: value }).trim();
+  const serialized = obsidian6.stringifyYaml({ [key]: value }).trim();
   return serialized || `${key}:`;
 }
 function entityTemplate(entityKey, name) {
@@ -25041,9 +25530,13 @@ var ENTITIES = {
       { key: "status", label: "Status", type: "enum", options: ["lead", "qualified", "active", "inactive", "archived"] },
       { key: "relationship_type", label: "Relationship" },
       { key: "my_role", label: "My Role" },
-      { key: "agreement_type", label: "Agreement" }
+      { key: "agreement_type", label: "Agreement" },
+      // Declared partner field as of the 2026-08 data-model decision. Auto-created
+      // commissions read it; without it the amount cannot be computed and is left
+      // at 0 rather than guessed.
+      { key: "commission_rate", label: "Commission %", type: "number" }
     ],
-    columns: ["partner_name", "partner_id", "status", "relationship_type", "my_role", "agreement_type"]
+    columns: ["partner_name", "partner_id", "status", "relationship_type", "agreement_type", "commission_rate"]
   },
   registration: {
     folder: "20-COMPANY/35-PARTNERS",
@@ -25091,7 +25584,8 @@ var ENTITIES = {
       { key: "project", label: "Project" },
       { key: "contact_name", label: "Contact" },
       { key: "contact_email", label: "Email", type: "email" },
-      { key: "source", label: "Source" },
+      { key: "source", label: "Source", type: "enum", options: ["inbound", "outbound", "referral", "network", "event", "partner"] },
+      { key: "partner_ref", label: "Partner", refEntity: "partner" },
       { key: "owner", label: "Owner" },
       { key: "status", label: "Status", type: "enum", options: ["lead", "qualified", "nurture", "disqualified"] },
       { key: "prospect_grade", label: "Grade", type: "enum", options: ["A+", "A", "B", "C", "D"] },
@@ -25102,7 +25596,11 @@ var ENTITIES = {
       { key: "related", label: "Related" },
       { key: "lead_date", label: "Lead Date", type: "date" }
     ],
-    columns: ["company_name", "client_id", "end_client_id", "project_id", "status", "owner", "prospect_grade", "next_action_date"]
+    columns: ["company_name", "client_id", "end_client_id", "project_id", "status", "owner", "prospect_grade", "next_action_date"],
+    // A partner-sourced lead with no partner named cannot be attributed later, and
+    // commission and partner-share analytics become name-matching guesswork. Mirrors
+    // the `conditional_required` rule declared on lead.yaml in the vault schema.
+    conditionalRequired: [{ when: { source: "partner" }, require: ["partner_ref"] }]
   },
   certification: {
     folder: "20-COMPANY/35-PARTNERS",
@@ -25926,489 +26424,6 @@ var BUILT_SURFACES = /* @__PURE__ */ new Set([
   "ai.skills"
 ]);
 var BUILTIN_SURFACE_IDS = new Set(BUILT_SURFACES);
-
-// src/task-notes.ts
-function taskNoteTemplate(title) {
-  const template = normalizeTemplateSpec(WORKSPACE_CONFIG?.templates?.taskNote || ENTITIES.task?.template);
-  if (template) {
-    return renderTemplateDocument(template, {
-      title,
-      name: title,
-      today: ymd(),
-      entityKey: "task",
-      label: "Task",
-      plural: "Tasks"
-    }, {
-      frontmatter: {
-        title,
-        type: "task",
-        status: "open",
-        priority: "normal",
-        size: "M",
-        due: "",
-        scheduled: "",
-        dateCreated: ymd(),
-        dateModified: ymd(),
-        tags: [],
-        assignee: [],
-        cluster: ""
-      },
-      body: [
-        `# ${title}`,
-        "",
-        "## Scope",
-        "",
-        "## Notes",
-        ""
-      ]
-    });
-  }
-  const now = ymd();
-  return [
-    "---",
-    `title: ${title}`,
-    "type: task",
-    "status: open",
-    "priority: normal",
-    "size: M",
-    "due:",
-    "scheduled:",
-    `dateCreated: ${now}`,
-    `dateModified: ${now}`,
-    "tags: []",
-    "assignee: []",
-    "cluster:",
-    "---",
-    "",
-    `# ${title}`,
-    "",
-    "## Scope",
-    "",
-    "## Notes",
-    ""
-  ].join("\n");
-}
-async function createTaskNote(app, settings, title) {
-  const folder = (settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").replace(/\/$/, "");
-  await ensureFolderSync(app, folder);
-  const safe = title.replace(/[\\/:*?"<>|]/g, "-").trim() || "Untitled Task";
-  let path = `${folder}/${safe}.md`;
-  let n = 2;
-  while (app.vault.getAbstractFileByPath(path)) {
-    path = `${folder}/${safe} ${n++}.md`;
-  }
-  return app.vault.create(path, taskNoteTemplate(title));
-}
-function listTodayTaskNotes(app, settings) {
-  const folder = (settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").replace(/\/$/, "");
-  const todayStr = ymd();
-  return scannableMarkdownFiles(app).filter((f) => f.path.startsWith(folder + "/")).map((f) => {
-    const fm = (app.metadataCache.getFileCache(f) || {}).frontmatter || {};
-    return { file: f, fm };
-  }).filter(({ fm }) => {
-    if (fm.status === "done") return false;
-    const due = fm.due ? String(fm.due).slice(0, 10) : null;
-    const sched = fm.scheduled ? String(fm.scheduled).slice(0, 10) : null;
-    return due === todayStr || sched === todayStr;
-  });
-}
-function taskNoteStatus(fm) {
-  return String(fm?.status || "open").toLowerCase().replace(/[\s_]+/g, "-");
-}
-function taskNoteIgnored(status) {
-  return status === "cancelled" || status === "canceled";
-}
-function taskNoteFolders(settings) {
-  const active = (settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").replace(/\/$/, "");
-  const fallbackArchive = active.replace(/\/Tasks$/, "/Archive");
-  const archive = (settings.taskNotesArchiveFolder || fallbackArchive || "00-CORE/TaskNotes/Archive").replace(/\/$/, "");
-  return [...new Set([active, archive].filter(Boolean))];
-}
-function taskNoteDateValue(file, fm, done) {
-  const raw = done ? fm.dateCompleted || fm.completedDate || fm.completed || fm.dateModified || fm.modified || fm.due || fm.scheduled || fm.dateCreated || fm.created : fm.due || fm.scheduled || fm.dateCreated || fm.created || fm.dateModified || fm.modified;
-  if (raw) return String(raw).slice(0, 10);
-  if (file?.stat?.mtime) return ymd(new Date(file.stat.mtime));
-  return "";
-}
-function taskNoteCreatedValue(file, fm) {
-  const raw = fm.dateCreated || fm.created;
-  if (raw) return String(raw).slice(0, 10);
-  if (file?.stat?.ctime) return ymd(new Date(file.stat.ctime));
-  return "";
-}
-function taskNoteClosedValue(file, fm, done) {
-  if (!done) return "";
-  const raw = fm.dateCompleted || fm.completedDate || fm.completed || fm.dateModified || fm.modified;
-  if (raw) return String(raw).slice(0, 10);
-  if (file?.stat?.mtime) return ymd(new Date(file.stat.mtime));
-  return "";
-}
-function listAllTaskNotes(app, settings) {
-  const folders = taskNoteFolders(settings);
-  return scannableMarkdownFiles(app).filter((f) => folders.some((folder) => f.path.startsWith(folder + "/"))).map((file) => {
-    const fm = (app.metadataCache.getFileCache(file) || {}).frontmatter || {};
-    const status = taskNoteStatus(fm);
-    const done = status === "done" || status === "completed" || status === "archived";
-    const date = taskNoteDateValue(file, fm, done);
-    return {
-      file,
-      fm,
-      status,
-      done,
-      date,
-      created: taskNoteCreatedValue(file, fm),
-      closed: taskNoteClosedValue(file, fm, done),
-      priority: String(fm.priority || "").trim().toLowerCase(),
-      due: fm.due ? String(fm.due).slice(0, 10) : "",
-      scheduled: fm.scheduled ? String(fm.scheduled).slice(0, 10) : "",
-      projects: Array.isArray(fm.projects) ? fm.projects : String(fm.projects || "").split(/[,\n]/).map((item) => item.trim()).filter(Boolean),
-      contexts: Array.isArray(fm.contexts) ? fm.contexts : String(fm.contexts || "").split(/[,\n]/).map((item) => item.trim()).filter(Boolean)
-    };
-  }).filter((item) => !taskNoteIgnored(item.status));
-}
-async function toggleTaskNoteStatus(app, file, done) {
-  await app.fileManager.processFrontMatter(file, (fm) => {
-    fm.status = done ? "done" : "open";
-    fm.dateModified = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  });
-}
-
-// src/settings.ts
-var obsidian6 = __toESM(require("obsidian"));
-var DEFAULT_SETTINGS = {
-  dailyNoteFolder: "daily",
-  journalHeading: "## Journal",
-  tasksHeading: "## Today",
-  weekStartsOn: 1,
-  // 0 = Sunday, 1 = Monday
-  defaultTab: "home",
-  openOnStartup: false,
-  activeWorkspaceTemplate: "",
-  collapsedGroups: {},
-  // { [groupId]: true }
-  pinnedSurfaces: [],
-  // [surfaceId]
-  dashboardState: {},
-  // { [surfaceId]: { [controlKey]: value } }
-  currency: "USD",
-  bobAppDark: false,
-  taskProjectLinks: {},
-  // { "dailyPath::taskText": "Cadence/Projects/X.md" }
-  modules: { crm: false, "client-work": false, prm: false, finance: false, procurement: false, planner: false, ai: false },
-  disabledSurfaces: [],
-  // surface IDs hidden from nav regardless of module toggle
-  showSecondaryNav: false,
-  showSetupNav: false,
-  inlineNativeViews: false,
-  teamPersonCategories: ["employee", "freelancer", "contractor"],
-  desktopNotifications: false,
-  reminders: [],
-  // [{ id, text, when (ISO|null), repeat ('none'|'daily'|'weekly'), notified, done, createdAt }]
-  // Task mode
-  taskMode: "checkbox",
-  // 'checkbox' | 'tasknotes' | 'hybrid'
-  taskNotesFolder: "00-CORE/TaskNotes/Tasks",
-  taskNotesArchiveFolder: "00-CORE/TaskNotes/Archive",
-  workbookExportFolder: "BOB Workspace/Exports",
-  canvasFolder: "BOB Workspace/Canvases",
-  // Entity folder locations (all configurable)
-  folderContacts: "10-ME/10-PEOPLE",
-  folderCompanies: "20-COMPANY/00-PROFILE",
-  folderClients: "30-CLIENTS",
-  folderSuppliers: "20-COMPANY/30-SUPPLIERS",
-  folderPipeline: "30-CLIENTS",
-  folderPartners: "20-COMPANY/35-PARTNERS",
-  folderRegistrations: "20-COMPANY/35-PARTNERS",
-  folderCommissions: "20-COMPANY/35-PARTNERS",
-  folderLeads: "20-COMPANY/55-LEADS",
-  folderCertifications: "20-COMPANY/35-PARTNERS",
-  folderActivities: "30-CLIENTS",
-  folderSequences: "20-COMPANY/60-SALES/SEQUENCES",
-  folderCampaigns: "20-COMPANY/60-SALES/CAMPAIGNS",
-  folderProjects: "30-CLIENTS",
-  folderPlaybooks: "00-CORE/Playbooks",
-  folderSkills: "00-CORE/Agents/skills",
-  projectFolders: [],
-  // extra folders to scan; first non-empty = default for new projects
-  ignoredFolders: [],
-  // folders excluded from every entity scan (e.g. ['99-TMP']) — speeds up large vaults
-  baseFiles: {
-    contact: "00-CORE/Bases/People.base",
-    client: "00-CORE/Bases/Clients.base",
-    company: "00-CORE/Bases/Companies.base",
-    deal: "00-CORE/Bases/Pipeline.base",
-    activity: "00-CORE/Bases/Activities.base",
-    lead: "00-CORE/Bases/Sales-Leads.base",
-    partner: "00-CORE/Bases/Partners.base",
-    registration: "00-CORE/Bases/Partner-Registrations.base",
-    commission: "00-CORE/Bases/Partner-Commissions.base",
-    certification: "00-CORE/Bases/Partner-Certifications.base",
-    campaign: "00-CORE/Bases/Campaigns.base",
-    sequence: "00-CORE/Bases/Sequences.base",
-    meeting: "00-CORE/Bases/Meetings.base",
-    "comms-thread": "00-CORE/Bases/Comms.base",
-    deliverable: "00-CORE/Bases/Deliverables.base",
-    feedback: "00-CORE/Bases/Feedback.base",
-    survey: "00-CORE/Bases/Surveys.base",
-    testimonial: "00-CORE/Bases/Testimonials.base",
-    decision: "00-CORE/Bases/Decisions.base",
-    project: "00-CORE/Bases/Projects.base",
-    supplier: "00-CORE/Bases/Suppliers.base",
-    "accounting-period": "00-CORE/Bases/Accounting-Periods.base",
-    "bank-account": "00-CORE/Bases/Bank-Accounts.base",
-    "bank-reconciliation": "00-CORE/Bases/Bank-Reconciliations.base",
-    "chart-of-accounts": "00-CORE/Bases/Chart-of-Accounts.base",
-    "financial-statement": "00-CORE/Bases/Financial-Statements.base",
-    "fs-notes": "00-CORE/Bases/FS-Notes.base",
-    "fx-rates-table": "00-CORE/Bases/FX-Rates-Tables.base",
-    inventory: "00-CORE/Bases/Inventory.base",
-    invoice: "00-CORE/Bases/AR.base",
-    "journal-entry": "00-CORE/Bases/Journal-Entries.base",
-    "purchase-requisition": "00-CORE/Bases/Purchase-Requisitions.base",
-    "purchase-order": "00-CORE/Bases/Purchase-Orders.base",
-    "supplier-invoice": "00-CORE/Bases/Supplier-Invoices.base",
-    "trial-balance": "00-CORE/Bases/Trial-Balances.base",
-    "vat-return": "00-CORE/Bases/VAT-Returns.base",
-    "corporate-tax-return": "00-CORE/Bases/Corporate-Tax-Returns.base",
-    "deferred-tax": "00-CORE/Bases/Deferred-Tax.base",
-    "transfer-pricing": "00-CORE/Bases/Transfer-Pricing.base",
-    "free-zone-status": "00-CORE/Bases/Free-Zone-Status.base",
-    "legal-rule": "00-CORE/Bases/Legal-Rules.base",
-    "document-retention": "00-CORE/Bases/Document-Retention.base"
-  },
-  // { [entityKey]: 'path/to/entity.base' }
-  baseViews: {},
-  // { [entityKey]: 'View name inside selected .base' }
-  basesFolder: "00-CORE/Bases",
-  // vault folder where entity .base files live (authoritative; baseFiles supplies the filename)
-  schemasFolder: "00-CORE/Schemas/source",
-  // Metadata Menu schema source folder
-  useSchemas: false
-  // toggle: read entity defs from schema YAML files
-};
-var CURRENT_CURRENCY = "USD";
-function setCurrentCurrency(currency) {
-  CURRENT_CURRENCY = currency || "USD";
-}
-var IGNORED_FOLDERS = [];
-function setIgnoredFolders(folders) {
-  IGNORED_FOLDERS = (Array.isArray(folders) ? folders : []).map((f) => String(f ?? "").trim().replace(/^\/+|\/+$/g, "")).filter(Boolean);
-}
-function isIgnoredPath(path) {
-  if (!IGNORED_FOLDERS.length) return false;
-  const p = String(path || "");
-  return IGNORED_FOLDERS.some((folder) => p === folder || p.startsWith(folder + "/"));
-}
-var ENTITY_FOLDERS = {
-  contact: "10-ME/10-PEOPLE",
-  company: "20-COMPANY/00-PROFILE",
-  client: "30-CLIENTS",
-  supplier: "20-COMPANY/30-SUPPLIERS",
-  deal: "30-CLIENTS",
-  partner: "20-COMPANY/35-PARTNERS",
-  registration: "20-COMPANY/35-PARTNERS",
-  commission: "20-COMPANY/35-PARTNERS",
-  lead: "20-COMPANY/55-LEADS",
-  certification: "20-COMPANY/35-PARTNERS",
-  activity: "30-CLIENTS",
-  sequence: "20-COMPANY/60-SALES/SEQUENCES",
-  campaign: "20-COMPANY/60-SALES/CAMPAIGNS",
-  project: "30-CLIENTS"
-};
-function syncEntityFolders(settings) {
-  ENTITY_FOLDERS.contact = (settings.folderContacts || "").trim() || "10-ME/10-PEOPLE";
-  ENTITY_FOLDERS.company = (settings.folderCompanies || "").trim() || "20-COMPANY/00-PROFILE";
-  ENTITY_FOLDERS.client = (settings.folderClients || "").trim() || "30-CLIENTS";
-  ENTITY_FOLDERS.supplier = (settings.folderSuppliers || "").trim() || "20-COMPANY/30-SUPPLIERS";
-  ENTITY_FOLDERS.deal = (settings.folderPipeline || "").trim() || "30-CLIENTS";
-  ENTITY_FOLDERS.partner = (settings.folderPartners || "").trim() || "20-COMPANY/35-PARTNERS";
-  ENTITY_FOLDERS.registration = (settings.folderRegistrations || "").trim() || "20-COMPANY/35-PARTNERS";
-  ENTITY_FOLDERS.commission = (settings.folderCommissions || "").trim() || "20-COMPANY/35-PARTNERS";
-  ENTITY_FOLDERS.lead = (settings.folderLeads || "").trim() || "20-COMPANY/55-LEADS";
-  ENTITY_FOLDERS.certification = (settings.folderCertifications || "").trim() || "20-COMPANY/35-PARTNERS";
-  ENTITY_FOLDERS.activity = (settings.folderActivities || "").trim() || "30-CLIENTS";
-  ENTITY_FOLDERS.sequence = (settings.folderSequences || "").trim() || "20-COMPANY/60-SALES/SEQUENCES";
-  ENTITY_FOLDERS.campaign = (settings.folderCampaigns || "").trim() || "20-COMPANY/60-SALES/CAMPAIGNS";
-  ENTITY_FOLDERS.playbook = (settings.folderPlaybooks || "").trim() || "00-CORE/Playbooks";
-  ENTITY_FOLDERS.skill = (settings.folderSkills || "").trim() || "00-CORE/Agents/skills";
-  const extraProjectFolders = (settings.projectFolders || []).filter((f) => f && f.trim());
-  const allProjectFolders = [
-    (settings.folderProjects || "").trim() || "30-CLIENTS",
-    ...extraProjectFolders
-  ];
-  ENTITY_FOLDERS.project = allProjectFolders[0];
-  ENTITIES.project.folders = allProjectFolders.length > 1 ? allProjectFolders : void 0;
-  if (!ENTITIES.project.folders) delete ENTITIES.project.folders;
-  ENTITY_FOLDERS.task = (settings.taskNotesFolder || "").trim() || "00-CORE/TaskNotes/Tasks";
-  ENTITIES.task.folder = ENTITY_FOLDERS.task;
-  ENTITIES.task.folders = taskNoteFolders(settings);
-  setIgnoredFolders(settings.ignoredFolders);
-}
-function entityFolder(entityKey) {
-  if (ENTITIES[entityKey]?.folders?.[0]) return ENTITIES[entityKey].folders[0];
-  return ENTITY_FOLDERS[entityKey] || ENTITIES[entityKey]?.folder || "";
-}
-function normalizePathSegment(value) {
-  return String(value ?? "").replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim();
-}
-function normalizedLookupKey(value) {
-  return String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
-}
-function normalizeProjectId(value) {
-  return String(value ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-+/g, "-").toLowerCase();
-}
-function humanizeProjectName(value) {
-  const text = String(value ?? "").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-  if (!text) return "";
-  return text.split(" ").map((part) => {
-    if (!part) return "";
-    if (/^[A-Z0-9]{2,}$/.test(part)) return part;
-    return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
-  }).join(" ");
-}
-function buildEntityCreateValueMap(def, context = {}) {
-  const values = Object.assign({}, context.values || {});
-  const map = /* @__PURE__ */ new Map();
-  const add = (key, value) => {
-    if (value == null || value === "") return;
-    const normalized = normalizedLookupKey(key);
-    if (normalized) map.set(normalized, value);
-  };
-  Object.entries(values).forEach(([key, value]) => add(key, value));
-  if (context.rawName) {
-    const primaryKey = primaryFieldKey(def);
-    if (primaryKey) add(primaryKey, context.rawName);
-    add("name", context.rawName);
-    add("title", context.rawName);
-  }
-  if (context.filePath) {
-    add("file_path", context.filePath);
-    add("path", context.filePath);
-  }
-  return map;
-}
-function lookupCreateValue(name, valueMap) {
-  const key = normalizedLookupKey(name);
-  if (!key) return "";
-  if (valueMap.has(key)) return valueMap.get(key);
-  return "";
-}
-function resolveLocationPatternFolder(pattern, def, context = {}) {
-  if (!pattern) return "";
-  const valueMap = buildEntityCreateValueMap(def, context);
-  const candidates = String(pattern).split(/\s+or\s+/i).map((part) => part.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
-  const resolvedPaths = [];
-  for (const candidate of candidates) {
-    const segments = candidate.split("/").map((segment) => segment.trim()).filter(Boolean);
-    const pathSegments = [];
-    let blocked = false;
-    let hadPlaceholder = false;
-    for (const segment of segments) {
-      if (!segment.includes("{")) {
-        const clean2 = normalizePathSegment(segment);
-        if (clean2) pathSegments.push(clean2);
-        continue;
-      }
-      hadPlaceholder = true;
-      let segmentResolved = segment;
-      let unresolved = false;
-      segmentResolved = segmentResolved.replace(/\{([^}]+)\}/g, (_, placeholder) => {
-        const value = lookupCreateValue(placeholder, valueMap);
-        if (value === "") {
-          unresolved = true;
-          return "";
-        }
-        return normalizePathSegment(value);
-      });
-      if (unresolved) {
-        blocked = true;
-        break;
-      }
-      const clean = normalizePathSegment(segmentResolved);
-      if (clean) pathSegments.push(clean);
-    }
-    resolvedPaths.push({
-      path: pathSegments.join("/"),
-      depth: pathSegments.length,
-      fullyResolved: !blocked && (!hadPlaceholder || pathSegments.length === segments.length)
-    });
-  }
-  const fullMatch = resolvedPaths.filter((item) => item.path && item.fullyResolved).sort((a, b) => b.depth - a.depth)[0];
-  if (fullMatch) return fullMatch.path;
-  const bestPartial = resolvedPaths.filter((item) => item.path).sort((a, b) => b.depth - a.depth)[0];
-  return bestPartial?.path || "";
-}
-function resolveEntityCreateFolder(entityKey, rawName, context = {}) {
-  const def = ENTITIES[entityKey];
-  if (!def) return entityFolder(entityKey);
-  const pattern = def.locationPattern || def.location_pattern || "";
-  const resolved = resolveLocationPatternFolder(pattern, def, Object.assign({}, context, { rawName }));
-  return resolved || entityFolder(entityKey);
-}
-function normalizeTemplateSpec(template) {
-  if (!template) return null;
-  if (typeof template === "string") return { body: template };
-  if (typeof template === "object" && !Array.isArray(template)) return template;
-  return null;
-}
-function applyTemplatePlaceholders(value, context = {}) {
-  if (typeof value !== "string") return value;
-  return value.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
-    const lookup = String(key || "").trim();
-    if (!lookup) return "";
-    const candidates = [lookup, lookup.toLowerCase(), lookup.replace(/\s+/g, "_").toLowerCase()];
-    for (const candidate of candidates) {
-      if (Object.prototype.hasOwnProperty.call(context, candidate) && context[candidate] != null) {
-        return String(context[candidate]);
-      }
-    }
-    return "";
-  });
-}
-function applyDashboardContext(value, context = {}) {
-  if (typeof value === "string") return applyTemplatePlaceholders(value, context);
-  if (Array.isArray(value)) return value.map((item) => applyDashboardContext(item, context));
-  if (value && typeof value === "object") {
-    const out = {};
-    Object.entries(value).forEach(([key, item]) => {
-      out[key] = applyDashboardContext(item, context);
-    });
-    return out;
-  }
-  return value;
-}
-function renderTemplateFrontmatter(frontmatter, context = {}) {
-  const result = {};
-  Object.entries(frontmatter || {}).forEach(([key, value]) => {
-    if (Array.isArray(value)) {
-      result[key] = value.map((item) => applyTemplatePlaceholders(item, context));
-      return;
-    }
-    if (value && typeof value === "object") {
-      result[key] = renderTemplateFrontmatter(value, context);
-      return;
-    }
-    result[key] = applyTemplatePlaceholders(value, context);
-  });
-  return result;
-}
-function renderTemplateBody(body, context = {}) {
-  const lines = Array.isArray(body) ? body : String(body || "").split("\n");
-  return lines.map((line) => applyTemplatePlaceholders(line, context)).join("\n");
-}
-function renderTemplateDocument(template, context = {}, fallback = null) {
-  const spec = normalizeTemplateSpec(template);
-  const body = spec?.body != null ? spec.body : fallback?.body;
-  const frontmatter = spec?.frontmatter != null ? spec.frontmatter : fallback?.frontmatter;
-  const fm = renderTemplateFrontmatter(frontmatter || {}, context);
-  const fmLines = ["---"];
-  Object.entries(fm).forEach(([key, value]) => {
-    fmLines.push(obsidian6.stringifyYaml({ [key]: value }).trim() || `${key}:`);
-  });
-  fmLines.push("---", "");
-  const renderedBody = renderTemplateBody(body != null ? body : "", context);
-  return [fmLines.join("\n"), renderedBody].filter(Boolean).join("\n");
-}
 
 // src/reminders.ts
 function reminderId() {
@@ -28740,6 +28755,140 @@ var BobWorkspaceSetupModal = class extends obsidian13.Modal {
   }
 };
 
+// src/partner-automation.ts
+var obsidian14 = __toESM(require("obsidian"));
+var CERT_WARN_DAYS = 60;
+var REG_WARN_DAYS = 30;
+var CERT_REMIND_LEAD_DAYS = 30;
+var REG_REMIND_LEAD_DAYS = 7;
+function daysUntil(raw, from = /* @__PURE__ */ new Date()) {
+  const v = String(raw || "").slice(0, 10);
+  if (!v) return null;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return null;
+  const today = new Date(from);
+  today.setHours(0, 0, 0, 0);
+  return Math.round((d.getTime() - today.getTime()) / 864e5);
+}
+function nakedRef(raw) {
+  return String(raw || "").replace(/^\[\[|\]\]$/g, "").split("|")[0].trim();
+}
+function dealPartnerName(deal, dealDef) {
+  return nakedRef(entityValue(deal, "partner_ref", dealDef) || entityValue(deal, "partner", dealDef));
+}
+var DEAL_STALE_DAYS = 30;
+function dealAtRisk(deal, dealDef) {
+  const due = daysUntil(entityValue(deal, dealDef.closeByField || "expected_close", dealDef));
+  if (due !== null && due < 0) return `close date ${Math.abs(due)}d overdue`;
+  const touched = daysUntil(entityValue(deal, "last_contact", dealDef));
+  if (touched !== null && touched < -DEAL_STALE_DAYS) return `no contact for ${Math.abs(touched)}d`;
+  return null;
+}
+async function maybeCreateCommissionForWonDeal(app, file, newStage) {
+  const dealDef = ENTITIES.deal;
+  const commDef = ENTITIES.commission;
+  if (!dealDef || !commDef) return false;
+  if (!dealWonStages(dealDef).includes(newStage)) return false;
+  const deal = readEntity(app, file);
+  const partnerName = dealPartnerName(deal, dealDef);
+  if (!partnerName) return false;
+  const dealKey = file.basename;
+  const existing = listEntities(app, "commission").some((c) => String(entityValue(c, "deal_ref", commDef) || "").includes(dealKey));
+  if (existing) return false;
+  const value = Number(entityValue(deal, dealValueField(dealDef), dealDef)) || 0;
+  const partner = listEntities(app, "partner").find((pt) => {
+    const pn = String(entityValue(pt, "partner_name", ENTITIES.partner) || "").trim();
+    return pn === partnerName || pt.basename === partnerName;
+  });
+  const rate = partner ? Number(entityValue(partner, "commission_rate", ENTITIES.partner)) : NaN;
+  const amount = Number.isFinite(rate) && rate > 0 ? Math.round(value * (rate / 100)) : 0;
+  const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  const period = today.slice(0, 7);
+  const folder = `${commDef.folder}/COMMISSIONS`;
+  if (!app.vault.getAbstractFileByPath(folder)) {
+    await app.vault.createFolder(folder).catch(() => {
+    });
+  }
+  const safe = `${partnerName}-${dealKey}`.replace(/[\\/:*?"<>|]/g, "-").slice(0, 80);
+  const path = `${folder}/commission-${safe}.md`;
+  if (app.vault.getAbstractFileByPath(path)) return false;
+  const body = [
+    "---",
+    "type: commission",
+    `reference: commission-${safe}`,
+    `partner_ref: "[[${partnerName}]]"`,
+    `deal_ref: "[[${dealKey}]]"`,
+    ...Number.isFinite(rate) && rate > 0 ? [`rate_pct: ${rate}`] : [],
+    `amount: ${amount}`,
+    "status: earned",
+    `period: ${period}`,
+    `earned_date: ${today}`,
+    "---",
+    "",
+    `# Commission \u2014 ${partnerName}`,
+    "",
+    `Auto-created when [[${dealKey}]] reached stage \`${newStage}\`.`,
+    "",
+    amount > 0 ? `Amount computed from deal value ${value} at the partner's declared rate of ${rate}%.` : `**Amount not computed** \u2014 the partner record leaves \`commission_rate\` blank. Set the amount by hand, or add a rate to the partner and delete this note to have it regenerate.`,
+    ""
+  ].join("\n");
+  await app.vault.create(path, body);
+  new obsidian14.Notice(`Commission recorded for ${partnerName}`);
+  return true;
+}
+async function pushPartnerExpiryReminders(app, host, candidates) {
+  if (host.settings.partnerExpiryReminders === false) return 0;
+  const seen = host.settings.expiryReminderSeen || {};
+  const reminders = Array.isArray(host.settings.reminders) ? host.settings.reminders : [];
+  const added = [];
+  for (const file of candidates) {
+    const fm = app.metadataCache.getFileCache(file)?.frontmatter;
+    if (!fm) continue;
+    const type = String(fm.type || "");
+    if (type !== "certification" && type !== "registration") continue;
+    const status = String(fm.status || "");
+    if (["renewed", "revoked", "rejected", "expired"].includes(status)) continue;
+    if (type === "registration" && status !== "approved") continue;
+    const expires = String(fm.expires_date || "").slice(0, 10);
+    const d = daysUntil(expires);
+    if (d === null) continue;
+    const window2 = type === "certification" ? CERT_WARN_DAYS : REG_WARN_DAYS;
+    if (d > window2) continue;
+    const key = `${file.path}::${expires}`;
+    if (seen[key]) continue;
+    const partner = String(fm.partner_ref || "").replace(/^\[\[|\]\]$/g, "");
+    const name = String(fm.name || fm.title || file.basename);
+    const text = type === "certification" ? `Renew ${name}${partner ? ` at ${partner}` : ""} \u2014 expires ${expires}` : `Registration ${name}${partner ? ` from ${partner}` : ""} expires ${expires} \u2014 close or extend`;
+    const lead = type === "certification" ? CERT_REMIND_LEAD_DAYS : REG_REMIND_LEAD_DAYS;
+    const when = new Date(expires);
+    when.setDate(when.getDate() - lead);
+    when.setHours(9, 0, 0, 0);
+    if (when.getTime() < Date.now()) {
+      const now = /* @__PURE__ */ new Date();
+      now.setHours(9, 0, 0, 0);
+      when.setTime(Math.max(now.getTime(), Date.now()));
+    }
+    added.push({
+      id: reminderId(),
+      text,
+      when: when.toISOString(),
+      repeat: "none",
+      notes: `Auto-raised from ${file.path}`,
+      project: null,
+      notified: false,
+      done: false,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    seen[key] = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  }
+  if (!added.length) return 0;
+  host.settings.reminders = reminders.concat(added);
+  host.settings.expiryReminderSeen = seen;
+  await host.saveSettings();
+  host.refreshOpenViews?.();
+  return added.length;
+}
+
 // src/help-content.ts
 var FIELD_HELP = {
   title: "Heading shown at the top of this widget.",
@@ -29364,8 +29513,8 @@ var CANVAS_GENERATORS = [
 ];
 
 // src/modals/entity-create.ts
-var obsidian14 = __toESM(require("obsidian"));
-var BobEntityCreateModal = class extends obsidian14.Modal {
+var obsidian15 = __toESM(require("obsidian"));
+var BobEntityCreateModal = class extends obsidian15.Modal {
   constructor(app, entityKey, opts) {
     super(app);
     this.entityKey = entityKey;
@@ -29381,7 +29530,9 @@ var BobEntityCreateModal = class extends obsidian14.Modal {
     contentEl.createEl("h3", { cls: "bob-create-title", text: `New ${this.def.label}` });
     const form = contentEl.createDiv({ cls: "bob-create-form" });
     const inputs = [];
-    const requiredInputs = [];
+    const baseRequired = [];
+    const labelFor = {};
+    const inputFor = {};
     const primaryKey = primaryFieldKey(this.def);
     this.def.fields.forEach((f) => {
       const isPrimary = f.key === primaryKey;
@@ -29389,6 +29540,7 @@ var BobEntityCreateModal = class extends obsidian14.Modal {
       const row = form.createDiv({ cls: "bob-create-row" });
       const label = row.createDiv({ cls: "bob-create-label" });
       label.setText(f.label.toUpperCase() + (isRequired ? " *" : ""));
+      labelFor[f.key] = { el: label, text: f.label.toUpperCase() };
       let input;
       const fieldType = f.type || "text";
       if (fieldType === "enum") {
@@ -29410,6 +29562,7 @@ var BobEntityCreateModal = class extends obsidian14.Modal {
       } else {
         input = row.createEl("input", { type: "text", cls: "bob-create-input" });
         input.placeholder = this._placeholderFor(f, isPrimary);
+        if (f.refEntity) this._attachRefDatalist(row, input, f.refEntity);
       }
       const defaultValue = resolveEntityFieldDefault(f);
       if (!isPrimary && defaultValue !== void 0) {
@@ -29419,8 +29572,9 @@ var BobEntityCreateModal = class extends obsidian14.Modal {
       input.dataset.fieldType = fieldType;
       if (isRequired) {
         input.required = true;
-        requiredInputs.push(input);
+        baseRequired.push(input);
       }
+      inputFor[f.key] = input;
       inputs.push(input);
     });
     const actions = contentEl.createDiv({ cls: "bob-create-actions" });
@@ -29429,7 +29583,37 @@ var BobEntityCreateModal = class extends obsidian14.Modal {
     cancel.addEventListener("click", () => this.close());
     const submitBtn = actions.createEl("button", { cls: "bob-btn primary", text: `Create ${this.def.label}` });
     submitBtn.type = "button";
-    attachRequiredValidation(submitBtn, requiredInputs);
+    const rules = this.def.conditionalRequired || [];
+    const syncRequired = () => {
+      const active = new Set(baseRequired);
+      const conditional = /* @__PURE__ */ new Set();
+      rules.forEach((rule) => {
+        const matches = Object.entries(rule.when || {}).every(([k, v]) => String(inputFor[k]?.value ?? "").trim() === String(v));
+        if (!matches) return;
+        (rule.require || []).forEach((key) => {
+          const el = inputFor[key];
+          if (el) {
+            active.add(el);
+            conditional.add(key);
+          }
+        });
+      });
+      Object.entries(labelFor).forEach(([key, lbl]) => {
+        const el = inputFor[key];
+        const req = el ? active.has(el) : false;
+        if (el) el.required = req;
+        lbl.el.setText(lbl.text + (req ? " *" : ""));
+        lbl.el.toggleClass("bob-create-label-conditional", conditional.has(key));
+      });
+      const filled = [...active].every((el) => (el.value || "").trim().length > 0);
+      submitBtn.disabled = !filled;
+      submitBtn.classList.toggle("bob-btn-disabled", !filled);
+    };
+    inputs.forEach((el) => {
+      el.addEventListener("input", syncRequired);
+      el.addEventListener("change", syncRequired);
+    });
+    syncRequired();
     const submit = () => {
       const values = {};
       let primaryValue = null;
@@ -29453,6 +29637,15 @@ var BobEntityCreateModal = class extends obsidian14.Modal {
         if (primaryInput) primaryInput.focus();
         return;
       }
+      for (const rule of rules) {
+        const matches = Object.entries(rule.when || {}).every(([k, v]) => String(inputFor[k]?.value ?? "").trim() === String(v));
+        if (!matches) continue;
+        const missing = (rule.require || []).find((key) => !String(inputFor[key]?.value ?? "").trim());
+        if (missing) {
+          inputFor[missing]?.focus();
+          return;
+        }
+      }
       this._submitted = true;
       this.close();
       this.onSubmit({ name: primaryValue, values });
@@ -29472,6 +29665,21 @@ var BobEntityCreateModal = class extends obsidian14.Modal {
         inputs[0].focus();
       }
     }, 0);
+  }
+  /** Back a text input with a datalist of an entity's records, offered as the
+   * `[[wikilink]]` the frontmatter field actually stores. */
+  _attachRefDatalist(row, input, entityKey) {
+    const def = ENTITIES[entityKey];
+    if (!def) return;
+    const primary = primaryFieldKey(def);
+    const names = listEntities(this.app, entityKey).map((e) => String(entityValue(e, primary, def) || e.basename).trim()).filter(Boolean).sort((a, b) => a.localeCompare(b));
+    if (!names.length) return;
+    const listId = `bob-ref-${entityKey}-${Math.random().toString(36).slice(2, 8)}`;
+    const list = row.createEl("datalist");
+    list.id = listId;
+    names.forEach((n) => list.createEl("option", { value: `[[${n}]]` }));
+    input.setAttr("list", listId);
+    input.placeholder = `e.g. [[${names[0]}]]`;
   }
   _placeholderFor(field, isPrimary) {
     if (!isPrimary) return "";
@@ -29580,7 +29788,7 @@ async function readProjectMeta(app, file) {
 }
 
 // src/snapshots.ts
-var obsidian15 = __toESM(require("obsidian"));
+var obsidian16 = __toESM(require("obsidian"));
 var PER_DAY_WINDOW = 30;
 var _dailyStatsMemo = /* @__PURE__ */ new Map();
 async function dailyNoteStatsByDate(app, settings, dates) {
@@ -29594,7 +29802,7 @@ async function dailyNoteStatsByDate(app, settings, dates) {
     const path = dailyNotePath(settings, d);
     livePaths.add(path);
     const f = app.vault.getAbstractFileByPath(path);
-    if (!(f instanceof obsidian15.TFile)) return;
+    if (!(f instanceof obsidian16.TFile)) return;
     const memo = _dailyStatsMemo.get(path);
     if (memo && memo.mtime === f.stat.mtime && memo.headingsKey === headingsKey) {
       statsByDate.set(dateKey, memo.stats);
@@ -29835,7 +30043,7 @@ async function buildPlannerSnapshot(app, settings = {}) {
     action: { surface: "planner.inbox" }
   }));
   const dailyFile = app.vault.getAbstractFileByPath(dailyNotePath(settings));
-  const todayTasks = dailyFile instanceof obsidian15.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
+  const todayTasks = dailyFile instanceof obsidian16.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
   const todayRows = (todayTasks.tasks || []).slice(0, 12).map((line, taskIndex) => {
     const done = / \[(x|X)\] /.test(line);
     return {
@@ -29856,7 +30064,7 @@ async function buildPlannerSnapshot(app, settings = {}) {
     const file = app.vault.getAbstractFileByPath(path);
     let tasks = [];
     let journal = "";
-    if (file instanceof obsidian15.TFile) {
+    if (file instanceof obsidian16.TFile) {
       const parsed = parseSections(await app.vault.cachedRead(file), settings);
       tasks = parsed.tasks || [];
       journal = parsed.journal || "";
@@ -29865,10 +30073,10 @@ async function buildPlannerSnapshot(app, settings = {}) {
     const done = tasks.filter((l) => / \[(x|X)\] /.test(l)).length;
     return {
       title: date.toLocaleDateString(void 0, { weekday: "short", month: "short", day: "numeric" }),
-      meta: file instanceof obsidian15.TFile ? `${open} open \xB7 ${done} done${journal ? ` \xB7 journal ${journal.length} chars` : ""}` : "no note",
+      meta: file instanceof obsidian16.TFile ? `${open} open \xB7 ${done} done${journal ? ` \xB7 journal ${journal.length} chars` : ""}` : "no note",
       value: done,
       values: { done, open, total: open + done, journal: journal.length },
-      file: file instanceof obsidian15.TFile ? file : null,
+      file: file instanceof obsidian16.TFile ? file : null,
       action: { surface: "planner.calendar" }
     };
   }));
@@ -29944,7 +30152,7 @@ async function buildHomeSnapshot(app, settings = {}) {
     action: { surface: "planner.inbox" }
   }));
   const dailyFile = app.vault.getAbstractFileByPath(dailyNotePath(settings));
-  const todayTasks = dailyFile instanceof obsidian15.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
+  const todayTasks = dailyFile instanceof obsidian16.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
   const todayRows = (todayTasks.tasks || []).slice(0, 8).map((line) => ({
     title: String(line).replace(/^\s*-\s\[(x|X| )\]\s/, ""),
     meta: / \[(x|X)\] /.test(line) ? "done" : "open",
@@ -30043,7 +30251,7 @@ async function buildHomeSnapshot(app, settings = {}) {
   const briefing = await (async () => {
     const items = [];
     try {
-      if (dailyFile instanceof obsidian15.TFile) {
+      if (dailyFile instanceof obsidian16.TFile) {
         const content = await app.vault.cachedRead(dailyFile);
         const parsed = parseSections(content, settings);
         const openTasks = parsed.tasks.filter((l) => / \[ \] /.test(l)).length;
@@ -30063,7 +30271,7 @@ async function buildHomeSnapshot(app, settings = {}) {
 }
 
 // src/widgets.ts
-var obsidian16 = __toESM(require("obsidian"));
+var obsidian17 = __toESM(require("obsidian"));
 var _builtInSnapshotCache = /* @__PURE__ */ new Map();
 function builtInSnapshot(app, name, settings) {
   const version = entityScanVersion();
@@ -30242,7 +30450,7 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
   let entities = listEntities(app, entityKey);
   if (basePath) {
     const baseFile = app.vault.getAbstractFileByPath(basePath);
-    if (!(baseFile instanceof obsidian16.TFile)) {
+    if (!(baseFile instanceof obsidian17.TFile)) {
       warnings.push(`Base not found: ${basePath}`);
     } else {
       const baseConfig = await parseBaseFile(app, basePath, baseView);
@@ -30286,7 +30494,7 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
 }
 
 // src/views/app-view.ts
-var obsidian17 = __toESM(require("obsidian"));
+var obsidian18 = __toESM(require("obsidian"));
 var NUMERIC_COLLATOR = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
 var OVERVIEW_DASHBOARD_ROUTES = /* @__PURE__ */ new Set([
   "client-work.dashboard",
@@ -30297,7 +30505,7 @@ var OVERVIEW_DASHBOARD_ROUTES = /* @__PURE__ */ new Set([
   "prm.partners.overview",
   "crm.campaigns.overview"
 ]);
-var BobAppView = class extends obsidian17.ItemView {
+var BobAppView = class extends obsidian18.ItemView {
   /** Optional parsed-base cache cleared on metadata changes (set externally when present). */
   constructor(leaf, plugin) {
     super(leaf);
@@ -30360,7 +30568,7 @@ var BobAppView = class extends obsidian17.ItemView {
       const themeBtn = root.querySelector(".bob-app-topbar .bob-topbar-icon-btn");
       if (themeBtn) {
         try {
-          obsidian17.setIcon(themeBtn, dark ? "sun" : "moon");
+          obsidian18.setIcon(themeBtn, dark ? "sun" : "moon");
         } catch (_) {
         }
         themeBtn.title = dark ? "BOB Workspace: switch to light" : "BOB Workspace: switch to dark";
@@ -30433,7 +30641,7 @@ var BobAppView = class extends obsidian17.ItemView {
   _openTaskProjectPicker(dailyPath, text, currentLink) {
     const projectFiles = listEntityFiles(this.app, "project");
     if (!projectFiles.length) {
-      new obsidian17.Notice("No projects yet. Create one in Planner \u2192 Projects first.");
+      new obsidian18.Notice("No projects yet. Create one in Planner \u2192 Projects first.");
       return;
     }
     const view = this;
@@ -30441,7 +30649,7 @@ var BobAppView = class extends obsidian17.ItemView {
       file: f,
       name: projectNameFromPath(this.app, f.path)
     }));
-    const picker = new class extends obsidian17.SuggestModal {
+    const picker = new class extends obsidian18.SuggestModal {
       constructor(app, projs, hasLink) {
         super(app);
         this.projs = projs;
@@ -30508,7 +30716,7 @@ var BobAppView = class extends obsidian17.ItemView {
     this.containerEl.children[1].empty();
     await this.render();
     this._renderQueued = false;
-    this._scheduleRender = obsidian17.debounce(() => {
+    this._scheduleRender = obsidian18.debounce(() => {
       if (!this.containerEl.isShown()) {
         this._renderQueued = true;
         return;
@@ -30587,7 +30795,7 @@ var BobAppView = class extends obsidian17.ItemView {
     const topLeft = topbar.createDiv({ cls: "bob-app-topbar-left" });
     const burger = topLeft.createEl("button", { cls: "bob-mobile-burger" });
     try {
-      obsidian17.setIcon(burger, "menu");
+      obsidian18.setIcon(burger, "menu");
     } catch (_) {
     }
     burger.title = "Show nav";
@@ -30598,7 +30806,7 @@ var BobAppView = class extends obsidian17.ItemView {
     const dark = !!this.plugin.settings.bobAppDark;
     const themeBtn = topLeft.createEl("button", { cls: "bob-topbar-icon-btn" });
     try {
-      obsidian17.setIcon(themeBtn, dark ? "sun" : "moon");
+      obsidian18.setIcon(themeBtn, dark ? "sun" : "moon");
     } catch (_) {
     }
     themeBtn.title = dark ? "BOB Workspace: switch to light" : "BOB Workspace: switch to dark";
@@ -30624,7 +30832,7 @@ var BobAppView = class extends obsidian17.ItemView {
         pin.title = surface.label;
         const ic = pin.createSpan({ cls: "bob-nav-pinned-icon" });
         try {
-          obsidian17.setIcon(ic, surface.icon);
+          obsidian18.setIcon(ic, surface.icon);
         } catch (_) {
         }
         pin.addEventListener("click", () => {
@@ -30638,7 +30846,7 @@ var BobAppView = class extends obsidian17.ItemView {
         remove.title = `Unpin ${surface.label}`;
         remove.draggable = false;
         try {
-          obsidian17.setIcon(remove, "pin-off");
+          obsidian18.setIcon(remove, "pin-off");
         } catch (_) {
         }
         remove.addEventListener("click", async (ev) => {
@@ -30696,13 +30904,13 @@ var BobAppView = class extends obsidian17.ItemView {
         const head = groupEl.createDiv({ cls: "bob-nav-group-head" });
         const chev = head.createSpan({ cls: "bob-nav-group-chev" });
         try {
-          obsidian17.setIcon(chev, isCollapsed ? "chevron-right" : "chevron-down");
+          obsidian18.setIcon(chev, isCollapsed ? "chevron-right" : "chevron-down");
         } catch (_) {
         }
         if (group.icon) {
           const groupIcon = head.createSpan({ cls: "bob-nav-group-icon" });
           try {
-            obsidian17.setIcon(groupIcon, group.icon);
+            obsidian18.setIcon(groupIcon, group.icon);
           } catch (_) {
           }
         }
@@ -30720,7 +30928,7 @@ var BobAppView = class extends obsidian17.ItemView {
           if (isActive) item.setAttribute("aria-current", "page");
           const ic = item.createSpan({ cls: "bob-app-nav-icon" });
           try {
-            obsidian17.setIcon(ic, s.icon);
+            obsidian18.setIcon(ic, s.icon);
           } catch (_) {
           }
           item.createSpan({ cls: "bob-app-nav-label", text: s.label });
@@ -30734,7 +30942,7 @@ var BobAppView = class extends obsidian17.ItemView {
           });
           pinBtn.title = isPinned ? `Unpin ${s.label}` : `Pin ${s.label}`;
           try {
-            obsidian17.setIcon(pinBtn, isPinned ? "pin" : "pin-off");
+            obsidian18.setIcon(pinBtn, isPinned ? "pin" : "pin-off");
           } catch (_) {
           }
           pinBtn.addEventListener("click", async (ev) => {
@@ -30817,7 +31025,7 @@ var BobAppView = class extends obsidian17.ItemView {
     wrap.createDiv({ cls: "bob-soon-desc", text: surface.desc });
     const ic = wrap.createDiv({ cls: "bob-soon-icon" });
     try {
-      obsidian17.setIcon(ic, surface.icon);
+      obsidian18.setIcon(ic, surface.icon);
     } catch (_) {
     }
     const meta = wrap.createDiv({ cls: "bob-soon-meta" });
@@ -30867,12 +31075,12 @@ var BobAppView = class extends obsidian17.ItemView {
       }
       shown.forEach((f) => this._renderCanvasRow(list, f));
     };
-    search.addEventListener("input", obsidian17.debounce(() => draw(search.value), 150, true));
+    search.addEventListener("input", obsidian18.debounce(() => draw(search.value), 150, true));
     draw("");
   }
   // Phase 2 — generate a canvas from vault data, then open it inline.
   _openCanvasGenerateMenu(evt) {
-    const menu = new obsidian17.Menu();
+    const menu = new obsidian18.Menu();
     for (const gen of CANVAS_GENERATORS) {
       menu.addItem((item) => item.setTitle(gen.label).setIcon(gen.icon).onClick(() => void this._generateCanvas(gen.id)));
     }
@@ -30885,11 +31093,11 @@ var BobAppView = class extends obsidian17.ItemView {
     try {
       data = gen.build(this.app);
     } catch (err) {
-      new obsidian17.Notice(`Canvas generation failed: ${err?.message || String(err)}`);
+      new obsidian18.Notice(`Canvas generation failed: ${err?.message || String(err)}`);
       return;
     }
     if (!data || !data.nodes.length) {
-      new obsidian17.Notice("Nothing to generate \u2014 no matching records found.");
+      new obsidian18.Notice("Nothing to generate \u2014 no matching records found.");
       return;
     }
     await this._writeGeneratedCanvas(gen.label.split(" (")[0], data, this._boardManifest(gen.id, data));
@@ -30917,12 +31125,12 @@ var BobAppView = class extends obsidian17.ItemView {
     const metaPath = `${folder}/${name}.canvas.bobmeta.json`;
     let out = data;
     const existing = this.app.vault.getAbstractFileByPath(canvasPath);
-    if (existing instanceof obsidian17.TFile) {
+    if (existing instanceof obsidian18.TFile) {
       try {
         const oldData = JSON.parse(await this.app.vault.read(existing));
         let oldOwned = [];
         const mf = this.app.vault.getAbstractFileByPath(metaPath);
-        if (mf instanceof obsidian17.TFile) {
+        if (mf instanceof obsidian18.TFile) {
           try {
             oldOwned = JSON.parse(await this.app.vault.read(mf)).bob_owned_node_ids || [];
           } catch (_) {
@@ -30936,16 +31144,16 @@ var BobAppView = class extends obsidian17.ItemView {
     await this._writeOrModify(canvasPath, serializeCanvas(out));
     await this._writeOrModify(metaPath, JSON.stringify(manifest, null, 2));
     const f = this.app.vault.getAbstractFileByPath(canvasPath);
-    if (f instanceof obsidian17.TFile) await this.openCanvas(f);
-    else new obsidian17.Notice(`Canvas written to ${canvasPath}`);
+    if (f instanceof obsidian18.TFile) await this.openCanvas(f);
+    else new obsidian18.Notice(`Canvas written to ${canvasPath}`);
   }
   // Entity Context Canvas — render the full operational context around a note
   // (evidence · people/systems · outputs · risks) and open it inline. Written to
   // a stable path; regeneration refreshes BOB's nodes while preserving any nodes
   // the user added by hand (see _writeGeneratedCanvas).
   async _generateContextCanvas(file) {
-    if (!(file instanceof obsidian17.TFile)) {
-      new obsidian17.Notice("No note to build context from.");
+    if (!(file instanceof obsidian18.TFile)) {
+      new obsidian18.Notice("No note to build context from.");
       return;
     }
     const isAgentRun = isAgentRunFile(this.app, file);
@@ -30953,11 +31161,11 @@ var BobAppView = class extends obsidian17.ItemView {
     try {
       result = isAgentRun ? buildAgentAuditCanvas(this.app, file) : buildEntityContextCanvas(this.app, file);
     } catch (err) {
-      new obsidian17.Notice(`Context canvas failed: ${err?.message || String(err)}`);
+      new obsidian18.Notice(`Context canvas failed: ${err?.message || String(err)}`);
       return;
     }
     if (!result || !result.data.nodes.length) {
-      new obsidian17.Notice("No context to render for this note.");
+      new obsidian18.Notice("No context to render for this note.");
       return;
     }
     const prefix = isAgentRun ? "Agent audit" : "Context";
@@ -30972,25 +31180,25 @@ var BobAppView = class extends obsidian17.ItemView {
     try {
       data = buildProcessCanvas(this.app, entityKey);
     } catch (err) {
-      new obsidian17.Notice(`Process canvas failed: ${err?.message || String(err)}`);
+      new obsidian18.Notice(`Process canvas failed: ${err?.message || String(err)}`);
       return;
     }
     if (!data || !data.nodes.length) {
-      new obsidian17.Notice("This type has no stage/status lifecycle to render.");
+      new obsidian18.Notice("This type has no stage/status lifecycle to render.");
       return;
     }
     await this._writeGeneratedCanvas(`Process - ${def.plural}`, data, this._boardManifest("process-runway", data));
   }
   async _writeOrModify(path, content) {
     const existing = this.app.vault.getAbstractFileByPath(path);
-    if (existing instanceof obsidian17.TFile) await this.app.vault.modify(existing, content);
+    if (existing instanceof obsidian18.TFile) await this.app.vault.modify(existing, content);
     else await this.app.vault.create(path, content);
   }
   _renderCanvasRow(list, file) {
     const row = list.createDiv({ cls: "bob-canvas-row" });
     const icon = row.createDiv({ cls: "bob-canvas-row-icon" });
     try {
-      obsidian17.setIcon(icon, "layout-dashboard");
+      obsidian18.setIcon(icon, "layout-dashboard");
     } catch (_) {
     }
     const main = row.createDiv({ cls: "bob-canvas-row-main" });
@@ -31046,7 +31254,7 @@ var BobAppView = class extends obsidian17.ItemView {
   async _mountLiveCanvas(body, file) {
     this._teardownCanvasLeaf();
     if (!this.plugin.settings.inlineNativeViews) throw new Error("inline native views disabled");
-    const WorkspaceLeafCtor = obsidian17.WorkspaceLeaf;
+    const WorkspaceLeafCtor = obsidian18.WorkspaceLeaf;
     if (typeof WorkspaceLeafCtor !== "function") throw new Error("WorkspaceLeaf constructor unavailable");
     let leaf = null;
     try {
@@ -31170,7 +31378,7 @@ var BobAppView = class extends obsidian17.ItemView {
     select.disabled = true;
     const currentView = entityBaseViewName(this.plugin.settings, entityKey);
     const baseFile = this.app.vault.getAbstractFileByPath(basePath);
-    if (!(baseFile instanceof obsidian17.TFile)) {
+    if (!(baseFile instanceof obsidian18.TFile)) {
       select.empty();
       select.createEl("option", { value: "", text: "Base not found" });
       return;
@@ -31204,8 +31412,8 @@ var BobAppView = class extends obsidian17.ItemView {
     if (!basePath) return;
     const viewName = entityBaseViewName(this.plugin.settings, entityKey) || ENTITIES[entityKey]?.baseView?.name || "";
     const baseFile = this.app.vault.getAbstractFileByPath(basePath);
-    if (!(baseFile instanceof obsidian17.TFile)) {
-      new obsidian17.Notice(`BOB Workspace: Base not found: ${basePath}`);
+    if (!(baseFile instanceof obsidian18.TFile)) {
+      new obsidian18.Notice(`BOB Workspace: Base not found: ${basePath}`);
       return;
     }
     const leaf = this.app.workspace.getLeaf("tab");
@@ -31219,7 +31427,7 @@ var BobAppView = class extends obsidian17.ItemView {
     const wrap = root.createDiv({ cls: "bob-external-base-view" });
     const body = wrap.createDiv({ cls: "bob-external-base-view-body" });
     const file = external.basePath ? this.app.vault.getAbstractFileByPath(external.basePath) : null;
-    if (file instanceof obsidian17.TFile) {
+    if (file instanceof obsidian18.TFile) {
       void this._mountLiveBaseView(body, file, external.basePath, external.name || "").catch(() => {
         body.empty();
         const fb = body.createDiv({ cls: "bob-empty-state" });
@@ -31285,7 +31493,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         try {
           await this.app.vault.trash(file, true);
         } catch (e) {
-          new obsidian17.Notice(`Delete failed for ${file.basename}: ${e.message}`);
+          new obsidian18.Notice(`Delete failed for ${file.basename}: ${e.message}`);
         }
       }
       await this.render();
@@ -31556,7 +31764,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
           }
         });
       } catch (err) {
-        new obsidian17.Notice(`Save failed: ${err.message}`);
+        new obsidian18.Notice(`Save failed: ${err.message}`);
       }
       refreshCell();
     };
@@ -32006,7 +32214,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
           });
           exportBtn.title = "Save report to note";
           try {
-            obsidian17.setIcon(exportBtn, "save");
+            obsidian18.setIcon(exportBtn, "save");
           } catch (_) {
           }
           exportBtn.addEventListener("click", async () => {
@@ -32014,9 +32222,9 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
             exportBtn.addClass("is-busy");
             try {
               const path = await this._exportConfigDashboard(surfaceId, config, getWidgetEntities, dashboardContext);
-              new obsidian17.Notice(`BOB Workspace: saved note to ${path}`, 6e3);
+              new obsidian18.Notice(`BOB Workspace: saved note to ${path}`, 6e3);
             } catch (e) {
-              new obsidian17.Notice(`BOB Workspace: save failed \u2014 ${e.message}`, 8e3);
+              new obsidian18.Notice(`BOB Workspace: save failed \u2014 ${e.message}`, 8e3);
             } finally {
               exportBtn.disabled = false;
               exportBtn.removeClass("is-busy");
@@ -32642,10 +32850,10 @@ ${snippet}` : "- No markdown content");
       }
       if (!basePath) return;
       const file = this.app.vault.getAbstractFileByPath(basePath);
-      if (file instanceof obsidian17.TFile) {
+      if (file instanceof obsidian18.TFile) {
         await this.app.workspace.openLinkText(file.path, "", false);
       } else {
-        new obsidian17.Notice(`Base file not found: ${basePath}`);
+        new obsidian18.Notice(`Base file not found: ${basePath}`);
       }
     });
     if (viewName && basePath) {
@@ -32654,7 +32862,7 @@ ${snippet}` : "- No markdown content");
         const snippet = JSON.stringify({ base: { file: basePath, view: viewName } }, null, 2);
         try {
           await navigator.clipboard.writeText(snippet);
-          new obsidian17.Notice("Copied Base widget config.");
+          new obsidian18.Notice("Copied Base widget config.");
         } catch (_) {
         }
       });
@@ -32699,10 +32907,10 @@ ${snippet}` : "- No markdown content");
       }
       if (!basePath) return;
       const file = this.app.vault.getAbstractFileByPath(basePath);
-      if (file instanceof obsidian17.TFile) {
+      if (file instanceof obsidian18.TFile) {
         await this.app.workspace.openLinkText(file.path, "", false);
       } else {
-        new obsidian17.Notice(`Base file not found: ${basePath}`);
+        new obsidian18.Notice(`Base file not found: ${basePath}`);
       }
     });
     if (!preview.length) {
@@ -32740,7 +32948,7 @@ ${snippet}` : "- No markdown content");
       return;
     }
     const file = this.app.vault.getAbstractFileByPath(basePath);
-    if (!(file instanceof obsidian17.TFile)) {
+    if (!(file instanceof obsidian18.TFile)) {
       await this._renderBaseViewFallback(root, card, getWidgetEntities, `Base file not found: ${basePath}`);
       return;
     }
@@ -32876,7 +33084,7 @@ ${snippet}` : "- No markdown content");
     const sourcePath = typeof source === "string" ? source : String(source?.file || source?.path || source?.note || source?.source || "").trim();
     if (!sourcePath) return { text: "", sourcePath: "" };
     const file = this.app.vault.getAbstractFileByPath(sourcePath);
-    if (!(file instanceof obsidian17.TFile)) return { text: "", sourcePath };
+    if (!(file instanceof obsidian18.TFile)) return { text: "", sourcePath };
     let content;
     try {
       content = await this.app.vault.cachedRead(file);
@@ -32907,8 +33115,8 @@ ${snippet}` : "- No markdown content");
     }
     const target = body.createDiv({ cls: "bob-markdown-render" });
     try {
-      if (obsidian17.MarkdownRenderer?.renderMarkdown) {
-        await obsidian17.MarkdownRenderer.renderMarkdown(text, target, sourcePath || "", this);
+      if (obsidian18.MarkdownRenderer?.renderMarkdown) {
+        await obsidian18.MarkdownRenderer.renderMarkdown(text, target, sourcePath || "", this);
       } else {
         target.createEl("pre", { text });
       }
@@ -32950,7 +33158,7 @@ ${snippet}` : "- No markdown content");
         try {
           await this.app.commands.executeCommandById(spec.command);
         } catch (e) {
-          new obsidian17.Notice(`Failed to run command: ${e.message}`);
+          new obsidian18.Notice(`Failed to run command: ${e.message}`);
         }
       }
       return;
@@ -32962,10 +33170,10 @@ ${snippet}` : "- No markdown content");
     if (spec.type === "note" || spec.path) {
       if (!spec.path) return;
       const file = this.app.vault.getAbstractFileByPath(spec.path);
-      if (file instanceof obsidian17.TFile) {
+      if (file instanceof obsidian18.TFile) {
         await this.app.workspace.openLinkText(file.path, "", false);
       } else {
-        new obsidian17.Notice(`Note not found: ${spec.path}`);
+        new obsidian18.Notice(`Note not found: ${spec.path}`);
       }
       return;
     }
@@ -33495,7 +33703,7 @@ ${snippet}` : "- No markdown content");
       return sorted;
     };
     const board = root.createDiv({ cls: "bob-kanban-board" });
-    const isMobile = !!(obsidian17.Platform && obsidian17.Platform.isMobile);
+    const isMobile = !!(obsidian18.Platform && obsidian18.Platform.isMobile);
     let activeDragPath = null;
     groups.forEach((group) => {
       const items = entities.filter((e) => String(entityValue(e, groupBy, def) || "").trim() === group.value);
@@ -33521,14 +33729,14 @@ ${snippet}` : "- No markdown content");
         if (!filePath || !groupBy) return;
         try {
           const file = this.app.vault.getAbstractFileByPath(filePath);
-          if (!(file instanceof obsidian17.TFile)) return;
+          if (!(file instanceof obsidian18.TFile)) return;
           await this.app.fileManager.processFrontMatter(file, (fm) => {
             fm[groupBy] = group.value;
           });
-          new obsidian17.Notice(`Moved to ${group.label}`);
+          new obsidian18.Notice(`Moved to ${group.label}`);
           await this._maybeCreateCommissionForWonDeal(file, groupBy, String(group.value));
         } catch (e) {
-          new obsidian17.Notice(`Failed to move: ${e.message}`);
+          new obsidian18.Notice(`Failed to move: ${e.message}`);
         }
       };
       const allowDrop = (event) => {
@@ -34109,7 +34317,7 @@ ${snippet}` : "- No markdown content");
     const toggle = block.createEl("button", { cls: "bob-help-toggle" + (open ? " is-open" : ""), attr: { type: "button" } });
     const icon = toggle.createSpan({ cls: "bob-help-toggle-icon" });
     try {
-      obsidian17.setIcon(icon, "help-circle");
+      obsidian18.setIcon(icon, "help-circle");
     } catch (_) {
       icon.setText("?");
     }
@@ -34175,7 +34383,7 @@ ${snippet}` : "- No markdown content");
     addSurfaceBtn.addEventListener("click", async () => {
       const id = String(newSurfaceInput.value || "").trim();
       if (!id) {
-        new obsidian17.Notice("Enter a surface id first.");
+        new obsidian18.Notice("Enter a surface id first.");
         return;
       }
       const targetStore = id.startsWith("planner.") ? "planner" : "dashboards";
@@ -34198,11 +34406,11 @@ ${snippet}` : "- No markdown content");
         await saveWorkspaceConfig(this.app, JSON.stringify(WORKSPACE_CONFIG, null, 2));
         this._dashEditorSurfaceId = id;
         this._dashEditorDraft = getConfig(id);
-        new obsidian17.Notice(`Created dashboard surface "${id}".`);
+        new obsidian18.Notice(`Created dashboard surface "${id}".`);
         renderEditorPane(id);
         renderPreview(id);
       } catch (e) {
-        new obsidian17.Notice(`Create failed: ${e.message}`);
+        new obsidian18.Notice(`Create failed: ${e.message}`);
       }
     });
     const modeToggle = toolbar.createDiv({ cls: "bob-de-mode-toggle" });
@@ -34324,9 +34532,9 @@ ${snippet}` : "- No markdown content");
             if (!WORKSPACE_CONFIG[targetStore]) WORKSPACE_CONFIG[targetStore] = {};
             WORKSPACE_CONFIG[targetStore][id] = this._dashEditorDraft;
             await saveWorkspaceConfig(this.app, JSON.stringify(WORKSPACE_CONFIG, null, 2));
-            new obsidian17.Notice("Dashboard saved.");
+            new obsidian18.Notice("Dashboard saved.");
           } catch (e) {
-            new obsidian17.Notice(`Save failed: ${e.message}`);
+            new obsidian18.Notice(`Save failed: ${e.message}`);
           }
         });
         if (builtinDashboardDefaults()[id] || id.startsWith("planner.")) {
@@ -34339,7 +34547,7 @@ ${snippet}` : "- No markdown content");
               if (Object.keys(WORKSPACE_CONFIG[targetStore]).length === 0) delete WORKSPACE_CONFIG[targetStore];
             });
             await saveWorkspaceConfig(this.app, JSON.stringify(WORKSPACE_CONFIG, null, 2));
-            new obsidian17.Notice("Reset to built-in.");
+            new obsidian18.Notice("Reset to built-in.");
             this._dashEditorDraft = getConfig(id);
             renderEditorPane(id);
             renderPreview(id);
@@ -34964,7 +35172,7 @@ ${snippet}` : "- No markdown content");
           o.selected = true;
         }
         const file = this.app.vault.getAbstractFileByPath(resolvedBaseFile);
-        if (file instanceof obsidian17.TFile) {
+        if (file instanceof obsidian18.TFile) {
           void readBaseSummary(this.app, file).then((summary) => {
             const metas = summary?.viewMeta?.length ? summary.viewMeta : (summary?.views || []).map((name) => ({ name, type: "table" }));
             sel.empty();
@@ -35257,7 +35465,7 @@ ${snippet}` : "- No markdown content");
       ).trim();
       if (!basePath) return;
       const baseFile2 = this.app.vault.getAbstractFileByPath(basePath);
-      if (!(baseFile2 instanceof obsidian17.TFile)) return;
+      if (!(baseFile2 instanceof obsidian18.TFile)) return;
       const baseViewName = String(
         baseMetadataSource.view || baseMetadataSource.baseView || baseMetadataSource.base_view || source.base?.view || source.base?.baseView || source.base?.base_view || ""
       ).trim();
@@ -35441,10 +35649,10 @@ ${snippet}` : "- No markdown content");
       if (!await confirmModal(this.app, `Delete this ${def.label.toLowerCase()}? This moves the file to trash.`, { title: "Delete", cta: "Delete" })) return;
       try {
         await this.app.vault.trash(file, true);
-        new obsidian17.Notice(`Deleted ${def.label}: ${file.basename}`);
+        new obsidian18.Notice(`Deleted ${def.label}: ${file.basename}`);
         this.closeEntityDetail();
       } catch (e) {
-        new obsidian17.Notice(`Delete failed: ${e.message}`);
+        new obsidian18.Notice(`Delete failed: ${e.message}`);
       }
     });
     const form = root.createDiv({ cls: "bob-detail-form" });
@@ -35478,7 +35686,7 @@ ${snippet}` : "- No markdown content");
         });
         flashSaved();
       } catch (e) {
-        new obsidian17.Notice(`Save failed: ${e.message}`);
+        new obsidian18.Notice(`Save failed: ${e.message}`);
       }
     };
     const debouncedWrite = (key, val) => {
@@ -35536,11 +35744,159 @@ ${snippet}` : "- No markdown content");
         inp.addEventListener("blur", () => writeField(f.key, inp.value));
       }
     });
+    if (entityKey === "partner") await this._renderPartnerPipeline(root, file);
     const bodyHint = root.createDiv({ cls: "bob-detail-body-hint" });
     bodyHint.createDiv({ cls: "bob-eyebrow", text: "NOTE BODY" });
     bodyHint.createDiv({ cls: "bob-detail-body-desc", text: "Brief, milestones, notes and any other markdown lives in the note body." });
     const openBody = bodyHint.createEl("button", { cls: "bob-btn primary", text: "Open as note for full editing" });
     openBody.addEventListener("click", () => this.app.workspace.openLinkText(file.path, "", false));
+  }
+  /** Per-partner pipeline, registrations, commissions and certifications.
+   *
+   * Answers the four questions a partner review asks — how many open deals, what
+   * is the pipeline worth, what is the win rate on their referrals, which deals
+   * are at risk — scoped to one partner. Every number here is computed with the
+   * same helpers PRM analytics uses (`dealPartnerName`, `dealAtRisk`, the won and
+   * lost stage lists), so the partner page and the cross-partner table cannot
+   * report different figures for the same partner.
+   */
+  async _renderPartnerPipeline(root, file) {
+    const partnerDef = ENTITIES.partner;
+    const dealDef = ENTITIES.deal;
+    if (!partnerDef || !dealDef) return;
+    const partner = readEntity(this.app, file);
+    const names = new Set([
+      String(entityValue(partner, "partner_name", partnerDef) || "").trim(),
+      String(entityValue(partner, "partner_id", partnerDef) || "").trim(),
+      file.path.startsWith("20-COMPANY/35-PARTNERS/") ? file.path.split("/")[2] : "",
+      file.basename
+    ].filter(Boolean).map((n) => n.toLowerCase()));
+    const isOurs = (raw) => {
+      const n = nakedRef(raw).toLowerCase();
+      return !!n && names.has(n);
+    };
+    const stageField = dealStageField(dealDef);
+    const valueOf = (e) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
+    const sumOf = (arr) => arr.reduce((s, e) => s + valueOf(e), 0);
+    const deals = listEntities(this.app, "deal").filter((d) => names.has(dealPartnerName(d, dealDef).toLowerCase()));
+    const won = [], lost = [], open = [];
+    deals.forEach((d) => {
+      const stage = String(entityValue(d, stageField, dealDef));
+      if (dealWonStages(dealDef).includes(stage)) won.push(d);
+      else if (dealLostStages(dealDef).includes(stage)) lost.push(d);
+      else open.push(d);
+    });
+    const atRisk = open.filter((d) => dealAtRisk(d, dealDef));
+    const registrations = listEntities(this.app, "registration").filter((e) => isOurs(entityValue(e, "partner_ref", ENTITIES.registration)));
+    const commissions = listEntities(this.app, "commission").filter((e) => isOurs(entityValue(e, "partner_ref", ENTITIES.commission)));
+    const certifications = listEntities(this.app, "certification").filter((e) => isOurs(entityValue(e, "partner_ref", ENTITIES.certification)));
+    root.createDiv({ cls: "bob-section-label-lg", text: "PIPELINE WITH THIS PARTNER" });
+    const grid = root.createDiv({ cls: "bob-stat-grid" });
+    const stat = (label, value, sub, accent) => {
+      const c = grid.createDiv({ cls: "bob-stat-card" });
+      if (accent) c.dataset.accent = accent;
+      c.createDiv({ cls: "bob-stat-label", text: label });
+      c.createDiv({ cls: "bob-stat-value", text: String(value) });
+      if (sub) c.createDiv({ cls: "bob-stat-sub", text: sub });
+    };
+    const decided = won.length + lost.length;
+    const winRate = decided === 0 ? null : Math.round(won.length / decided * 100);
+    const avg = deals.length === 0 ? 0 : Math.round(sumOf(deals) / deals.length);
+    const activeRegs = registrations.filter((e) => String(entityValue(e, "status", ENTITIES.registration) || "") === "approved").length;
+    const expiringCerts = certifications.filter((e) => {
+      const status = String(entityValue(e, "status", ENTITIES.certification) || "");
+      if (["expired", "revoked"].includes(status)) return false;
+      const d = daysUntil(entityValue(e, "expires_date", ENTITIES.certification));
+      return d !== null && d <= CERT_WARN_DAYS;
+    }).length;
+    stat("OPEN DEALS", open.length, fmtValue(sumOf(open), "currency"), "mint");
+    stat("WON", won.length, fmtValue(sumOf(won), "currency"), "emerald");
+    stat(
+      "WIN RATE",
+      winRate === null ? "\u2014" : `${winRate}%`,
+      decided === 0 ? "no decided deals yet" : `${won.length}/${decided} decided`,
+      winRate === null ? "sky" : winRate >= 50 ? "emerald" : "warn"
+    );
+    stat(
+      "AVG DEAL SIZE",
+      deals.length ? fmtValue(avg, "currency") : "\u2014",
+      deals.length ? `across ${deals.length} deals` : "no deals yet",
+      "sky"
+    );
+    stat(
+      "AT RISK",
+      atRisk.length || "\u2014",
+      atRisk.length ? "stalled or overdue" : "nothing stalled",
+      atRisk.length ? "rose" : "mint"
+    );
+    stat(
+      "ACTIVE REGISTRATIONS",
+      activeRegs || "\u2014",
+      registrations.length ? `${registrations.length} total` : "none",
+      activeRegs ? "sky" : "mint"
+    );
+    stat(
+      "CERTS EXPIRING",
+      expiringCerts || "\u2014",
+      `within ${CERT_WARN_DAYS} days`,
+      expiringCerts ? "warn" : "mint"
+    );
+    const dealsCard = root.createDiv({ cls: "bob-dash-card" });
+    const dealsBody = dealsCard.createDiv({ cls: "bob-dash-card-body" });
+    if (!deals.length) {
+      dealsBody.createDiv({ cls: "bob-empty", text: "No deals attributed to this partner yet." });
+    } else {
+      const table = dealsBody.createEl("table", { cls: "bob-table" });
+      const thead = table.createEl("thead").createEl("tr");
+      ["Deal", "Stage", "Value", "Client", "Expected close", "Last contact", "Risk"].forEach((h) => thead.createEl("th", { text: h }));
+      const tbody = table.createEl("tbody");
+      const byClose = (e) => String(entityValue(e, dealDef.closeByField || "expected_close", dealDef) || "9999");
+      [...open, ...won, ...lost].sort((a, b) => byClose(a).localeCompare(byClose(b))).forEach((d) => {
+        const tr = tbody.createEl("tr");
+        const nameCell = tr.createEl("td", { text: String(entityValue(d, "title", dealDef) || d.basename) });
+        nameCell.addClass("clickable");
+        nameCell.onclick = () => this.openEntityDetail("deal", d.file);
+        tr.createEl("td", { text: String(entityValue(d, stageField, dealDef) || "") });
+        tr.createEl("td", { text: valueOf(d) ? fmtValue(valueOf(d), "currency") : "\u2014" });
+        tr.createEl("td", { text: String(entityValue(d, "client_id", dealDef) || "\u2014") });
+        tr.createEl("td", { text: String(entityValue(d, dealDef.closeByField || "expected_close", dealDef) || "\u2014") });
+        tr.createEl("td", { text: String(entityValue(d, "last_contact", dealDef) || "\u2014") });
+        const reason = dealAtRisk(d, dealDef);
+        const riskCell = tr.createEl("td", { text: reason || "\u2014" });
+        if (reason) riskCell.dataset.accent = "rose";
+      });
+    }
+    const miniRows = (records, def, title, meta) => {
+      if (!records.length) return;
+      this._dashCardSection(root, title, records.slice(0, 10).map((e) => ({
+        title: String(entityValue(e, "title", def) || entityValue(e, "name", def) || e.basename),
+        meta: meta(e),
+        file: e.file
+      })), "None.");
+    };
+    const commDef = ENTITIES.commission;
+    const owed = commissions.filter((e) => String(entityValue(e, "status", commDef) || "") === "earned").reduce((s, e) => s + (Number(entityValue(e, "amount", commDef)) || 0), 0);
+    miniRows(
+      registrations,
+      ENTITIES.registration,
+      `REGISTRATIONS \xB7 ${registrations.length}`,
+      (e) => `${entityValue(e, "status", ENTITIES.registration) || "\u2014"} \xB7 expires ${entityValue(e, "expires_date", ENTITIES.registration) || "\u2014"}`
+    );
+    miniRows(
+      commissions,
+      commDef,
+      `COMMISSIONS \xB7 ${commissions.length}${owed ? ` \xB7 ${fmtValue(owed, "currency")} owed` : ""}`,
+      (e) => `${entityValue(e, "status", commDef) || "\u2014"} \xB7 ${fmtValue(Number(entityValue(e, "amount", commDef)) || 0, "currency")}`
+    );
+    miniRows(
+      certifications,
+      ENTITIES.certification,
+      `CERTIFICATIONS \xB7 ${certifications.length}`,
+      (e) => {
+        const d = daysUntil(entityValue(e, "expires_date", ENTITIES.certification));
+        return d === null ? String(entityValue(e, "status", ENTITIES.certification) || "\u2014") : d < 0 ? `expired ${Math.abs(d)}d ago` : `${d}d left`;
+      }
+    );
   }
   /* ── Project DETAIL view (real PM surface) ─────── */
   async renderProjectDetail(root, file) {
@@ -35576,10 +35932,10 @@ ${snippet}` : "- No markdown content");
       if (!await confirmModal(this.app, `Delete this project? This moves the file to trash.`, { title: "Delete project", cta: "Delete" })) return;
       try {
         await this.app.vault.trash(file, true);
-        new obsidian17.Notice(`Deleted project: ${file.basename}`);
+        new obsidian18.Notice(`Deleted project: ${file.basename}`);
         this.closeEntityDetail();
       } catch (e) {
-        new obsidian17.Notice(`Delete failed: ${e.message}`);
+        new obsidian18.Notice(`Delete failed: ${e.message}`);
       }
     });
     const hero = root.createDiv({ cls: "bob-pd-hero" });
@@ -35817,7 +36173,7 @@ ${snippet}` : "- No markdown content");
           await this._commitTasks(file, items, flashSaved, true);
           const taskText = titleInp.value.trim();
           if (!taskText) {
-            new obsidian17.Notice("Add a task title first.");
+            new obsidian18.Notice("Add a task title first.");
             titleInp.focus();
             return;
           }
@@ -35884,7 +36240,7 @@ ${snippet}` : "- No markdown content");
       });
       if (typeof flashSaved === "function") flashSaved();
     } catch (e) {
-      new obsidian17.Notice(`Save failed: ${e.message}`);
+      new obsidian18.Notice(`Save failed: ${e.message}`);
     }
   }
   /* ── Projects: rich card grid with milestone progress ─ */
@@ -36109,7 +36465,7 @@ ${snippet}` : "- No markdown content");
         ev.preventDefault();
         ev.stopPropagation();
         const file = this.app.vault.getAbstractFileByPath(r.project);
-        if (file && file instanceof obsidian17.TFile) this.openEntityDetailFromFile(file);
+        if (file && file instanceof obsidian18.TFile) this.openEntityDetailFromFile(file);
       });
     }
     if (r.notes) {
@@ -36172,9 +36528,9 @@ ${snippet}` : "- No markdown content");
       const newTasks = [...parsed.tasks, `- [ ] ${text}`];
       const next = replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join("\n"));
       await this.app.vault.modify(file, next);
-      new obsidian17.Notice("Added to today");
+      new obsidian18.Notice("Added to today");
     } catch (e) {
-      new obsidian17.Notice(`Couldn't add task: ${e.message}`);
+      new obsidian18.Notice(`Couldn't add task: ${e.message}`);
     }
   }
   /* ── Pipeline kanban (deals grouped by stage) ───── */
@@ -36192,6 +36548,15 @@ ${snippet}` : "- No markdown content");
       const row = body.createDiv({ cls: "bob-dash-row" });
       row.createDiv({ cls: "bob-dash-row-title", text: r.title });
       row.createDiv({ cls: "bob-dash-row-meta", text: r.meta });
+      (r.rowActions || []).forEach((a) => {
+        const btn = row.createEl("button", { cls: "bob-dash-row-action", text: a.label });
+        btn.type = "button";
+        if (a.title) btn.title = a.title;
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          void a.run();
+        });
+      });
       if (r.file) row.addEventListener("click", () => {
         if (r.entityKey) {
           this.openEntityDetail(r.entityKey, r.file);
@@ -36200,6 +36565,133 @@ ${snippet}` : "- No markdown content");
         this.openEntityDetailFromFile(r.file);
       });
     });
+  }
+  /** Turn an approved registration into the deal it was protecting.
+   *
+   * The deal is created **under the partner**, at
+   * `20-COMPANY/35-PARTNERS/{partner-id}/01-DEALS/`, not under a client. A
+   * partner-sourced registration for a prospect has no client folder to be created
+   * in, and filing it beside the partner's registrations, certifications and
+   * commissions keeps one partner's records in one place — which is also what makes
+   * the won-deal commission automation resolvable without a client detour.
+   * (Owner decision, 2026-08-23; the `deal` entity's location pattern and the
+   * validator's R7/P4 rules were widened to match.)
+   *
+   * Refuses rather than guesses when the partner cannot be resolved: a deal filed
+   * under the wrong partner is worse than one not filed yet.
+   */
+  async _convertRegistrationToDeal(reg) {
+    const regDef = ENTITIES.registration;
+    try {
+      const rawRef = String(entityValue(reg, "partner_ref", regDef) || "").trim();
+      const naked = rawRef.replace(/^\[\[|\]\]$/g, "").split("|")[0].trim();
+      if (!naked) {
+        new obsidian18.Notice("This registration names no partner, so there is no partner folder to file a deal under.");
+        return;
+      }
+      const partner = listEntities(this.app, "partner").find((pt) => {
+        const pn = String(entityValue(pt, "partner_name", ENTITIES.partner) || "").trim();
+        const pid = String(entityValue(pt, "partner_id", ENTITIES.partner) || "").trim();
+        return pn === naked || pid === naked || pt.basename === naked;
+      });
+      const partnerId = partner?.file.path.startsWith("20-COMPANY/35-PARTNERS/") ? partner.file.path.split("/")[2] : null;
+      if (!partnerId) {
+        new obsidian18.Notice(`No partner folder found for "${naked}" under 20-COMPANY/35-PARTNERS/. Create the partner record first.`);
+        return;
+      }
+      const title = String(entityValue(reg, "title", regDef) || reg.basename);
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || reg.basename;
+      const folder = `20-COMPANY/35-PARTNERS/${partnerId}/01-DEALS`;
+      const path = `${folder}/${slug}.md`;
+      const existing = this.app.vault.getAbstractFileByPath(path);
+      if (existing instanceof obsidian18.TFile) {
+        await this.app.fileManager.processFrontMatter(reg.file, (fm) => {
+          fm.deal_ref = `[[${slug}]]`;
+        });
+        new obsidian18.Notice(`Deal already exists \u2014 linked ${reg.basename} to it.`);
+        void this.app.workspace.getLeaf(false).openFile(existing);
+        return;
+      }
+      if (!this.app.vault.getAbstractFileByPath(folder)) {
+        await this.app.vault.createFolder(folder).catch(() => {
+        });
+      }
+      const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const value = Number(entityValue(reg, "value", regDef)) || 0;
+      const expires = String(entityValue(reg, "expires_date", regDef) || "").slice(0, 10);
+      const body = [
+        "---",
+        "type: deal",
+        `title: "${title.replace(/"/g, "'")}"`,
+        // `qualified`, not `lead`: an approved registration is an accepted claim on
+        // a named opportunity, which is past the lead stage by definition.
+        "stage: qualified",
+        `partner_ref: "[[${naked}]]"`,
+        `company_id: ${partnerId}`,
+        "company_type: partner",
+        ...value ? [`deal_value: ${value}`] : [],
+        "deal_source: partner",
+        // The registration's expiry is the date the protection lapses, which is the
+        // only close-by date the registration actually asserts.
+        ...expires ? [`expected_close: ${expires}`] : [],
+        `created: ${today}`,
+        "tags: [deal, partner]",
+        "---",
+        "",
+        `# ${title}`,
+        "",
+        `Converted from registration [[${reg.basename}]] on ${today}.`,
+        ""
+      ].join("\n");
+      const file = await this.app.vault.create(path, body);
+      await this.app.fileManager.processFrontMatter(reg.file, (fm) => {
+        fm.deal_ref = `[[${slug}]]`;
+      });
+      new obsidian18.Notice(`Deal created under ${partnerId}`);
+      this.render();
+      void this.app.workspace.getLeaf(false).openFile(file);
+    } catch (e) {
+      new obsidian18.Notice(`Could not convert registration: ${e.message}`);
+    }
+  }
+  /** Prompt for a new expiry date and write it, with an optional status reset.
+   *
+   * The alert surfaces were read-only, so acting on a warning meant opening the
+   * note and editing frontmatter by hand — the friction that let these lapse in
+   * the first place. The date is asked for rather than assumed: a renewal term is
+   * a fact about the certificate or the registration, not something to guess.
+   */
+  _promptNewExpiry(file, opts) {
+    const suggested = (() => {
+      const d = new Date(opts.currentExpiry);
+      if (Number.isNaN(d.getTime())) return "";
+      d.setFullYear(d.getFullYear() + 1);
+      return d.toISOString().slice(0, 10);
+    })();
+    new BobPromptModal(this.app, {
+      title: opts.title,
+      placeholder: "YYYY-MM-DD",
+      defaultValue: suggested,
+      cta: opts.cta,
+      onSubmit: async (value) => {
+        const next = String(value || "").trim();
+        if (!next) return;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(next) || Number.isNaN(new Date(next).getTime())) {
+          new obsidian18.Notice(`Not a date: ${next}. Use YYYY-MM-DD.`);
+          return;
+        }
+        try {
+          await this.app.fileManager.processFrontMatter(file, (fm) => {
+            fm.expires_date = next;
+            if (opts.status) fm.status = opts.status;
+          });
+          new obsidian18.Notice(`${file.basename} now expires ${next}`);
+          this.render();
+        } catch (e) {
+          new obsidian18.Notice(`Could not update ${file.basename}: ${e.message}`);
+        }
+      }
+    }).open();
   }
   /* ── Reports: Productivity (over daily notes) ── */
   /* ── PRM Analytics ──────────────────────── */
@@ -36211,7 +36703,7 @@ ${snippet}` : "- No markdown content");
     const deals = listEntities(this.app, "deal");
     const dealValue = (e) => Number(entityValue(e, dealValueField(dealDef), dealDef)) || 0;
     const sumVal = (arr) => arr.reduce((s, e) => s + dealValue(e), 0);
-    const partnerSourced = deals.filter((e) => entityValue(e, "partner", dealDef));
+    const partnerSourced = deals.filter((e) => dealPartnerName(e, dealDef));
     const partnerWon = partnerSourced.filter((e) => dealWonStages(dealDef).includes(String(entityValue(e, dealStageField(dealDef), dealDef))));
     this._renderPageHeader(root, "PRM analytics", "Partner programme health, tier mix and revenue contribution");
     const grid = root.createDiv({ cls: "bob-stat-grid" });
@@ -36239,7 +36731,7 @@ ${snippet}` : "- No markdown content");
     const partnerByName = /* @__PURE__ */ new Map();
     partners.forEach((p) => partnerByName.set(String(entityValue(p, "name", partnerDef) || p.basename), p));
     partnerWon.forEach((d) => {
-      const pname = String(entityValue(d, "partner", dealDef) || "");
+      const pname = dealPartnerName(d, dealDef);
       const partner = partnerByName.get(pname);
       if (!partner) return;
       const tier = String(entityValue(partner, "tier", partnerDef) || "Untiered");
@@ -36313,15 +36805,19 @@ ${snippet}` : "- No markdown content");
     convFill.style.width = `${conv}%`;
     if (partners.length && partnerSourced.length) {
       const stageField = dealStageField(dealDef);
+      const atRisk = (d) => dealAtRisk(d, dealDef);
       const perPartner = /* @__PURE__ */ new Map();
       partnerSourced.forEach((d) => {
-        const key = String(entityValue(d, "partner", dealDef) || "(unnamed)");
-        if (!perPartner.has(key)) perPartner.set(key, { open: [], won: [], lost: [] });
+        const key = dealPartnerName(d, dealDef) || "(unnamed)";
+        if (!perPartner.has(key)) perPartner.set(key, { open: [], won: [], lost: [], risk: [] });
         const bucket = perPartner.get(key);
         const stage = String(entityValue(d, stageField, dealDef));
         if (dealWonStages(dealDef).includes(stage)) bucket.won.push(d);
         else if (dealLostStages(dealDef).includes(stage)) bucket.lost.push(d);
-        else bucket.open.push(d);
+        else {
+          bucket.open.push(d);
+          if (atRisk(d)) bucket.risk.push(d);
+        }
       });
       root.createDiv({ cls: "bob-section-label-lg", text: "PIPELINE BY PARTNER" });
       const ppCard = root.createDiv({ cls: "bob-dash-card" });
@@ -36329,7 +36825,7 @@ ${snippet}` : "- No markdown content");
       const ppBody = ppCard.createDiv({ cls: "bob-dash-card-body" });
       const table = ppBody.createEl("table", { cls: "bob-table" });
       const thead = table.createEl("thead").createEl("tr");
-      ["Partner", "Open", "Open value", "Won", "Won value", "Win rate"].forEach((h) => thead.createEl("th", { text: h }));
+      ["Partner", "Open", "Open value", "At risk", "Won", "Won value", "Win rate"].forEach((h) => thead.createEl("th", { text: h }));
       const tbody = table.createEl("tbody");
       [...perPartner.entries()].sort((a, b) => sumVal(b[1].won) - sumVal(a[1].won) || b[1].open.length - a[1].open.length).forEach(([name, b]) => {
         const decided = b.won.length + b.lost.length;
@@ -36339,10 +36835,15 @@ ${snippet}` : "- No markdown content");
         const partnerRec = partnerByName.get(name);
         if (partnerRec?.file) {
           nameCell.addClass("clickable");
-          nameCell.onclick = () => this.app.workspace.getLeaf(false).openFile(partnerRec.file);
+          nameCell.onclick = () => this.openEntityDetail("partner", partnerRec.file);
         }
         tr.createEl("td", { text: String(b.open.length) });
         tr.createEl("td", { text: fmtValue(sumVal(b.open), "currency") });
+        const riskCell = tr.createEl("td", { text: b.risk.length ? String(b.risk.length) : "\u2014" });
+        if (b.risk.length) {
+          riskCell.dataset.accent = "rose";
+          riskCell.title = b.risk.map((d) => `${String(entityValue(d, "title", dealDef) || d.basename)} \u2014 ${atRisk(d)}`).join("\n");
+        }
         tr.createEl("td", { text: String(b.won.length) });
         tr.createEl("td", { text: fmtValue(sumVal(b.won), "currency") });
         tr.createEl("td", { text: wr === null ? "\u2014" : `${wr}%` });
@@ -36351,15 +36852,6 @@ ${snippet}` : "- No markdown content");
     const commissions = listEntities(this.app, "commission");
     const registrations = listEntities(this.app, "registration");
     const certifications = listEntities(this.app, "certification");
-    const daysUntil = (raw) => {
-      const v = String(raw || "").slice(0, 10);
-      if (!v) return null;
-      const d = new Date(v);
-      if (Number.isNaN(d.getTime())) return null;
-      const today = /* @__PURE__ */ new Date();
-      today.setHours(0, 0, 0, 0);
-      return Math.round((d.getTime() - today.getTime()) / 864e5);
-    };
     if (commissions.length || registrations.length || certifications.length) {
       root.createDiv({ cls: "bob-section-label-lg", text: "PROGRAMME HEALTH" });
       const healthGrid = root.createDiv({ cls: "bob-stat-grid" });
@@ -36398,7 +36890,7 @@ ${snippet}` : "- No markdown content");
           decided === 0 ? "no decisions yet" : `${approved}/${decided} decided`,
           rate === null ? "sky" : rate >= 70 ? "emerald" : "warn"
         );
-        const regExpiring = registrations.filter((e) => !["expired", "rejected"].includes(regStatus(e))).map((e) => ({ e, d: daysUntil(entityValue(e, "expires_date", regDef)) })).filter((r) => r.d !== null && r.d <= 30).sort((a, b) => a.d - b.d);
+        const regExpiring = registrations.filter((e) => !["expired", "rejected"].includes(regStatus(e))).map((e) => ({ e, d: daysUntil(entityValue(e, "expires_date", regDef)) })).filter((r) => r.d !== null && r.d <= REG_WARN_DAYS).sort((a, b) => a.d - b.d);
         if (regExpiring.length) {
           const lapsed = regExpiring.filter((r) => r.d < 0).length;
           healthStat(
@@ -36407,17 +36899,58 @@ ${snippet}` : "- No markdown content");
             lapsed ? `${lapsed} already lapsed` : `soonest in ${regExpiring[0].d}d`,
             lapsed ? "rose" : "warn"
           );
+          this._dashCardSection(
+            root,
+            `REGISTRATIONS AT RISK \xB7 within ${REG_WARN_DAYS} days`,
+            regExpiring.slice(0, 10).map(({ e, d }) => {
+              const title = String(entityValue(e, "title", regDef) || e.basename);
+              const partner = String(entityValue(e, "partner_ref", regDef) || "").replace(/^\[\[|\]\]$/g, "");
+              const deal = String(entityValue(e, "deal_ref", regDef) || "");
+              const days = d;
+              const dealFile = deal ? this.app.metadataCache.getFirstLinkpathDest(deal.replace(/^\[\[|\]\]$/g, "").split("|")[0], e.file.path) : null;
+              return {
+                title: partner ? `${title} \u2014 ${partner}` : title,
+                meta: `${days < 0 ? `lapsed ${Math.abs(days)}d ago` : `${days}d left`}${deal ? "" : " \xB7 no deal linked"}`,
+                file: e.file,
+                rowActions: [
+                  {
+                    label: "Extend",
+                    title: "Push the registration expiry out",
+                    // Status stays `approved`: extending a live registration is not
+                    // a new approval decision, it is the same one with more runway.
+                    run: () => this._promptNewExpiry(e.file, {
+                      title: `Extend ${title}`,
+                      cta: "Extend",
+                      currentExpiry: String(entityValue(e, "expires_date", regDef) || "")
+                    })
+                  },
+                  dealFile ? {
+                    label: "Open deal",
+                    title: "Open the deal this registration protects",
+                    run: () => {
+                      void this.app.workspace.getLeaf(false).openFile(dealFile);
+                    }
+                  } : {
+                    label: "Convert to deal",
+                    title: "Create the partner-scoped deal this registration becomes",
+                    run: () => this._convertRegistrationToDeal(e)
+                  }
+                ]
+              };
+            }),
+            "Nothing expiring."
+          );
         }
       }
       if (certifications.length) {
         const certDef = ENTITIES.certification;
         const certStatus = (e) => String(entityValue(e, "status", certDef) || "");
-        const certExpiring = certifications.filter((e) => !["expired", "revoked"].includes(certStatus(e))).map((e) => ({ e, d: daysUntil(entityValue(e, "expires_date", certDef)) })).filter((r) => r.d !== null && r.d <= 60).sort((a, b) => a.d - b.d);
+        const certExpiring = certifications.filter((e) => !["expired", "revoked"].includes(certStatus(e))).map((e) => ({ e, d: daysUntil(entityValue(e, "expires_date", certDef)) })).filter((r) => r.d !== null && r.d <= CERT_WARN_DAYS).sort((a, b) => a.d - b.d);
         const lapsedCerts = certExpiring.filter((r) => r.d < 0).length;
         healthStat(
           "CERTS EXPIRING",
           certExpiring.length,
-          certExpiring.length === 0 ? "none within 60 days" : lapsedCerts ? `${lapsedCerts} already lapsed` : `soonest in ${certExpiring[0].d}d`,
+          certExpiring.length === 0 ? `none within ${CERT_WARN_DAYS} days` : lapsedCerts ? `${lapsedCerts} already lapsed` : `soonest in ${certExpiring[0].d}d`,
           certExpiring.length === 0 ? "mint" : lapsedCerts ? "rose" : "warn"
         );
         if (certExpiring.length) {
@@ -36428,81 +36961,43 @@ ${snippet}` : "- No markdown content");
             return {
               title: partner ? `${name} \u2014 ${partner}` : name,
               meta: days < 0 ? `expired ${Math.abs(days)}d ago` : `${days}d left`,
-              file: e.file
+              file: e.file,
+              rowActions: [{
+                label: "Renew",
+                title: "Set a new expiry date",
+                // Back to `active`, not `renewed`: `renewed` is the sweep's
+                // permanent opt-out, and a certificate with a real new date should
+                // be managed by that date again like any other.
+                run: () => this._promptNewExpiry(e.file, {
+                  title: `Renew ${name}`,
+                  cta: "Renew",
+                  currentExpiry: String(entityValue(e, "expires_date", certDef) || ""),
+                  status: "active"
+                })
+              }]
             };
           });
-          this._dashCardSection(root, "RENEWAL PIPELINE \xB7 certifications within 60 days", renewalRows, "Nothing expiring.");
+          this._dashCardSection(root, `RENEWAL PIPELINE \xB7 certifications within ${CERT_WARN_DAYS} days`, renewalRows, "Nothing expiring.");
         }
       }
     }
   }
-  /** Create a commission record when a partner-sourced deal reaches a won stage.
+  /** Kanban-drop path into the shared commission automation.
    *
-   * Commissions were previously created by hand after every won deal, which is
-   * exactly the kind of step that gets skipped in a busy week — and an unrecorded
-   * commission is a partner-trust problem, not a bookkeeping one.
-   *
-   * Deliberately conservative:
-   *  - only fires when the changed field is the deal's stage field
-   *  - only for a won stage, and only when the deal names a partner
-   *  - never creates a second commission for the same deal (idempotent on re-drag)
-   *  - status is `earned`, not `paid` — this records the liability, it does not settle it
-   *  - a rate is only applied when the partner declares one; no invented default,
-   *    because a wrong rate is worse than a blank one somebody has to fill in
+   * The same rule also runs from the plugin's metadata-cache watcher, which
+   * covers stage changes made outside the board. This wrapper exists so the
+   * Notice lands against the drop the user just made, and so a commission
+   * failure never makes the stage change itself look failed.
    */
   async _maybeCreateCommissionForWonDeal(file, changedField, newValue) {
     try {
       const dealDef = ENTITIES.deal;
-      const commDef = ENTITIES.commission;
-      if (!dealDef || !commDef) return;
+      if (!dealDef) return;
       if (changedField !== dealStageField(dealDef)) return;
-      if (!dealWonStages(dealDef).includes(newValue)) return;
-      const deal = readEntity(this.app, file);
-      const partnerName = String(entityValue(deal, "partner", dealDef) || entityValue(deal, "partner_ref", dealDef) || "").trim();
-      if (!partnerName) return;
-      const dealKey = file.basename;
-      const existing = listEntities(this.app, "commission").some((c) => String(entityValue(c, "deal_ref", commDef) || "").includes(dealKey));
-      if (existing) return;
-      const value = Number(entityValue(deal, dealValueField(dealDef), dealDef)) || 0;
-      const partner = listEntities(this.app, "partner").find((pt) => {
-        const pn = String(entityValue(pt, "partner_name", ENTITIES.partner) || "").trim();
-        return pn === partnerName || pt.basename === partnerName;
-      });
-      const rate = partner ? Number(entityValue(partner, "commission_rate", ENTITIES.partner)) : NaN;
-      const amount = Number.isFinite(rate) && rate > 0 ? Math.round(value * (rate / 100)) : 0;
-      const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      const period = today.slice(0, 7);
-      const folder = `${commDef.folder}/COMMISSIONS`;
-      if (!this.app.vault.getAbstractFileByPath(folder)) {
-        await this.app.vault.createFolder(folder).catch(() => {
-        });
-      }
-      const safe = `${partnerName}-${dealKey}`.replace(/[\\/:*?"<>|]/g, "-").slice(0, 80);
-      const path = `${folder}/commission-${safe}.md`;
-      if (this.app.vault.getAbstractFileByPath(path)) return;
-      const fm = [
-        "---",
-        "type: commission",
-        `reference: commission-${safe}`,
-        `partner_ref: "[[${partnerName}]]"`,
-        `deal_ref: "[[${dealKey}]]"`,
-        `amount: ${amount}`,
-        "status: earned",
-        `period: ${period}`,
-        `earned_date: ${today}`,
-        "---",
-        "",
-        `# Commission \u2014 ${partnerName}`,
-        "",
-        `Auto-created when [[${dealKey}]] reached stage \`${newValue}\`.`,
-        "",
-        amount > 0 ? `Amount computed from deal value ${value} at the partner's declared rate of ${rate}%.` : `**Amount not computed** \u2014 the partner record declares no \`commission_rate\`. Set the amount by hand, or add a rate to the partner and delete this note to have it regenerate.`,
-        ""
-      ].join("\n");
-      await this.app.vault.create(path, fm);
-      new obsidian17.Notice(`Commission recorded for ${partnerName}`);
+      if (this.plugin.settings.autoCommissionOnWon === false) return;
+      await maybeCreateCommissionForWonDeal(this.app, file, newValue);
     } catch (e) {
-      new obsidian17.Notice(`Deal moved, but commission was not created: ${e.message}`);
+      new obsidian18.Notice(`Deal moved, but commission was not created: ${e.message}`);
     }
   }
   /* ── Team (configurable People categories) ─ */
@@ -36524,7 +37019,7 @@ ${snippet}` : "- No markdown content");
     const wrap = root.createDiv({ cls: "bob-soon-wrap" });
     const ic = wrap.createDiv({ cls: "bob-soon-icon" });
     try {
-      obsidian17.setIcon(ic, "settings-2");
+      obsidian18.setIcon(ic, "settings-2");
     } catch (_) {
     }
     wrap.createDiv({ cls: "bob-eyebrow", text: "BOB WORKSPACE" });
@@ -36560,7 +37055,7 @@ ${snippet}` : "- No markdown content");
       if (projectsTouched.has(r.project)) continue;
       projectsTouched.add(r.project);
       const file = this.app.vault.getAbstractFileByPath(r.project);
-      if (!file || !(file instanceof obsidian17.TFile)) continue;
+      if (!file || !(file instanceof obsidian18.TFile)) continue;
       await this._tickProjectTaskByText(file, t, !!done);
     }
     const datesToCheck = /* @__PURE__ */ new Set([ymd(/* @__PURE__ */ new Date())]);
@@ -36579,7 +37074,7 @@ ${snippet}` : "- No markdown content");
     for (const dateStr of datesToCheck) {
       const path = settings.dailyNoteFolder ? `${settings.dailyNoteFolder.replace(/\/$/, "")}/${dateStr}.md` : `${dateStr}.md`;
       const file = this.app.vault.getAbstractFileByPath(path);
-      if (!file || !(file instanceof obsidian17.TFile)) continue;
+      if (!file || !(file instanceof obsidian18.TFile)) continue;
       if (source.kind === "daily" && source.file && source.file.path === file.path) continue;
       await this._tickDailyNoteTaskByText(file, t, !!done);
     }
@@ -36658,11 +37153,11 @@ ${snippet}` : "- No markdown content");
               });
             });
           }
-          new obsidian17.Notice(`Created ${def.label}: ${file.basename}
+          new obsidian18.Notice(`Created ${def.label}: ${file.basename}
 Saved to ${file.path}`, 4e3);
           await this.openEntityDetail(entityKey, file);
         } catch (e) {
-          new obsidian17.Notice(`BOB Workspace: failed to create ${def.label} \u2014 ${e.message}`);
+          new obsidian18.Notice(`BOB Workspace: failed to create ${def.label} \u2014 ${e.message}`);
         }
       }
     }).open();
@@ -36713,7 +37208,7 @@ Saved to ${file.path}`, 4e3);
               ev.preventDefault();
               ev.stopPropagation();
               const f = this.app.vault.getAbstractFileByPath(linkedProject);
-              if (f instanceof obsidian17.TFile) this.openEntityDetailFromFile(f);
+              if (f instanceof obsidian18.TFile) this.openEntityDetailFromFile(f);
             });
           }
           const linkBtn = row.createEl("button", { cls: "bob-task-link-btn" + (linkedProject ? " linked" : ""), text: linkedProject ? "\u270E" : "\u{1F4C1}" });
@@ -36727,7 +37222,7 @@ Saved to ${file.path}`, 4e3);
             promBtn.addEventListener("click", async (ev) => {
               ev.stopPropagation();
               await createTaskNote(this.app, this.plugin.settings, text);
-              new obsidian17.Notice(`TaskNote created: ${text}`);
+              new obsidian18.Notice(`TaskNote created: ${text}`);
             });
           }
         });
@@ -36778,7 +37273,7 @@ Saved to ${file.path}`, 4e3);
           this.appendTodayTask(v);
         } else {
           await createTaskNote(this.app, this.plugin.settings, v);
-          new obsidian17.Notice(`TaskNote created: ${v}`);
+          new obsidian18.Notice(`TaskNote created: ${v}`);
           this.render();
         }
       }
@@ -36872,7 +37367,7 @@ Saved to ${file.path}`, 4e3);
     const dayData = await Promise.all(days.map(async (d) => {
       const path = dailyNotePath(settings, d);
       const file = this.app.vault.getAbstractFileByPath(path);
-      if (!file || !(file instanceof obsidian17.TFile)) {
+      if (!file || !(file instanceof obsidian18.TFile)) {
         return { date: d, path, exists: false, tasks: [] };
       }
       const content = await this.app.vault.cachedRead(file);
@@ -36956,8 +37451,8 @@ Saved to ${file.path}`, 4e3);
 };
 
 // src/settings-tab.ts
-var obsidian18 = __toESM(require("obsidian"));
-var BobSettingTab = class extends obsidian18.PluginSettingTab {
+var obsidian19 = __toESM(require("obsidian"));
+var BobSettingTab = class extends obsidian19.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -36974,7 +37469,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
     const toggle = block.createEl("button", { cls: "bob-help-toggle" + (open ? " is-open" : ""), attr: { type: "button" } });
     const icon = toggle.createSpan({ cls: "bob-help-toggle-icon" });
     try {
-      obsidian18.setIcon(icon, "help-circle");
+      obsidian19.setIcon(icon, "help-circle");
     } catch (_) {
       icon.setText("?");
     }
@@ -37047,24 +37542,24 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    this._queueSave = obsidian18.debounce(() => {
+    this._queueSave = obsidian19.debounce(() => {
       void this.plugin.saveSettings();
     }, 600, true);
-    this._queueSaveRefresh = obsidian18.debounce(() => {
+    this._queueSaveRefresh = obsidian19.debounce(() => {
       void (async () => {
         await this.plugin.saveSettings();
         syncEntityFolders(this.plugin.settings);
         this.plugin.refreshOpenViews();
       })();
     }, 600, true);
-    this._queueSaveReload = obsidian18.debounce(() => {
+    this._queueSaveReload = obsidian19.debounce(() => {
       void (async () => {
         await this.plugin.saveSettings();
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
       })();
     }, 800, true);
-    this._queueEntityReload = obsidian18.debounce(() => {
+    this._queueEntityReload = obsidian19.debounce(() => {
       void (async () => {
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
@@ -37184,14 +37679,14 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         this._workspaceDraftDirty = false;
         this.plugin.refreshOpenViews();
         if (bootstrapFailed.length) {
-          new obsidian18.Notice(`BOB Workspace: workspace.json saved and applied. Skipped schema for: ${bootstrapFailed.join("; ")}`);
+          new obsidian19.Notice(`BOB Workspace: workspace.json saved and applied. Skipped schema for: ${bootstrapFailed.join("; ")}`);
         } else {
-          new obsidian18.Notice("BOB Workspace: workspace.json saved and applied.");
+          new obsidian19.Notice("BOB Workspace: workspace.json saved and applied.");
         }
         this.display();
       } catch (e) {
         setWorkspaceStatus(`Save failed: ${e.message}`, false);
-        new obsidian18.Notice(`BOB Workspace: workspace.json save failed - ${e.message}`);
+        new obsidian19.Notice(`BOB Workspace: workspace.json save failed - ${e.message}`);
       }
     });
     const workspaceRestoreBtn = workspaceBtns.createEl("button", { text: "Restore backup" });
@@ -37290,10 +37785,10 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         templateStatus.setText(`Loaded ${workspaceTemplates.length} template${workspaceTemplates.length === 1 ? "" : "s"} \xB7 active: ${workspaceTemplateKey(selected)}`);
         renderWorkspaceDesigners();
         void renderWorkspaceReview();
-        new obsidian18.Notice(`BOB Workspace: "${meta.label}" template applied.`);
+        new obsidian19.Notice(`BOB Workspace: "${meta.label}" template applied.`);
       } catch (e) {
         templateStatus.setText(`Template apply failed: ${e.message}`);
-        new obsidian18.Notice(`BOB Workspace: template apply failed - ${e.message}`);
+        new obsidian19.Notice(`BOB Workspace: template apply failed - ${e.message}`);
       }
     });
     setTimeout(() => refreshWorkspaceTemplateSelector(), 0);
@@ -37403,7 +37898,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
       const listed = await adapter2.list(folder);
       for (const filePath of (listed.files || []).filter((file) => /\.ya?ml$/i.test(file))) {
         try {
-          const schema = validateSourceSchemaDefinition(obsidian18.parseYaml(await adapter2.read(filePath)));
+          const schema = validateSourceSchemaDefinition(obsidian19.parseYaml(await adapter2.read(filePath)));
           result.schemas.push({ path: filePath, schema });
         } catch (e) {
           result.errors.push(`${filePath}: ${e.message}`);
@@ -37707,7 +38202,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         button.empty();
         const preview = button.createSpan({ cls: "bob-nav-designer-icon-preview" });
         try {
-          obsidian18.setIcon(preview, currentIcon || "shapes");
+          obsidian19.setIcon(preview, currentIcon || "shapes");
         } catch (_) {
         }
         button.createSpan({ cls: "bob-nav-designer-icon-name", text: currentIcon || emptyText });
@@ -38186,7 +38681,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         });
       });
     };
-    workspaceTa.addEventListener("input", obsidian18.debounce(() => {
+    workspaceTa.addEventListener("input", obsidian19.debounce(() => {
       try {
         const parsed = readWorkspaceDraft();
         setWorkspaceConfig(parsed);
@@ -38303,6 +38798,16 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         cls: "setting-item-description bob-module-card-desc",
         text: moduleLabels[moduleKey] || `${headingText} section defined in workspace.json.`
       });
+      if (moduleKey === "prm") {
+        new obsidian19.Setting(panel).setName("Auto-create commission on deal won").setDesc("When a deal naming a partner reaches a won stage, record an `earned` commission under that partner. Never creates a second one for the same deal. Turning this off stops new commissions; it does not delete existing ones.").addToggle((tg) => tg.setValue(this.plugin.settings.autoCommissionOnWon !== false).onChange(async (v) => {
+          this.plugin.settings.autoCommissionOnWon = v;
+          await this.plugin.saveSettings();
+        }));
+        new obsidian19.Setting(panel).setName("Partner expiry reminders").setDesc(`Raise a one-time inbox reminder when a certification enters its ${CERT_WARN_DAYS}-day renewal window or an approved registration enters its ${REG_WARN_DAYS}-day window. One reminder per expiry date, so renewing to a new date raises a fresh one.`).addToggle((tg) => tg.setValue(this.plugin.settings.partnerExpiryReminders !== false).onChange(async (v) => {
+          this.plugin.settings.partnerExpiryReminders = v;
+          await this.plugin.saveSettings();
+        }));
+      }
       const disabled = new Set(this.plugin.settings.disabledSurfaces || []);
       const renderSurfaceRow = (surface, showVisibility = true) => {
         const eDef = surface.entityKey ? ENTITIES[surface.entityKey] : null;
@@ -38324,7 +38829,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         const hasBuiltinDash = !!builtinDashboardDefaults()[surface.id];
         if (hasCustomDash) desc.push("\u270E custom dashboard");
         else if (hasBuiltinDash) desc.push("built-in dashboard");
-        const s = new obsidian18.Setting(panel).setName(level !== "primary" ? `${surface.label} (${levelLabel})` : surface.label).setDesc(desc.join(" \xB7 "));
+        const s = new obsidian19.Setting(panel).setName(level !== "primary" ? `${surface.label} (${levelLabel})` : surface.label).setDesc(desc.join(" \xB7 "));
         if (moduleDisabled) s.settingEl.classList.add("bob-setting-disabled");
         if (hasCustomDash || hasBuiltinDash) {
           s.addExtraButton((b) => b.setIcon("layout-panel-left").setTooltip(hasCustomDash ? "Edit custom dashboard in Surface Designer" : "Customize this dashboard in Surface Designer").onClick(() => {
@@ -38477,12 +38982,12 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
     pApp.createEl("h3", { text: "Navigation" });
     const navGroup = pApp.createDiv({ cls: "setting-group bob-settings-section" });
     const navPanel = navGroup.createDiv({ cls: "setting-items" });
-    new obsidian18.Setting(navPanel).setName("Show secondary nav items").setDesc("Show lower-frequency child surfaces (e.g. campaign sub-tabs, finance children) directly in the left rail. When off, they stay reachable via their parent surface's tabs.").addToggle((t) => t.setValue(!!this.plugin.settings.showSecondaryNav).onChange(async (v) => {
+    new obsidian19.Setting(navPanel).setName("Show secondary nav items").setDesc("Show lower-frequency child surfaces (e.g. campaign sub-tabs, finance children) directly in the left rail. When off, they stay reachable via their parent surface's tabs.").addToggle((t) => t.setValue(!!this.plugin.settings.showSecondaryNav).onChange(async (v) => {
       this.plugin.settings.showSecondaryNav = v;
       await this.plugin.saveSettings();
       this.plugin.refreshOpenViews();
     }));
-    new obsidian18.Setting(navPanel).setName("Show setup nav items").setDesc('Show setup-level surfaces (marked navLevel "setup") in the left rail. Off by default to keep the rail focused on day-to-day work.').addToggle((t) => t.setValue(!!this.plugin.settings.showSetupNav).onChange(async (v) => {
+    new obsidian19.Setting(navPanel).setName("Show setup nav items").setDesc('Show setup-level surfaces (marked navLevel "setup") in the left rail. Off by default to keep the rail focused on day-to-day work.').addToggle((t) => t.setValue(!!this.plugin.settings.showSetupNav).onChange(async (v) => {
       this.plugin.settings.showSetupNav = v;
       await this.plugin.saveSettings();
       this.plugin.refreshOpenViews();
@@ -38490,7 +38995,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
     pApp.createEl("h3", { text: "Rendering" });
     const renderGroup = pApp.createDiv({ cls: "setting-group bob-settings-section" });
     const renderPanel = renderGroup.createDiv({ cls: "setting-items" });
-    new obsidian18.Setting(renderPanel).setName("Inline canvases & Base views").setDesc('Render Obsidian canvases and non-table Base views inline inside the workspace. Uses Obsidian internal APIs, so it is off by default \u2014 canvases open in a tab and Base views show an "Open Base" button. Enable for the richer in-app experience (may be affected by Obsidian updates).').addToggle((t) => t.setValue(!!this.plugin.settings.inlineNativeViews).onChange(async (v) => {
+    new obsidian19.Setting(renderPanel).setName("Inline canvases & Base views").setDesc('Render Obsidian canvases and non-table Base views inline inside the workspace. Uses Obsidian internal APIs, so it is off by default \u2014 canvases open in a tab and Base views show an "Open Base" button. Enable for the richer in-app experience (may be affected by Obsidian updates).').addToggle((t) => t.setValue(!!this.plugin.settings.inlineNativeViews).onChange(async (v) => {
       this.plugin.settings.inlineNativeViews = v;
       await this.plugin.saveSettings();
       this.plugin.refreshOpenViews();
@@ -38498,7 +39003,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
     pApp.createEl("h3", { text: "Reminders" });
     const remindersGroup = pApp.createDiv({ cls: "setting-group bob-settings-section" });
     const remindersPanel = remindersGroup.createDiv({ cls: "setting-items" });
-    new obsidian18.Setting(remindersPanel).setName("Desktop notifications").setDesc("In addition to the in-app banner, fire a system notification when a reminder is due. Requires browser permission.").addToggle((t) => t.setValue(!!this.plugin.settings.desktopNotifications).onChange(async (v) => {
+    new obsidian19.Setting(remindersPanel).setName("Desktop notifications").setDesc("In addition to the in-app banner, fire a system notification when a reminder is due. Requires browser permission.").addToggle((t) => t.setValue(!!this.plugin.settings.desktopNotifications).onChange(async (v) => {
       this.plugin.settings.desktopNotifications = v;
       await this.plugin.saveSettings();
       if (v && typeof Notification !== "undefined" && Notification.permission === "default") {
@@ -38508,7 +39013,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         }
       }
     }));
-    new obsidian18.Setting(remindersPanel).setName("Notification permission").setDesc(typeof Notification === "undefined" ? "Notifications API not available in this environment." : `Current status: ${Notification.permission}`).addButton((b) => b.setButtonText("Request permission").onClick(async () => {
+    new obsidian19.Setting(remindersPanel).setName("Notification permission").setDesc(typeof Notification === "undefined" ? "Notifications API not available in this environment." : `Current status: ${Notification.permission}`).addButton((b) => b.setButtonText("Request permission").onClick(async () => {
       if (typeof Notification === "undefined") return;
       try {
         await Notification.requestPermission();
@@ -38516,7 +39021,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
       } catch (_) {
       }
     }));
-    new obsidian18.Setting(remindersPanel).setName("Clear completed reminders").setDesc(`${(this.plugin.settings.reminders || []).filter((r) => r.done).length} completed reminders stored.`).addButton((b) => b.setButtonText("Clear").onClick(async () => {
+    new obsidian19.Setting(remindersPanel).setName("Clear completed reminders").setDesc(`${(this.plugin.settings.reminders || []).filter((r) => r.done).length} completed reminders stored.`).addButton((b) => b.setButtonText("Clear").onClick(async () => {
       this.plugin.settings.reminders = (this.plugin.settings.reminders || []).filter((r) => !r.done);
       await this.plugin.saveSettings();
       this.plugin.refreshOpenViews();
@@ -38530,7 +39035,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
     const selectedTeamCategories = new Set(
       (Array.isArray(this.plugin.settings.teamPersonCategories) ? this.plugin.settings.teamPersonCategories : DEFAULT_SETTINGS.teamPersonCategories).map((v) => String(v || "").toLowerCase())
     );
-    const teamSetting = new obsidian18.Setting(appPanel).setName("Team person categories").setDesc("People categories included on the Team screen.");
+    const teamSetting = new obsidian19.Setting(appPanel).setName("Team person categories").setDesc("People categories included on the Team screen.");
     const teamControls = teamSetting.controlEl.createDiv({ cls: "bob-settings-checkboxes" });
     peopleCategories.forEach((category) => {
       const label = teamControls.createEl("label", { cls: "bob-settings-checkbox" });
@@ -38548,42 +39053,42 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         this.plugin.refreshOpenViews();
       });
     });
-    new obsidian18.Setting(appPanel).setName("Ignored folders").setDesc('Top-level vault folders to exclude from all entity scans (one per line, e.g. "99-TMP"). Speeds up large vaults by skipping folders that hold no records.').addTextArea((t) => {
+    new obsidian19.Setting(appPanel).setName("Ignored folders").setDesc('Top-level vault folders to exclude from all entity scans (one per line, e.g. "99-TMP"). Speeds up large vaults by skipping folders that hold no records.').addTextArea((t) => {
       t.inputEl.rows = 4;
       t.setPlaceholder("99-TMP\nArchive").setValue((this.plugin.settings.ignoredFolders || []).join("\n")).onChange((v) => {
         this.plugin.settings.ignoredFolders = String(v || "").split("\n").map((line) => line.trim().replace(/^\/+|\/+$/g, "")).filter(Boolean);
         this._queueSaveRefresh();
       });
     });
-    new obsidian18.Setting(plannerPanel).setName("Daily note folder").setDesc('Folder under which daily notes live, e.g. "daily" or "Journal/Daily".').addText((t) => t.setPlaceholder("daily").setValue(this.plugin.settings.dailyNoteFolder).onChange((v) => {
+    new obsidian19.Setting(plannerPanel).setName("Daily note folder").setDesc('Folder under which daily notes live, e.g. "daily" or "Journal/Daily".').addText((t) => t.setPlaceholder("daily").setValue(this.plugin.settings.dailyNoteFolder).onChange((v) => {
       this.plugin.settings.dailyNoteFolder = v;
       this._queueSave();
     }));
-    const taskModeEl = new obsidian18.Setting(plannerPanel).setName("Task mode").setDesc("How tasks are stored and displayed in the Planner.").addDropdown((d) => d.addOption("checkbox", "Checkbox only \u2014 inline checkboxes in daily notes").addOption("tasknotes", "TaskNotes only \u2014 full markdown note per task").addOption("hybrid", "Hybrid \u2014 checkboxes with Promote \u2191 to TaskNote").setValue(this.plugin.settings.taskMode || "checkbox").onChange(async (v) => {
+    const taskModeEl = new obsidian19.Setting(plannerPanel).setName("Task mode").setDesc("How tasks are stored and displayed in the Planner.").addDropdown((d) => d.addOption("checkbox", "Checkbox only \u2014 inline checkboxes in daily notes").addOption("tasknotes", "TaskNotes only \u2014 full markdown note per task").addOption("hybrid", "Hybrid \u2014 checkboxes with Promote \u2191 to TaskNote").setValue(this.plugin.settings.taskMode || "checkbox").onChange(async (v) => {
       this.plugin.settings.taskMode = v;
       await this.plugin.saveSettings();
       this.plugin.refreshOpenViews();
       this.display();
     }));
     if ((this.plugin.settings.taskMode || "checkbox") !== "checkbox") {
-      new obsidian18.Setting(plannerPanel).setName("TaskNotes folder").setDesc("Vault path where TaskNote files are stored.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Tasks").setValue(this.plugin.settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").onChange((v) => {
+      new obsidian19.Setting(plannerPanel).setName("TaskNotes folder").setDesc("Vault path where TaskNote files are stored.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Tasks").setValue(this.plugin.settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").onChange((v) => {
         this.plugin.settings.taskNotesFolder = v.trim() || "00-CORE/TaskNotes/Tasks";
         this._queueSave();
       }));
-      new obsidian18.Setting(plannerPanel).setName("TaskNotes archive folder").setDesc("Vault path where archived TaskNote files are stored and included in productivity history.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Archive").setValue(this.plugin.settings.taskNotesArchiveFolder || "00-CORE/TaskNotes/Archive").onChange((v) => {
+      new obsidian19.Setting(plannerPanel).setName("TaskNotes archive folder").setDesc("Vault path where archived TaskNote files are stored and included in productivity history.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Archive").setValue(this.plugin.settings.taskNotesArchiveFolder || "00-CORE/TaskNotes/Archive").onChange((v) => {
         this.plugin.settings.taskNotesArchiveFolder = v.trim() || "00-CORE/TaskNotes/Archive";
         this._queueSave();
       }));
     }
-    new obsidian18.Setting(plannerPanel).setName("Tasks heading").setDesc('The H2 inside each daily note where tasks live. Default "## Today".').addText((t) => t.setValue(this.plugin.settings.tasksHeading).onChange((v) => {
+    new obsidian19.Setting(plannerPanel).setName("Tasks heading").setDesc('The H2 inside each daily note where tasks live. Default "## Today".').addText((t) => t.setValue(this.plugin.settings.tasksHeading).onChange((v) => {
       this.plugin.settings.tasksHeading = v;
       this._queueSave();
     }));
-    new obsidian18.Setting(plannerPanel).setName("Journal heading").setDesc(`The H2 where today's journal entry lives. Default "## Journal".`).addText((t) => t.setValue(this.plugin.settings.journalHeading).onChange((v) => {
+    new obsidian19.Setting(plannerPanel).setName("Journal heading").setDesc(`The H2 where today's journal entry lives. Default "## Journal".`).addText((t) => t.setValue(this.plugin.settings.journalHeading).onChange((v) => {
       this.plugin.settings.journalHeading = v;
       this._queueSave();
     }));
-    new obsidian18.Setting(appPanel).setName("Currency").setDesc("Used to format money values across Pipeline, Reports and Commissions.").addDropdown((d) => {
+    new obsidian19.Setting(appPanel).setName("Currency").setDesc("Used to format money values across Pipeline, Reports and Commissions.").addDropdown((d) => {
       CURRENCY_OPTIONS.forEach((c) => d.addOption(c.code, c.label));
       d.setValue(this.plugin.settings.currency || "USD");
       d.onChange(async (v) => {
@@ -38594,15 +39099,15 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         });
       });
     });
-    new obsidian18.Setting(appPanel).setName("Week starts on").setDesc("First day of the week shown in the Planner tab.").addDropdown((d) => d.addOption("1", "Monday").addOption("0", "Sunday").setValue(String(this.plugin.settings.weekStartsOn)).onChange(async (v) => {
+    new obsidian19.Setting(appPanel).setName("Week starts on").setDesc("First day of the week shown in the Planner tab.").addDropdown((d) => d.addOption("1", "Monday").addOption("0", "Sunday").setValue(String(this.plugin.settings.weekStartsOn)).onChange(async (v) => {
       this.plugin.settings.weekStartsOn = Number(v) === 0 ? 0 : 1;
       await this.plugin.saveSettings();
     }));
-    new obsidian18.Setting(appPanel).setName("Open BOB Workspace on Obsidian startup").setDesc("Auto-open the BOB Workspace Home command centre when Obsidian launches.").addToggle((t) => t.setValue(!!this.plugin.settings.openOnStartup).onChange(async (v) => {
+    new obsidian19.Setting(appPanel).setName("Open BOB Workspace on Obsidian startup").setDesc("Auto-open the BOB Workspace Home command centre when Obsidian launches.").addToggle((t) => t.setValue(!!this.plugin.settings.openOnStartup).onChange(async (v) => {
       this.plugin.settings.openOnStartup = v;
       await this.plugin.saveSettings();
     }));
-    const defaultDrop = new obsidian18.Setting(appPanel).setName("Default tab").setDesc("Which surface opens first when you launch BOB Workspace.");
+    const defaultDrop = new obsidian19.Setting(appPanel).setName("Default tab").setDesc("Which surface opens first when you launch BOB Workspace.");
     defaultDrop.addDropdown((d) => {
       NAV_GROUPS.forEach((g) => {
         g.items.forEach((s) => {
@@ -38619,19 +39124,19 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
     pDm.createEl("h3", { text: "Data model" });
     const basesGroup = pDm.createDiv({ cls: "setting-group bob-settings-section" });
     const basesPanel = basesGroup.createDiv({ cls: "setting-items" });
-    new obsidian18.Setting(basesPanel).setName("Bases folder").setDesc("Vault folder where entity .base files live. Authoritative: changing it relocates where every base is resolved (the filename comes from the entity config, the folder from here).").addText((t) => t.setPlaceholder("00-CORE/Bases").setValue(this.plugin.settings.basesFolder || "00-CORE/Bases").onChange((v) => {
+    new obsidian19.Setting(basesPanel).setName("Bases folder").setDesc("Vault folder where entity .base files live. Authoritative: changing it relocates where every base is resolved (the filename comes from the entity config, the folder from here).").addText((t) => t.setPlaceholder("00-CORE/Bases").setValue(this.plugin.settings.basesFolder || "00-CORE/Bases").onChange((v) => {
       this.plugin.settings.basesFolder = v.trim() || "00-CORE/Bases";
       this._queueSaveReload();
     }));
-    new obsidian18.Setting(basesPanel).setName("Generate missing bases").setDesc("Create a .base file (filter + table view) for each entity that does not have one yet, in the Bases folder. Existing files are left untouched.").addButton((button) => button.setButtonText("Generate missing bases").onClick(async () => {
+    new obsidian19.Setting(basesPanel).setName("Generate missing bases").setDesc("Create a .base file (filter + table view) for each entity that does not have one yet, in the Bases folder. Existing files are left untouched.").addButton((button) => button.setButtonText("Generate missing bases").onClick(async () => {
       if (!await confirmModal(this.plugin.app, "Generate .base files for entities that don't have one yet? Existing files are left untouched.", { title: "Generate missing bases", cta: "Generate", danger: false })) return;
       try {
         const result = await generateMissingBases(this.plugin.app, this.plugin.settings);
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
-        new obsidian18.Notice(`BOB Workspace: created ${result.count} base${result.count === 1 ? "" : "s"} in ${result.folder}${result.skipped ? `; skipped ${result.skipped} existing` : ""}${result.failed.length ? `; ${result.failed.length} failed` : ""}.`);
+        new obsidian19.Notice(`BOB Workspace: created ${result.count} base${result.count === 1 ? "" : "s"} in ${result.folder}${result.skipped ? `; skipped ${result.skipped} existing` : ""}${result.failed.length ? `; ${result.failed.length} failed` : ""}.`);
       } catch (e) {
-        new obsidian18.Notice(`BOB Workspace: generate bases failed \u2014 ${e.message}`);
+        new obsidian19.Notice(`BOB Workspace: generate bases failed \u2014 ${e.message}`);
       }
     }));
     const schemasGroup = pDm.createDiv({ cls: "setting-group bob-settings-section" });
@@ -38643,7 +39148,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
       const banner = schemasPanel.createDiv({ cls: "bob-managed-banner" });
       const icon = banner.createSpan({ cls: "bob-managed-banner-icon" });
       try {
-        obsidian18.setIcon(icon, "lock");
+        obsidian19.setIcon(icon, "lock");
       } catch (_) {
       }
       banner.createSpan({ text: "Schema settings are controlled by " });
@@ -38656,7 +39161,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
       });
       banner.createSpan({ text: " to change them." });
     }
-    new obsidian18.Setting(schemasPanel).setName("Use schema YAML files").setDesc("Read entity definitions (folders, type filters, field types, enum options) from Metadata Menu schema YAML files.").addToggle((t) => {
+    new obsidian19.Setting(schemasPanel).setName("Use schema YAML files").setDesc("Read entity definitions (folders, type filters, field types, enum options) from Metadata Menu schema YAML files.").addToggle((t) => {
       t.setValue(!!schemaSettings.useSchemas);
       if (schemasManaged) t.setDisabled(true);
       return t.onChange(async (v) => {
@@ -38666,7 +39171,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         this.plugin.refreshOpenViews();
       });
     });
-    new obsidian18.Setting(schemasPanel).setName("Schemas folder").setDesc("Vault path where schema YAML files live (one per entity).").addText((t) => {
+    new obsidian19.Setting(schemasPanel).setName("Schemas folder").setDesc("Vault path where schema YAML files live (one per entity).").addText((t) => {
       t.setPlaceholder("00-CORE/Schemas/source").setValue(schemaSettings.schemasFolder);
       if (schemasManaged) t.setDisabled(true);
       return t.onChange((v) => {
@@ -38674,25 +39179,25 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         this._queueSave();
       });
     });
-    new obsidian18.Setting(schemasPanel).setName("Regenerate derived schema outputs").setDesc("Validate canonical YAML sources and regenerate Metadata Menu FileClasses and JSON Schemas.").addButton((button) => button.setButtonText("Regenerate outputs").onClick(async () => {
+    new obsidian19.Setting(schemasPanel).setName("Regenerate derived schema outputs").setDesc("Validate canonical YAML sources and regenerate Metadata Menu FileClasses and JSON Schemas.").addButton((button) => button.setButtonText("Regenerate outputs").onClick(async () => {
       try {
         const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
-        new obsidian18.Notice(`BOB Workspace: generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s)${result.datamodelUpdated ? `; updated ${result.datamodelUpdated} DATAMODEL section(s)` : ""}.`);
+        new obsidian19.Notice(`BOB Workspace: generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s)${result.datamodelUpdated ? `; updated ${result.datamodelUpdated} DATAMODEL section(s)` : ""}.`);
         if (result.datamodelFullLosses.length) {
-          new obsidian18.Notice(`BOB Workspace: DATAMODEL-FULL.md NOT regenerated - ${result.datamodelFullLosses.length} authored line(s) would be deleted, first: ${result.datamodelFullLosses[0].slice(0, 120)}`, 15e3);
+          new obsidian19.Notice(`BOB Workspace: DATAMODEL-FULL.md NOT regenerated - ${result.datamodelFullLosses.length} authored line(s) would be deleted, first: ${result.datamodelFullLosses[0].slice(0, 120)}`, 15e3);
           console.warn("BOB Workspace: DATAMODEL-FULL.md regeneration refused; authored lines not reproducible from source:", result.datamodelFullLosses);
         }
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
       } catch (e) {
-        new obsidian18.Notice(`BOB Workspace: output generation failed - ${e.message}`);
+        new obsidian19.Notice(`BOB Workspace: output generation failed - ${e.message}`);
       }
     }));
     const schemaBootstrapBanner = schemasPanel.createDiv({ cls: "bob-managed-banner bob-schema-bootstrap-banner" });
     schemaBootstrapBanner.style.display = "none";
     const bootstrapIcon = schemaBootstrapBanner.createSpan({ cls: "bob-managed-banner-icon" });
     try {
-      obsidian18.setIcon(bootstrapIcon, "database");
+      obsidian19.setIcon(bootstrapIcon, "database");
     } catch (_) {
     }
     const bootstrapText = schemaBootstrapBanner.createSpan({ text: "No schema sources found in the configured folder." });
@@ -38705,10 +39210,10 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         const regen = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
-        new obsidian18.Notice(`BOB Workspace: bootstrapped ${result.count} schema source file${result.count === 1 ? "" : "s"}${result.skipped ? `; skipped ${result.skipped} existing source file${result.skipped === 1 ? "" : "s"}` : ""}. Generated ${regen.count} FileClass and JSON Schema output(s).`);
+        new obsidian19.Notice(`BOB Workspace: bootstrapped ${result.count} schema source file${result.count === 1 ? "" : "s"}${result.skipped ? `; skipped ${result.skipped} existing source file${result.skipped === 1 ? "" : "s"}` : ""}. Generated ${regen.count} FileClass and JSON Schema output(s).`);
         this.display();
       } catch (e) {
-        new obsidian18.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
+        new obsidian19.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
       }
     });
     const schemaDesigner = schemasPanel.createDiv({ cls: "bob-schema-designer" });
@@ -38774,7 +39279,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
           await adapter.write(`${targetPath}.backup`, await adapter.read(targetPath));
           this._schemaBackupPaths.add(targetPath);
         }
-        await adapter.write(targetPath, obsidian18.stringifyYaml(sourceSchema));
+        await adapter.write(targetPath, obsidian19.stringifyYaml(sourceSchema));
         sourceSchemaPath = targetPath;
         schemaDirty = false;
         highlightSaveButtons(false);
@@ -38862,7 +39367,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         iconButton.empty();
         const preview = iconButton.createSpan({ cls: "bob-nav-designer-icon-preview" });
         try {
-          obsidian18.setIcon(preview, sourceSchema.icon || "file-text");
+          obsidian19.setIcon(preview, sourceSchema.icon || "file-text");
         } catch (_) {
         }
         iconButton.createSpan({ cls: "bob-nav-designer-icon-name", text: sourceSchema.icon || "Choose icon" });
@@ -39021,7 +39526,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         return;
       }
       try {
-        sourceSchema = validateSourceSchemaDefinition(obsidian18.parseYaml(await adapter.read(path)));
+        sourceSchema = validateSourceSchemaDefinition(obsidian19.parseYaml(await adapter.read(path)));
         sourceSchemaPath = path;
         this._schemaDesignerSelectedPath = path;
         schemaDirty = false;
@@ -39071,7 +39576,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
           if (!entity) return;
           const path = `${schemaFolder}/${entity}.yaml`;
           if (await adapter.exists(path)) {
-            new obsidian18.Notice(`BOB Workspace: schema already exists at ${path}.`);
+            new obsidian19.Notice(`BOB Workspace: schema already exists at ${path}.`);
             await loadSourceSchema(path);
             return;
           }
@@ -39112,7 +39617,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         if (await adapter.exists(sourceSchemaPath)) {
           await adapter.write(`${sourceSchemaPath}.backup`, await adapter.read(sourceSchemaPath));
         }
-        await adapter.write(sourceSchemaPath, obsidian18.stringifyYaml(sourceSchema));
+        await adapter.write(sourceSchemaPath, obsidian19.stringifyYaml(sourceSchema));
         let outputText = "";
         if (regenerate) {
           const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
@@ -39124,11 +39629,11 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         if (!schemaFiles.includes(sourceSchemaPath)) schemaFiles.push(sourceSchemaPath);
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
-        new obsidian18.Notice(`BOB Workspace: schema source saved and applied.${outputText}`);
+        new obsidian19.Notice(`BOB Workspace: schema source saved and applied.${outputText}`);
         this.display();
       } catch (e) {
         setSchemaStatus(`Save failed: ${e.message}`, false);
-        new obsidian18.Notice(`BOB Workspace: schema source save failed - ${e.message}`);
+        new obsidian19.Notice(`BOB Workspace: schema source save failed - ${e.message}`);
       }
     };
     schemaSave.addEventListener("click", async () => saveSchemaSource(false));
@@ -39145,7 +39650,7 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
         this._schemaDesignerSelectedPath = "";
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
-        new obsidian18.Notice(`BOB Workspace: schema archived at ${archivedPath}.`);
+        new obsidian19.Notice(`BOB Workspace: schema archived at ${archivedPath}.`);
         this.display();
       } catch (e) {
         setSchemaStatus(`Archive failed: ${e.message}`, false);
@@ -39155,15 +39660,15 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
     pData.createEl("h3", { text: "Data import/export" });
     const dataGroup = pData.createDiv({ cls: "setting-group bob-settings-section" });
     const dataPanel = dataGroup.createDiv({ cls: "setting-items" });
-    new obsidian18.Setting(dataPanel).setName("Workbook export folder").setDesc("Vault folder where XLSX workbook exports are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.workbookExportFolder).setValue(this.plugin.settings.workbookExportFolder || DEFAULT_SETTINGS.workbookExportFolder).onChange((v) => {
+    new obsidian19.Setting(dataPanel).setName("Workbook export folder").setDesc("Vault folder where XLSX workbook exports are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.workbookExportFolder).setValue(this.plugin.settings.workbookExportFolder || DEFAULT_SETTINGS.workbookExportFolder).onChange((v) => {
       this.plugin.settings.workbookExportFolder = v.trim().replace(/^\/+/, "").replace(/\/+$/, "") || DEFAULT_SETTINGS.workbookExportFolder;
       this._queueSave();
     }));
-    new obsidian18.Setting(dataPanel).setName("Canvas folder").setDesc("Vault folder where generated canvases (Context / Process / Pipeline / Agent Audit) are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.canvasFolder).setValue(this.plugin.settings.canvasFolder || DEFAULT_SETTINGS.canvasFolder).onChange((v) => {
+    new obsidian19.Setting(dataPanel).setName("Canvas folder").setDesc("Vault folder where generated canvases (Context / Process / Pipeline / Agent Audit) are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.canvasFolder).setValue(this.plugin.settings.canvasFolder || DEFAULT_SETTINGS.canvasFolder).onChange((v) => {
       this.plugin.settings.canvasFolder = v.trim().replace(/^\/+/, "").replace(/\/+$/, "") || DEFAULT_SETTINGS.canvasFolder;
       this._queueSave();
     }));
-    new obsidian18.Setting(dataPanel).setName("Export & import data").setDesc("Group export (one sheet per entity), import templates, and CSV/XLSX import with column mapping live on the Export and Import screens.").addButton((b) => b.setButtonText("Open Export").onClick(() => this._gotoSurface("misc.export"))).addButton((b) => b.setButtonText("Open Import").onClick(() => this._gotoSurface("misc.import")));
+    new obsidian19.Setting(dataPanel).setName("Export & import data").setDesc("Group export (one sheet per entity), import templates, and CSV/XLSX import with column mapping live on the Export and Import screens.").addButton((b) => b.setButtonText("Open Export").onClick(() => this._gotoSurface("misc.export"))).addButton((b) => b.setButtonText("Open Import").onClick(() => this._gotoSurface("misc.import")));
   }
   // Close the settings dialog (best-effort, internal API) and open a BOB surface.
   _gotoSurface(mode) {
@@ -39176,10 +39681,10 @@ var BobSettingTab = class extends obsidian18.PluginSettingTab {
 };
 
 // src/views/playbook-runner.ts
-var obsidian19 = __toESM(require("obsidian"));
+var obsidian20 = __toESM(require("obsidian"));
 var PLAYBOOK_RUNNER_VIEW_TYPE = "agent-client-playbook-runner";
 var PLAYBOOK_RUNNER_PINNED_KEY = "bob-pinned-playbooks";
-var BobPlaybookRunnerView = class _BobPlaybookRunnerView extends (obsidian19.BasesView || class {
+var BobPlaybookRunnerView = class _BobPlaybookRunnerView extends (obsidian20.BasesView || class {
 }) {
   constructor(controller, parentEl, app) {
     super(controller);
@@ -39253,20 +39758,25 @@ var BobPlaybookRunnerView = class _BobPlaybookRunnerView extends (obsidian19.Bas
     } catch {
       leaf.detach();
       await navigator.clipboard.writeText(cmd);
-      new obsidian19.Notice(`Agent chat unavailable. Copied to clipboard:
+      new obsidian20.Notice(`Agent chat unavailable. Copied to clipboard:
 ${cmd}`, 5e3);
     }
   }
 };
 
 // src/plugin.ts
-var obsidian20 = __toESM(require("obsidian"));
-var BobPlugin = class extends obsidian20.Plugin {
+var obsidian21 = __toESM(require("obsidian"));
+var BobPlugin = class extends obsidian21.Plugin {
   constructor() {
     super(...arguments);
     // Set by the Modules settings "Edit dashboard" action to deep-link the Surface
     // Designer to a specific surface; consumed (once) by renderDashboardEditor.
     this.pendingDesignerSurface = null;
+    /** Last seen stage per deal path, so a commission is created on the transition
+     * into a won stage and not on every subsequent save of an already-won deal.
+     * Seeded once at layout-ready: without the seed, the first metadata event after
+     * a restart would look like a fresh transition for every deal already won. */
+    this.dealStages = /* @__PURE__ */ new Map();
   }
   async onload() {
     initPluginPaths(this);
@@ -39286,7 +39796,13 @@ var BobPlugin = class extends obsidian20.Plugin {
       void this.refreshPartnerExpiryStatuses();
     });
     this.registerEvent(this.app.metadataCache.on("changed", (file) => {
-      if (file instanceof obsidian20.TFile) void this.refreshPartnerExpiryStatuses(file);
+      if (file instanceof obsidian21.TFile) void this.refreshPartnerExpiryStatuses(file);
+    }));
+    this.app.workspace.onLayoutReady(() => {
+      this.seedDealStages();
+    });
+    this.registerEvent(this.app.metadataCache.on("changed", (file) => {
+      if (file instanceof obsidian21.TFile) void this.onDealMetadataChanged(file);
     }));
     if (typeof this.registerBasesView === "function") {
       this.registerBasesView(PLAYBOOK_RUNNER_VIEW_TYPE, {
@@ -39341,7 +39857,7 @@ var BobPlugin = class extends obsidian20.Plugin {
       callback: async () => {
         const file = this.app.workspace.getActiveFile();
         if (!file) {
-          new obsidian20.Notice("Open a note first \u2014 the context canvas is built around the active note.");
+          new obsidian21.Notice("Open a note first \u2014 the context canvas is built around the active note.");
           return;
         }
         const view = await this.openApp();
@@ -39399,9 +39915,9 @@ var BobPlugin = class extends obsidian20.Plugin {
       callback: async () => {
         try {
           const path = await exportAllEntitiesXLSX(this.app, this.settings);
-          new obsidian20.Notice(`BOB Workspace: exported workbook to ${path}`, 6e3);
+          new obsidian21.Notice(`BOB Workspace: exported workbook to ${path}`, 6e3);
         } catch (e) {
-          new obsidian20.Notice(`BOB Workspace: XLSX export failed \u2014 ${e.message}`, 8e3);
+          new obsidian21.Notice(`BOB Workspace: XLSX export failed \u2014 ${e.message}`, 8e3);
         }
       }
     });
@@ -39417,13 +39933,13 @@ var BobPlugin = class extends obsidian20.Plugin {
       name: "Create workspace.json template",
       callback: async () => {
         if (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH)) {
-          new obsidian20.Notice(`workspace.json already exists at ${WORKSPACE_CONFIG_PATH}`);
+          new obsidian21.Notice(`workspace.json already exists at ${WORKSPACE_CONFIG_PATH}`);
           return;
         }
         await this.app.vault.adapter.write(WORKSPACE_CONFIG_PATH, workspaceConfigTemplate(this.settings));
         await reloadEntityConfiguration(this.app, this.settings);
         this.refreshOpenViews();
-        new obsidian20.Notice(`Created ${WORKSPACE_CONFIG_PATH} - edit it via Settings -> BOB Workspace -> Workspace definition.`);
+        new obsidian21.Notice(`Created ${WORKSPACE_CONFIG_PATH} - edit it via Settings -> BOB Workspace -> Workspace definition.`);
       }
     });
     this.addCommand({
@@ -39432,7 +39948,7 @@ var BobPlugin = class extends obsidian20.Plugin {
       callback: async () => {
         const templates = await loadWorkspaceTemplates(this.app);
         if (templates.length === 0) {
-          new obsidian20.Notice("BOB Workspace: no templates found in plugin templates/ folder.");
+          new obsidian21.Notice("BOB Workspace: no templates found in plugin templates/ folder.");
           return;
         }
         new BobWorkspaceSetupModal(this.app, this, templates).open();
@@ -39444,7 +39960,7 @@ var BobPlugin = class extends obsidian20.Plugin {
       callback: async () => {
         await this.reloadWorkspaceConfiguration();
         this.refreshOpenViews();
-        new obsidian20.Notice("BOB Workspace: workspace configuration reloaded.");
+        new obsidian21.Notice("BOB Workspace: workspace configuration reloaded.");
       }
     });
     this.addCommand({
@@ -39456,9 +39972,9 @@ var BobPlugin = class extends obsidian20.Plugin {
           const regen = await regenerateSchemaOutputs(this.app, this.settings);
           await reloadEntityConfiguration(this.app, this.settings);
           this.refreshOpenViews();
-          new obsidian20.Notice(`BOB Workspace: bootstrapped ${result.count} schema source file${result.count === 1 ? "" : "s"}${result.skipped ? `; skipped ${result.skipped} existing source file${result.skipped === 1 ? "" : "s"}` : ""}. Generated ${regen.count} FileClass and JSON Schema output(s).`);
+          new obsidian21.Notice(`BOB Workspace: bootstrapped ${result.count} schema source file${result.count === 1 ? "" : "s"}${result.skipped ? `; skipped ${result.skipped} existing source file${result.skipped === 1 ? "" : "s"}` : ""}. Generated ${regen.count} FileClass and JSON Schema output(s).`);
         } catch (e) {
-          new obsidian20.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
+          new obsidian21.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
         }
       }
     });
@@ -39470,9 +39986,9 @@ var BobPlugin = class extends obsidian20.Plugin {
           const result = await generateMissingBases(this.app, this.settings);
           await reloadEntityConfiguration(this.app, this.settings);
           this.refreshOpenViews();
-          new obsidian20.Notice(`BOB Workspace: created ${result.count} base${result.count === 1 ? "" : "s"} in ${result.folder}${result.skipped ? `; skipped ${result.skipped} existing` : ""}${result.failed.length ? `; ${result.failed.length} failed` : ""}.`);
+          new obsidian21.Notice(`BOB Workspace: created ${result.count} base${result.count === 1 ? "" : "s"} in ${result.folder}${result.skipped ? `; skipped ${result.skipped} existing` : ""}${result.failed.length ? `; ${result.failed.length} failed` : ""}.`);
         } catch (e) {
-          new obsidian20.Notice(`BOB Workspace: generate bases failed \u2014 ${e.message}`);
+          new obsidian21.Notice(`BOB Workspace: generate bases failed \u2014 ${e.message}`);
         }
       }
     });
@@ -39520,9 +40036,9 @@ var BobPlugin = class extends obsidian20.Plugin {
         }
         const noteLabel = sameDay(noteDate, /* @__PURE__ */ new Date()) ? "today's note" : `${ymd(noteDate)} note`;
         if (result.when) {
-          new obsidian20.Notice(`Reminder set \xB7 ${reminderTimeStr(result.when)}${dailyNoteAppended ? ` \xB7 added to ${noteLabel}` : ""}`);
+          new obsidian21.Notice(`Reminder set \xB7 ${reminderTimeStr(result.when)}${dailyNoteAppended ? ` \xB7 added to ${noteLabel}` : ""}`);
         } else {
-          new obsidian20.Notice(`Captured to Inbox${dailyNoteAppended ? ` \xB7 added to ${noteLabel}` : ""}`);
+          new obsidian21.Notice(`Captured to Inbox${dailyNoteAppended ? ` \xB7 added to ${noteLabel}` : ""}`);
         }
       }
     }).open();
@@ -39611,7 +40127,7 @@ var BobPlugin = class extends obsidian20.Plugin {
     }
   }
   _fireReminder(r) {
-    new obsidian20.Notice(`\u23F0  ${r.text}`, 8e3);
+    new obsidian21.Notice(`\u23F0  ${r.text}`, 8e3);
     if (this.settings.desktopNotifications && typeof Notification !== "undefined") {
       try {
         if (Notification.permission === "granted") {
@@ -39640,7 +40156,7 @@ var BobPlugin = class extends obsidian20.Plugin {
     const DAY = 864e5;
     const today = /* @__PURE__ */ new Date();
     today.setHours(0, 0, 0, 0);
-    const daysUntil = (raw) => {
+    const daysUntil2 = (raw) => {
       const v = String(raw || "").slice(0, 10);
       if (!v) return null;
       const d = new Date(v);
@@ -39653,7 +40169,7 @@ var BobPlugin = class extends obsidian20.Plugin {
       const type = String(fm.type || "");
       if (type !== "certification" && type !== "registration") continue;
       const current = String(fm.status || "");
-      const d = daysUntil(fm.expires_date);
+      const d = daysUntil2(fm.expires_date);
       let next = null;
       if (type === "certification") {
         if (["renewed", "revoked"].includes(current)) continue;
@@ -39672,6 +40188,36 @@ var BobPlugin = class extends obsidian20.Plugin {
         });
       } catch {
       }
+    }
+    try {
+      await pushPartnerExpiryReminders(this.app, this, candidates);
+    } catch {
+    }
+  }
+  seedDealStages() {
+    const dealDef = ENTITIES.deal;
+    if (!dealDef) return;
+    const stageKey = dealStageField(dealDef);
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if (!fm || String(fm.type || "") !== "deal") continue;
+      this.dealStages.set(file.path, String(fm[stageKey] ?? ""));
+    }
+  }
+  async onDealMetadataChanged(file) {
+    const dealDef = ENTITIES.deal;
+    if (!dealDef) return;
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+    if (!fm || String(fm.type || "") !== "deal") return;
+    const stage = String(fm[dealStageField(dealDef)] ?? "");
+    const previous = this.dealStages.get(file.path);
+    this.dealStages.set(file.path, stage);
+    if (previous === void 0 || previous === stage) return;
+    if (this.settings.autoCommissionOnWon === false) return;
+    try {
+      await maybeCreateCommissionForWonDeal(this.app, file, stage);
+    } catch (e) {
+      new obsidian21.Notice(`Deal saved, but commission was not created: ${e.message}`);
     }
   }
   async openApp(mode = null) {

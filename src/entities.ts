@@ -93,8 +93,12 @@ export const ENTITIES: Record<string, BobEntityDef> = {
       { key: 'relationship_type', label: 'Relationship' },
       { key: 'my_role', label: 'My Role' },
       { key: 'agreement_type', label: 'Agreement' },
+      // Declared partner field as of the 2026-08 data-model decision. Auto-created
+      // commissions read it; without it the amount cannot be computed and is left
+      // at 0 rather than guessed.
+      { key: 'commission_rate', label: 'Commission %', type: 'number' },
     ],
-    columns: ['partner_name', 'partner_id', 'status', 'relationship_type', 'my_role', 'agreement_type'],
+    columns: ['partner_name', 'partner_id', 'status', 'relationship_type', 'agreement_type', 'commission_rate'],
   },
   registration: {
     folder: '20-COMPANY/35-PARTNERS',
@@ -139,7 +143,8 @@ export const ENTITIES: Record<string, BobEntityDef> = {
       { key: 'project', label: 'Project' },
       { key: 'contact_name', label: 'Contact' },
       { key: 'contact_email', label: 'Email', type: 'email' },
-      { key: 'source',   label: 'Source' },
+      { key: 'source',   label: 'Source',   type: 'enum', options: ['inbound', 'outbound', 'referral', 'network', 'event', 'partner'] },
+      { key: 'partner_ref', label: 'Partner', refEntity: 'partner' },
       { key: 'owner', label: 'Owner' },
       { key: 'status',   label: 'Status',   type: 'enum', options: ['lead', 'qualified', 'nurture', 'disqualified'] },
       { key: 'prospect_grade', label: 'Grade', type: 'enum', options: ['A+', 'A', 'B', 'C', 'D'] },
@@ -151,6 +156,10 @@ export const ENTITIES: Record<string, BobEntityDef> = {
       { key: 'lead_date', label: 'Lead Date', type: 'date' },
     ],
     columns: ['company_name', 'client_id', 'end_client_id', 'project_id', 'status', 'owner', 'prospect_grade', 'next_action_date'],
+    // A partner-sourced lead with no partner named cannot be attributed later, and
+    // commission and partner-share analytics become name-matching guesswork. Mirrors
+    // the `conditional_required` rule declared on lead.yaml in the vault schema.
+    conditionalRequired: [{ when: { source: 'partner' }, require: ['partner_ref'] }],
   },
   certification: {
     folder: '20-COMPANY/35-PARTNERS',

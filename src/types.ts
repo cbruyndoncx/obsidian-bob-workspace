@@ -31,6 +31,10 @@ export interface EntityField {
   primary?: boolean;
   required?: boolean;
   default?: JsonValue;
+  /** Entity key this field references. The create form backs the input with a
+   * datalist of that entity's records, so a `[[link]]`-shaped field is picked
+   * from what exists rather than typed from memory and mistyped. */
+  refEntity?: string;
 }
 
 /** Template spec on an entity definition: a path string or { path, ... }. */
@@ -81,6 +85,17 @@ export interface EntityDef {
   baseGroupBy?: string;
   unsupportedBaseFilters?: string[];
   unsupportedBaseFeatures?: string[];
+  /** Value-based required rules: when every `when` key matches, the `require`
+   * fields become mandatory. Mirrors the `conditional_required` construct in the
+   * vault schema source, so the create form enforces what the JSON Schema does. */
+  conditionalRequired?: EntityConditionalRequired[];
+}
+
+/** "When source is partner, partner_ref is required." Distinct from presence-based
+ * co-requirement: only a value-based rule can express this. */
+export interface EntityConditionalRequired {
+  when: Record<string, string>;
+  require: string[];
 }
 
 export type EntityRegistry = Record<string, EntityDef>;
@@ -194,6 +209,14 @@ export interface BobSettings {
   teamPersonCategories: string[];
   desktopNotifications: boolean;
   reminders: Reminder[];
+  /** Auto-create a commission when a partner-sourced deal reaches a won stage. */
+  autoCommissionOnWon: boolean;
+  /** Push a one-time inbox reminder when a partner certification or registration
+   * enters its expiry warning window. */
+  partnerExpiryReminders: boolean;
+  /** `${path}::${expires_date}` → date the reminder was raised. Keyed on the date
+   * as well as the path so a renewal to a new expiry raises a fresh reminder. */
+  expiryReminderSeen: Record<string, string>;
   taskMode: 'checkbox' | 'tasknotes' | 'hybrid' | (string & {});
   taskNotesFolder: string;
   taskNotesArchiveFolder: string;

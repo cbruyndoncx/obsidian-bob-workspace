@@ -1,3 +1,4 @@
+import { CERT_WARN_DAYS, REG_WARN_DAYS } from './partner-automation';
 import { setWorkspaceConfig } from './workspace-config';
 import { entityBasePath, entityBaseViewName, generateMissingBases } from './bases-config';
 import { baseSummaryCompatibleWithEntity, baseViewRendersInline, readBaseSummary } from './bases-parse';
@@ -1612,6 +1613,30 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
         cls: 'setting-item-description bob-module-card-desc',
         text: moduleLabels[moduleKey] || `${headingText} section defined in workspace.json.`,
       });
+
+      /* Partner-programme automation. Both write to the vault or the inbox on
+       * their own, so they get an explicit off switch on the module that owns
+       * them rather than being buried in a global list. */
+      if (moduleKey === 'prm') {
+        new obsidian.Setting(panel)
+          .setName('Auto-create commission on deal won')
+          .setDesc('When a deal naming a partner reaches a won stage, record an `earned` commission under that partner. Never creates a second one for the same deal. Turning this off stops new commissions; it does not delete existing ones.')
+          .addToggle((tg) => tg
+            .setValue(this.plugin.settings.autoCommissionOnWon !== false)
+            .onChange(async (v) => {
+              this.plugin.settings.autoCommissionOnWon = v;
+              await this.plugin.saveSettings();
+            }));
+        new obsidian.Setting(panel)
+          .setName('Partner expiry reminders')
+          .setDesc(`Raise a one-time inbox reminder when a certification enters its ${CERT_WARN_DAYS}-day renewal window or an approved registration enters its ${REG_WARN_DAYS}-day window. One reminder per expiry date, so renewing to a new date raises a fresh one.`)
+          .addToggle((tg) => tg
+            .setValue(this.plugin.settings.partnerExpiryReminders !== false)
+            .onChange(async (v) => {
+              this.plugin.settings.partnerExpiryReminders = v;
+              await this.plugin.saveSettings();
+            }));
+      }
 
       // One row per surface: visibility toggle + folder text input + base file dropdown
       const disabled = new Set(this.plugin.settings.disabledSurfaces || []);

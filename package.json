@@ -1,6 +1,6 @@
 {
   "name": "bob-workspace",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "BOB Workspace — unified vault-native workspace for CRM, PRM, client work, finance, procurement, planning, dashboards, and AI playbooks (Obsidian plugin).",
   "main": "main.js",
   "private": true,

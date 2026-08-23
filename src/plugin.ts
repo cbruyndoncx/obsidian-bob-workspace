@@ -1,3 +1,4 @@
+import { ENTITIES, dealStageField } from './entities';
 import { setCurrentCurrency } from './settings';
 import { setWorkspaceConfig } from './workspace-config';
 import { generateMissingBases } from './bases-config';
@@ -7,6 +8,7 @@ import { BobWorkspaceSetupModal } from './modals/workspace-setup';
 import { invalidateEntityScanCache } from './entity-files';
 import { VIEW_TYPE_BOB_APP } from './nav';
 import { ensureDailyNote, parseSections, replaceSection } from './notes';
+import { maybeCreateCommissionForWonDeal, pushPartnerExpiryReminders } from './partner-automation';
 import { nextRepeat, reminderId, reminderTimeStr } from './reminders';
 import { reloadEntityConfiguration, workspaceConfigTemplate } from './runtime-config';
 import { bootstrapCanonicalSchemaSources, regenerateSchemaOutputs } from './schema-designer';
@@ -86,6 +88,14 @@ export class BobPlugin extends obsidian.Plugin {
     this.app.workspace.onLayoutReady(() => { void this.refreshPartnerExpiryStatuses(); });
     this.registerEvent(this.app.metadataCache.on('changed', (file) => {
       if (file instanceof obsidian.TFile) void this.refreshPartnerExpiryStatuses(file);
+    }));
+
+    // A deal's stage can change from the kanban board, the entity form, or a hand
+    // edit of the frontmatter. Watching the metadata cache covers all three; the
+    // board handler stays as-is so the Notice appears against the drop that caused it.
+    this.app.workspace.onLayoutReady(() => { this.seedDealStages(); });
+    this.registerEvent(this.app.metadataCache.on('changed', (file) => {
+      if (file instanceof obsidian.TFile) void this.onDealMetadataChanged(file);
     }));
 
     // Register playbook runner as a Bases custom view type (used in Playbooks.base Runner tabs)
@@ -514,6 +524,50 @@ export class BobPlugin extends obsidian.Plugin {
       } catch {
         // A single unwritable note must not stop the sweep.
       }
+    }
+
+    // Recolouring a card only warns somebody who opens that surface. The inbox
+    // reminder is what reaches a person who does not.
+    try {
+      await pushPartnerExpiryReminders(this.app, this, candidates);
+    } catch {
+      // Reminder-raising is advisory; never let it break the status sweep.
+    }
+  }
+
+  /** Last seen stage per deal path, so a commission is created on the transition
+   * into a won stage and not on every subsequent save of an already-won deal.
+   * Seeded once at layout-ready: without the seed, the first metadata event after
+   * a restart would look like a fresh transition for every deal already won. */
+  dealStages: Map<string, string> = new Map();
+
+  seedDealStages() {
+    const dealDef = ENTITIES.deal;
+    if (!dealDef) return;
+    const stageKey = dealStageField(dealDef);
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if (!fm || String(fm.type || '') !== 'deal') continue;
+      this.dealStages.set(file.path, String(fm[stageKey] ?? ''));
+    }
+  }
+
+  async onDealMetadataChanged(file: obsidian.TFile) {
+    const dealDef = ENTITIES.deal;
+    if (!dealDef) return;
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+    if (!fm || String(fm.type || '') !== 'deal') return;
+    const stage = String(fm[dealStageField(dealDef)] ?? '');
+    const previous = this.dealStages.get(file.path);
+    this.dealStages.set(file.path, stage);
+    if (previous === undefined || previous === stage) return;
+    if (this.settings.autoCommissionOnWon === false) return;
+    try {
+      await maybeCreateCommissionForWonDeal(this.app, file, stage);
+    } catch (e) {
+      // A commission problem must never make the edit the user actually made
+      // look like it failed.
+      new obsidian.Notice(`Deal saved, but commission was not created: ${e.message}`);
     }
   }
 

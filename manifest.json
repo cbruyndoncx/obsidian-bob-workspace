@@ -1,7 +1,7 @@
 {
   "id": "bob-workspace",
   "name": "BOB Workspace",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "minAppVersion": "1.4.0",
   "description": "Runs CRM, PRM, client work, finance, procurement, and planning as a configurable, vault-native workspace on plain markdown.",
   "author": "cbruyndoncx",

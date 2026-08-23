@@ -46,6 +46,12 @@ export const DEFAULT_SETTINGS: BobSettings = {
   teamPersonCategories: ['employee', 'freelancer', 'contractor'],
   desktopNotifications: false,
   reminders: [], // [{ id, text, when (ISO|null), repeat ('none'|'daily'|'weekly'), notified, done, createdAt }]
+  // Partner programme automation. Both default on: the failure they prevent
+  // (a forgotten commission, a lapsed registration) is silent, and the thing
+  // they produce is a record or an inbox row, neither of which is destructive.
+  autoCommissionOnWon: true,
+  partnerExpiryReminders: true,
+  expiryReminderSeen: {},
   // Task mode
   taskMode: 'checkbox',              // 'checkbox' | 'tasknotes' | 'hybrid'
   taskNotesFolder: '00-CORE/TaskNotes/Tasks',

@@ -601,6 +601,13 @@ body.theme-dark .bob-app.bob-dark .bob-btn:hover {
   color: var(--text-normal); vertical-align: top;
 }
 .bob-table tbody tr:hover { background: var(--background-modifier-hover); }
+/* Accented table cells (e.g. the at-risk count in PIPELINE BY PARTNER). Without
+   this the cell carries data-accent and renders identically to a plain count,
+   which is the one thing a risk column must not do. */
+.bob-table tbody td[data-accent] { font-weight: 700; }
+.bob-table tbody td[data-accent="rose"]    { color: oklch(0.60 0.16 25); }
+.bob-table tbody td[data-accent="warn"]    { color: oklch(0.62 0.15 70); }
+.bob-table tbody td[data-accent="emerald"] { color: oklch(0.52 0.13 155); }
 .bob-table tbody tr.bob-row-showall:hover { background: transparent; }
 .bob-table-showall-btn {
   width: 100%; padding: 8px 12px; cursor: pointer;
@@ -797,6 +804,24 @@ select.bob-cell-input { padding: 5px 8px; }
 .bob-dash-row-title { font-size: 13px; color: var(--text-normal); font-weight: 500; }
 .bob-dash-row-meta {
   font-size: 11px; color: var(--text-muted); font-family: var(--font-monospace);
+}
+/* Quick actions on an alert row (Renew / Extend / Open deal). The title takes the
+   slack so meta and buttons stay grouped at the right edge instead of being spread
+   apart by the row's space-between. */
+.bob-dash-row:has(.bob-dash-row-action) { gap: 10px; }
+.bob-dash-row:has(.bob-dash-row-action) .bob-dash-row-title { flex: 1 1 auto; }
+.bob-dash-row-action {
+  flex: 0 0 auto;
+  font-size: 11px; font-weight: 600; line-height: 1;
+  padding: 5px 9px; border-radius: 6px; cursor: pointer;
+  color: var(--text-muted);
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+}
+.bob-dash-row-action:hover {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
 }
 
 /* ─────────── Pipeline kanban ─────────── */
@@ -1125,6 +1150,10 @@ select.bob-cell-input { padding: 5px 8px; }
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--text-muted);
 }
+/* A field that became required because of another field's value. Marked apart
+   from a permanently-required one so the asterisk appearing mid-form reads as a
+   consequence of the choice just made, rather than as a form that changed shape. */
+.bob-create-label-conditional { color: var(--text-accent); }
 .bob-create-input {
   width: 100%;
   background: var(--background-primary);
