@@ -2040,6 +2040,25 @@ textarea.bob-schema-designer-input {
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 .bob-form-input::placeholder { color: var(--text-faint); }
+
+/* Read-only rendering of a structured field (nested object / list of records).
+   Matches .bob-form-input's box so the form stays on one grid, but is muted and
+   non-interactive: these are edited in the note's frontmatter, not here. */
+.bob-form-static {
+  display: block; width: 100%;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 7px;
+  padding: 8px 11px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
 .bob-form-input:focus {
   outline: none;
   border-color: var(--interactive-accent);

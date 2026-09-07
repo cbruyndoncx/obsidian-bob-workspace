@@ -4,7 +4,7 @@ import { CANVAS_GENERATORS, buildAgentAuditCanvas, buildEntityContextCanvas, bui
 import { builtinDashboardDefaults, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
 import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
-import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
+import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, formatStructuredValue, isStructuredValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
 import { BobReminderEditModal } from '../modals/capture';
 import { BobPromptModal, confirmModal } from '../modals/common';
 import { BobEntityCreateModal } from '../modals/entity-create';
@@ -5857,6 +5857,15 @@ export class BobAppView extends obsidian.ItemView {
         else if (current) inp.value = String(current);
         inp.addEventListener('input', () => debouncedWrite(f.key, inp.value));
         inp.addEventListener('blur', () => writeField(f.key, inp.value));
+      } else if (isStructuredValue(current)) {
+        // A nested object or list-of-records cannot round-trip through a
+        // single-line input: String(value) renders "[object Object]", and
+        // writeField() would then persist that literal string over the real
+        // structure on the next blur — silently destroying the data. Show a
+        // read-only summary; these stay editable in the note's frontmatter.
+        const staticEl = row.createDiv({ cls: 'bob-form-static' });
+        staticEl.setText(formatStructuredValue(current) || '—');
+        staticEl.title = 'Structured field — edit this in the note frontmatter';
       } else {
         const inp = row.createEl('input', { type: 'text', cls: 'bob-form-input' });
         if (current) inp.value = String(current);

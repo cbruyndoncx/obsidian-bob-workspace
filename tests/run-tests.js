@@ -17,6 +17,7 @@ require('./xlsx-bundle.test');
 require('./export-view-filter.test');
 require('./canvas.test');
 require('./entity-files-filter.test');
+require('./fmt-value.test');
 require('./partner-automation.test');
 require('./workbook.test');
 require('./widget-source.test');

@@ -377,6 +377,82 @@ export function entityPrimaryValue(entity: EntityRecord, def: EntityDef): string
   return (key ? entityValue(entity, key, def) : '') || entity.basename || '';
 }
 
+/**
+ * The identifying value of a plain record, or '' when it has none. Keys are
+ * tried in order and mirror the identifiers these nested records actually carry
+ * in vault frontmatter (activities use `id`, some lists use `activity_label`).
+ */
+export function objectIdentity(item: unknown): string {
+  if (!item || typeof item !== 'object' || Array.isArray(item) || item instanceof Date) return '';
+  const record = item as Record<string, unknown>;
+  for (const key of ['id', 'name', 'title', 'label', 'key', 'slug', 'activity_label']) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim() !== '') return value.trim();
+    if (typeof value === 'number' && !isNaN(value)) return String(value);
+  }
+  return '';
+}
+
+/**
+ * Render a structured frontmatter value (object, or array containing objects)
+ * as a single readable line for a table cell.
+ *
+ * Plain `String(obj)` yields "[object Object]" and `array.join()` yields
+ * "[object Object], [object Object]", which is what every nested field used to
+ * show. Obsidian's own Bases views render these fine, so the plugin's tables
+ * looked broken next to a native Base on the same data.
+ *
+ * Depth is capped because cells are one line: past `maxDepth` an object collapses
+ * to `{…}` and an array to its length, so a deeply nested value (e.g. a
+ * financial_contract with nested fx_rates/tax_policy) stays scannable instead of
+ * flooding the row.
+ */
+export function formatStructuredValue(val: unknown, depth = 0, maxDepth = 2, maxItems = 6): string {
+  if (val == null || val === '') return '';
+  if (val instanceof Date) return isNaN(val.getTime()) ? '' : dateFormatter().format(val);
+  if (Array.isArray(val)) {
+    if (!val.length) return '';
+    if (depth >= maxDepth) return `[${val.length}]`;
+    const shown = val.slice(0, maxItems);
+    const parts = shown
+      .map((item) => {
+        // An array of records (activities, milestones, line items) is only
+        // readable as a list of WHAT the records are. Expanding every field of
+        // every item produced a 2000+ char cell, which is as unusable as
+        // "[object Object]" was — so prefer each item's identifying field.
+        const id = objectIdentity(item);
+        return id || formatStructuredValue(item, depth + 1, maxDepth, maxItems);
+      })
+      .filter((part) => part !== '');
+    const hidden = val.length - shown.length;
+    if (!parts.length) return '';
+    return hidden > 0 ? `${parts.join(', ')}, +${hidden} more` : parts.join(', ');
+  }
+  if (typeof val === 'object') {
+    if (depth >= maxDepth) return '{…}';
+    const parts: string[] = [];
+    for (const [key, inner] of Object.entries(val as Record<string, unknown>)) {
+      const rendered = formatStructuredValue(inner, depth + 1, maxDepth, maxItems);
+      if (rendered === '') continue;
+      parts.push(`${key}: ${rendered}`);
+    }
+    return parts.join(', ');
+  }
+  return String(val);
+}
+
+/**
+ * True for values a single-line text input cannot represent or round-trip:
+ * a plain object, or a list containing objects. Dates are ordinary scalars here.
+ */
+export function isStructuredValue(val: unknown): boolean {
+  if (val == null || val instanceof Date) return false;
+  if (Array.isArray(val)) {
+    return val.some((item) => item != null && typeof item === 'object' && !(item instanceof Date));
+  }
+  return typeof val === 'object';
+}
+
 export function fmtValue(val: unknown, type?: string): string {
   if (val == null || val === '') return '';
   if (type === 'tags' && Array.isArray(val)) return val.map((t) => `#${t}`).join(' ');
@@ -397,7 +473,13 @@ export function fmtValue(val: unknown, type?: string): string {
     return String(val);
   }
   if (type === 'number') return String(val);
-  if (Array.isArray(val)) return val.join(', ');
+  // Arrays of scalars keep their existing join; only arrays that actually carry
+  // objects take the structured path, so nothing that rendered fine changes.
+  if (Array.isArray(val)) {
+    return isStructuredValue(val) ? formatStructuredValue(val) : val.join(', ');
+  }
+  if (val instanceof Date) return dateFormatter().format(val);
+  if (typeof val === 'object') return formatStructuredValue(val);
   return String(val);
 }
 

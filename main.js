@@ -25264,6 +25264,50 @@ function entityPrimaryValue(entity, def) {
   const key = primaryFieldKey(def);
   return (key ? entityValue(entity, key, def) : "") || entity.basename || "";
 }
+function objectIdentity(item) {
+  if (!item || typeof item !== "object" || Array.isArray(item) || item instanceof Date) return "";
+  const record = item;
+  for (const key of ["id", "name", "title", "label", "key", "slug", "activity_label"]) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim() !== "") return value.trim();
+    if (typeof value === "number" && !isNaN(value)) return String(value);
+  }
+  return "";
+}
+function formatStructuredValue(val, depth = 0, maxDepth = 2, maxItems = 6) {
+  if (val == null || val === "") return "";
+  if (val instanceof Date) return isNaN(val.getTime()) ? "" : dateFormatter().format(val);
+  if (Array.isArray(val)) {
+    if (!val.length) return "";
+    if (depth >= maxDepth) return `[${val.length}]`;
+    const shown = val.slice(0, maxItems);
+    const parts = shown.map((item) => {
+      const id = objectIdentity(item);
+      return id || formatStructuredValue(item, depth + 1, maxDepth, maxItems);
+    }).filter((part) => part !== "");
+    const hidden = val.length - shown.length;
+    if (!parts.length) return "";
+    return hidden > 0 ? `${parts.join(", ")}, +${hidden} more` : parts.join(", ");
+  }
+  if (typeof val === "object") {
+    if (depth >= maxDepth) return "{\u2026}";
+    const parts = [];
+    for (const [key, inner] of Object.entries(val)) {
+      const rendered = formatStructuredValue(inner, depth + 1, maxDepth, maxItems);
+      if (rendered === "") continue;
+      parts.push(`${key}: ${rendered}`);
+    }
+    return parts.join(", ");
+  }
+  return String(val);
+}
+function isStructuredValue(val) {
+  if (val == null || val instanceof Date) return false;
+  if (Array.isArray(val)) {
+    return val.some((item) => item != null && typeof item === "object" && !(item instanceof Date));
+  }
+  return typeof val === "object";
+}
 function fmtValue(val, type) {
   if (val == null || val === "") return "";
   if (type === "tags" && Array.isArray(val)) return val.map((t) => `#${t}`).join(" ");
@@ -25284,7 +25328,11 @@ function fmtValue(val, type) {
     return String(val);
   }
   if (type === "number") return String(val);
-  if (Array.isArray(val)) return val.join(", ");
+  if (Array.isArray(val)) {
+    return isStructuredValue(val) ? formatStructuredValue(val) : val.join(", ");
+  }
+  if (val instanceof Date) return dateFormatter().format(val);
+  if (typeof val === "object") return formatStructuredValue(val);
   return String(val);
 }
 function resolveEntityFieldDefault(field) {
@@ -35731,6 +35779,10 @@ ${snippet}` : "- No markdown content");
         else if (current) inp.value = String(current);
         inp.addEventListener("input", () => debouncedWrite(f.key, inp.value));
         inp.addEventListener("blur", () => writeField(f.key, inp.value));
+      } else if (isStructuredValue(current)) {
+        const staticEl = row.createDiv({ cls: "bob-form-static" });
+        staticEl.setText(formatStructuredValue(current) || "\u2014");
+        staticEl.title = "Structured field \u2014 edit this in the note frontmatter";
       } else {
         const inp = row.createEl("input", { type: "text", cls: "bob-form-input" });
         if (current) inp.value = String(current);
