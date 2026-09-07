@@ -1,3 +1,5 @@
+import { isStructuredValue } from './field-values';
+export { isStructuredValue } from './field-values';
 import { basePropValue, hasBaseValue, parseTodayExpression, splitBaseExpression, stripOuterParens } from './bases-parse';
 import { ENTITIES, primaryFieldKey } from './entities';
 import { cloneConfig } from './nav';
@@ -209,6 +211,9 @@ export function buildParsedBaseCondition(rawString: string): ParsedBaseCondition
 
   const empty = cond.match(/^(?:date\()?(.+?)\)?\.isEmpty\(\)$/);
   if (empty) return { kind: 'isEmpty', prop: empty[1] };
+
+  const scalarEq = cond.match(/^(.+?)\s*(==|!=)\s*(true|false|-?\d+(?:\.\d+)?)$/);
+  if (scalarEq) return { kind: 'propEq', prop: scalarEq[1], op: scalarEq[2], expected: scalarEq[3] };
 
   const propEq = cond.match(/^(.+?)\s*(==|!=)\s*(?:(["'])(.*?)\3|null)$/);
   if (propEq) {
@@ -441,20 +446,9 @@ export function formatStructuredValue(val: unknown, depth = 0, maxDepth = 2, max
   return String(val);
 }
 
-/**
- * True for values a single-line text input cannot represent or round-trip:
- * a plain object, or a list containing objects. Dates are ordinary scalars here.
- */
-export function isStructuredValue(val: unknown): boolean {
-  if (val == null || val instanceof Date) return false;
-  if (Array.isArray(val)) {
-    return val.some((item) => item != null && typeof item === 'object' && !(item instanceof Date));
-  }
-  return typeof val === 'object';
-}
-
 export function fmtValue(val: unknown, type?: string): string {
   if (val == null || val === '') return '';
+  if (isStructuredValue(val)) return formatStructuredValue(val);
   if (type === 'tags' && Array.isArray(val)) return val.map((t) => `#${t}`).join(' ');
   if (type === 'date') {
     const d = new Date(val as string | number);
@@ -503,6 +497,13 @@ export function yamlTemplateLine(key: string, value: JsonValue): string {
   return serialized || `${key}:`;
 }
 
+/** Runtime identity is also the default identity of newly created notes. */
+export function entityIdentityDefaults(def: EntityDef, entityKey: string): Frontmatter {
+  const defaults: Frontmatter = {};
+  if (!def.fields?.some((f) => f.key === 'type')) defaults.type = def.typeFilter || entityKey;
+  return Object.assign(defaults, def.typeFilters || {});
+}
+
 export function entityTemplate(entityKey: string, name: string): string {
   const def = ENTITIES[entityKey];
   const template = def?.template || WORKSPACE_CONFIG?.templates?.[entityKey];
@@ -516,15 +517,17 @@ export function entityTemplate(entityKey: string, name: string): string {
       label: def?.label || entityKey,
       plural: def?.plural || pluralizeEntityLabel(def?.label || entityKey),
     };
-    return renderTemplateDocument(template, context, {
+    const effectiveTemplate = typeof template === 'object' && !Array.isArray(template)
+      && template.frontmatter != null && typeof template.frontmatter === 'object' && !Array.isArray(template.frontmatter)
+      ? { ...template, frontmatter: { ...entityIdentityDefaults(def, entityKey), ...template.frontmatter } }
+      : template;
+    return renderTemplateDocument(effectiveTemplate, context, {
       frontmatter: (() => {
         const fallback: Frontmatter = {};
-        const hasTypeField = fields.some((f) => f.key === 'type');
-        if (!hasTypeField) fallback.type = def.typeFilter || entityKey;
         fields.forEach((f) => {
           fallback[f.key] = templateFieldValue(f, f.key === primaryFieldKey(def), name);
         });
-        return fallback;
+        return Object.assign(fallback, entityIdentityDefaults(def, entityKey));
       })(),
       body: `# ${name}\n`,
     });
@@ -533,17 +536,10 @@ export function entityTemplate(entityKey: string, name: string): string {
   if (entityKey === 'project') return projectTemplate(name);
 
   const lines = ['---'];
-  // Only write the meta `type: <entityKey>` tag if the entity doesn't already
-  // define a `type` field of its own (e.g. Activity has type=Call/Email/...).
-  // Otherwise we'd emit duplicate YAML keys and the file fails to parse.
-  const hasTypeField = def.fields.some((f) => f.key === 'type');
-  if (!hasTypeField) {
-    lines.push(yamlTemplateLine('type', def.typeFilter || entityKey));
-  }
-
-  def.fields.forEach((f) => {
-    lines.push(yamlTemplateLine(f.key, templateFieldValue(f, f.key === primaryFieldKey(def), name)));
-  });
+  const defaults: Frontmatter = {};
+  def.fields.forEach((f) => { defaults[f.key] = templateFieldValue(f, f.key === primaryFieldKey(def), name); });
+  Object.assign(defaults, entityIdentityDefaults(def, entityKey));
+  Object.entries(defaults).forEach(([key, value]) => lines.push(yamlTemplateLine(key, value)));
   lines.push('---', '', `# ${name}`, '', '');
   return lines.join('\n');
 }

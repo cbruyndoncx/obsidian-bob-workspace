@@ -78,7 +78,8 @@ export function baseFileFromEntityDefinition(entityKey: string, def: EntityDef):
     ? def.typeFilters
     : null;
   if (typeFilters) {
-    for (const [k, v] of Object.entries(typeFilters)) conditions.push(`note.${k} == "${v}"`);
+    if (def.typeFilter && !('type' in typeFilters)) conditions.push(`note.type == ${JSON.stringify(def.typeFilter)}`);
+    for (const [k, v] of Object.entries(typeFilters)) conditions.push(`note.${k} == ${JSON.stringify(v)}`);
   } else if (def.typeFilter) {
     conditions.push(`note.type == "${def.typeFilter}"`);
   } else {

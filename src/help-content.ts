@@ -32,6 +32,7 @@ export interface WidgetGuide {
 
 /* ── Field-level hover help (widget editor form labels) ─────────── */
 export const FIELD_HELP: Record<string, string> = {
+  structured: 'Structured field — edit this in the note frontmatter',
   title: 'Heading shown at the top of this widget.',
   entity: 'Which record type to read (e.g. task, contact). The widget lists these.',
   titleFields: 'Frontmatter fields to use as each row’s title (first non-empty wins).',

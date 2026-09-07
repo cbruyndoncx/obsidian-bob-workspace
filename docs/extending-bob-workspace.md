@@ -9,7 +9,7 @@ This guide explains the intended extension model.
 The plugin has several layers. Later layers should refine or override earlier layers:
 
 1. **Built-in fallback model**
-   - Lives in `main.js`.
+   - Defined in `src/entities.ts` and bundled into generated `main.js`.
    - Keeps the plugin usable in an empty vault.
    - Should stay small and generic.
    - May still contain some legacy field names for older saved workspace shapes.
@@ -22,7 +22,7 @@ The plugin has several layers. Later layers should refine or override earlier la
    - Edited visually from Settings -> BOB Workspace -> Schemas -> Data model designer.
 
 3. **Base layer**
-   - `.base` files in `00-CORE/Bases/`.
+   - `.base` files anywhere in the vault; bare filenames resolve under `settings.basesFolder` (default `00-CORE/Bases`).
    - Defines view behavior: visible columns, filters, sort, groupBy, and special Base views.
    - The workspace should reuse these views where practical instead of duplicating view logic.
 
@@ -254,7 +254,7 @@ A workspace template (`templates/workspace-*.json`, bundled into `main.js`) may 
 
 On apply, `applyWorkspaceTemplate()` strips `_template`/`_assets`, validates the config, then `writeTemplateAssets()` writes the embedded schema YAML (to the schema folder) and `.base` files (to the Bases folder) **missing-only, before** the bootstrap. Because the template's own schemas now exist, the built-in schema bootstrap stays gated — so a template whose entities are **not** built-in (like EMAI) seeds exactly its own entities instead of the full built-in set.
 
-Switching to a *different* template first archives the outgoing template's full schema state — source YAML, the derived `fileClasses/` and `json-schema/` outputs, `.base` files, and a labelled `workspace-<template>-<timestamp>.json` — into sibling `…-archive-…` folders (reversible). This matters because `regenerateSchemaOutputs` only prunes stale outputs in the *active* schema folder; when two templates use different schema roots, the old derived outputs would otherwise orphan. So trying multiple templates never compounds files on disk. Re-applying the same template is idempotent.
+Switching to a different template archives schema sources, derived outputs, and Bases from the configured folders. It records the old workspace/settings, move plan, and snapshots of external Base references in a plugin-folder `template-switch-<template>-<timestamp>.json` recovery file before moving anything. Archive failures abort the switch and roll back completed moves; external Bases stay in place because they may be shared. Later apply failures retain the archive and record the failed phase. Re-applying the same template rewrites workspace configuration and fills missing assets, while preserving existing asset contents. See [recovery instructions](installing-into-existing-vault.md#recovering-a-failed-template-switch).
 
 ## Entity Identity
 
@@ -303,8 +303,6 @@ location_pattern: 10-ME/10-PEOPLE/ or 30-CLIENTS/{id}/10-PEOPLE/
 key_fields:
 - name
 - person_category
-- company
-- role
 fields:
 - name: type
   type: string
@@ -334,6 +332,8 @@ field_aliases:
   - full name
   - displayName
 ```
+
+Runtime identity uses canonical `type_value` (falling back to `entity`) and `discriminator`. The `person` schema maps to the `contact` runtime key while still matching notes with `type: person`. Explicit `bob.typeFilter`/`bob.typeFilters` override canonical matching when supplied. New-note defaults include the effective type and discriminators, preserving boolean/number values; explicit `template.frontmatter` keys can override those defaults.
 
 When schemas are enabled, BOB Workspace uses these fields to enrich built-in entities. That means workbook export/import, create forms, and entity tables can use the vault's field names instead of the upstream defaults.
 
@@ -400,13 +400,13 @@ schema fields from create or import workflows.
 
 If the plugin cannot support a Base feature directly, it should show the unsupported filter/view information rather than silently pretending it is applied.
 
-### Bases folder (authoritative location)
+### Bases folder and explicit paths
 
-`Settings → BOB Workspace → Data model → Bases folder` (default `00-CORE/Bases`) is the single, authoritative location for every entity's `.base`. `entityBasePath()` composes `${basesFolder}/${basename}`, where the filename comes from `workspace.json` `bases[key].file`, the plugin `baseFiles` map, or — for schema-defined entities with neither — a name derived from the entity (e.g. `area` → `Areas.base`). Changing the folder relocates **every** base; only the directory portion of any saved path is replaced, so the filename and `bases[key].view` selection are preserved.
+`entityBasePath()` takes the reference from `workspace.json.bases[key].file`, then `settings.baseFiles`, then built-in/default filenames. A bare filename such as `People.base` resolves under **Bases folder** (default `00-CORE/Bases`). A reference containing a directory, such as `20-COMPANY/skills.base`, is used verbatim. Changing the folder setting changes resolution for bare filenames only; it does not move existing files or rewrite explicit paths. The picker stores full vault paths.
 
 ### Generate missing bases
 
-`Settings → BOB Workspace → Data model → Generate missing bases` (command: **Generate missing bases**) writes a starter `.base` for every known entity that lacks one — a `filters` clause from the entity's `type_value`/folder, a `table` view listing its columns (`file.name` for the primary field, `note.<key>` otherwise), and `properties.<id>.displayName` for readable headers. It covers entities defined via schema YAML, not just built-ins. Missing-only: existing `.base` files are never overwritten.
+`Settings → BOB Workspace → Data model → Generate missing bases` (command: **Generate missing bases**) writes a starter `.base` for every known entity that lacks one — a `filters` clause from the runtime entity's `typeFilters`/`typeFilter` or folder, a `table` view listing its columns (`file.name` for the primary field, bare field keys otherwise), and `properties.<id>.displayName` for readable headers. It covers entities defined via schema YAML, not just built-ins. Missing-only: existing `.base` files are never overwritten.
 
 In a Base, `order`/`sort` use **bare** property names (`person_category`), while `properties` keys and `filters` use the `note.<prop>` form; `file.name` is the primary field's column. (Match this when hand-authoring.)
 
@@ -487,15 +487,20 @@ Then add fields with **+ Add field**. For each field:
 - Choose a **BOB display** override only when the JSON type differs from how
   the UI should render the field (e.g. a `string` field displayed as `currency`)
 
-Click **Save** (triggered automatically on blur for text fields, or immediately
-for dropdowns, checkboxes, and buttons).
+Click **Save schema source** to persist the draft. Editing controls updates the
+draft; it does not replace the explicit save action.
 
 Click **Save and regenerate** to write downstream artifacts:
 
-- `<schema folder>/fileClasses/{Entity}.md` — Metadata Menu FileClass
-- `<schema folder>/json-schema/{type_value}.schema.json` — JSON Schema for validation
+- `<schema root>/fileClasses/{type_value}.md` — Metadata Menu FileClass
+- `<schema root>/json-schema/{type_value}.schema.json` — JSON Schema for validation
 - Injects an entity table and definition block into `DATAMODEL.md` and
   `DATAMODEL-FULL.md` between the `<!-- BEGIN/END GENERATED -->` markers
+
+The schema root is the configured source path with a trailing `/source` removed
+(e.g. `00-CORE/Schemas/source` → `00-CORE/Schemas`). Entities sharing a note type
+are merged for generated outputs; they do not get separate files under entity
+names. If `type_value` is omitted, output naming falls back to the entity key.
 
 If the source folder is empty, the Settings schema section exposes a
 **Bootstrap schemas** button. That command seeds canonical YAML from the
@@ -572,12 +577,44 @@ panel. Add the entity key to an existing group or create a new bundle.
 
 These cost real debugging time when building a standalone product vault on BOB Workspace:
 
-- **Schema field types are limited to `string | number | integer | boolean | array`.** There is no `date` type — dates are stored as `string` (e.g. `due_date`, `target_date`, `created`). A schema with `type: date` fails to load with `Cannot load <file>: Field "<x>" has unsupported type "date"`.
+- **Canonical schema field types are `string | number | integer | boolean | array | object`.** Use `type: string` with `format: date` for a date picker. The designer/regenerator rejects `type: date`, although the runtime loader currently accepts it; use the canonical form for consistent validation.
 - **A nav entity must be defined in the schema layer.** Canonical entities live in `Schemas/*.yaml` with `schemas.enabled: true`. The legacy `entities` mechanism is **no longer supported**: a top-level `entities` key in `workspace.json` is now rejected by `validateWorkspaceConfig` (`entities is no longer supported; define record types in schema YAML`), and a stray `entities.json` in the plugin folder is not read at all.
 - **An entity nav item with no wired Base still renders — as the generic list.** A Base mapping is optional for simple lists (they render from folder/type); add one under the top-level `bases` block (`bases: { <entity>: { file, view } }`) only when you need Base-defined filters, column order, grouping, sorting, or an external non-table Base view. A surface only shows "coming soon" when its `entityKey` resolves to no registered entity at all.
-- **Navigation is entity-backed.** A view that is *not* an entity (e.g. a habit tracker reading `habit_*` fields across daily notes) cannot be a navigation item. Surface it as a Base opened from the file tree, embedded in a note, or as a secondary tab — not a nav entry.
-- **Settings live in `workspace.json → settings`, not `data.json`.** `taskMode`, `taskNotesFolder`, `folderProjects`, `dailyNoteFolder`, and `modules` are persisted in the workspace definition; unknown keys placed in `data.json` are stripped on load.
-- *(Obsidian, not BOB)* Embedding a Base view inline uses a ` ```base ` code block; `![[file.base]]` does not render the view.
+- **Navigation can target dashboards and tab parents as well as entities.** A habit tracker can be a custom dashboard route with a Base-backed widget; it does not need its own entity definition.
+- **Workspace-owned settings live in `workspace.json.settings`.** Personal settings remain in `data.json`. Loading overlays workspace-owned keys from the workspace; saving removes those keys from plugin data. Unknown plugin-data keys are not automatically stripped on load.
+- **Inline native views are optional and off by default.** BOB mounts Base views through Obsidian's internal embed registry, selecting the view with `#View`. Enable **Settings → App → Rendering → Inline canvases & Base views** to use that path; otherwise use **Open Base**. Static Markdown rendering is not the plugin's live-mount mechanism.
+
+## Structured fields and editing limits
+
+Objects and arrays of records display as readable summaries in tables and detail
+forms. Record arrays prefer an identifying field (`id`, `name`, `title`, `label`,
+`key`, `slug`, or `activity_label`), show up to six items, and limit nested
+expansion. Use **Open as note** to edit these values. Scalar editors check the
+current frontmatter again when saving, so a value changed into an object by
+another writer cannot be overwritten with text.
+
+Canonical `object` fields and arrays without explicit string items use note
+editing. An array with `items: { type: string }` uses the tag editor. Integer
+fields use numeric inputs and reject fractional values; boolean fields use
+true/false selectors. Clearing an optional numeric field removes the property;
+entering `0` preserves a real zero. Detail autosaves use per-field timers, cancel
+pending duplicate saves on blur, and flush pending values on navigation.
+
+### Workbook value encoding
+
+XLSX export encodes arrays and objects as `BOB:JSON:v1:<JSON>`. Strings beginning
+with that prefix are escaped through the same encoding. Import decodes only
+marked cells; ordinary JSON-looking text stays text. Keep the marker when editing
+an encoded cell. Existing legacy exports containing `[object Object]` cannot
+recover data that was already lost; export again from intact notes.
+
+Imports validate field shape and reject scalar replacements of existing objects
+or arrays. A `file_path` update must target an existing markdown note belonging
+to the selected entity; invalid targets are reported as failed rows. Imported
+primary-field values update frontmatter, not filenames. Blank/missing cells leave
+existing values alone; encoded `[]` and `{}` explicitly write empty collections.
+Use the note editor to remove a property. Import errors identify the row; the
+workbook notice displays the first few failures.
 
 ## What Requires Code
 

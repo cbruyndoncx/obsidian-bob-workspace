@@ -4,7 +4,7 @@ import { addDays, startOfDay } from './utils';
 import { CONFIGURED_BASE_ENTITY_KEYS, WORKSPACE_CONFIG } from './workspace-config';
 import * as obsidian from 'obsidian';
 import type { ConfiguredBaseRef } from './bases-config';
-import type { BaseFilterNode, BaseSortSpec, EntityField, Frontmatter, PartialSettings } from './types';
+import type { BaseFilterNode, BaseSortSpec, EntityField, Frontmatter, PartialSettings, JsonValue } from './types';
 
 /*
  * Raw filter node as authored in .base YAML: a condition string, an array of
@@ -453,7 +453,7 @@ interface BaseAwareEntityDef {
   fields?: EntityField[];
   columns?: string[];
   folders?: string[];
-  typeFilters?: Record<string, string>;
+  typeFilters?: Record<string, JsonValue>;
   typeFilter?: string;
   baseFilters?: BaseFilterNode[] | ParsedBaseFilters;
   baseSort?: BaseSortSpec[] | ParsedBaseSort[];

@@ -27,6 +27,9 @@ export interface EntityField {
   label?: string;
   /** UI type; defaults to 'text'. Schema-derived fields may carry other strings. */
   type?: EntityFieldType | (string & {});
+  /** Canonical shape retained independently of presentation overrides. */
+  schemaType?: string;
+  items?: Record<string, JsonValue>;
   options?: string[];
   primary?: boolean;
   required?: boolean;
@@ -52,7 +55,7 @@ export interface EntityDef {
   /** Frontmatter `type:` value to match. */
   typeFilter?: string;
   /** Multi-field frontmatter discriminators, e.g. { type: 'profile', profile_type: 'partner' }. */
-  typeFilters?: Record<string, string>;
+  typeFilters?: Record<string, JsonValue>;
   /** Match by file basename (e.g. skills match only SKILL.md). */
   filenameFilter?: string;
   icon?: string;

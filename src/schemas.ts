@@ -1,48 +1,28 @@
+import type { SourceSchema, SourceSchemaField } from './schema-designer';
 import { applyEntityDefinitions } from './bases-config';
 import { ENTITIES, type BobEntityDef, type BobEntityField } from './entities';
 import { cloneConfig } from './nav';
 import { SCHEMA_ENTITY_KEYS, bumpWorkspaceConfigEpoch } from './workspace-config';
 import * as obsidian from 'obsidian';
-import type { JsonValue, PartialSettings } from './types';
+import type { PartialSettings } from './types';
 
-/** A canonical schema YAML document as authored in the schema source folder. */
-interface SchemaYamlField {
-  name: string;
-  type?: string;
-  format?: string;
-  label?: string;
-  required?: boolean;
-  primary?: boolean;
-  enum?: string[];
-  bob_type?: string;
-  default?: JsonValue;
-}
-
-interface SchemaYaml {
-  entity?: string;
-  label?: string;
-  plural?: string;
-  icon?: string;
-  location_pattern?: string;
-  key_fields?: string[];
-  fields?: SchemaYamlField[];
-  field_aliases?: Record<string, string[]>;
-  status_lifecycle?: string[];
-  bob?: BobEntityDef;
-}
+type SchemaYamlField = SourceSchemaField;
+type SchemaYaml = Omit<SourceSchema, 'bob'> & { bob?: BobEntityDef };
 
 export const SCHEMA_FOLDER_DEFAULT = '00-CORE/Schemas/source';
 export const SCHEMA_TO_ENTITY_KEY: Record<string, string> = {
   person: 'contact',
 };
 
-export function _schemaTypeToFieldType(schemaType: string | undefined, schemaField: Partial<SchemaYamlField> = {}): 'date' | 'number' | 'tags' | null {
+export function _schemaTypeToFieldType(schemaType: string | undefined, schemaField: Partial<SchemaYamlField> = {}): 'date' | 'number' | 'tags' | 'boolean' | 'structured' | null {
   if ((schemaField.format || '').toLowerCase() === 'date') return 'date';
   switch ((schemaType || '').toLowerCase()) {
+    case 'integer':
     case 'number':  return 'number';
     case 'date':    return 'date';
-    case 'boolean': return null;
-    case 'array':   return 'tags';
+    case 'boolean': return 'boolean';
+    case 'object': return 'structured';
+    case 'array': return schemaField.items?.type === 'string' ? 'tags' : 'structured';
     default:        return null;   // string → text (default)
   }
 }
@@ -82,12 +62,15 @@ export function fieldsFromSchema(schema: SchemaYaml, existingFields: BobEntityFi
       key: sf.name,
       label: sf.label || existing.label || schemaFieldLabel(sf.name),
     });
+    field.schemaType = sf.type;
+    if (sf.items) field.items = cloneConfig(sf.items);
+    else delete field.items;
     if (sf.required === true) field.required = true;
     if (sf.name === primaryKey) field.primary = true;
     else delete field.primary;
     if (Array.isArray(sf.enum) && sf.enum.length) {
       field.type = 'enum';
-      field.options = sf.enum;
+      field.options = sf.enum.map(String);
     } else {
       const fieldType = _schemaTypeToFieldType(sf.type, sf);
       if (fieldType) field.type = fieldType;
@@ -120,7 +103,8 @@ export async function applySchemas(app: obsidian.App, settings: PartialSettings 
       const raw = await app.vault.adapter.read(filePath);
       schema = obsidian.parseYaml(raw);
     } catch (e) {
-      continue;   // skip invalid schemas silently
+      new obsidian.Notice(`Cannot load schema ${filePath}: ${e instanceof Error ? e.message : String(e)}`);
+      continue;
     }
     if (!schema || typeof schema !== 'object' || !schema.entity) continue;
 
@@ -162,7 +146,7 @@ export async function applySchemas(app: obsidian.App, settings: PartialSettings 
           if (!base || base.includes('*')) return '';
           return base;
         })
-        .filter((p) => p && p.includes('/') && !p.includes(','));
+        .filter((p) => p && !p.includes(','));
       if (entityKey === 'contact') {
         delete ENTITIES[entityKey].folders;
       } else if (folders.length) {
@@ -170,8 +154,14 @@ export async function applySchemas(app: obsidian.App, settings: PartialSettings 
       }
     }
 
-    // typeFilter is the entity name — skip if the entity is matched by filename, not by a type field
-    if (!ENTITIES[entityKey].filenameFilter) ENTITIES[entityKey].typeFilter = entityKey;
+    // Canonical identity first; explicit bob behavior below remains the final override.
+    if (!ENTITIES[entityKey].filenameFilter) {
+      ENTITIES[entityKey].typeFilter = schema.type_value || schema.entity;
+    }
+    delete ENTITIES[entityKey].typeFilters;
+    if (schema.discriminator && Object.keys(schema.discriminator).length) {
+      ENTITIES[entityKey].typeFilters = cloneConfig(schema.discriminator);
+    }
 
     // Enrich fields from schema.fields (preserve existing labels where present)
     if (Array.isArray(schema.fields) && ENTITIES[entityKey].fields) {

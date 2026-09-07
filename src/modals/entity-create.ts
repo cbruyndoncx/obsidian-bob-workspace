@@ -1,3 +1,6 @@
+import { isReadOnlyField, scalarFieldValue } from '../field-values';
+import { FIELD_HELP } from '../help-content';
+import type { JsonValue } from '../types';
 import { ENTITIES, primaryFieldKey } from '../entities';
 import { listEntities, entityValue, resolveEntityFieldDefault } from '../entity-files';
 import * as obsidian from 'obsidian';
@@ -9,7 +12,7 @@ type CreateFormControl = HTMLInputElement | HTMLSelectElement;
 
 export interface EntityCreateResult {
   name: string;
-  values: Record<string, string | number | string[]>;
+  values: Record<string, JsonValue>;
 }
 
 interface BobEntityCreateModalOptions {
@@ -56,10 +59,14 @@ export class BobEntityCreateModal extends obsidian.Modal {
       let input: CreateFormControl;
       const fieldType = f.type || 'text';
 
-      if (fieldType === 'enum') {
+      if (isReadOnlyField(f, resolveEntityFieldDefault(f))) {
+        row.createDiv({ cls: 'bob-form-static', text: FIELD_HELP.structured });
+        return;
+      }
+      if (fieldType === 'enum' || fieldType === 'boolean') {
         input = row.createEl('select', { cls: 'bob-create-input' });
         input.createEl('option', { value: '', text: '— —' });
-        (f.options || []).forEach((opt) => input.createEl('option', { value: opt, text: opt }));
+        (fieldType === 'boolean' ? ['true', 'false'] : f.options || []).forEach((opt) => input.createEl('option', { value: opt, text: opt }));
       } else if (fieldType === 'date') {
         input = row.createEl('input', { type: 'date', cls: 'bob-create-input' });
         input.lang = navigator.language || '';
@@ -139,23 +146,20 @@ export class BobEntityCreateModal extends obsidian.Modal {
     syncRequired();
 
     const submit = () => {
-      const values: Record<string, string | number | string[]> = {};
+      const values: Record<string, JsonValue> = {};
       let primaryValue: string | null = null;
-      inputs.forEach((el, idx) => {
-        const key = el.dataset.fieldKey;
-        const type = el.dataset.fieldType;
-        let raw: string | number | string[] | null = el.value;
-        if (key === primaryKey) primaryValue = (raw || '').trim();
-        if (raw === '' || raw == null) return;
-        if (type === 'tags') raw = raw.split(',').map((t) => t.trim()).filter(Boolean);
-        else if (type === 'number' || type === 'currency') {
-          const n = Number(raw);
-          raw = isNaN(n) ? null : n;
-        }
-        if (raw == null) return;
-        if (Array.isArray(raw) && raw.length === 0) return;
-        values[key] = raw;
-      });
+      try {
+        inputs.forEach((el) => {
+          const key = el.dataset.fieldKey;
+          const field = this.def.fields.find((f) => f.key === key);
+          if (key === primaryKey) primaryValue = el.value.trim();
+          const value = scalarFieldValue(el.value, field);
+          if (value != null) values[key] = value;
+        });
+      } catch (error) {
+        new obsidian.Notice(error instanceof Error ? error.message : String(error));
+        return;
+      }
       if (!primaryValue) {
         const primaryInput = inputs.find((input) => input.dataset.fieldKey === primaryKey);
         if (primaryInput) primaryInput.focus();
@@ -219,7 +223,7 @@ export class BobEntityCreateModal extends obsidian.Modal {
       certification:'e.g. Cisco CCNP — May 2026',
       activity:     'e.g. Discovery call with Jane',
       sequence:     'e.g. Outbound — SMB',
-      project:      'e.g. Q3 Cadence launch',
+      project:      'e.g. Q3 product launch',
     };
     return examples[ek] || '';
   }

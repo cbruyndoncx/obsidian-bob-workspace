@@ -13,6 +13,7 @@ import type { JsonValue, PartialSettings, WorkspaceConfig } from './types';
 /** Canonical source-schema YAML shape edited by the Data model designer. */
 export interface SourceSchemaField {
   name: string;
+  primary?: boolean;
   type?: string;
   format?: string;
   label?: string;
@@ -27,6 +28,7 @@ export interface SourceSchemaField {
 
 export interface SourceSchema {
   entity: string;
+  type_value?: string;
   label?: string;
   plural?: string;
   icon?: string;
@@ -67,13 +69,15 @@ export function schemaFieldFromEntityField(field: BobEntityField & { description
   const type = String(field?.type || 'string').toLowerCase();
   const result: SourceSchemaField = {
     name: field.key,
-    type: type === 'number' || type === 'currency' ? 'number'
+    type: field.schemaType || (type === 'number' || type === 'currency' ? 'number'
       : type === 'integer' ? 'integer'
       : type === 'boolean' ? 'boolean'
       : type === 'array' || type === 'tags' ? 'array'
-      : 'string',
+      : 'string'),
     required: !!field.primary,
   };
+  if (field.items) result.items = cloneConfig(field.items);
+  else if (type === 'tags') result.items = { type: 'string' };
   if (type === 'date') result.format = 'date';
   else if (type === 'datetime' || type === 'date-time') result.format = 'date-time';
   else if (type === 'email') result.format = 'email';

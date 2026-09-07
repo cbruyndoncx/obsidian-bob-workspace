@@ -13,8 +13,9 @@ Copy `main.js`, `manifest.json`, `styles.css` into
 `<vault>/.obsidian/plugins/bob-workspace/`, then enable **BOB Workspace** under
 Settings → Community plugins (restart Obsidian if it doesn't appear).
 
-On first load the plugin seeds the starter templates and opens the **workspace
-template picker** automatically (because there's no `workspace.json` yet).
+On first load the plugin reads its bundled starter templates from `main.js` and
+opens the **workspace template picker** if `workspace.json` is absent and setup
+has not previously been dismissed.
 
 ## 2. Pick a starter template
 
@@ -43,7 +44,7 @@ On a fresh vault this is non-destructive (nothing is archived). Applying:
 - writes your `workspace.json` (navigation, dashboards, export groups, settings);
 - seeds the schema model — for schema-driven templates (BOB Workspace, EMAI) it
   writes the record-type YAML and regenerates the derived FileClasses / JSON
-  Schemas;
+  Schemas, and writes the template's bundled `.base` assets;
 - reloads, so the full left navigation and dashboards appear.
 
 The UI is now live — but **lists are empty**, because a new vault has no notes
@@ -91,7 +92,9 @@ checkboxes). To turn it into a configurable, interactive dashboard:
 
 BOB never hides your data — every record is a plain markdown note with YAML
 frontmatter, in a normal vault folder. The plugin is a UI over those files. Export
-to XLSX (Data tab / command) or import CSV/XLSX anytime.
+to XLSX (Data tab / command) or import CSV/XLSX. Nested objects and arrays of
+records use note editing in the app and explicit JSON encoding in XLSX;
+see [editing limits](extending-bob-workspace.md#structured-fields-and-editing-limits).
 
 ---
 

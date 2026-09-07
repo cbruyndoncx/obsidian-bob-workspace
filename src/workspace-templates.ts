@@ -1,11 +1,11 @@
-import { setWorkspaceConfig } from './workspace-config';
-import { resolveBasesFolder } from './bases-config';
-import { BUNDLED_WORKSPACE_TEMPLATES } from './bundled/templates';
 import { cloneConfig } from './nav';
+import { setWorkspaceConfig } from './workspace-config';
+import { entityBasePath, resolveBasesFolder } from './bases-config';
+import { BUNDLED_WORKSPACE_TEMPLATES } from './bundled/templates';
 import { reloadEntityConfiguration } from './runtime-config';
 import { bootstrapCanonicalSchemaSourcesIfMissing, regenerateSchemaOutputs } from './schema-designer';
 import { SCHEMA_FOLDER_DEFAULT } from './schemas';
-import { ensureFolderSync, ymd } from './utils';
+import { ensureFolderSync } from './utils';
 import { PLUGIN_DIR, WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, applyWorkspaceOwnedSettings, resetWorkspaceOwnedSettings, saveWorkspaceConfig, validateWorkspaceConfig } from './workspace-config';
 import * as obsidian from 'obsidian';
 import type { App } from 'obsidian';
@@ -100,53 +100,77 @@ export async function writeTemplateAssets(app: App, assets: WorkspaceConfig['_as
   return result;
 }
 
-// Move files with the given extensions out of `folder` into a sibling
-// "<name>-archive-<stamp>" folder. Returns the count moved. Reversible.
-export async function archiveFolderContents(app: App, folder: string, stamp: string, exts: string[]): Promise<{ dest: string; count: number }> {
+export interface ArchiveMove { from: string; to: string; }
+
+async function planArchiveFolder(app: App, folder: string, stamp: string, exts: string[]) {
   const dir = String(folder || '').replace(/\/+$/, '');
-  if (!dir || !await app.vault.adapter.exists(dir)) return { dest: '', count: 0 };
+  if (!dir || !await app.vault.adapter.exists(dir)) return { dest: '', moves: [] as ArchiveMove[] };
   const listed = await app.vault.adapter.list(dir);
-  const files = (listed.files || []).filter((f) => exts.some((e) => f.toLowerCase().endsWith(e)));
-  if (!files.length) return { dest: '', count: 0 };
-  const parent = dir.split('/').slice(0, -1).join('/');
-  const base = dir.split('/').pop();
-  const dest = `${parent ? parent + '/' : ''}${base}-archive-${stamp}`;
-  await ensureFolderSync(app, dest);
-  let count = 0;
-  for (const f of files) {
-    const name = f.split('/').pop();
-    try { await app.vault.adapter.rename(f, `${dest}/${name}`); count++; } catch (_) {}
-  }
-  return { dest, count };
+  const files = listed.files.filter((f) => exts.some((ext) => f.toLowerCase().endsWith(ext)));
+  const dest = files.length ? `${dir}-archive-${stamp}` : '';
+  return { dest, moves: files.map((from) => ({ from, to: `${dest}/${from.split('/').pop()}` })) };
 }
 
-// Before switching to a different template, archive the outgoing template's
-// schema YAML, base files, and workspace.json (labelled with the template key
-// and a timestamp) so applying a new template never compounds onto the old one.
-export async function archiveTemplateAssets(app: App, schemaFolder: string, basesFolder: string, prevKey: string) {
-  const d = new Date();
-  const p2 = (n: number) => String(n).padStart(2, '0');
-  const stamp = `${prevKey || 'previous'}-${ymd()}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
-  const schemas = await archiveFolderContents(app, schemaFolder, stamp, ['.yaml', '.yml']);
-  // Derived schema outputs live as siblings of the source folder (same
-  // derivation regenerateSchemaOutputs uses). Archive them too, otherwise a
-  // switch between templates with different schema folders leaves the old
-  // template's FileClasses / JSON Schema orphaned (prune only touches the new
-  // folder).
-  const root = String(schemaFolder || '').replace(/\/source$/, '');
-  const fileClasses = await archiveFolderContents(app, `${root}/fileClasses`, stamp, ['.md']);
-  const jsonSchemas = await archiveFolderContents(app, `${root}/json-schema`, stamp, ['.json']);
-  const bases = await archiveFolderContents(app, basesFolder, stamp, ['.base']);
-  // Keep a labelled copy of the outgoing workspace.json (the shared backup is
-  // overwritten on every save and carries no template identity).
+async function moveArchiveFiles(app: App, moves: ArchiveMove[]): Promise<void> {
+  const moved: ArchiveMove[] = [];
   try {
-    if (await app.vault.adapter.exists(WORKSPACE_CONFIG_PATH)) {
-      const dest = `${schemas.dest || basesFolder}/workspace-${stamp}.json`;
-      await ensureFolderSync(app, dest.split('/').slice(0, -1).join('/'));
-      await app.vault.adapter.write(dest, await app.vault.adapter.read(WORKSPACE_CONFIG_PATH));
+    for (const move of moves) {
+      if (await app.vault.adapter.exists(move.to)) throw new Error(`Archive destination already exists: ${move.to}`);
+      await ensureFolderSync(app, move.to.split('/').slice(0, -1).join('/'));
+      await app.vault.adapter.rename(move.from, move.to);
+      moved.push(move);
     }
-  } catch (_) {}
-  return { schemas: schemas.count, fileClasses: fileClasses.count, jsonSchemas: jsonSchemas.count, bases: bases.count, stamp };
+  } catch (error) {
+    const failures: string[] = [];
+    for (const move of moved.reverse()) {
+      try { await app.vault.adapter.rename(move.to, move.from); }
+      catch (rollbackError) { failures.push(`${move.to} -> ${move.from}: ${String(rollbackError)}`); }
+    }
+    throw new Error(`Archive failed: ${String(error)}${failures.length ? `; rollback incomplete: ${failures.join('; ')}` : '; completed moves restored'}`);
+  }
+}
+
+export async function archiveFolderContents(app: App, folder: string, stamp: string, exts: string[]): Promise<{ dest: string; count: number }> {
+  const plan = await planArchiveFolder(app, folder, stamp, exts);
+  await moveArchiveFiles(app, plan.moves);
+  return { dest: plan.dest, count: plan.moves.length };
+}
+
+// Plan all moves and persist recovery information BEFORE changing the active folders.
+export async function archiveTemplateAssets(app: App, schemaFolder: string, basesFolder: string, prevKey: string, settings: PartialSettings = {}) {
+  const stamp = `${String(prevKey || 'previous').replace(/[^a-zA-Z0-9_-]/g, '-')}-${Date.now()}`;
+  const root = String(schemaFolder || '').replace(/\/source$/, '');
+  const schemas = await planArchiveFolder(app, schemaFolder, stamp, ['.yaml', '.yml']);
+  const fileClasses = await planArchiveFolder(app, `${root}/fileClasses`, stamp, ['.md']);
+  const jsonSchemas = await planArchiveFolder(app, `${root}/json-schema`, stamp, ['.json']);
+  const bases = await planArchiveFolder(app, basesFolder, stamp, ['.base']);
+  const moves = [...schemas.moves, ...fileClasses.moves, ...jsonSchemas.moves, ...bases.moves];
+  const recoveryPath = `${PLUGIN_DIR}/template-switch-${stamp}.json`;
+  const adapter = app.vault.adapter;
+  const workspace = await adapter.exists(WORKSPACE_CONFIG_PATH) ? await adapter.read(WORKSPACE_CONFIG_PATH) : null;
+  // Explicit Bases elsewhere may be shared. Preserve them in place and snapshot their content.
+  const externalBases: Record<string, string> = {};
+  const keys = new Set([...Object.keys(WORKSPACE_CONFIG.bases || {}), ...Object.keys(settings.baseFiles || {})]);
+  for (const key of keys) {
+    const path = entityBasePath(settings, key);
+    if (path && !moves.some((move) => move.from === path) && await adapter.exists(path)) externalBases[path] = await adapter.read(path);
+  }
+  const recovery = { phase: 'planned', previousTemplate: prevKey, workspacePath: WORKSPACE_CONFIG_PATH, workspace, settings: cloneConfig(settings), moves, externalBases, error: '' };
+  await ensureFolderSync(app, PLUGIN_DIR);
+  if (await adapter.exists(recoveryPath)) throw new Error(`Archive recovery already exists: ${recoveryPath}`);
+  await adapter.write(recoveryPath, JSON.stringify(recovery, null, 2));
+  try {
+    await moveArchiveFiles(app, moves);
+    recovery.phase = 'archived';
+    await adapter.write(recoveryPath, JSON.stringify(recovery, null, 2));
+  } catch (error) {
+    recovery.phase = 'archive-failed';
+    recovery.error = String(error);
+    try { await adapter.write(recoveryPath, JSON.stringify(recovery, null, 2)); }
+    catch (journalError) { throw new Error(`${String(error)}; recovery update failed: ${String(journalError)}; plan: ${recoveryPath}`); }
+    throw new Error(`${String(error)}; recovery: ${recoveryPath}`);
+  }
+  return { schemas: schemas.moves.length, fileClasses: fileClasses.moves.length, jsonSchemas: jsonSchemas.moves.length, bases: bases.moves.length, stamp, recoveryPath, recovery };
 }
 
 export async function applyWorkspaceTemplate(app: App, plugin: BobPlugin, template: WorkspaceTemplate): Promise<WorkspaceConfig['_template']> {
@@ -160,35 +184,49 @@ export async function applyWorkspaceTemplate(app: App, plugin: BobPlugin, templa
   const oldBasesFolder = resolveBasesFolder(plugin.settings);
 
   const parsed = validateWorkspaceConfig(config);
+  let archived: Awaited<ReturnType<typeof archiveTemplateAssets>> | undefined;
   if (switching) {
-    const archived = await archiveTemplateAssets(app, oldSchemaFolder, oldBasesFolder, prevKey);
+    archived = await archiveTemplateAssets(app, oldSchemaFolder, oldBasesFolder, prevKey, plugin.settings);
     const total = archived.schemas + archived.fileClasses + archived.jsonSchemas + archived.bases;
     if (total) {
       new obsidian.Notice(`BOB Workspace: archived ${archived.schemas} schema, ${archived.fileClasses} FileClass, ${archived.jsonSchemas} JSON Schema, and ${archived.bases} base file(s) from "${prevKey}" before applying "${newKey}".`);
     }
   }
-  await saveWorkspaceConfig(app, JSON.stringify(parsed, null, 2));
-  setWorkspaceConfig(parsed);
-  plugin.settings.activeWorkspaceTemplate = newKey;
-  plugin.settings.setupDismissed = true;
-  // Clean starting point when switching templates: reset workspace-owned settings
-  // to defaults first, so unlisted owned settings from the previous template don't
-  // leak in. The outgoing settings were archived above (workspace-<stamp>.json).
-  if (switching) plugin.settings = resetWorkspaceOwnedSettings(plugin.settings) as BobSettings;
-  plugin.settings = applyWorkspaceOwnedSettings(plugin.settings) as BobSettings;
-  await plugin.saveSettings();
-  // Seed the template's own schemas/bases first so its entities exist before
-  // any bootstrap — this is what keeps a custom template (e.g. EMAI) from
-  // falling back to the full built-in entity set.
-  const assetResult = await writeTemplateAssets(app, _assets, plugin.settings);
-  if (parsed.schemas?.enabled) {
-    const bootstrap = await bootstrapCanonicalSchemaSourcesIfMissing(app, plugin.settings);
-    if (bootstrap.count || assetResult.schemas) {
-      await regenerateSchemaOutputs(app, plugin.settings);
+  try {
+    await saveWorkspaceConfig(app, JSON.stringify(parsed, null, 2));
+    setWorkspaceConfig(parsed);
+    plugin.settings.activeWorkspaceTemplate = newKey;
+    plugin.settings.setupDismissed = true;
+    // Clean starting point when switching templates: reset workspace-owned settings
+    // to defaults first, so unlisted owned settings from the previous template don't
+    // leak in. The outgoing settings are snapshotted in the template-switch recovery record.
+    if (switching) plugin.settings = resetWorkspaceOwnedSettings(plugin.settings) as BobSettings;
+    plugin.settings = applyWorkspaceOwnedSettings(plugin.settings) as BobSettings;
+    await plugin.saveSettings();
+    // Seed the template's own schemas/bases first so its entities exist before
+    // any bootstrap — this is what keeps a custom template (e.g. EMAI) from
+    // falling back to the full built-in entity set.
+    const assetResult = await writeTemplateAssets(app, _assets, plugin.settings);
+    if (parsed.schemas?.enabled) {
+      const bootstrap = await bootstrapCanonicalSchemaSourcesIfMissing(app, plugin.settings);
+      if (bootstrap.count || assetResult.schemas) {
+        await regenerateSchemaOutputs(app, plugin.settings);
+      }
     }
+    await reloadEntityConfiguration(app, plugin.settings);
+    plugin.refreshOpenViews();
+    if (archived) {
+      archived.recovery.phase = 'applied';
+      await app.vault.adapter.write(archived.recoveryPath, JSON.stringify(archived.recovery, null, 2));
+    }
+    return _template;
+  } catch (error) {
+    if (!archived) throw error;
+    archived.recovery.phase = 'apply-failed';
+    archived.recovery.error = String(error);
+    try { await app.vault.adapter.write(archived.recoveryPath, JSON.stringify(archived.recovery, null, 2)); }
+    catch (journalError) { throw new Error(`${String(error)}; recovery update failed: ${String(journalError)}; plan: ${archived.recoveryPath}`); }
+    throw new Error(`Template apply failed: ${String(error)}; recovery: ${archived.recoveryPath}`);
   }
-  await reloadEntityConfiguration(app, plugin.settings);
-  plugin.refreshOpenViews();
-  return _template;
 }
 

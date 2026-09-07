@@ -11768,6 +11768,43 @@ __export(main_exports, {
 });
 module.exports = __toCommonJS(main_exports);
 
+// src/field-values.ts
+function isStructuredValue(val) {
+  if (val == null || val instanceof Date) return false;
+  if (Array.isArray(val)) return val.some((item) => item != null && typeof item === "object" && !(item instanceof Date));
+  return typeof val === "object";
+}
+function isReadOnlyField(field, current) {
+  return field.type === "structured" || field.schemaType === "object" || field.schemaType === "array" && (field.type !== "tags" || field.items?.type !== "string") || isStructuredValue(current) || Array.isArray(current) && field.type !== "tags";
+}
+function scalarFieldValue(raw, field, current) {
+  if (isReadOnlyField(field, current)) throw new Error("Structured field \u2014 edit this in the note frontmatter");
+  if (raw.trim() === "") return null;
+  if (field.type === "boolean" || field.schemaType === "boolean" || typeof current === "boolean") {
+    const normalized = raw.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+    throw new Error(`${field.label || field.key} must be true or false`);
+  }
+  if (field.type === "number" || field.type === "currency" || field.schemaType === "integer") {
+    const value = Number(raw);
+    if (!Number.isFinite(value) || field.schemaType === "integer" && !Number.isInteger(value)) {
+      throw new Error(`${field.label || field.key} must be a valid ${field.schemaType === "integer" ? "integer" : "number"}`);
+    }
+    return value;
+  }
+  if (field.type === "tags") return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  return raw;
+}
+function writeScalarField(fm, field, raw) {
+  const value = scalarFieldValue(raw, field, fm[field.key]);
+  if (value == null || Array.isArray(value) && !value.length) delete fm[field.key];
+  else fm[field.key] = value;
+}
+function matchesEnumSelection(value, selected) {
+  return selected === void 0 || selected.has(String(value ?? ""));
+}
+
 // templates/workspace-bob.json
 var workspace_bob_default = {
   _template: {
@@ -24286,14 +24323,17 @@ var SCHEMA_TO_ENTITY_KEY = {
 function _schemaTypeToFieldType(schemaType, schemaField = {}) {
   if ((schemaField.format || "").toLowerCase() === "date") return "date";
   switch ((schemaType || "").toLowerCase()) {
+    case "integer":
     case "number":
       return "number";
     case "date":
       return "date";
     case "boolean":
-      return null;
+      return "boolean";
+    case "object":
+      return "structured";
     case "array":
-      return "tags";
+      return schemaField.items?.type === "string" ? "tags" : "structured";
     default:
       return null;
   }
@@ -24327,12 +24367,15 @@ function fieldsFromSchema(schema, existingFields = []) {
       key: sf.name,
       label: sf.label || existing.label || schemaFieldLabel(sf.name)
     });
+    field.schemaType = sf.type;
+    if (sf.items) field.items = cloneConfig(sf.items);
+    else delete field.items;
     if (sf.required === true) field.required = true;
     if (sf.name === primaryKey) field.primary = true;
     else delete field.primary;
     if (Array.isArray(sf.enum) && sf.enum.length) {
       field.type = "enum";
-      field.options = sf.enum;
+      field.options = sf.enum.map(String);
     } else {
       const fieldType = _schemaTypeToFieldType(sf.type, sf);
       if (fieldType) field.type = fieldType;
@@ -24362,6 +24405,7 @@ async function applySchemas(app, settings = {}) {
       const raw = await app.vault.adapter.read(filePath);
       schema = obsidian3.parseYaml(raw);
     } catch (e) {
+      new obsidian3.Notice(`Cannot load schema ${filePath}: ${e instanceof Error ? e.message : String(e)}`);
       continue;
     }
     if (!schema || typeof schema !== "object" || !schema.entity) continue;
@@ -24390,14 +24434,20 @@ async function applySchemas(app, settings = {}) {
         const base = String(p || "").trim().replace(/^['"]|['"]$/g, "").split("{")[0].replace(/\/$/, "").trim();
         if (!base || base.includes("*")) return "";
         return base;
-      }).filter((p) => p && p.includes("/") && !p.includes(","));
+      }).filter((p) => p && !p.includes(","));
       if (entityKey === "contact") {
         delete ENTITIES[entityKey].folders;
       } else if (folders.length) {
         ENTITIES[entityKey].folders = folders;
       }
     }
-    if (!ENTITIES[entityKey].filenameFilter) ENTITIES[entityKey].typeFilter = entityKey;
+    if (!ENTITIES[entityKey].filenameFilter) {
+      ENTITIES[entityKey].typeFilter = schema.type_value || schema.entity;
+    }
+    delete ENTITIES[entityKey].typeFilters;
+    if (schema.discriminator && Object.keys(schema.discriminator).length) {
+      ENTITIES[entityKey].typeFilters = cloneConfig(schema.discriminator);
+    }
     if (Array.isArray(schema.fields) && ENTITIES[entityKey].fields) {
       const schemaFields = fieldsFromSchema(schema, ENTITIES[entityKey].fields);
       if (schemaFields?.length) {
@@ -24453,7 +24503,8 @@ function baseFileFromEntityDefinition(entityKey, def) {
   const conditions = [];
   const typeFilters = def.typeFilters && typeof def.typeFilters === "object" && !Array.isArray(def.typeFilters) ? def.typeFilters : null;
   if (typeFilters) {
-    for (const [k, v] of Object.entries(typeFilters)) conditions.push(`note.${k} == "${v}"`);
+    if (def.typeFilter && !("type" in typeFilters)) conditions.push(`note.type == ${JSON.stringify(def.typeFilter)}`);
+    for (const [k, v] of Object.entries(typeFilters)) conditions.push(`note.${k} == ${JSON.stringify(v)}`);
   } else if (def.typeFilter) {
     conditions.push(`note.type == "${def.typeFilter}"`);
   } else {
@@ -25113,6 +25164,8 @@ function buildParsedBaseCondition(rawString) {
   if (contains) return { kind: "contains", prop: contains[1], value: contains[2] };
   const empty = cond.match(/^(?:date\()?(.+?)\)?\.isEmpty\(\)$/);
   if (empty) return { kind: "isEmpty", prop: empty[1] };
+  const scalarEq = cond.match(/^(.+?)\s*(==|!=)\s*(true|false|-?\d+(?:\.\d+)?)$/);
+  if (scalarEq) return { kind: "propEq", prop: scalarEq[1], op: scalarEq[2], expected: scalarEq[3] };
   const propEq = cond.match(/^(.+?)\s*(==|!=)\s*(?:(["'])(.*?)\3|null)$/);
   if (propEq) {
     const expectedIsNull = propEq[0].trim().endsWith("null");
@@ -25301,15 +25354,9 @@ function formatStructuredValue(val, depth = 0, maxDepth = 2, maxItems = 6) {
   }
   return String(val);
 }
-function isStructuredValue(val) {
-  if (val == null || val instanceof Date) return false;
-  if (Array.isArray(val)) {
-    return val.some((item) => item != null && typeof item === "object" && !(item instanceof Date));
-  }
-  return typeof val === "object";
-}
 function fmtValue(val, type) {
   if (val == null || val === "") return "";
+  if (isStructuredValue(val)) return formatStructuredValue(val);
   if (type === "tags" && Array.isArray(val)) return val.map((t) => `#${t}`).join(" ");
   if (type === "date") {
     const d = new Date(val);
@@ -25352,6 +25399,11 @@ function yamlTemplateLine(key, value) {
   const serialized = obsidian6.stringifyYaml({ [key]: value }).trim();
   return serialized || `${key}:`;
 }
+function entityIdentityDefaults(def, entityKey) {
+  const defaults = {};
+  if (!def.fields?.some((f) => f.key === "type")) defaults.type = def.typeFilter || entityKey;
+  return Object.assign(defaults, def.typeFilters || {});
+}
 function entityTemplate(entityKey, name) {
   const def = ENTITIES[entityKey];
   const template = def?.template || WORKSPACE_CONFIG?.templates?.[entityKey];
@@ -25365,15 +25417,14 @@ function entityTemplate(entityKey, name) {
       label: def?.label || entityKey,
       plural: def?.plural || pluralizeEntityLabel(def?.label || entityKey)
     };
-    return renderTemplateDocument(template, context, {
+    const effectiveTemplate = typeof template === "object" && !Array.isArray(template) && template.frontmatter != null && typeof template.frontmatter === "object" && !Array.isArray(template.frontmatter) ? { ...template, frontmatter: { ...entityIdentityDefaults(def, entityKey), ...template.frontmatter } } : template;
+    return renderTemplateDocument(effectiveTemplate, context, {
       frontmatter: (() => {
         const fallback = {};
-        const hasTypeField2 = fields.some((f) => f.key === "type");
-        if (!hasTypeField2) fallback.type = def.typeFilter || entityKey;
         fields.forEach((f) => {
           fallback[f.key] = templateFieldValue(f, f.key === primaryFieldKey(def), name);
         });
-        return fallback;
+        return Object.assign(fallback, entityIdentityDefaults(def, entityKey));
       })(),
       body: `# ${name}
 `
@@ -25381,13 +25432,12 @@ function entityTemplate(entityKey, name) {
   }
   if (entityKey === "project") return projectTemplate(name);
   const lines = ["---"];
-  const hasTypeField = def.fields.some((f) => f.key === "type");
-  if (!hasTypeField) {
-    lines.push(yamlTemplateLine("type", def.typeFilter || entityKey));
-  }
+  const defaults = {};
   def.fields.forEach((f) => {
-    lines.push(yamlTemplateLine(f.key, templateFieldValue(f, f.key === primaryFieldKey(def), name)));
+    defaults[f.key] = templateFieldValue(f, f.key === primaryFieldKey(def), name);
   });
+  Object.assign(defaults, entityIdentityDefaults(def, entityKey));
+  Object.entries(defaults).forEach(([key, value]) => lines.push(yamlTemplateLine(key, value)));
   lines.push("---", "", `# ${name}`, "", "");
   return lines.join("\n");
 }
@@ -27253,12 +27303,36 @@ function workbookEntityKeyFromSheet(sheetName) {
   }
   return null;
 }
+var WORKBOOK_VALUE_PREFIX = "BOB:JSON:v1:";
 function xlsxCellValue(value) {
   if (value == null) return "";
-  if (Array.isArray(value)) return value.join("; ");
   if (value instanceof Date) return value.toISOString().slice(0, 10);
-  if (typeof value === "object") return JSON.stringify(value);
+  if (typeof value === "object" || typeof value === "string" && value.startsWith(WORKBOOK_VALUE_PREFIX)) {
+    return WORKBOOK_VALUE_PREFIX + JSON.stringify(value);
+  }
   return value;
+}
+function matchesImportedType(value, type) {
+  if (Array.isArray(type)) return type.some((itemType) => matchesImportedType(value, itemType));
+  if (type === "null") return value === null;
+  if (type === "array") return Array.isArray(value);
+  if (type === "object") return value !== null && typeof value === "object" && !Array.isArray(value);
+  if (type === "integer") return Number.isInteger(value);
+  return typeof value === type;
+}
+function validateImportedShape(value, field, current) {
+  const type = field.schemaType;
+  const object = value != null && typeof value === "object" && !Array.isArray(value);
+  if (type === "object" && !object) throw new Error(`${field.key} requires an object`);
+  if (type === "array" && !Array.isArray(value)) throw new Error(`${field.key} requires an array`);
+  if (Array.isArray(current) && !Array.isArray(value) || isStructuredValue(current) && !Array.isArray(current) && !object) {
+    throw new Error(`${field.key}: refusing to replace a structured value with a scalar`);
+  }
+  if (Array.isArray(value) && field.items?.type) {
+    if (value.some((v) => !matchesImportedType(v, field.items.type))) {
+      throw new Error(`${field.key}: invalid array item type`);
+    }
+  }
 }
 function entityRowsForWorkbook(app, entityKey) {
   const def = ENTITIES[entityKey];
@@ -27373,24 +27447,32 @@ function rowValueForField(row, field, def) {
   return "";
 }
 function normalizeImportValue(value, field) {
-  let val = value == null ? "" : value;
-  if (typeof val === "string") val = val.trim();
-  if (val === "") return null;
-  if (field.type === "number" || field.type === "currency") {
-    const n = Number(String(val).replace(/[^\d.\-]/g, ""));
-    return isNaN(n) ? null : n;
+  if (value == null || value === "") return null;
+  if (typeof value === "string" && value.startsWith(WORKBOOK_VALUE_PREFIX)) {
+    const decoded = JSON.parse(value.slice(WORKBOOK_VALUE_PREFIX.length));
+    validateImportedShape(decoded, field);
+    if (decoded != null && typeof decoded === "object") {
+      if (field.schemaType && !["object", "array"].includes(field.schemaType)) throw new Error(`${field.key} is a scalar field`);
+      return decoded;
+    }
+    if (typeof decoded === "string" && !isReadOnlyField(field) && (!field.schemaType || field.schemaType === "string")) return decoded;
+    return decoded == null ? null : scalarFieldValue(String(decoded), field);
   }
-  if (field.type === "tags") {
-    if (Array.isArray(val)) return val.filter(Boolean);
-    const tags = String(val).split(/[,;]/).map((s) => s.trim()).filter(Boolean);
-    return tags.length ? tags : null;
+  if (typeof value === "object" && !(value instanceof Date)) {
+    const decoded = value;
+    validateImportedShape(decoded, field);
+    return decoded;
   }
+  let raw = String(value).trim();
+  if (raw === "") return null;
+  if (isReadOnlyField(field)) throw new Error(`${field.key}: structured imports require a BOB encoded cell`);
   if (field.type === "date") {
-    if (val instanceof Date && !isNaN(val.getTime())) return val.toISOString().slice(0, 10);
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? String(val) : d.toISOString().slice(0, 10);
+    const d = value instanceof Date ? value : new Date(raw);
+    if (isNaN(d.getTime())) throw new Error(`${field.key}: invalid date`);
+    return d.toISOString().slice(0, 10);
   }
-  return val;
+  if (field.type === "tags") raw = raw.replace(/;/g, ",");
+  return scalarFieldValue(raw, field);
 }
 async function importEntityRows(app, entityKey, rows) {
   const def = ENTITIES[entityKey];
@@ -27400,39 +27482,46 @@ async function importEntityRows(app, entityKey, rows) {
   let created = 0;
   let updated = 0;
   let failed = 0;
-  for (const row of rows) {
-    const primaryValue = String(rowValueForField(row, primary, def) || "").trim();
-    if (!primaryValue) {
-      failed++;
-      continue;
-    }
+  const errors = [];
+  for (const [index, row] of rows.entries()) {
     try {
+      const primaryValue = String(normalizeImportValue(rowValueForField(row, primary, def), primary) ?? "").trim();
+      if (!primaryValue) throw new Error("Missing primary value");
       const explicitPath = String(rowValue(row, "file_path") || "").trim();
       let file = explicitPath ? app.vault.getAbstractFileByPath(explicitPath) : null;
-      let isUpdate = file instanceof obsidian9.TFile;
-      if (!isUpdate) file = await createEntity(app, entityKey, primaryValue, { values: row });
+      if (explicitPath && (!(file instanceof obsidian9.TFile) || file.extension !== "md" || !listEntityFiles(app, entityKey, { ignoreViewFilter: true }).some((f) => f.path === file.path))) {
+        throw new Error(`Import target is not a ${def.label} note: ${explicitPath}`);
+      }
+      const isUpdate = file instanceof obsidian9.TFile;
+      const values = {};
+      def.fields.forEach((field) => {
+        const raw = rowValueForField(row, field, def);
+        if (raw == null || raw === "") return;
+        values[field.key] = normalizeImportValue(raw, field);
+      });
+      if (!isUpdate) file = await createEntity(app, entityKey, primaryValue, { values });
       await app.fileManager.processFrontMatter(file, (fm) => {
         def.fields.forEach((field) => {
-          if (field.key === primary.key) return;
-          const imported = normalizeImportValue(rowValueForField(row, field, def), field);
-          if (imported == null || imported === "") return;
-          if (Array.isArray(imported) && !imported.length) return;
-          fm[field.key] = imported;
+          if (Object.prototype.hasOwnProperty.call(values, field.key)) validateImportedShape(values[field.key], field, fm[field.key]);
+        });
+        Object.entries(values).forEach(([key, value]) => {
+          if (value != null) fm[key] = value;
         });
       });
       if (isUpdate) updated++;
       else created++;
-    } catch (_) {
+    } catch (error) {
       failed++;
+      errors.push(`Row ${index + 1}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-  return { created, updated, failed };
+  return { created, updated, failed, errors };
 }
 async function importWorkbookEntities(app, file) {
   const XLSX = getXLSX(app);
   const data = await app.vault.readBinary(file);
   const wb = XLSX.read(data, { type: "array", cellDates: true });
-  const result = { created: 0, updated: 0, failed: 0, sheets: 0, skippedSheets: [] };
+  const result = { created: 0, updated: 0, failed: 0, sheets: 0, skippedSheets: [], errors: [] };
   for (const sheetName of wb.SheetNames) {
     const entityKey = workbookEntityKeyFromSheet(sheetName);
     if (!entityKey) {
@@ -27445,6 +27534,7 @@ async function importWorkbookEntities(app, file) {
     result.created += imported.created;
     result.updated += imported.updated || 0;
     result.failed += imported.failed;
+    result.errors.push(...(imported.errors || []).map((error) => `${sheetName}: ${error}`));
     result.sheets++;
   }
   return result;
@@ -27479,6 +27569,7 @@ async function promptImportWorkbook(app, onDone = () => {
     try {
       const result = await importWorkbookEntities(app, file);
       await onDone(result);
+      if (result.errors.length) new obsidian9.Notice(result.errors.slice(0, 3).join("\n"), 1e4);
       const skipped = result.skippedSheets.length ? ` \xB7 skipped sheets: ${result.skippedSheets.join(", ")}` : "";
       new obsidian9.Notice(`BOB Workspace: imported ${result.created} created, ${result.updated || 0} updated from ${result.sheets} sheet${result.sheets === 1 ? "" : "s"}${result.failed ? ` \xB7 ${result.failed} skipped` : ""}${skipped}`, 8e3);
     } catch (e) {
@@ -27923,32 +28014,21 @@ var BobImportModal = class extends obsidian10.Modal {
           const val = String(row[idx] || "").trim();
           if (val) contextValues[key] = val;
         });
-        const file = await createEntity(this.app, this.entityKey, primaryValue, { values: contextValues });
         const extras = {};
         Object.entries(this.mapping).forEach(([header, key]) => {
           if (!key || key === primaryKey) return;
           const idx = this.headers.indexOf(header);
-          let val = String(row[idx] || "").trim();
-          if (!val) return;
+          const raw = String(row[idx] || "").trim();
+          if (!raw) return;
           const fdef = def.fields.find((f) => f.key === key);
-          if (fdef) {
-            if (fdef.type === "number" || fdef.type === "currency") {
-              const cleaned = val.replace(/[^\d.\-]/g, "");
-              const n = Number(cleaned);
-              if (isNaN(n)) return;
-              val = n;
-            } else if (fdef.type === "tags") {
-              val = val.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
-              if (!val.length) return;
-            } else if (fdef.type === "date") {
-              const d = new Date(val);
-              if (!isNaN(d.getTime())) val = d.toISOString().slice(0, 10);
-            }
-          }
+          if (!fdef) return;
+          const val = normalizeImportValue(raw, fdef);
           extras[key] = val;
         });
+        const file = await createEntity(this.app, this.entityKey, primaryValue, { values: contextValues });
         if (Object.keys(extras).length) {
           await this.app.fileManager.processFrontMatter(file, (fm) => {
+            Object.entries(extras).forEach(([k, v]) => validateImportedShape(v, def.fields.find((f) => f.key === k), fm[k]));
             Object.entries(extras).forEach(([k, v]) => {
               if (v == null || v === "") return;
               if (Array.isArray(v) && v.length === 0) return;
@@ -27977,9 +28057,11 @@ function schemaFieldFromEntityField(field) {
   const type = String(field?.type || "string").toLowerCase();
   const result = {
     name: field.key,
-    type: type === "number" || type === "currency" ? "number" : type === "integer" ? "integer" : type === "boolean" ? "boolean" : type === "array" || type === "tags" ? "array" : "string",
+    type: field.schemaType || (type === "number" || type === "currency" ? "number" : type === "integer" ? "integer" : type === "boolean" ? "boolean" : type === "array" || type === "tags" ? "array" : "string"),
     required: !!field.primary
   };
+  if (field.items) result.items = cloneConfig(field.items);
+  else if (type === "tags") result.items = { type: "string" };
   if (type === "date") result.format = "date";
   else if (type === "datetime" || type === "date-time") result.format = "date-time";
   else if (type === "email") result.format = "email";
@@ -28673,45 +28755,71 @@ async function writeTemplateAssets(app, assets, settings = {}) {
   }
   return result;
 }
-async function archiveFolderContents(app, folder, stamp, exts) {
+async function planArchiveFolder(app, folder, stamp, exts) {
   const dir = String(folder || "").replace(/\/+$/, "");
-  if (!dir || !await app.vault.adapter.exists(dir)) return { dest: "", count: 0 };
+  if (!dir || !await app.vault.adapter.exists(dir)) return { dest: "", moves: [] };
   const listed = await app.vault.adapter.list(dir);
-  const files = (listed.files || []).filter((f) => exts.some((e) => f.toLowerCase().endsWith(e)));
-  if (!files.length) return { dest: "", count: 0 };
-  const parent = dir.split("/").slice(0, -1).join("/");
-  const base = dir.split("/").pop();
-  const dest = `${parent ? parent + "/" : ""}${base}-archive-${stamp}`;
-  await ensureFolderSync(app, dest);
-  let count = 0;
-  for (const f of files) {
-    const name = f.split("/").pop();
-    try {
-      await app.vault.adapter.rename(f, `${dest}/${name}`);
-      count++;
-    } catch (_) {
-    }
-  }
-  return { dest, count };
+  const files = listed.files.filter((f) => exts.some((ext) => f.toLowerCase().endsWith(ext)));
+  const dest = files.length ? `${dir}-archive-${stamp}` : "";
+  return { dest, moves: files.map((from) => ({ from, to: `${dest}/${from.split("/").pop()}` })) };
 }
-async function archiveTemplateAssets(app, schemaFolder, basesFolder, prevKey) {
-  const d = /* @__PURE__ */ new Date();
-  const p2 = (n) => String(n).padStart(2, "0");
-  const stamp = `${prevKey || "previous"}-${ymd()}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
-  const schemas = await archiveFolderContents(app, schemaFolder, stamp, [".yaml", ".yml"]);
-  const root = String(schemaFolder || "").replace(/\/source$/, "");
-  const fileClasses = await archiveFolderContents(app, `${root}/fileClasses`, stamp, [".md"]);
-  const jsonSchemas = await archiveFolderContents(app, `${root}/json-schema`, stamp, [".json"]);
-  const bases = await archiveFolderContents(app, basesFolder, stamp, [".base"]);
+async function moveArchiveFiles(app, moves) {
+  const moved = [];
   try {
-    if (await app.vault.adapter.exists(WORKSPACE_CONFIG_PATH)) {
-      const dest = `${schemas.dest || basesFolder}/workspace-${stamp}.json`;
-      await ensureFolderSync(app, dest.split("/").slice(0, -1).join("/"));
-      await app.vault.adapter.write(dest, await app.vault.adapter.read(WORKSPACE_CONFIG_PATH));
+    for (const move of moves) {
+      if (await app.vault.adapter.exists(move.to)) throw new Error(`Archive destination already exists: ${move.to}`);
+      await ensureFolderSync(app, move.to.split("/").slice(0, -1).join("/"));
+      await app.vault.adapter.rename(move.from, move.to);
+      moved.push(move);
     }
-  } catch (_) {
+  } catch (error) {
+    const failures = [];
+    for (const move of moved.reverse()) {
+      try {
+        await app.vault.adapter.rename(move.to, move.from);
+      } catch (rollbackError) {
+        failures.push(`${move.to} -> ${move.from}: ${String(rollbackError)}`);
+      }
+    }
+    throw new Error(`Archive failed: ${String(error)}${failures.length ? `; rollback incomplete: ${failures.join("; ")}` : "; completed moves restored"}`);
   }
-  return { schemas: schemas.count, fileClasses: fileClasses.count, jsonSchemas: jsonSchemas.count, bases: bases.count, stamp };
+}
+async function archiveTemplateAssets(app, schemaFolder, basesFolder, prevKey, settings = {}) {
+  const stamp = `${String(prevKey || "previous").replace(/[^a-zA-Z0-9_-]/g, "-")}-${Date.now()}`;
+  const root = String(schemaFolder || "").replace(/\/source$/, "");
+  const schemas = await planArchiveFolder(app, schemaFolder, stamp, [".yaml", ".yml"]);
+  const fileClasses = await planArchiveFolder(app, `${root}/fileClasses`, stamp, [".md"]);
+  const jsonSchemas = await planArchiveFolder(app, `${root}/json-schema`, stamp, [".json"]);
+  const bases = await planArchiveFolder(app, basesFolder, stamp, [".base"]);
+  const moves = [...schemas.moves, ...fileClasses.moves, ...jsonSchemas.moves, ...bases.moves];
+  const recoveryPath = `${PLUGIN_DIR}/template-switch-${stamp}.json`;
+  const adapter = app.vault.adapter;
+  const workspace = await adapter.exists(WORKSPACE_CONFIG_PATH) ? await adapter.read(WORKSPACE_CONFIG_PATH) : null;
+  const externalBases = {};
+  const keys = /* @__PURE__ */ new Set([...Object.keys(WORKSPACE_CONFIG.bases || {}), ...Object.keys(settings.baseFiles || {})]);
+  for (const key of keys) {
+    const path = entityBasePath(settings, key);
+    if (path && !moves.some((move) => move.from === path) && await adapter.exists(path)) externalBases[path] = await adapter.read(path);
+  }
+  const recovery = { phase: "planned", previousTemplate: prevKey, workspacePath: WORKSPACE_CONFIG_PATH, workspace, settings: cloneConfig(settings), moves, externalBases, error: "" };
+  await ensureFolderSync(app, PLUGIN_DIR);
+  if (await adapter.exists(recoveryPath)) throw new Error(`Archive recovery already exists: ${recoveryPath}`);
+  await adapter.write(recoveryPath, JSON.stringify(recovery, null, 2));
+  try {
+    await moveArchiveFiles(app, moves);
+    recovery.phase = "archived";
+    await adapter.write(recoveryPath, JSON.stringify(recovery, null, 2));
+  } catch (error) {
+    recovery.phase = "archive-failed";
+    recovery.error = String(error);
+    try {
+      await adapter.write(recoveryPath, JSON.stringify(recovery, null, 2));
+    } catch (journalError) {
+      throw new Error(`${String(error)}; recovery update failed: ${String(journalError)}; plan: ${recoveryPath}`);
+    }
+    throw new Error(`${String(error)}; recovery: ${recoveryPath}`);
+  }
+  return { schemas: schemas.moves.length, fileClasses: fileClasses.moves.length, jsonSchemas: jsonSchemas.moves.length, bases: bases.moves.length, stamp, recoveryPath, recovery };
 }
 async function applyWorkspaceTemplate(app, plugin, template) {
   if (!template?._template) throw new Error("Invalid workspace template");
@@ -28722,30 +28830,47 @@ async function applyWorkspaceTemplate(app, plugin, template) {
   const oldSchemaFolder = (WORKSPACE_CONFIG.schemas?.folder || plugin.settings.schemasFolder || SCHEMA_FOLDER_DEFAULT).replace(/\/$/, "");
   const oldBasesFolder = resolveBasesFolder(plugin.settings);
   const parsed = validateWorkspaceConfig(config);
+  let archived;
   if (switching) {
-    const archived = await archiveTemplateAssets(app, oldSchemaFolder, oldBasesFolder, prevKey);
+    archived = await archiveTemplateAssets(app, oldSchemaFolder, oldBasesFolder, prevKey, plugin.settings);
     const total = archived.schemas + archived.fileClasses + archived.jsonSchemas + archived.bases;
     if (total) {
       new obsidian12.Notice(`BOB Workspace: archived ${archived.schemas} schema, ${archived.fileClasses} FileClass, ${archived.jsonSchemas} JSON Schema, and ${archived.bases} base file(s) from "${prevKey}" before applying "${newKey}".`);
     }
   }
-  await saveWorkspaceConfig(app, JSON.stringify(parsed, null, 2));
-  setWorkspaceConfig(parsed);
-  plugin.settings.activeWorkspaceTemplate = newKey;
-  plugin.settings.setupDismissed = true;
-  if (switching) plugin.settings = resetWorkspaceOwnedSettings(plugin.settings);
-  plugin.settings = applyWorkspaceOwnedSettings(plugin.settings);
-  await plugin.saveSettings();
-  const assetResult = await writeTemplateAssets(app, _assets, plugin.settings);
-  if (parsed.schemas?.enabled) {
-    const bootstrap = await bootstrapCanonicalSchemaSourcesIfMissing(app, plugin.settings);
-    if (bootstrap.count || assetResult.schemas) {
-      await regenerateSchemaOutputs(app, plugin.settings);
+  try {
+    await saveWorkspaceConfig(app, JSON.stringify(parsed, null, 2));
+    setWorkspaceConfig(parsed);
+    plugin.settings.activeWorkspaceTemplate = newKey;
+    plugin.settings.setupDismissed = true;
+    if (switching) plugin.settings = resetWorkspaceOwnedSettings(plugin.settings);
+    plugin.settings = applyWorkspaceOwnedSettings(plugin.settings);
+    await plugin.saveSettings();
+    const assetResult = await writeTemplateAssets(app, _assets, plugin.settings);
+    if (parsed.schemas?.enabled) {
+      const bootstrap = await bootstrapCanonicalSchemaSourcesIfMissing(app, plugin.settings);
+      if (bootstrap.count || assetResult.schemas) {
+        await regenerateSchemaOutputs(app, plugin.settings);
+      }
     }
+    await reloadEntityConfiguration(app, plugin.settings);
+    plugin.refreshOpenViews();
+    if (archived) {
+      archived.recovery.phase = "applied";
+      await app.vault.adapter.write(archived.recoveryPath, JSON.stringify(archived.recovery, null, 2));
+    }
+    return _template;
+  } catch (error) {
+    if (!archived) throw error;
+    archived.recovery.phase = "apply-failed";
+    archived.recovery.error = String(error);
+    try {
+      await app.vault.adapter.write(archived.recoveryPath, JSON.stringify(archived.recovery, null, 2));
+    } catch (journalError) {
+      throw new Error(`${String(error)}; recovery update failed: ${String(journalError)}; plan: ${archived.recoveryPath}`);
+    }
+    throw new Error(`Template apply failed: ${String(error)}; recovery: ${archived.recoveryPath}`);
   }
-  await reloadEntityConfiguration(app, plugin.settings);
-  plugin.refreshOpenViews();
-  return _template;
 }
 
 // src/modals/workspace-setup.ts
@@ -28939,6 +29064,7 @@ async function pushPartnerExpiryReminders(app, host, candidates) {
 
 // src/help-content.ts
 var FIELD_HELP = {
+  structured: "Structured field \u2014 edit this in the note frontmatter",
   title: "Heading shown at the top of this widget.",
   entity: "Which record type to read (e.g. task, contact). The widget lists these.",
   titleFields: "Frontmatter fields to use as each row\u2019s title (first non-empty wins).",
@@ -29560,6 +29686,80 @@ var CANVAS_GENERATORS = [
   { id: "pipeline", label: "Pipeline board (deals by stage)", icon: "kanban", build: buildPipelineCanvasData }
 ];
 
+// src/canvas-storage.ts
+function validateCanvasData(value) {
+  const data = value;
+  if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges)) throw new Error("Invalid canvas: nodes and edges must be arrays");
+  const ids = /* @__PURE__ */ new Set();
+  for (const entry of [...data.nodes, ...data.edges]) {
+    if (!entry || typeof entry.id !== "string" || !entry.id || ids.has(entry.id)) throw new Error("Invalid canvas: missing or duplicate ID");
+    ids.add(entry.id);
+  }
+  const nodes = new Set(data.nodes.map((n) => n.id));
+  for (const edge of data.edges) {
+    if (!nodes.has(edge.fromNode) || !nodes.has(edge.toNode)) throw new Error("Invalid canvas: dangling edge");
+  }
+}
+var canvasWrites = /* @__PURE__ */ new WeakMap();
+async function saveGeneratedCanvas(app, path, data, manifest) {
+  let writes = canvasWrites.get(app);
+  if (!writes) {
+    writes = /* @__PURE__ */ new Map();
+    canvasWrites.set(app, writes);
+  }
+  const previous = writes.get(path) || Promise.resolve();
+  const pending = previous.catch(() => {
+  }).then(() => persistGeneratedCanvas(app, path, data, manifest));
+  writes.set(path, pending);
+  try {
+    await pending;
+  } finally {
+    if (writes.get(path) === pending) writes.delete(path);
+  }
+}
+async function persistGeneratedCanvas(app, path, data, manifest) {
+  const adapter = app.vault.adapter;
+  const metaPath = `${path}.bobmeta.json`;
+  const recoveryPath = `${path}.bob-recovery.json`;
+  if (await adapter.exists(recoveryPath)) throw new Error(`Unresolved canvas recovery: ${recoveryPath}`);
+  validateCanvasData(data);
+  const oldCanvas = await adapter.exists(path) ? await adapter.read(path) : null;
+  const oldMeta = await adapter.exists(metaPath) ? await adapter.read(metaPath) : null;
+  let out = data;
+  let owned = [];
+  if (oldMeta !== null) {
+    const parsed = JSON.parse(oldMeta);
+    if (!parsed || !Array.isArray(parsed.bob_owned_node_ids) || parsed.bob_owned_node_ids.some((id) => typeof id !== "string")) {
+      throw new Error(`Invalid canvas manifest: ${metaPath}`);
+    }
+    if (parsed.source_path !== manifest.source_path) throw new Error(`Canvas belongs to another source: ${path}`);
+    owned = parsed.bob_owned_node_ids;
+  }
+  if (oldCanvas !== null) {
+    const parsed = JSON.parse(oldCanvas);
+    validateCanvasData(parsed);
+    out = mergeGeneratedCanvas(parsed, owned, data);
+    validateCanvasData(out);
+  }
+  await adapter.write(recoveryPath, JSON.stringify({ path, metaPath, canvas: oldCanvas, manifest: oldMeta }, null, 2));
+  try {
+    await adapter.write(path, serializeCanvas(out));
+    await adapter.write(metaPath, JSON.stringify(manifest, null, 2));
+  } catch (error) {
+    const failures = [];
+    for (const [target, before] of [[path, oldCanvas], [metaPath, oldMeta]]) {
+      try {
+        if (before !== null) await adapter.write(target, before);
+        else if (await adapter.exists(target)) await adapter.remove(target);
+      } catch {
+        failures.push(target);
+      }
+    }
+    throw new Error(`Canvas save failed: ${String(error)}. Recovery: ${recoveryPath}${failures.length ? `; restore failed for ${failures.join(", ")}` : "; previous files restored"}`);
+  }
+  await adapter.remove(recoveryPath);
+}
+
 // src/modals/entity-create.ts
 var obsidian15 = __toESM(require("obsidian"));
 var BobEntityCreateModal = class extends obsidian15.Modal {
@@ -29591,10 +29791,14 @@ var BobEntityCreateModal = class extends obsidian15.Modal {
       labelFor[f.key] = { el: label, text: f.label.toUpperCase() };
       let input;
       const fieldType = f.type || "text";
-      if (fieldType === "enum") {
+      if (isReadOnlyField(f, resolveEntityFieldDefault(f))) {
+        row.createDiv({ cls: "bob-form-static", text: FIELD_HELP.structured });
+        return;
+      }
+      if (fieldType === "enum" || fieldType === "boolean") {
         input = row.createEl("select", { cls: "bob-create-input" });
         input.createEl("option", { value: "", text: "\u2014 \u2014" });
-        (f.options || []).forEach((opt) => input.createEl("option", { value: opt, text: opt }));
+        (fieldType === "boolean" ? ["true", "false"] : f.options || []).forEach((opt) => input.createEl("option", { value: opt, text: opt }));
       } else if (fieldType === "date") {
         input = row.createEl("input", { type: "date", cls: "bob-create-input" });
         input.lang = navigator.language || "";
@@ -29665,21 +29869,18 @@ var BobEntityCreateModal = class extends obsidian15.Modal {
     const submit = () => {
       const values = {};
       let primaryValue = null;
-      inputs.forEach((el, idx) => {
-        const key = el.dataset.fieldKey;
-        const type = el.dataset.fieldType;
-        let raw = el.value;
-        if (key === primaryKey) primaryValue = (raw || "").trim();
-        if (raw === "" || raw == null) return;
-        if (type === "tags") raw = raw.split(",").map((t) => t.trim()).filter(Boolean);
-        else if (type === "number" || type === "currency") {
-          const n = Number(raw);
-          raw = isNaN(n) ? null : n;
-        }
-        if (raw == null) return;
-        if (Array.isArray(raw) && raw.length === 0) return;
-        values[key] = raw;
-      });
+      try {
+        inputs.forEach((el) => {
+          const key = el.dataset.fieldKey;
+          const field = this.def.fields.find((f) => f.key === key);
+          if (key === primaryKey) primaryValue = el.value.trim();
+          const value = scalarFieldValue(el.value, field);
+          if (value != null) values[key] = value;
+        });
+      } catch (error) {
+        new obsidian15.Notice(error instanceof Error ? error.message : String(error));
+        return;
+      }
       if (!primaryValue) {
         const primaryInput = inputs.find((input) => input.dataset.fieldKey === primaryKey);
         if (primaryInput) primaryInput.focus();
@@ -29743,7 +29944,7 @@ var BobEntityCreateModal = class extends obsidian15.Modal {
       certification: "e.g. Cisco CCNP \u2014 May 2026",
       activity: "e.g. Discovery call with Jane",
       sequence: "e.g. Outbound \u2014 SMB",
-      project: "e.g. Q3 Cadence launch"
+      project: "e.g. Q3 product launch"
     };
     return examples[ek] || "";
   }
@@ -30828,6 +31029,8 @@ var BobAppView = class extends obsidian18.ItemView {
     const previousNav = root.querySelector ? root.querySelector(".bob-app-nav") : null;
     const previousNavScrollTop = previousNav ? previousNav.scrollTop : this._navScrollTop || 0;
     const renderSeq = ++this._renderSeq;
+    this._detailSaveCleanup?.();
+    this._detailSaveCleanup = void 0;
     root.empty();
     root.addClass("bob-app");
     root.toggleClass("bob-dark", !!this.plugin.settings.bobAppDark);
@@ -31170,27 +31373,12 @@ var BobAppView = class extends obsidian18.ItemView {
     await ensureFolderSync(this.app, folder);
     const name = rawName.replace(/[\\/:*?"<>|]/g, "-");
     const canvasPath = `${folder}/${name}.canvas`;
-    const metaPath = `${folder}/${name}.canvas.bobmeta.json`;
-    let out = data;
-    const existing = this.app.vault.getAbstractFileByPath(canvasPath);
-    if (existing instanceof obsidian18.TFile) {
-      try {
-        const oldData = JSON.parse(await this.app.vault.read(existing));
-        let oldOwned = [];
-        const mf = this.app.vault.getAbstractFileByPath(metaPath);
-        if (mf instanceof obsidian18.TFile) {
-          try {
-            oldOwned = JSON.parse(await this.app.vault.read(mf)).bob_owned_node_ids || [];
-          } catch (_) {
-          }
-        }
-        out = mergeGeneratedCanvas(oldData, oldOwned, data);
-      } catch (_) {
-        out = data;
-      }
+    try {
+      await saveGeneratedCanvas(this.app, canvasPath, data, manifest);
+    } catch (error) {
+      new obsidian18.Notice(`Canvas save failed for ${canvasPath}: ${error instanceof Error ? error.message : String(error)}`, 1e4);
+      return;
     }
-    await this._writeOrModify(canvasPath, serializeCanvas(out));
-    await this._writeOrModify(metaPath, JSON.stringify(manifest, null, 2));
     const f = this.app.vault.getAbstractFileByPath(canvasPath);
     if (f instanceof obsidian18.TFile) await this.openCanvas(f);
     else new obsidian18.Notice(`Canvas written to ${canvasPath}`);
@@ -31217,7 +31405,7 @@ var BobAppView = class extends obsidian18.ItemView {
       return;
     }
     const prefix = isAgentRun ? "Agent audit" : "Context";
-    await this._writeGeneratedCanvas(`${prefix} - ${file.basename}`, result.data, result.manifest);
+    await this._writeGeneratedCanvas(`${prefix} - ${file.basename} - ${shortHash(file.path)}`, result.data, result.manifest);
   }
   // Process Execution Canvas — render an entity type's lifecycle as a left-to-
   // right runway (records by stage, blockers flagged), opened inline.
@@ -31236,11 +31424,6 @@ var BobAppView = class extends obsidian18.ItemView {
       return;
     }
     await this._writeGeneratedCanvas(`Process - ${def.plural}`, data, this._boardManifest("process-runway", data));
-  }
-  async _writeOrModify(path, content) {
-    const existing = this.app.vault.getAbstractFileByPath(path);
-    if (existing instanceof obsidian18.TFile) await this.app.vault.modify(existing, content);
-    else await this.app.vault.create(path, content);
   }
   _renderCanvasRow(list, file) {
     const row = list.createDiv({ cls: "bob-canvas-row" });
@@ -31559,9 +31742,8 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       if (filterState.size === 0) return arr;
       return arr.filter((e) => {
         for (const [key, vals] of filterState) {
-          if (!vals || vals.size === 0) continue;
-          const v = String(entityValue(e, key, def) ?? "");
-          if (!vals.has(v)) return false;
+          if (!vals) continue;
+          if (!matchesEnumSelection(entityValue(e, key, def), vals)) return false;
         }
         return true;
       });
@@ -31681,8 +31863,8 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         const tr = tbody.createEl("tr", { cls: "bob-row" });
         tr.addEventListener("dblclick", () => {
           tr.querySelectorAll("td").forEach((cell) => {
-            clearTimeout(cell._cadEditTimer);
-            delete cell._cadEditTimer;
+            clearTimeout(cell._bobEditTimer);
+            delete cell._bobEditTimer;
           });
           this.openEntityDetail(entityKey, e.file);
         });
@@ -31780,66 +31962,59 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     renderBody(applyFilters(sortEntities([...entities])));
   }
   _makeInlineEditable(td, entity, field, def, initialFormatted) {
+    if (isReadOnlyField(field, entityValue(entity, field.key, def))) {
+      td.setText(initialFormatted || "");
+      td.title = FIELD_HELP.structured;
+      return;
+    }
     td.addClass("bob-cell-editable");
     td.setText(initialFormatted || "");
-    td._cadEditing = false;
+    td._bobEditing = false;
     const refreshCell = () => {
       const cache = this.app.metadataCache.getFileCache(entity.file);
       const fm = cache?.frontmatter || {};
       const newVal = entityValue({ file: entity.file, frontmatter: fm, basename: entity.basename }, field.key, def);
       td.empty();
       td.removeClass("bob-cell-editing");
-      td._cadEditing = false;
+      td._bobEditing = false;
       td.setText(fmtValue(newVal, field.type) || "");
     };
     const saveField = async (raw) => {
-      const fieldType = field.type || "text";
-      let value = raw;
-      if (fieldType === "tags") {
-        value = (raw || "").split(",").map((t) => t.trim()).filter(Boolean);
-      } else if (fieldType === "number" || fieldType === "currency") {
-        const n = Number(raw);
-        value = isNaN(n) ? null : n;
-      } else if (raw === "" || raw == null) {
-        value = null;
-      }
       try {
-        await this.app.fileManager.processFrontMatter(entity.file, (fm) => {
-          if (value == null || Array.isArray(value) && value.length === 0) {
-            delete fm[field.key];
-          } else {
-            fm[field.key] = value;
-          }
-        });
+        await this.app.fileManager.processFrontMatter(entity.file, (fm) => writeScalarField(fm, field, raw));
       } catch (err) {
         new obsidian18.Notice(`Save failed: ${err.message}`);
       }
       refreshCell();
     };
     const activateEdit = () => {
-      if (td._cadEditing) return;
-      td._cadEditing = true;
+      if (td._bobEditing) return;
+      td._bobEditing = true;
       const cache = this.app.metadataCache.getFileCache(entity.file);
       const currentVal = entityValue(
         { file: entity.file, frontmatter: cache?.frontmatter || {}, basename: entity.basename },
         field.key,
         def
       );
+      if (isReadOnlyField(field, currentVal)) {
+        refreshCell();
+        return;
+      }
       const fieldType = field.type || "text";
       td.empty();
       td.addClass("bob-cell-editing");
       const cancel = () => {
         td.empty();
         td.removeClass("bob-cell-editing");
-        td._cadEditing = false;
+        td._bobEditing = false;
         td.setText(fmtValue(currentVal, field.type) || "");
       };
-      if (fieldType === "enum") {
+      if (fieldType === "enum" || fieldType === "boolean") {
         const sel = td.createEl("select", { cls: "bob-cell-input" });
         sel.createEl("option", { value: "", text: "\u2014" });
-        (field.options || []).forEach((opt) => {
+        (fieldType === "boolean" ? ["true", "false"] : field.options || []).forEach((opt) => {
           const o = sel.createEl("option", { value: opt, text: opt });
-          if (String(currentVal || "") === opt) o.selected = true;
+          if (String(currentVal ?? "") === opt) o.selected = true;
         });
         let committed = false;
         sel.addEventListener("change", () => {
@@ -31919,9 +32094,9 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       }
     };
     td.addEventListener("click", () => {
-      if (td._cadEditing) return;
-      clearTimeout(td._cadEditTimer);
-      td._cadEditTimer = setTimeout(() => activateEdit(), 250);
+      if (td._bobEditing) return;
+      clearTimeout(td._bobEditTimer);
+      td._bobEditTimer = setTimeout(() => activateEdit(), 250);
     });
   }
   _tabsForParent(parentId) {
@@ -35704,54 +35879,61 @@ ${snippet}` : "- No markdown content");
       }
     });
     const form = root.createDiv({ cls: "bob-detail-form" });
-    let saveTimer = null;
+    const saveTimers = /* @__PURE__ */ new Map();
+    const pendingValues = /* @__PURE__ */ new Map();
+    let disposed = false;
+    const cleanup = () => {
+      disposed = true;
+      clearTimeout(savedBadge._t);
+      saveTimers.forEach(clearTimeout);
+      saveTimers.clear();
+      const pending = [...pendingValues];
+      pendingValues.clear();
+      pending.forEach(([key, raw]) => {
+        void writeField(key, raw);
+      });
+    };
+    this._detailSaveCleanup = cleanup;
     const flashSaved = () => {
+      if (disposed) return;
       savedBadge.setText("Saved");
       savedBadge.addClass("show");
       clearTimeout(savedBadge._t);
       savedBadge._t = setTimeout(() => savedBadge.removeClass("show"), 1400);
     };
     const writeField = async (key, raw) => {
+      clearTimeout(saveTimers.get(key));
+      saveTimers.delete(key);
+      pendingValues.delete(key);
       try {
-        let value = raw;
         const fdef = def.fields.find((f) => f.key === key);
-        if (fdef) {
-          if (fdef.type === "tags") {
-            value = (raw || "").split(",").map((t) => t.trim()).filter(Boolean);
-          } else if (fdef.type === "number" || fdef.type === "currency") {
-            const n = Number(raw);
-            value = isNaN(n) ? null : n;
-          } else if (raw === "") {
-            value = null;
-          }
-        }
-        await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-          if (value == null || Array.isArray(value) && value.length === 0) {
-            delete frontmatter[key];
-          } else {
-            frontmatter[key] = value;
-          }
-        });
+        if (!fdef) return;
+        await this.app.fileManager.processFrontMatter(file, (frontmatter) => writeScalarField(frontmatter, fdef, raw));
         flashSaved();
       } catch (e) {
         new obsidian18.Notice(`Save failed: ${e.message}`);
       }
     };
     const debouncedWrite = (key, val) => {
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => writeField(key, val), 350);
+      clearTimeout(saveTimers.get(key));
+      pendingValues.set(key, val);
+      saveTimers.set(key, setTimeout(() => writeField(key, val), 350));
     };
     def.fields.forEach((f) => {
       const row = form.createDiv({ cls: "bob-form-row" });
       row.createDiv({ cls: "bob-form-label", text: f.label.toUpperCase() });
       const current = fm[f.key];
       const fieldType = f.type || "text";
-      if (fieldType === "enum") {
+      if (isReadOnlyField(f, current)) {
+        const staticEl = row.createDiv({ cls: "bob-form-static" });
+        staticEl.setText(formatStructuredValue(current) || "\u2014");
+        staticEl.title = FIELD_HELP.structured;
+      } else if (fieldType === "enum" || fieldType === "boolean") {
         const sel = row.createEl("select", { cls: "bob-form-input" });
         sel.createEl("option", { value: "", text: "\u2014" });
-        (f.options || []).forEach((opt) => {
+        (fieldType === "boolean" ? ["true", "false"] : f.options || []).forEach((opt) => {
           const o = sel.createEl("option", { value: opt, text: opt });
-          if (String(current || "") === opt) o.selected = true;
+          if (String(current ?? "") === opt) o.selected = true;
         });
         sel.addEventListener("change", () => writeField(f.key, sel.value));
       } else if (fieldType === "date") {
@@ -35779,10 +35961,6 @@ ${snippet}` : "- No markdown content");
         else if (current) inp.value = String(current);
         inp.addEventListener("input", () => debouncedWrite(f.key, inp.value));
         inp.addEventListener("blur", () => writeField(f.key, inp.value));
-      } else if (isStructuredValue(current)) {
-        const staticEl = row.createDiv({ cls: "bob-form-static" });
-        staticEl.setText(formatStructuredValue(current) || "\u2014");
-        staticEl.title = "Structured field \u2014 edit this in the note frontmatter";
       } else {
         const inp = row.createEl("input", { type: "text", cls: "bob-form-input" });
         if (current) inp.value = String(current);
@@ -37497,6 +37675,7 @@ Saved to ${file.path}`, 4e3);
     this.render();
   }
   async onClose() {
+    this._detailSaveCleanup?.();
     this._closeColumnFilterMenu();
     this._teardownCanvasLeaf();
   }

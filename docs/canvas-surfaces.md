@@ -45,6 +45,20 @@ your own text/file nodes and arrows, regenerate, and they stay. BOB owns the
 layout and content of the nodes *it* generates (moving one resets on regenerate);
 you own anything you add.
 
+Regeneration aborts if an existing canvas or manifest cannot be read or parsed;
+it does not replace unreadable content. Saves are serialized per output path and
+keep the previous canvas/manifest bytes in `<name>.canvas.bob-recovery.json`
+until both new files are saved. If a write fails, BOB attempts to restore both
+originals and retains the recovery file; the notice identifies any failed restore.
+Restore the recorded `canvas` and `manifest` contents to `path` and `metaPath`
+(`null` means there was no previous file), verify them, then remove the recovery
+file before retrying. Successful saves remove the temporary recovery file.
+
+Entity-context and agent-audit output names include a stable hash of the full
+source-note path, so notes with the same basename do not overwrite one another.
+Old outputs with unhashed names are left in place; move any manual additions to
+the new output before retiring an older canvas.
+
 A small sidecar, `<name>.canvas.bobmeta.json`, records which nodes BOB owns so it
 knows what to refresh vs. preserve. The `.canvas` file itself stays 100% standard
 JSON Canvas — portable to any tool that reads the format.

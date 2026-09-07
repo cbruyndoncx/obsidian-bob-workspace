@@ -3,15 +3,15 @@ import { ENTITIES, primaryField, primaryFieldKey } from '../entities';
 import { createEntity } from '../notes';
 import { DEFAULT_SETTINGS, entityFolder } from '../settings';
 import { ensureFolderSync } from '../utils';
-import { configuredFieldAliases, getXLSX, normalizedImportHeader, safeSheetName, workbookEntityKeyFromSheet, writeWorkbookToVault } from '../workbook';
+import { normalizeImportValue, validateImportedShape, configuredFieldAliases, getXLSX, normalizedImportHeader, safeSheetName, workbookEntityKeyFromSheet, writeWorkbookToVault } from '../workbook';
 import { WORKSPACE_CONFIG, workspaceConfiguredEntityEntries } from '../workspace-config';
 import * as obsidian from 'obsidian';
 import type { App } from 'obsidian';
-import type { EntityDef, Frontmatter } from '../types';
+import type { EntityDef, Frontmatter, JsonValue } from '../types';
 import type { BobEntityDef } from '../entities';
 
 /** Values importable into a single frontmatter field from a CSV/XLSX cell. */
-type ImportCellValue = string | number | string[];
+type ImportCellValue = JsonValue;
 
 export interface ImportResult {
   created: number;
@@ -406,33 +406,21 @@ export class BobImportModal extends obsidian.Modal {
           const val = String(row[idx] || '').trim();
           if (val) contextValues[key] = val;
         });
-        const file = await createEntity(this.app, this.entityKey, primaryValue, { values: contextValues });
         const extras: Record<string, ImportCellValue> = {};
         Object.entries(this.mapping).forEach(([header, key]) => {
           if (!key || key === primaryKey) return;
           const idx = this.headers.indexOf(header);
-          let val: ImportCellValue = String(row[idx] || '').trim();
-          if (!val) return;
+          const raw = String(row[idx] || '').trim();
+          if (!raw) return;
           const fdef = def.fields.find((f) => f.key === key);
-          if (fdef) {
-            if (fdef.type === 'number' || fdef.type === 'currency') {
-              const cleaned = val.replace(/[^\d.\-]/g, '');
-              const n = Number(cleaned);
-              if (isNaN(n)) return;
-              val = n;
-            } else if (fdef.type === 'tags') {
-              val = val.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
-              if (!val.length) return;
-            } else if (fdef.type === 'date') {
-              // Try to normalise to YYYY-MM-DD
-              const d = new Date(val);
-              if (!isNaN(d.getTime())) val = d.toISOString().slice(0, 10);
-            }
-          }
+          if (!fdef) return;
+          const val = normalizeImportValue(raw, fdef);
           extras[key] = val;
         });
+        const file = await createEntity(this.app, this.entityKey, primaryValue, { values: contextValues });
         if (Object.keys(extras).length) {
           await this.app.fileManager.processFrontMatter(file, (fm) => {
+            Object.entries(extras).forEach(([k, v]) => validateImportedShape(v, def.fields.find((f) => f.key === k), fm[k]));
             Object.entries(extras).forEach(([k, v]) => {
               if (v == null || v === '') return;
               if (Array.isArray(v) && v.length === 0) return;

@@ -6,8 +6,10 @@ startup and configuration code (not aspirational). It complements the
 "Preparing an empty-vault workspace" section in `CLAUDE.md`/`AGENTS.md`, which
 covers the from-scratch case.
 
-The core idea: **BOB is a UI over your existing markdown.** It never moves or
-rewrites your notes. It reads them by *folder* and by `type:` *frontmatter*, and
+The core idea: **BOB is a UI over your existing markdown.** Loading the workspace
+does not restructure record notes; edits and imports write back to them, and
+switching templates can move schema and Base artifacts. It reads records by
+*folder* and by `type:` *frontmatter*, and
 shows them through navigation + dashboards defined in `workspace.json`, with
 record shapes described by schema YAML. Getting an existing vault working is
 therefore a matter of **describing what you already have** so the plugin can
@@ -21,8 +23,9 @@ When the plugin loads (`onload`, `src/plugin.ts`), in order:
 
 1. `initPluginPaths` — resolves the active config location to
    `<vault>/.obsidian/plugins/bob-workspace/workspace.json`.
-2. `seedWorkspaceTemplates` — copies the bundled starter templates into the
-   plugin's `templates/` folder (so they appear in the picker). Missing-only.
+2. `seedWorkspaceTemplates` — ensures the plugin's `templates/` directory exists.
+   The picker loads bundled templates from `main.js`; disk files can add custom
+   templates but cannot override bundled filenames.
 3. `loadSettings` — reads plugin `data.json`, then `workspace.json` if present,
    then overlays `workspace.json.settings` for the workspace-owned keys.
 4. `reloadEntityConfiguration` — the runtime assembly (see below).
@@ -92,26 +95,36 @@ Put one YAML per record type under the schema source folder (default
 `00-CORE/Schemas/source/`). Minimum useful shape:
 
 ```yaml
-entity: contact              # the BOB entity key
-label: Contact               # REQUIRED — display label for the record type
-type_value: person           # matches your notes' `type:` frontmatter
-location_pattern: 10-ME/10-PEOPLE   # REQUIRED — folder your notes live in
-key_fields: [name]           # first becomes the primary (display/title/basename) field
+entity: person               # maps to the plugin's contact entity key
+label: Contact
+type_value: person            # note-facing type for scans, creation and outputs
+location_pattern: 10-ME/10-PEOPLE/
+key_fields: [name]
 fields:
-  - { key: name,  label: Name,  primary: true }
-  - { key: email, label: Email, type: email }
-  - { key: company, label: Company }
+  - { name: name, label: Name, type: string, required: true }
+  - { name: email, label: Email, type: string, bob_type: email }
+  - { name: company, label: Company, type: string }
 ```
 
 `validateSourceSchemaDefinition` (`src/schema-designer.ts`) **requires** `entity`,
-`label`, `location_pattern`, at least one field, and `type_value` unless the
-entity is filename-backed. It also checks: field `type` ∈
-`{string,number,integer,boolean,array}` (there is **no `date` type** — dates are
-`string`); no duplicate field keys; every `key_fields` entry is a defined field; a
-field `default` must be one of its `enum` options and match its type. Note it does
+`label`, `location_pattern`, and at least one field. Include `type_value` for
+correct generated outputs; the validator currently does not require it. It also checks: field `type` ∈
+`{string,number,integer,boolean,array,object}` (use `type: string` with
+`format: date` for dates); no duplicate field names; every `key_fields` entry is a defined field; a
+field `default` must be one of its `enum` options; arrays, numbers and booleans
+receive type checks, while object/string defaults are not fully checked. Note it does
 **not** validate a `format` key. Give each entity a real name/title field as its
 primary — if `key_fields` is omitted, the first field wins, which can make a
 `status` field the basename by accident.
+
+**Runtime identity:** `type_value` supplies the note type; `discriminator` adds
+frontmatter constraints. These also initialize new-note defaults. The `person`
+schema maps to the plugin's `contact` key while still matching `type: person`.
+Explicit `bob.typeFilter`/`bob.typeFilters` take precedence when supplied, and
+explicit template frontmatter can override new-note defaults. Verify an existing
+note and a newly created note before populating the workspace. See
+[structured-field editing](extending-bob-workspace.md#structured-fields-and-editing-limits)
+for nested values and workbook encoding.
 
 Because the bootstrap is gated (Step "What the plugin does" above), the presence
 of *any* YAML here stops the plugin from seeding the full built-in set — so your
@@ -175,7 +188,7 @@ dashboards and navigation should now reflect the vault's real content.
 
 ---
 
-## ⚠️ The one destructive edge: switching/re-applying templates
+## Switching and re-applying templates
 
 `applyWorkspaceTemplate` calls `archiveTemplateAssets` **only when switching to a
 different template** (a previously-active template exists and differs). That
@@ -191,7 +204,27 @@ Implications:
   archive.
 - **Switching templates later, or re-applying a different one:** back up first,
   and be ready to re-generate bases / re-run the datamodel bootstrap afterward.
-  Re-applying the *same* template is idempotent (no archive).
+  Re-applying the *same* template skips archiving but rewrites workspace config
+  and fills missing assets; it does not preserve workspace customizations.
+- Archive failures abort the switch and attempt to restore completed moves.
+  Explicitly mapped Bases outside the configured Bases folder remain in place;
+  their contents are snapshotted for recovery because they may be shared.
+
+### Recovering a failed template switch
+
+The error notice names a `template-switch-<template>-<timestamp>.json` recovery
+file in the installed plugin folder. It contains the original `workspace` text,
+`settings`, source/destination `moves`, snapshots of `externalBases`, and a
+`phase` (`planned`, `archived`, `archive-failed`, `apply-failed`, or `applied`).
+
+For an archive failure, completed moves are rolled back automatically. If rollback
+also fails, the error names the remaining paths; use the recorded move plan to
+restore them. For a later apply failure, the outgoing assets remain archived:
+restore each archived file to its recorded source, restore the saved workspace
+text and settings, and reload the plugin. Preserve any incoming assets separately
+before restoring outgoing files into the same paths. External Bases need no move.
+Keep the recovery file until restoration has been verified. A successful apply
+marks it `applied` and retains it as the archive's recovery record.
 
 ---
 

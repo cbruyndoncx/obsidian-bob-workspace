@@ -4,7 +4,7 @@ A unified Obsidian plugin for **CRM, PRM, project management, daily planning, an
 
 This repository is a BOB Workspace customization of the original Cadence plugin. The plugin is intended to stay vault-model aware: built-in fields are only fallbacks, while real vault behavior should come from schemas, Bases, and `workspace.json` overrides. When schema support is enabled and the source folder is empty, the plugin can bootstrap canonical schema YAML from the current workspace entity definitions and then regenerate the derived FileClasses and JSON Schema outputs.
 
-For extension guidance, see [Extending BOB Workspace Without Code Changes](docs/extending-bob-workspace.md).
+Start with the [empty-vault quickstart](docs/empty-vault-quickstart.md) or [existing-vault installation guide](docs/installing-into-existing-vault.md). For extension guidance, see [Extending BOB Workspace Without Code Changes](docs/extending-bob-workspace.md), including its current editing limitations.
 
 💬 **Docs, support, and community:** join the **ThirdBrain BOB** Skool community → https://www.skool.com/thirdbrain-tech-3102
 
@@ -89,10 +89,10 @@ A clean two-column modal for every entity type — type-aware widgets (date pick
 Bring an entire client list, pipeline, or partner roster in from a spreadsheet. Run **BOB Workspace: Import from CSV** (or hit "Import CSV" on any list view) → pick a `.csv` from your vault or paste raw text → BOB Workspace auto-maps columns to entity fields by name (with synonyms — `Email`, `email`, `Email Address` all map to `email`). Override any mapping, see a sample of the first two rows, then import. Each row becomes one markdown file with frontmatter populated.
 
 ### XLSX workbook export / import
-Export your entities to a multi-sheet `.xlsx` workbook (one sheet per entity type, grouped by area) with **BOB Workspace: Export to XLSX**, and round-trip edits back in with **Import XLSX**. The SheetJS library is bundled into the plugin, so export/import works offline with no extra files to install.
+Export your entities to a multi-sheet `.xlsx` workbook (one sheet per entity type, grouped by area) with **BOB Workspace: Export to XLSX**, and import edits back in with **Import XLSX**. Arrays and objects use explicitly marked JSON cells to preserve their types on round-trip. Blank cells leave existing values unchanged; nested edits in the app use **Open as note**. The SheetJS library is bundled into the plugin, so export/import works offline with no extra files to install.
 
 ### Bases-backed views
-Entity lists can be driven by Obsidian **Bases** (`.base`) files for richer filtering, sorting, and column control. A single **Bases folder** setting controls where every `.base` lives, and **Generate missing bases** creates a starter `.base` (filter + table view) for any entity that doesn't have one — including entities you define purely via schema YAML. See *Configuration* below.
+Entity lists can be driven by Obsidian **Bases** (`.base`) files for richer filtering, sorting, and column control. The **Bases folder** setting resolves bare filenames; explicit vault paths stay at their configured locations, and **Generate missing bases** creates a starter `.base` (filter + table view) for any entity that doesn't have one — including entities you define purely via schema YAML. See *Configuration* below.
 
 ---
 
@@ -126,9 +126,9 @@ The shipped templates are:
 
 Use **BOB Workspace** for the full business model, **EMAI Starter** for a PARA personal-productivity workspace, **CRM Only** for a lighter start, or **Minimal** to build everything by hand.
 
-**Templates bring their own entities.** A template can embed its entity definitions (schema YAML) and `.base` files. Applying it writes *exactly* those into the configured schema/Bases folders, so a template like EMAI Starter provisions only its own entities on a fresh vault — it never falls back to the full built-in business model. (Built-in templates whose entities are built-in, like BOB Workspace, bootstrap from the built-in definitions as before.)
+**Templates bring their own entities.** A template can embed its entity definitions (schema YAML) and `.base` files. Applying it writes *exactly* those into the configured schema/Bases folders, so a template like EMAI Starter provisions only its own entities on a fresh vault — it never falls back to the full built-in business model. BOB Workspace also ships its full schema and Base assets; it does not rely on the lean built-in entity defaults for a fresh installation.
 
-**Switching templates is clean.** Applying a *different* template first archives the outgoing template's full schema state — source YAML, the derived `fileClasses/` and `json-schema/` outputs, `.base` files, and a labelled copy of `workspace.json` — into sibling `…-archive-<template>-<timestamp>` folders, reversible (moved, never deleted). So you can try several templates in one vault without files compounding. Re-applying the *same* template is idempotent (only fills in what's missing).
+**Switching templates archives the previous configuration.** Applying a different template moves schema sources, derived outputs, and Bases from the configured folders into sibling archive folders. Before moving files, it saves the outgoing workspace, settings, and full move plan in `template-switch-<template>-<timestamp>.json` in the installed plugin folder. Archive failures stop the switch and trigger rollback of completed moves. Explicit Bases elsewhere stay in place and are snapshotted in the recovery file. Re-applying the same template rewrites workspace configuration and fills missing assets; it does not restore edited assets. See [template recovery](docs/installing-into-existing-vault.md#recovering-a-failed-template-switch).
 
 ---
 
@@ -153,8 +153,8 @@ Settings → BOB Workspace:
 The surface areas are easiest to understand in this order:
 
 1. **Workspace** - the source-of-truth `workspace.json` for schemas, Bases, navigation, dashboards, templates, and workbook groups.
-2. **Data model** - canonical schema YAML, plus bootstrap/regenerate actions when the schema folder is empty. Also home to the **Bases folder** setting (authoritative location for every `.base`) and the **Generate missing bases** action (creates a starter `.base` for any entity — built-in or schema-defined — that lacks one).
-3. **Bases** - view configuration for each entity, either through `workspace.json.bases` or the Base selectors in Settings. Changing the Bases folder relocates where every base is resolved; the filename comes from the entity config, the folder from the setting.
+2. **Data model** - canonical schema YAML, plus bootstrap/regenerate actions when the schema folder is empty. Also home to the **Bases folder** setting (default location for bare `.base` filenames) and the **Generate missing bases** action (creates a starter `.base` for any entity — built-in or schema-defined — that lacks one).
+3. **Bases** - view configuration for each entity, either through `workspace.json.bases` or the Base selectors in Settings. Changing the Bases folder changes resolution only for bare filenames such as `People.base`. Paths such as `20-COMPANY/skills.base` are honored verbatim; changing the setting does not move files.
 4. **Navigation** - the left rail, secondary tabs, and module groups.
 5. **Dashboards** - Home, CRM, Reports, and any custom surfaces composed from widgets.
 6. **Widgets** - the widget catalog and inventory used by dashboards and reports.
@@ -247,7 +247,7 @@ own agent's skills directory to use them.
 git clone https://github.com/cbruyndoncx/obsidian-bob-workspace
 cd obsidian-bob-workspace
 npm install
-npm run build   # bundles src/ TypeScript (+ templates and the XLSX library) into main.js
+npm run check   # typecheck, build main.js, syntax check, and regression tests
 # Drop main.js + manifest.json + styles.css
 # into <vault>/.obsidian/plugins/bob-workspace/ to test.
 ```

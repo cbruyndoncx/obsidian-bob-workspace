@@ -1,6 +1,7 @@
+import { isReadOnlyField, isStructuredValue, scalarFieldValue } from './field-values';
 import { loadBundledXLSX } from './bundled/xlsx';
 import { ENTITIES, primaryField } from './entities';
-import { entityValue, listEntities } from './entity-files';
+import { entityValue, listEntities, listEntityFiles } from './entity-files';
 import { WORKBOOK_EXPORT_GROUPS } from './nav';
 import { createEntity } from './notes';
 import { DEFAULT_SETTINGS } from './settings';
@@ -10,7 +11,7 @@ import * as obsidian from 'obsidian';
 import type { App, TFile } from 'obsidian';
 import type { XlsxLib, XlsxWorkbook } from './bundled/xlsx';
 import type { BobEntityDef } from './entities';
-import type { EntityDef, EntityField, PartialSettings } from './types';
+import type { EntityDef, EntityField, PartialSettings, JsonValue } from './types';
 
 /** Counters returned by the workbook import paths. */
 interface WorkbookImportResult {
@@ -19,6 +20,7 @@ interface WorkbookImportResult {
   failed: number;
   sheets: number;
   skippedSheets: string[];
+  errors: string[];
 }
 
 export let XLSX_LIB: XlsxLib | null = null;
@@ -60,12 +62,40 @@ export function workbookEntityKeyFromSheet(sheetName: string) {
   return null;
 }
 
+/** Tagged cells distinguish serialized values from ordinary JSON-looking text. */
+export const WORKBOOK_VALUE_PREFIX = 'BOB:JSON:v1:';
 export function xlsxCellValue(value: unknown) {
   if (value == null) return '';
-  if (Array.isArray(value)) return value.join('; ');
   if (value instanceof Date) return value.toISOString().slice(0, 10);
-  if (typeof value === 'object') return JSON.stringify(value);
+  if (typeof value === 'object' || (typeof value === 'string' && value.startsWith(WORKBOOK_VALUE_PREFIX))) {
+    return WORKBOOK_VALUE_PREFIX + JSON.stringify(value);
+  }
   return value;
+}
+
+function matchesImportedType(value: JsonValue, type: JsonValue): boolean {
+  if (Array.isArray(type)) return type.some((itemType) => matchesImportedType(value, itemType));
+  if (type === 'null') return value === null;
+  if (type === 'array') return Array.isArray(value);
+  if (type === 'object') return value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (type === 'integer') return Number.isInteger(value);
+  return typeof value === type;
+}
+
+export function validateImportedShape(value: JsonValue, field: EntityField, current?: unknown): void {
+  const type = field.schemaType;
+  const object = value != null && typeof value === 'object' && !Array.isArray(value);
+  if (type === 'object' && !object) throw new Error(`${field.key} requires an object`);
+  if (type === 'array' && !Array.isArray(value)) throw new Error(`${field.key} requires an array`);
+  if ((Array.isArray(current) && !Array.isArray(value))
+      || (isStructuredValue(current) && !Array.isArray(current) && !object)) {
+    throw new Error(`${field.key}: refusing to replace a structured value with a scalar`);
+  }
+  if (Array.isArray(value) && field.items?.type) {
+    if (value.some((v) => !matchesImportedType(v, field.items.type))) {
+      throw new Error(`${field.key}: invalid array item type`);
+    }
+  }
 }
 
 export function entityRowsForWorkbook(app: App, entityKey: string) {
@@ -210,28 +240,36 @@ export function rowValueForField(row: Record<string, unknown>, field: EntityFiel
   return '';
 }
 
-export function normalizeImportValue(value: unknown, field: EntityField) {
-  let val = value == null ? '' : value;
-  if (typeof val === 'string') val = val.trim();
-  if (val === '') return null;
-  if (field.type === 'number' || field.type === 'currency') {
-    const n = Number(String(val).replace(/[^\d.\-]/g, ''));
-    return isNaN(n) ? null : n;
+export function normalizeImportValue(value: unknown, field: EntityField): JsonValue {
+  if (value == null || value === '') return null;
+  if (typeof value === 'string' && value.startsWith(WORKBOOK_VALUE_PREFIX)) {
+    const decoded: JsonValue = JSON.parse(value.slice(WORKBOOK_VALUE_PREFIX.length));
+    validateImportedShape(decoded, field);
+    if (decoded != null && typeof decoded === 'object') {
+      if (field.schemaType && !['object', 'array'].includes(field.schemaType)) throw new Error(`${field.key} is a scalar field`);
+      return decoded;
+    }
+    if (typeof decoded === 'string' && !isReadOnlyField(field) && (!field.schemaType || field.schemaType === 'string')) return decoded;
+    return decoded == null ? null : scalarFieldValue(String(decoded), field);
   }
-  if (field.type === 'tags') {
-    if (Array.isArray(val)) return val.filter(Boolean);
-    const tags = String(val).split(/[,;]/).map((s) => s.trim()).filter(Boolean);
-    return tags.length ? tags : null;
+  if (typeof value === 'object' && !(value instanceof Date)) {
+    const decoded = value as JsonValue;
+    validateImportedShape(decoded, field);
+    return decoded;
   }
+  let raw = String(value).trim();
+  if (raw === '') return null;
+  if (isReadOnlyField(field)) throw new Error(`${field.key}: structured imports require a BOB encoded cell`);
   if (field.type === 'date') {
-    if (val instanceof Date && !isNaN(val.getTime())) return val.toISOString().slice(0, 10);
-    const d = new Date(val as string | number);
-    return isNaN(d.getTime()) ? String(val) : d.toISOString().slice(0, 10);
+    const d = value instanceof Date ? value : new Date(raw);
+    if (isNaN(d.getTime())) throw new Error(`${field.key}: invalid date`);
+    return d.toISOString().slice(0, 10);
   }
-  return val;
+  if (field.type === 'tags') raw = raw.replace(/;/g, ',');
+  return scalarFieldValue(raw, field);
 }
 
-export async function importEntityRows(app: App, entityKey: string, rows: Record<string, unknown>[]): Promise<{ created: number; updated?: number; failed: number }> {
+export async function importEntityRows(app: App, entityKey: string, rows: Record<string, unknown>[]): Promise<{ created: number; updated?: number; failed: number; errors?: string[] }> {
   const def = ENTITIES[entityKey];
   if (!def) return { created: 0, failed: rows.length };
   const primary = primaryField(def);
@@ -239,37 +277,48 @@ export async function importEntityRows(app: App, entityKey: string, rows: Record
   let created = 0;
   let updated = 0;
   let failed = 0;
-  for (const row of rows) {
-    const primaryValue = String(rowValueForField(row, primary, def) || '').trim();
-    if (!primaryValue) { failed++; continue; }
+  const errors: string[] = [];
+  for (const [index, row] of rows.entries()) {
     try {
+      const primaryValue = String(normalizeImportValue(rowValueForField(row, primary, def), primary) ?? '').trim();
+      if (!primaryValue) throw new Error('Missing primary value');
       const explicitPath = String(rowValue(row, 'file_path') || '').trim();
       let file = explicitPath ? app.vault.getAbstractFileByPath(explicitPath) : null;
-      let isUpdate = file instanceof obsidian.TFile;
-      if (!isUpdate) file = await createEntity(app, entityKey, primaryValue, { values: row });
+      if (explicitPath && (!(file instanceof obsidian.TFile) || file.extension !== 'md'
+          || !listEntityFiles(app, entityKey, { ignoreViewFilter: true }).some((f) => f.path === file.path))) {
+        throw new Error(`Import target is not a ${def.label} note: ${explicitPath}`);
+      }
+      const isUpdate = file instanceof obsidian.TFile;
+      const values: Record<string, JsonValue> = {};
+      def.fields.forEach((field) => {
+        const raw = rowValueForField(row, field, def);
+        // Blank and missing columns leave existing values alone; encoded []/{} are explicit values.
+        if (raw == null || raw === '') return;
+        values[field.key] = normalizeImportValue(raw, field);
+      });
+      if (!isUpdate) file = await createEntity(app, entityKey, primaryValue, { values });
       await app.fileManager.processFrontMatter(file as TFile, (fm) => {
+        // Validate every write before applying any of them; recheck the current note shape.
         def.fields.forEach((field) => {
-          if (field.key === primary.key) return;
-          const imported = normalizeImportValue(rowValueForField(row, field, def), field);
-          if (imported == null || imported === '') return;
-          if (Array.isArray(imported) && !imported.length) return;
-          fm[field.key] = imported;
+          if (Object.prototype.hasOwnProperty.call(values, field.key)) validateImportedShape(values[field.key], field, fm[field.key]);
         });
+        Object.entries(values).forEach(([key, value]) => { if (value != null) fm[key] = value; });
       });
       if (isUpdate) updated++;
       else created++;
-    } catch (_) {
+    } catch (error) {
       failed++;
+      errors.push(`Row ${index + 1}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-  return { created, updated, failed };
+  return { created, updated, failed, errors };
 }
 
 export async function importWorkbookEntities(app: App, file: TFile) {
   const XLSX = getXLSX(app);
   const data = await app.vault.readBinary(file);
   const wb = XLSX.read(data, { type: 'array', cellDates: true });
-  const result: WorkbookImportResult = { created: 0, updated: 0, failed: 0, sheets: 0, skippedSheets: [] };
+  const result: WorkbookImportResult = { created: 0, updated: 0, failed: 0, sheets: 0, skippedSheets: [], errors: [] };
   for (const sheetName of wb.SheetNames) {
     const entityKey = workbookEntityKeyFromSheet(sheetName);
     if (!entityKey) {
@@ -282,6 +331,7 @@ export async function importWorkbookEntities(app: App, file: TFile) {
     result.created += imported.created;
     result.updated += imported.updated || 0;
     result.failed += imported.failed;
+    result.errors.push(...(imported.errors || []).map((error) => `${sheetName}: ${error}`));
     result.sheets++;
   }
   return result;
@@ -307,6 +357,7 @@ export async function promptImportWorkbook(app: App, onDone: (result: WorkbookIm
     try {
       const result = await importWorkbookEntities(app, file);
       await onDone(result);
+      if (result.errors.length) new obsidian.Notice(result.errors.slice(0, 3).join('\n'), 10000);
       const skipped = result.skippedSheets.length ? ` · skipped sheets: ${result.skippedSheets.join(', ')}` : '';
       new obsidian.Notice(`BOB Workspace: imported ${result.created} created, ${result.updated || 0} updated from ${result.sheets} sheet${result.sheets === 1 ? '' : 's'}${result.failed ? ` · ${result.failed} skipped` : ''}${skipped}`, 8000);
     } catch (e) {

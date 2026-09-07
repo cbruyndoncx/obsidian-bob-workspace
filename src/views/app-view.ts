@@ -1,10 +1,13 @@
+import { saveGeneratedCanvas } from '../canvas-storage';
+import { shortHash } from '../canvas';
+import { isReadOnlyField, writeScalarField, matchesEnumSelection } from '../field-values';
 import { entityBasePath, entityBaseViewName } from '../bases-config';
 import { baseViewRendersInline, hasBaseValue, parseBaseFile, readBaseSummary } from '../bases-parse';
-import { CANVAS_GENERATORS, buildAgentAuditCanvas, buildEntityContextCanvas, buildProcessCanvas, entityLifecycle, isAgentRunFile, mergeGeneratedCanvas, ownedIdsOf, serializeCanvas, type CanvasData, type CanvasManifest } from '../canvas';
+import { CANVAS_GENERATORS, buildAgentAuditCanvas, buildEntityContextCanvas, buildProcessCanvas, entityLifecycle, isAgentRunFile, ownedIdsOf, type CanvasData, type CanvasManifest } from '../canvas';
 import { builtinDashboardDefaults, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
 import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
-import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, formatStructuredValue, isStructuredValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
+import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, formatStructuredValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
 import { BobReminderEditModal } from '../modals/capture';
 import { BobPromptModal, confirmModal } from '../modals/common';
 import { BobEntityCreateModal } from '../modals/entity-create';
@@ -256,7 +259,7 @@ interface ProjectPickItem {
 }
 
 /** Inline-editable table cell / saved-badge DOM expandos. */
-type EditableCellEl = HTMLTableCellElement & { _cadEditing?: boolean; _cadEditTimer?: ReturnType<typeof setTimeout> };
+type EditableCellEl = HTMLTableCellElement & { _bobEditing?: boolean; _bobEditTimer?: ReturnType<typeof setTimeout> };
 type SavedBadgeEl = HTMLSpanElement & { _t?: ReturnType<typeof setTimeout> };
 
 /** Drag payload for the dashboard designer layout board. */
@@ -685,6 +688,8 @@ export class BobAppView extends obsidian.ItemView {
     const previousNav = root.querySelector ? root.querySelector('.bob-app-nav') : null;
     const previousNavScrollTop = previousNav ? previousNav.scrollTop : (this._navScrollTop || 0);
     const renderSeq = ++this._renderSeq;
+    this._detailSaveCleanup?.();
+    this._detailSaveCleanup = undefined;
     root.empty();
     root.addClass('bob-app');
     root.toggleClass('bob-dark', !!this.plugin.settings.bobAppDark);
@@ -1025,22 +1030,12 @@ export class BobAppView extends obsidian.ItemView {
     await ensureFolderSync(this.app, folder);
     const name = rawName.replace(/[\\/:*?"<>|]/g, '-');
     const canvasPath = `${folder}/${name}.canvas`;
-    const metaPath = `${folder}/${name}.canvas.bobmeta.json`;
-    let out = data;
-    const existing = this.app.vault.getAbstractFileByPath(canvasPath);
-    if (existing instanceof obsidian.TFile) {
-      try {
-        const oldData = JSON.parse(await this.app.vault.read(existing)) as CanvasData;
-        let oldOwned: string[] = [];
-        const mf = this.app.vault.getAbstractFileByPath(metaPath);
-        if (mf instanceof obsidian.TFile) {
-          try { oldOwned = (JSON.parse(await this.app.vault.read(mf)) as CanvasManifest).bob_owned_node_ids || []; } catch (_) { /* ignore */ }
-        }
-        out = mergeGeneratedCanvas(oldData, oldOwned, data);
-      } catch (_) { out = data; }
+    try {
+      await saveGeneratedCanvas(this.app, canvasPath, data, manifest);
+    } catch (error) {
+      new obsidian.Notice(`Canvas save failed for ${canvasPath}: ${error instanceof Error ? error.message : String(error)}`, 10000);
+      return;
     }
-    await this._writeOrModify(canvasPath, serializeCanvas(out));
-    await this._writeOrModify(metaPath, JSON.stringify(manifest, null, 2));
     const f = this.app.vault.getAbstractFileByPath(canvasPath);
     if (f instanceof obsidian.TFile) await this.openCanvas(f);
     else new obsidian.Notice(`Canvas written to ${canvasPath}`);
@@ -1064,7 +1059,7 @@ export class BobAppView extends obsidian.ItemView {
     }
     if (!result || !result.data.nodes.length) { new obsidian.Notice('No context to render for this note.'); return; }
     const prefix = isAgentRun ? 'Agent audit' : 'Context';
-    await this._writeGeneratedCanvas(`${prefix} - ${file.basename}`, result.data, result.manifest);
+    await this._writeGeneratedCanvas(`${prefix} - ${file.basename} - ${shortHash(file.path)}`, result.data, result.manifest);
   }
 
   // Process Execution Canvas — render an entity type's lifecycle as a left-to-
@@ -1079,12 +1074,6 @@ export class BobAppView extends obsidian.ItemView {
     }
     if (!data || !data.nodes.length) { new obsidian.Notice('This type has no stage/status lifecycle to render.'); return; }
     await this._writeGeneratedCanvas(`Process - ${def.plural}`, data, this._boardManifest('process-runway', data));
-  }
-
-  async _writeOrModify(path: string, content: string) {
-    const existing = this.app.vault.getAbstractFileByPath(path);
-    if (existing instanceof obsidian.TFile) await this.app.vault.modify(existing, content);
-    else await this.app.vault.create(path, content);
   }
 
   _renderCanvasRow(list: HTMLElement, file: obsidian.TFile) {
@@ -1414,9 +1403,8 @@ export class BobAppView extends obsidian.ItemView {
       if (filterState.size === 0) return arr;
       return arr.filter((e) => {
         for (const [key, vals] of filterState) {
-          if (!vals || vals.size === 0) continue;
-          const v = String(entityValue(e, key, def) ?? '');
-          if (!vals.has(v)) return false;
+          if (!vals) continue;
+          if (!matchesEnumSelection(entityValue(e, key, def), vals)) return false;
         }
         return true;
       });
@@ -1547,8 +1535,8 @@ export class BobAppView extends obsidian.ItemView {
         const tr = tbody.createEl('tr', { cls: 'bob-row' });
         tr.addEventListener('dblclick', () => {
           tr.querySelectorAll('td').forEach((cell: EditableCellEl) => {
-            clearTimeout(cell._cadEditTimer);
-            delete cell._cadEditTimer;
+            clearTimeout(cell._bobEditTimer);
+            delete cell._bobEditTimer;
           });
           this.openEntityDetail(entityKey, e.file);
         });
@@ -1650,9 +1638,14 @@ export class BobAppView extends obsidian.ItemView {
   }
 
   _makeInlineEditable(td: EditableCellEl, entity: EntityRecord, field: EntityField, def: EntityDef, initialFormatted: string) {
+    if (isReadOnlyField(field, entityValue(entity, field.key, def))) {
+      td.setText(initialFormatted || '');
+      td.title = FIELD_HELP.structured;
+      return;
+    }
     td.addClass('bob-cell-editable');
     td.setText(initialFormatted || '');
-    td._cadEditing = false;
+    td._bobEditing = false;
 
     const refreshCell = () => {
       const cache = this.app.metadataCache.getFileCache(entity.file);
@@ -1660,29 +1653,13 @@ export class BobAppView extends obsidian.ItemView {
       const newVal = entityValue({ file: entity.file, frontmatter: fm, basename: entity.basename }, field.key, def);
       td.empty();
       td.removeClass('bob-cell-editing');
-      td._cadEditing = false;
+      td._bobEditing = false;
       td.setText(fmtValue(newVal, field.type) || '');
     };
 
     const saveField = async (raw: string) => {
-      const fieldType = field.type || 'text';
-      let value: string | string[] | number | null = raw;
-      if (fieldType === 'tags') {
-        value = (raw || '').split(',').map((t) => t.trim()).filter(Boolean);
-      } else if (fieldType === 'number' || fieldType === 'currency') {
-        const n = Number(raw);
-        value = isNaN(n) ? null : n;
-      } else if (raw === '' || raw == null) {
-        value = null;
-      }
       try {
-        await this.app.fileManager.processFrontMatter(entity.file, (fm) => {
-          if (value == null || (Array.isArray(value) && value.length === 0)) {
-            delete fm[field.key];
-          } else {
-            fm[field.key] = value;
-          }
-        });
+        await this.app.fileManager.processFrontMatter(entity.file, (fm) => writeScalarField(fm, field, raw));
       } catch (err) {
         new obsidian.Notice(`Save failed: ${err.message}`);
       }
@@ -1690,13 +1667,14 @@ export class BobAppView extends obsidian.ItemView {
     };
 
     const activateEdit = () => {
-      if (td._cadEditing) return;
-      td._cadEditing = true;
+      if (td._bobEditing) return;
+      td._bobEditing = true;
       const cache = this.app.metadataCache.getFileCache(entity.file);
       const currentVal = entityValue(
         { file: entity.file, frontmatter: cache?.frontmatter || {}, basename: entity.basename },
         field.key, def
       );
+      if (isReadOnlyField(field, currentVal)) { refreshCell(); return; }
       const fieldType = field.type || 'text';
       td.empty();
       td.addClass('bob-cell-editing');
@@ -1704,16 +1682,16 @@ export class BobAppView extends obsidian.ItemView {
       const cancel = () => {
         td.empty();
         td.removeClass('bob-cell-editing');
-        td._cadEditing = false;
+        td._bobEditing = false;
         td.setText(fmtValue(currentVal, field.type) || '');
       };
 
-      if (fieldType === 'enum') {
+      if (fieldType === 'enum' || fieldType === 'boolean') {
         const sel = td.createEl('select', { cls: 'bob-cell-input' });
         sel.createEl('option', { value: '', text: '—' });
-        (field.options || []).forEach((opt) => {
+        (fieldType === 'boolean' ? ['true', 'false'] : field.options || []).forEach((opt) => {
           const o = sel.createEl('option', { value: opt, text: opt });
-          if (String(currentVal || '') === opt) o.selected = true;
+          if (String(currentVal ?? '') === opt) o.selected = true;
         });
         let committed = false;
         sel.addEventListener('change', () => { committed = true; saveField(sel.value); });
@@ -1752,9 +1730,9 @@ export class BobAppView extends obsidian.ItemView {
     };
 
     td.addEventListener('click', () => {
-      if (td._cadEditing) return;
-      clearTimeout(td._cadEditTimer);
-      td._cadEditTimer = setTimeout(() => activateEdit(), 250);
+      if (td._bobEditing) return;
+      clearTimeout(td._bobEditTimer);
+      td._bobEditTimer = setTimeout(() => activateEdit(), 250);
     });
   }
 
@@ -5776,43 +5754,43 @@ export class BobAppView extends obsidian.ItemView {
 
     // Form
     const form = root.createDiv({ cls: 'bob-detail-form' });
-    let saveTimer: ReturnType<typeof setTimeout> | null = null;
+    const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    const pendingValues = new Map<string, string>();
+    let disposed = false;
+    const cleanup = () => {
+      disposed = true;
+      clearTimeout(savedBadge._t);
+      saveTimers.forEach(clearTimeout);
+      saveTimers.clear();
+      const pending = [...pendingValues];
+      pendingValues.clear();
+      pending.forEach(([key, raw]) => { void writeField(key, raw); });
+    };
+    this._detailSaveCleanup = cleanup;
     const flashSaved = () => {
+      if (disposed) return;
       savedBadge.setText('Saved');
       savedBadge.addClass('show');
       clearTimeout(savedBadge._t);
       savedBadge._t = setTimeout(() => savedBadge.removeClass('show'), 1400);
     };
     const writeField = async (key: string, raw: string) => {
+      clearTimeout(saveTimers.get(key));
+      saveTimers.delete(key);
+      pendingValues.delete(key);
       try {
-        let value: string | string[] | number | null = raw;
-        // Coerce based on field type
         const fdef = def.fields.find((f) => f.key === key);
-        if (fdef) {
-          if (fdef.type === 'tags') {
-            value = (raw || '').split(',').map((t) => t.trim()).filter(Boolean);
-          } else if (fdef.type === 'number' || fdef.type === 'currency') {
-            const n = Number(raw);
-            value = isNaN(n) ? null : n;
-          } else if (raw === '') {
-            value = null;
-          }
-        }
-        await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-          if (value == null || (Array.isArray(value) && value.length === 0)) {
-            delete frontmatter[key];
-          } else {
-            frontmatter[key] = value;
-          }
-        });
+        if (!fdef) return;
+        await this.app.fileManager.processFrontMatter(file, (frontmatter) => writeScalarField(frontmatter, fdef, raw));
         flashSaved();
       } catch (e) {
         new obsidian.Notice(`Save failed: ${e.message}`);
       }
     };
     const debouncedWrite = (key: string, val: string) => {
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => writeField(key, val), 350);
+      clearTimeout(saveTimers.get(key));
+      pendingValues.set(key, val);
+      saveTimers.set(key, setTimeout(() => writeField(key, val), 350));
     };
 
     // Render each field as a labelled row
@@ -5823,13 +5801,17 @@ export class BobAppView extends obsidian.ItemView {
       const current = fm[f.key];
       const fieldType = f.type || 'text';
 
-      if (fieldType === 'enum') {
+      if (isReadOnlyField(f, current)) {
+        const staticEl = row.createDiv({ cls: 'bob-form-static' });
+        staticEl.setText(formatStructuredValue(current) || '—');
+        staticEl.title = FIELD_HELP.structured;
+      } else if (fieldType === 'enum' || fieldType === 'boolean') {
         const sel = row.createEl('select', { cls: 'bob-form-input' });
         // Allow empty
         sel.createEl('option', { value: '', text: '—' });
-        (f.options || []).forEach((opt) => {
+        (fieldType === 'boolean' ? ['true', 'false'] : f.options || []).forEach((opt) => {
           const o = sel.createEl('option', { value: opt, text: opt });
-          if (String(current || '') === opt) o.selected = true;
+          if (String(current ?? '') === opt) o.selected = true;
         });
         sel.addEventListener('change', () => writeField(f.key, sel.value));
       } else if (fieldType === 'date') {
@@ -5857,15 +5839,6 @@ export class BobAppView extends obsidian.ItemView {
         else if (current) inp.value = String(current);
         inp.addEventListener('input', () => debouncedWrite(f.key, inp.value));
         inp.addEventListener('blur', () => writeField(f.key, inp.value));
-      } else if (isStructuredValue(current)) {
-        // A nested object or list-of-records cannot round-trip through a
-        // single-line input: String(value) renders "[object Object]", and
-        // writeField() would then persist that literal string over the real
-        // structure on the next blur — silently destroying the data. Show a
-        // read-only summary; these stay editable in the note's frontmatter.
-        const staticEl = row.createDiv({ cls: 'bob-form-static' });
-        staticEl.setText(formatStructuredValue(current) || '—');
-        staticEl.title = 'Structured field — edit this in the note frontmatter';
       } else {
         const inp = row.createEl('input', { type: 'text', cls: 'bob-form-input' });
         if (current) inp.value = String(current);
@@ -7751,7 +7724,9 @@ export class BobAppView extends obsidian.ItemView {
     this.render();
   }
 
-  async onClose() { this._closeColumnFilterMenu(); this._teardownCanvasLeaf(); }
+  _detailSaveCleanup?: () => void;
+
+  async onClose() { this._detailSaveCleanup?.(); this._closeColumnFilterMenu(); this._teardownCanvasLeaf(); }
 }
 
 /* ─────────── Settings tab ─────────── */

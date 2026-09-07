@@ -4,6 +4,21 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [1.3.1] — 2026-09-07
+
+### Fixed
+
+- Protect structured frontmatter values from destructive scalar editing.
+- Preserve schema identity, discriminators, and typed field shapes at runtime and during record creation.
+- Preserve arrays and objects through XLSX export/import with explicit JSON cell encoding and row-level errors.
+- Make generated canvas writes recoverable and prevent replacement after read or parse failures.
+- Make template switching archive failures recoverable with rollback and recovery journals.
+- Correct numeric clearing, enum filter selection, and pending detail-field saves.
+
+### Changed
+
+- Updated installation, extension, canvas, and agent guidance to match the repaired behavior.
+
 ## [1.3.0] — 2026-08-24
 
 Partner programme automation: the PRM surfaces now act rather than only report.
