@@ -163,7 +163,7 @@ export function evaluateBaseFilterGroup(app: App, file: TFile, op: string, child
    re-enters through the same memo. Per-file allocations (tags Set, folder
    string, today Date) moved into the only branches that need them. */
 interface ParsedBaseCondition {
-  kind: 'true' | 'not' | 'or' | 'and' | 'hasTag' | 'folderNe' | 'pathStarts' | 'pathContains' | 'contains' | 'isEmpty' | 'propEq' | 'dateCompare' | 'unsupported';
+  kind: 'true' | 'not' | 'or' | 'and' | 'hasTag' | 'folderNe' | 'pathStarts' | 'pathContains' | 'contains' | 'containsToday' | 'isEmpty' | 'present' | 'propEq' | 'dateCompare' | 'unsupported';
   inner?: string;
   parts?: string[];
   prop?: string;
@@ -206,6 +206,9 @@ export function buildParsedBaseCondition(rawString: string): ParsedBaseCondition
   const pathContains = cond.match(/^file\.path\.contains\(["'](.+?)["']\)$/);
   if (pathContains) return { kind: 'pathContains', value: pathContains[1] };
 
+  const containsToday = cond.match(/^(?:list\((.+?)\)|(.+?))\.contains\(today\(\)\.format\(["'](.+?)["']\)\)$/);
+  if (containsToday) return { kind: 'containsToday', prop: containsToday[1] || containsToday[2], value: containsToday[3] };
+
   const contains = cond.match(/^(.+?)\.contains\(["'](.+?)["']\)$/);
   if (contains) return { kind: 'contains', prop: contains[1], value: contains[2] };
 
@@ -223,6 +226,9 @@ export function buildParsedBaseCondition(rawString: string): ParsedBaseCondition
 
   const dateCompare = cond.match(/^(?:date\()?(.+?)\)?\s*(==|<|<=|>|>=)\s*((?:today|now)\(\)(?:\s*[+-]\s*["']?\d+\s*(?:d|day|days)["']?)?|["']\d{4}-\d{2}-\d{2}["'])$/);
   if (dateCompare) return { kind: 'dateCompare', prop: dateCompare[1], op: dateCompare[2], targetRaw: dateCompare[3] };
+
+  // Bare property: truthy when the note has a value for it (e.g. `recurrence`).
+  if (/^(?:note\.)?[\w-]+$/.test(cond) && cond !== 'true' && cond !== 'false') return { kind: 'present', prop: cond };
 
   return { kind: 'unsupported' };
 }
@@ -259,6 +265,18 @@ export function evaluateBaseFilterCondition(app: App, file: TFile, raw: unknown)
       if (Array.isArray(value)) return value.map((item) => String(item)).includes(parsed.value);
       return String(value ?? '').includes(parsed.value);
     }
+    case 'containsToday': {
+      const d = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const today = String(parsed.value)
+        .replace(/yyyy|YYYY/g, String(d.getFullYear()))
+        .replace(/MM/g, pad(d.getMonth() + 1))
+        .replace(/dd|DD/g, pad(d.getDate()));
+      const value = basePropValue(app, file, fm, parsed.prop);
+      if (Array.isArray(value)) return value.map((item) => String(item).slice(0, today.length)).includes(today);
+      return String(value ?? '').includes(today);
+    }
+    case 'present': return hasBaseValue(basePropValue(app, file, fm, parsed.prop));
     case 'isEmpty': return !hasBaseValue(basePropValue(app, file, fm, parsed.prop));
     case 'propEq': {
       const actualValue = basePropValue(app, file, fm, parsed.prop);

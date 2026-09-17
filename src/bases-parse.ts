@@ -341,6 +341,8 @@ export function isSupportedBaseFilterCondition(raw: unknown): boolean {
     || /^file\.path\.startsWith\(["'].+?["']\)$/.test(cond)
     || /^file\.path\.contains\(["'].+?["']\)$/.test(cond)
     || /^.+?\.contains\(["'].+?["']\)$/.test(cond)
+    || /^.+?\.contains\(today\(\)\.format\(["'].+?["']\)\)$/.test(cond)
+    || (/^(?:note\.)?[\w-]+$/.test(cond) && cond !== 'true' && cond !== 'false')
     || /^(?:date\()?[\w-]+\)?\.isEmpty\(\)$/.test(cond)
     || /^(?:note\.|note\[['"].+?['"]\])?[\w-]*\s*(==|!=)\s*(?:["'].*?["']|null)$/.test(cond)
     || /^(?:date\()?[\w.-]+(?:\[['"].+?['"]\])?\)?\s*(==|<|<=|>|>=)\s*(?:(?:today\(\)|now\(\))(?:\s*[+-]\s*["']?\d+\s*(?:d|day|days)["']?)?|["']\d{4}-\d{2}-\d{2}["'])$/.test(cond);

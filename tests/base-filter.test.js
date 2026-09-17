@@ -139,3 +139,37 @@ const app = {
 })();
 
 console.log('base-filter.test.js: ok');
+
+// TaskNotes default views: bare property truthiness and today().format() contains.
+(() => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const today = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const recurring = makeFile({ recurrence: 'FREQ=DAILY', complete_instances: [today] });
+  const plain = makeFile({ recurrence: '', complete_instances: [] });
+  const cond = '!complete_instances.contains(today().format("yyyy-MM-dd"))';
+  assert.strictEqual(sandbox.isSupportedBaseFilterCondition('recurrence'), true);
+  assert.strictEqual(sandbox.isSupportedBaseFilterCondition(cond), true);
+  assert.strictEqual(evaluateBaseFilterNode(app, recurring, 'recurrence'), true);
+  assert.strictEqual(evaluateBaseFilterNode(app, plain, 'recurrence'), false);
+  assert.strictEqual(evaluateBaseFilterNode(app, recurring, cond), false);
+  assert.strictEqual(evaluateBaseFilterNode(app, plain, cond), true);
+  assert.strictEqual(
+    evaluateBaseFilterNode(app, recurring, { and: ['recurrence', cond] }),
+    false
+  );
+  const listCond = '!list(complete_instances).contains(today().format("YYYY-MM-DD"))';
+  assert.strictEqual(sandbox.isSupportedBaseFilterCondition(listCond), true);
+  assert.strictEqual(evaluateBaseFilterNode(app, recurring, listCond), false);
+  assert.strictEqual(evaluateBaseFilterNode(app, plain, listCond), true);
+  assert.strictEqual(evaluateBaseFilterNode(app, plain, 'due && date(due) <= today()'), false);
+})();
+
+// Guarded date comparisons with a note.-prefixed property (People.base).
+(() => {
+  const cond = 'note.last_contact && note.last_contact < today() - "30d"';
+  assert.strictEqual(sandbox.isSupportedBaseFilterCondition(cond), true);
+  assert.strictEqual(evaluateBaseFilterNode(app, makeFile({}), cond), false);
+  assert.strictEqual(evaluateBaseFilterNode(app, makeFile({ last_contact: '2020-01-01' }), cond), true);
+  assert.strictEqual(evaluateBaseFilterNode(app, makeFile({ last_contact: '2999-01-01' }), cond), false);
+})();

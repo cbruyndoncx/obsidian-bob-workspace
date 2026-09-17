@@ -24041,7 +24041,7 @@ function isSupportedBaseFilterCondition(raw) {
   if (orParts) return orParts.every(isSupportedBaseFilterCondition);
   const andParts = splitBaseExpression(cond, "&&");
   if (andParts) return andParts.every(isSupportedBaseFilterCondition);
-  return /^file\.hasTag\(["']#?.+?["']\)$/.test(cond) || /^file\.folder\s*!=\s*["'].+?["']$/.test(cond) || /^file\.path\.startsWith\(["'].+?["']\)$/.test(cond) || /^file\.path\.contains\(["'].+?["']\)$/.test(cond) || /^.+?\.contains\(["'].+?["']\)$/.test(cond) || /^(?:date\()?[\w-]+\)?\.isEmpty\(\)$/.test(cond) || /^(?:note\.|note\[['"].+?['"]\])?[\w-]*\s*(==|!=)\s*(?:["'].*?["']|null)$/.test(cond) || /^(?:date\()?[\w.-]+(?:\[['"].+?['"]\])?\)?\s*(==|<|<=|>|>=)\s*(?:(?:today\(\)|now\(\))(?:\s*[+-]\s*["']?\d+\s*(?:d|day|days)["']?)?|["']\d{4}-\d{2}-\d{2}["'])$/.test(cond);
+  return /^file\.hasTag\(["']#?.+?["']\)$/.test(cond) || /^file\.folder\s*!=\s*["'].+?["']$/.test(cond) || /^file\.path\.startsWith\(["'].+?["']\)$/.test(cond) || /^file\.path\.contains\(["'].+?["']\)$/.test(cond) || /^.+?\.contains\(["'].+?["']\)$/.test(cond) || /^.+?\.contains\(today\(\)\.format\(["'].+?["']\)\)$/.test(cond) || /^(?:note\.)?[\w-]+$/.test(cond) && cond !== "true" && cond !== "false" || /^(?:date\()?[\w-]+\)?\.isEmpty\(\)$/.test(cond) || /^(?:note\.|note\[['"].+?['"]\])?[\w-]*\s*(==|!=)\s*(?:["'].*?["']|null)$/.test(cond) || /^(?:date\()?[\w.-]+(?:\[['"].+?['"]\])?\)?\s*(==|<|<=|>|>=)\s*(?:(?:today\(\)|now\(\))(?:\s*[+-]\s*["']?\d+\s*(?:d|day|days)["']?)?|["']\d{4}-\d{2}-\d{2}["'])$/.test(cond);
 }
 function collectUnsupportedBaseFilterConditions(node) {
   return collectBaseFilterConditions(node).filter((cond) => !isSupportedBaseFilterCondition(cond));
@@ -24278,6 +24278,8 @@ function buildParsedBaseCondition(rawString) {
   if (pathStarts) return { kind: "pathStarts", value: pathStarts[1].replace(/\/$/, "") + "/" };
   const pathContains = cond.match(/^file\.path\.contains\(["'](.+?)["']\)$/);
   if (pathContains) return { kind: "pathContains", value: pathContains[1] };
+  const containsToday = cond.match(/^(?:list\((.+?)\)|(.+?))\.contains\(today\(\)\.format\(["'](.+?)["']\)\)$/);
+  if (containsToday) return { kind: "containsToday", prop: containsToday[1] || containsToday[2], value: containsToday[3] };
   const contains = cond.match(/^(.+?)\.contains\(["'](.+?)["']\)$/);
   if (contains) return { kind: "contains", prop: contains[1], value: contains[2] };
   const empty = cond.match(/^(?:date\()?(.+?)\)?\.isEmpty\(\)$/);
@@ -24291,6 +24293,7 @@ function buildParsedBaseCondition(rawString) {
   }
   const dateCompare = cond.match(/^(?:date\()?(.+?)\)?\s*(==|<|<=|>|>=)\s*((?:today|now)\(\)(?:\s*[+-]\s*["']?\d+\s*(?:d|day|days)["']?)?|["']\d{4}-\d{2}-\d{2}["'])$/);
   if (dateCompare) return { kind: "dateCompare", prop: dateCompare[1], op: dateCompare[2], targetRaw: dateCompare[3] };
+  if (/^(?:note\.)?[\w-]+$/.test(cond) && cond !== "true" && cond !== "false") return { kind: "present", prop: cond };
   return { kind: "unsupported" };
 }
 function evaluateBaseFilterCondition(app, file, raw) {
@@ -24330,6 +24333,16 @@ function evaluateBaseFilterCondition(app, file, raw) {
       if (Array.isArray(value)) return value.map((item) => String(item)).includes(parsed.value);
       return String(value ?? "").includes(parsed.value);
     }
+    case "containsToday": {
+      const d = /* @__PURE__ */ new Date();
+      const pad2 = (n) => String(n).padStart(2, "0");
+      const today = String(parsed.value).replace(/yyyy|YYYY/g, String(d.getFullYear())).replace(/MM/g, pad2(d.getMonth() + 1)).replace(/dd|DD/g, pad2(d.getDate()));
+      const value = basePropValue(app, file, fm, parsed.prop);
+      if (Array.isArray(value)) return value.map((item) => String(item).slice(0, today.length)).includes(today);
+      return String(value ?? "").includes(today);
+    }
+    case "present":
+      return hasBaseValue(basePropValue(app, file, fm, parsed.prop));
     case "isEmpty":
       return !hasBaseValue(basePropValue(app, file, fm, parsed.prop));
     case "propEq": {
