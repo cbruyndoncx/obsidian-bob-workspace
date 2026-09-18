@@ -4,7 +4,7 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
-## [Unreleased]
+## [1.3.2] — 2026-09-18
 
 ### Fixed
 
