@@ -15885,16 +15885,15 @@ views:
       "Period-Closes.base": 'filters: note.type == "period-close"\nformulas:\n  open: link(file.path, "\u{1F4C4}")\nproperties:\n  file.name:\n    displayName: Period Close\n  note.close_id:\n    displayName: Close\n  note.period_id:\n    displayName: Period\n  note.close_type:\n    displayName: Type\n  note.status:\n    displayName: Status\nviews:\n  - type: table\n    name: Open\n    filters: note.status != "closed" && note.status != "done" && note.status != "archived"\n    order:\n      - formula.open\n      - file.name\n      - close_id\n      - period_id\n      - close_type\n    columnSize:\n      formula.open: 52\n  - type: table\n    name: All\n    order:\n      - formula.open\n      - file.name\n      - close_id\n      - period_id\n      - close_type\n      - status\n    columnSize:\n      formula.open: 52\n'
     },
     schemas: {
-      "accounting-period": "entity: accounting-period\nlabel: Accounting Period\n\nlocation_pattern: 20-COMPANY/06-FINANCE/PERIODS/\ndescription: Accounting Period entity from DATAMODEL.md\nkey_fields:\n- period_id\n- period_type\n- start_date\n- end_date\n- status\n- currency\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  type: string\n  required: true\n  description: e.g. 2025-12, 2025-Q4, 2025\n- name: period_type\n  type: string\n  required: true\n  enum:\n  - monthly\n  - quarterly\n  - annual\n- name: start_date\n  type: string\n  format: date\n  required: true\n  description: First day of period\n- name: end_date\n  type: string\n  format: date\n  required: true\n  description: Last day of period\n- name: status\n  type: string\n  required: true\n  enum:\n  - open\n  - soft-closed\n  - hard-closed\n- name: currency\n  type: string\n  required: true\n  description: Functional currency (AED for UAE entities; EUR for BE)\n- name: client_id\n  required: false\n  type: string\n  description: kebab-case client identifier. Populated for client periods under 30-CLIENTS/.\n    Omitted for own-company periods\n- name: purpose\n  required: false\n  type: string\n  enum:\n  - live-books\n  - audit-reference\n- name: approved_by\n  required: false\n  type: string\n  description: 'Required when status: hard-closed'\n- name: approved_date\n  required: false\n  type: string\n  format: date\n  description: 'Required when status: hard-closed'\n- name: tags\n  required: true\n  type: array\n  description: Must include accounting-period\nstatus_lifecycle:\n- open\n- soft-closed\n- hard-closed\n",
-      activity: 'entity: activity\nlabel: Activity\n\nlocation_pattern: 30-CLIENTS/{client-id}/03-COMMS/\ndescription: Activity entity from DATAMODEL.md\nkey_fields:\n- title\n- channel\n- direction\n- client_id\n- lead_id\n- contact_ref\n- date\n- related\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: false\n  description: Short subject/title for the activity\n- name: channel\n  type: string\n  required: false\n  enum:\n  - telegram\n  - whatsapp\n  - email\n  - call\n  - meeting\n  - note\n- name: direction\n  type: string\n  required: false\n  enum:\n  - in\n  - out\n  - internal\n- name: client_id\n  type: string\n  required: false\n  description: Client identifier when client-scoped\n- name: lead_id\n  type: string\n  required: false\n  description: Lead identifier when lead-scoped\n- name: contact_ref\n  type: string\n  required: false\n  description: Person/contact involved in the activity\n- name: date\n  type: string\n  format: date\n  required: false\n  description: Activity date\n- name: related\n  type: string\n  required: false\n  description: Related note, deal, project, thread, or artifact\n- name: outcome\n  required: false\n  type: string\n  description: Result or short summary of the activity\n- name: next_action\n  required: false\n  type: string\n  description: Follow-up action from this activity\n- name: next_action_date\n  required: false\n  type: string\n  format: date\n  description: Follow-up date\n- name: tags\n  required: false\n  type: array\n  description: "\\u2014"\n',
-      "ai-initiative": "entity: ai-initiative\nlabel: AI Initiative\n\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: AI Initiative entity from DATAMODEL.md\nkey_fields:\n- initiative_id\n- solution_type\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: initiative_id\n  type: string\n  required: false\n- name: solution_type\n  type: string\n  required: false\n- name: status\n  type: string\n  required: false\n",
-      analysis: 'entity: analysis\nlabel: Analysis\n\nlocation_pattern: Same as related research\ndescription: Analysis entity from DATAMODEL.md\nkey_fields:\n- analysis_type\n- based_on\n- feeds_into\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: analysis_type\n  type: string\n  required: true\n  enum:\n  - swot\n  - growth-opportunities\n  - risk-assessment\n  - competitive\n  - market-sizing\n  - prospect-audit\n  - lead-qualification\n  - decision-maker-map\n- name: based_on\n  type: array\n  required: true\n  description: Wikilinks to source Research artifacts\n- name: feeds_into\n  type: array\n  required: false\n  description: Wikilinks to Deliverables this supports\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: client_id\n  required: false\n  type: string\n  description: Client this analysis is scoped to (when client-specific)\n- name: framework\n  required: false\n  type: string\n  description: Methodology used\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
-      "audit-finding": "entity: audit-finding\nlabel: Audit Finding\n\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: Audit Finding entity from DATAMODEL.md\nkey_fields:\n- finding_id\n- kind\n- severity\n- stage\nfields:\n- name: type\n  type: string\n  required: true\n- name: finding_id\n  type: string\n  required: false\n- name: kind\n  type: string\n  required: false\n- name: severity\n  type: string\n  required: false\n- name: stage\n  type: string\n  required: false\n",
-      "audit-process": "entity: audit-process\nlabel: Audit Process\n\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: Audit Process entity from DATAMODEL.md\nkey_fields:\n- process_id\n- stage\nfields:\n- name: type\n  type: string\n  required: true\n- name: process_id\n  type: string\n  required: false\n- name: stage\n  type: string\n  required: false\n",
-      "audit-waste": "entity: audit-waste\nlabel: Audit Waste\n\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: Audit Waste entity from DATAMODEL.md\nkey_fields:\n- waste_id\n- category\n- annual_cost\nfields:\n- name: type\n  type: string\n  required: true\n- name: waste_id\n  type: string\n  required: false\n- name: category\n  type: string\n  required: false\n- name: annual_cost\n  type: number\n  required: false\n",
+      "accounting-period": "entity: accounting-period\nlabel: Accounting Period\nlocation_pattern: 20-COMPANY/06-FINANCE/PERIODS/\ndescription: Accounting Period entity from DATAMODEL.md\nkey_fields:\n- period_id\n- period_type\n- start_date\n- end_date\n- status\n- currency\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  type: string\n  required: true\n  description: e.g. 2025-12, 2025-Q4, 2025\n- name: period_type\n  type: string\n  required: true\n  enum:\n  - monthly\n  - quarterly\n  - annual\n- name: start_date\n  type: string\n  format: date\n  required: true\n  description: First day of period\n- name: end_date\n  type: string\n  format: date\n  required: true\n  description: Last day of period\n- name: status\n  type: string\n  required: true\n  enum:\n  - open\n  - soft-closed\n  - hard-closed\n- name: currency\n  type: string\n  required: true\n  description: Functional currency (AED for UAE entities; EUR for BE)\n- name: client_id\n  required: false\n  type: string\n  description: kebab-case client identifier. Populated for client periods under 30-CLIENTS/.\n    Omitted for own-company periods\n- name: purpose\n  required: false\n  type: string\n  enum:\n  - live-books\n  - audit-reference\n- name: approved_by\n  required: false\n  type: string\n  description: 'Required when status: hard-closed'\n- name: approved_date\n  required: false\n  type: string\n  format: date\n  description: 'Required when status: hard-closed'\n- name: tags\n  required: true\n  type: array\n  description: Must include accounting-period\nstatus_lifecycle:\n- open\n- soft-closed\n- hard-closed\n",
+      activity: 'entity: activity\nlabel: Activity\nlocation_pattern: 30-CLIENTS/{client-id}/03-COMMS/\ndescription: Activity entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  required: false\n  type: string\n  description: Short subject/title for the activity\n- name: channel\n  required: false\n  type: string\n  enum:\n  - telegram\n  - whatsapp\n  - email\n  - call\n  - meeting\n  - note\n- name: direction\n  required: false\n  type: string\n  enum:\n  - inbound\n  - outbound\n  - internal\n- name: client_id\n  required: false\n  type: string\n  description: Client identifier when client-scoped\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier\\\n    \\ or own company this record attaches to. Pair with company_type. For client records,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: lead_id\n  required: false\n  type: string\n  description: Lead identifier when lead-scoped\n- name: contact_ref\n  required: false\n  type: string\n  description: Person/contact involved in the activity\n- name: date\n  required: false\n  type: string\n  format: date\n  description: Activity date\n- name: related\n  required: false\n  type: string\n  description: Related note, deal, project, thread, or artifact\n- name: outcome\n  required: false\n  type: string\n  description: Result or short summary of the activity\n- name: next_action\n  required: false\n  type: string\n  description: Follow-up action from this activity\n- name: next_action_date\n  required: false\n  type: string\n  format: date\n  description: Follow-up date\n- name: tags\n  required: false\n  type: array\n',
+      "ai-initiative": 'entity: ai-initiative\nlabel: AI Initiative\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: AI Initiative entity from DATAMODEL.md\nkey_fields:\n- initiative_id\n- solution_type\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: initiative_id\n  type: string\n  required: true\n  description: Short mnemonic id, e.g. CH-012\n- name: solution_type\n  type: string\n  required: true\n  enum:\n  - cowork-plugin\n  - automation\n  - custom-build\n  - data-migration\n- name: status\n  type: string\n  required: true\n  enum:\n  - proposed\n  - planned\n  - in-progress\n  - shipped\n  - measured\n  - dropped\n- name: title\n  required: true\n  type: string\n- name: tool\n  required: false\n  type: string\n  description: Named tool/product delivering the initiative (e.g. n8n, Claude Cowork)\n- name: annual_value\n  required: false\n  type: number\n  description: Estimated/measured annual $ value\n- name: effort_weeks\n  required: false\n  type: number\n  description: Estimated implementation effort\n- name: phase\n  required: false\n  type: integer\n  description: 1=quick wins, 2=core platform, 3=AI on clean data\n- name: impact\n  required: false\n  type: string\n  enum:\n  - high\n  - medium\n  - low\n- name: solves\n  required: false\n  type: array\n  description: Wikilinks to audit-waste/audit-finding ids this initiative resolves\n- name: kpi_experiment\n  required: false\n  type: string\n  description: "Wikilink to a KPI experiment TaskNote \\u2014 company-scope only, never\\\n    \\ present on a client-delivery copy"\n- name: quote\n  required: false\n  type: string\n  description: Supporting stakeholder quote\n- name: quote_by\n  required: false\n  type: string\n  description: Speaker attribution for the quote\n- name: client_id\n  required: false\n  type: string\n  description: Present only on a client-delivery copy; absent = company scope\n- name: audit\n  required: false\n  type: string\n  description: Audit engagement id this initiative belongs to\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include audit and initiative status\n',
+      analysis: "entity: analysis\nlabel: Analysis\nlocation_pattern: 30-CLIENTS/{client-id}/ or 20-COMPANY/{division}/analysis/ or 20-COMPANY/35-PARTNERS/{partner-id}/analysis/\n  or 20-COMPANY/60-SALES/ or 30-CLIENTS/{client-id}/60-SALES/ or 50-BRNCX-PROJECTS/{project}/\ndescription: Analysis entity from DATAMODEL.md\nkey_fields:\n- analysis_type\n- based_on\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: analysis_type\n  type: string\n  required: true\n  enum:\n  - swot\n  - growth-opportunities\n  - risk-assessment\n  - competitive\n  - market-sizing\n  - prospect-audit\n  - lead-qualification\n  - decision-maker-map\n  - objection-playbook\n  - pipeline-report\n  - skill-audit\n  - partner-opportunity\n  - architecture-gap-analysis\n  - integration-spec\n  - use-case-inventory\n  - lead-list-curation\n  - demo-script\n  - pitch-script\n  - roi-calculator\n  - lead-gen-control\n  - lead-gen-inventory\n  - outbound-sequence\n  - sales-flow\n  - vault-evolution\n  - credit-check\n  - usp\n  - weights-derivation\n  - roadmap-gap-analysis\n  - consultative-selling\n  - gap-analysis\n  - icp-discovery\n  - skills-mapping\n  - finance-scenario-lineage\n  description: 'genuinely open: 300+ skills each produce their own analysis output. Adding\n    a value here requires editing this row + regenerating, same as any enum; there is no separate\n    registration step (see Decide the open-vocabulary enums (analysis_type, report_type, research_type)\n    for why a heavier gate wasn''t built)'\n- name: based_on\n  type: array\n  required: true\n  description: Wikilinks to source Research artifacts\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: feeds_into\n  required: false\n  type: array\n  description: Wikilinks to Deliverables this supports\n- name: client_id\n  required: false\n  type: string\n  description: Client this analysis is scoped to (when client-specific)\n- name: framework\n  required: false\n  type: string\n  description: Methodology used\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`; note\n    that batch edits routinely leave it stale.\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes. The vault-wide cross-reference idiom.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: analysis_date\n  required: false\n  type: string\n  description: Date the analysis was performed.\n  format: date\n- name: analyst\n  required: false\n  type: string\n  description: Who performed the analysis.\n- name: methodology\n  required: false\n  type: string\n  description: Method or framework the analysis applied.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n- name: entity\n  required: false\n  type: string\n  description: Named entity the analysis is about.\n- name: entity_id\n  required: false\n  type: string\n  description: Identifier for `entity`.\nnotes: '**Unrenamed template copies under `30-CLIENTS/` (2026-08-23).** `analyst` and `analysis_date`\n  are properly typed. Getting there meant clearing the literal `{analyst-name}` / `{YYYY-MM-DD}`\n  placeholders from 11 live client analysis notes copied from `00-CORE/Templates/client/project-template/20-ANALYSIS/`\n  and never filled. A further 28 files still carry them, but every one has a filename ending\n  `_template` and 24 of those sit under `30-CLIENTS/` \u2014 template scaffolding copied into client\n  folders and never renamed. `validate_frontmatter.py` skips `_template` stems, so they neither\n  fail nor get checked. That is a client-deliverable hygiene backlog item, not a schema one.'\n",
+      "audit-finding": "entity: audit-finding\nlabel: Audit Finding\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: Audit Finding entity from DATAMODEL.md\nkey_fields:\n- finding_id\n- kind\n- severity\n- stage\nfields:\n- name: type\n  type: string\n  required: true\n- name: finding_id\n  type: string\n  required: true\n  description: Short mnemonic id, e.g. PP-001, OPT-001\n- name: kind\n  type: string\n  required: true\n  enum:\n  - pain-point\n  - optimisation\n- name: severity\n  type: string\n  required: true\n  enum:\n  - high\n  - medium\n  - low\n- name: stage\n  type: string\n  required: true\n  description: Process/business stage this finding relates to\n- name: title\n  required: true\n  type: string\n  description: One-line description of the finding\n- name: process_ref\n  required: false\n  type: string\n  description: Wikilink to the audit-process this came from\n- name: source_session\n  required: false\n  type: string\n  description: Interview/discovery session identifier\n- name: citation_speaker\n  required: false\n  type: string\n  description: Person quoted or attributed\n- name: citation_quote\n  required: false\n  type: string\n  description: Supporting verbatim quote\n- name: annual_cost\n  required: false\n  type: number\n  description: Optional $ estimate directly on the finding\n- name: status\n  required: true\n  type: string\n  enum:\n  - open\n  - planned\n  - resolved\n  - dismissed\n- name: client_id\n  required: false\n  type: string\n  description: Present only on a client-delivery copy; absent = company scope\n- name: audit\n  required: false\n  type: string\n  description: Audit engagement id this finding belongs to\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include audit and finding kind\n",
+      "audit-process": 'entity: audit-process\nlabel: Audit Process\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: Audit Process entity from DATAMODEL.md\nkey_fields:\n- process_id\nfields:\n- name: type\n  type: string\n  required: true\n- name: process_id\n  type: string\n  required: true\n  description: "kebab-case id \\u2014 drives the generated .bpmn filename and BPMN\\\n    \\ element ids"\n- name: stage\n  required: false\n  type: string\n  description: Business stage this process belongs to\n- name: title\n  required: true\n  type: string\n  description: Process display name\n- name: owner\n  required: false\n  type: string\n  description: Process owner (Person)\n- name: confidence\n  required: false\n  type: string\n  enum:\n  - high\n  - medium\n  - low\n- name: lanes\n  required: false\n  type: array\n  description: Tool swimlanes, top-to-bottom authored order\n- name: steps\n  required: true\n  type: array\n  description: "[{id, title, type, lane, kind, owner}] \\u2014 the BPMN nodes. type\\\n    \\ one of start\\\\|end\\\\|task\\\\|exclusive_gateway\\\\|parallel_gateway; kind optional\\\n    \\ normal\\\\|pain\\\\|opt colours the node"\n- name: flows\n  required: false\n  type: array\n  description: "from, to, label? \\u2014 directed edges between step ids"\n- name: status\n  required: true\n  type: string\n  enum:\n  - draft\n  - review\n  - final\n- name: client_id\n  required: false\n  type: string\n  description: Present only on a client-delivery copy; absent = company scope\n- name: audit\n  required: false\n  type: string\n  description: Audit engagement id this process belongs to\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include audit and process stage\n',
+      "audit-waste": 'entity: audit-waste\nlabel: Audit Waste\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: Audit Waste entity from DATAMODEL.md\nkey_fields:\n- waste_id\n- category\n- annual_cost\nfields:\n- name: type\n  type: string\n  required: true\n- name: waste_id\n  type: string\n  required: true\n  description: Short mnemonic id, e.g. W-001\n- name: category\n  type: string\n  required: true\n  enum:\n  - missing-automation\n  - communication-gap\n  - no-follow-up\n  - manual-data-entry\n  - duplicate-work\n- name: annual_cost\n  type: number\n  required: true\n  description: "hours_per_week \\xD7 people \\xD7 hourly_rate \\xD7 weeks"\n- name: severity\n  required: true\n  type: string\n  enum:\n  - high\n  - medium\n  - low\n- name: title\n  required: true\n  type: string\n  description: One-line description of the hidden cost\n- name: quote\n  required: false\n  type: string\n  description: Supporting stakeholder quote\n- name: citation_session\n  required: false\n  type: string\n  description: Interview/discovery session identifier\n- name: hours_per_week\n  required: false\n  type: number\n  description: Hours lost per week to this waste\n- name: people\n  required: false\n  type: number\n  description: Number of people affected\n- name: hourly_rate\n  required: false\n  type: number\n  description: Loaded hourly rate used in the calc\n- name: weeks\n  required: false\n  type: integer\n  description: Working weeks per year used in the calc (typically 52)\n- name: rate_estimated\n  required: false\n  type: boolean\n  description: True when hourly_rate is an estimate, not a confirmed figure\n- name: solves_refs\n  required: false\n  type: array\n  description: Finding ids this waste maps to\n- name: status\n  required: true\n  type: string\n  enum:\n  - open\n  - planned\n  - resolved\n  - dismissed\n- name: client_id\n  required: false\n  type: string\n  description: Present only on a client-delivery copy; absent = company scope\n- name: audit\n  required: false\n  type: string\n  description: Audit engagement id this waste belongs to\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include audit and waste category\n',
       "bank-account": `entity: bank-account
 label: Bank Account
-
 location_pattern: 20-COMPANY/06-FINANCE/BANK/
 description: Bank Account entity from DATAMODEL.md
 key_fields:
@@ -15915,7 +15914,6 @@ fields:
 - name: bank_name
   type: string
   required: true
-  description: "\\u2014"
 - name: iban
   type: string
   required: true
@@ -15946,7 +15944,6 @@ fields:
 `,
       "bank-reconciliation": `entity: bank-reconciliation
 label: Bank Reconciliation
-
 location_pattern: 20-COMPANY/06-FINANCE/BANK/
 description: Bank Reconciliation entity from DATAMODEL.md
 key_fields:
@@ -15955,9 +15952,6 @@ key_fields:
 - period_id
 - bank_statement_balance
 - gl_balance
-- bank_charges_not_in_gl
-- interest_not_in_gl
-- errors_in_gl
 - adjusted_bank_balance
 - adjusted_gl_balance
 - status
@@ -15976,7 +15970,6 @@ fields:
 - name: period_id
   type: string
   required: true
-  description: "\\u2014"
 - name: bank_statement_balance
   type: number
   required: true
@@ -15985,22 +15978,6 @@ fields:
   type: number
   required: true
   description: Closing balance per GL cash account
-- name: bank_charges_not_in_gl
-  type: number
-  required: false
-  description: Bank fees on statement not yet posted to GL. Stored as a positive amount.
-    The formula REDUCES the adjusted GL balance by this amount.
-- name: interest_not_in_gl
-  type: number
-  required: false
-  description: Bank interest credited on the statement but not yet posted to GL. Stored
-    as a positive amount. The formula INCREASES the adjusted GL balance by this amount.
-- name: errors_in_gl
-  type: number
-  required: false
-  description: 'Net GL posting errors identified during reconciliation, signed: positive
-    = GL was understated and needs increasing; negative = GL was overstated and needs
-    decreasing.'
 - name: adjusted_bank_balance
   type: number
   required: true
@@ -16018,6 +15995,22 @@ fields:
   - draft
   - reconciled
   - approved
+- name: bank_charges_not_in_gl
+  required: false
+  type: number
+  description: Bank fees on statement not yet posted to GL. Stored as a positive amount.
+    The formula REDUCES the adjusted GL balance by this amount.
+- name: interest_not_in_gl
+  required: false
+  type: number
+  description: Bank interest credited on the statement but not yet posted to GL. Stored
+    as a positive amount. The formula INCREASES the adjusted GL balance by this amount.
+- name: errors_in_gl
+  required: false
+  type: number
+  description: 'Net GL posting errors identified during reconciliation, signed: positive
+    = GL was understated and needs increasing; negative = GL was overstated and needs
+    decreasing.'
 - name: statement_date
   required: true
   type: string
@@ -16034,7 +16027,6 @@ fields:
 - name: prepared_by
   required: true
   type: string
-  description: "\\u2014"
 - name: approved_by
   required: false
   type: string
@@ -16048,21 +16040,15 @@ status_lifecycle:
 - reconciled
 - approved
 `,
-      campaign: 'entity: campaign\nlabel: Campaign\n\nlocation_pattern: 20-COMPANY/60-SALES/CAMPAIGNS/\ndescription: Campaign entity from DATAMODEL.md\nkey_fields:\n- campaign_name\n- campaign_type\n- status\n- launch_date\n- target_persona\nfields:\n- name: type\n  type: string\n  required: true\n- name: campaign_name\n  type: string\n  required: true\n  description: Display name\n- name: campaign_type\n  type: string\n  required: true\n  enum:\n  - outbound\n  - inbound\n  - mixed\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - paused\n  - completed\n  - archived\n- name: launch_date\n  type: string\n  format: date\n  required: false\n  description: When the campaign goes live\n- name: target_persona\n  type: string\n  required: false\n  description: e.g. "Head of Ops, 50-200 emp SaaS"\n- name: target_account_list\n  required: false\n  type: string\n  description: ICP segment or list reference\n- name: channels\n  required: false\n  type: array\n  description: email, linkedin, phone, ads, content\n- name: goal\n  required: false\n  type: string\n  description: MQLs, meetings, pipeline, brand\n- name: target_metric_value\n  required: false\n  type: number\n  description: Numeric goal\n- name: budget\n  required: false\n  type: number\n  description: Spend budget\n- name: owner\n  required: false\n  type: string\n  description: Person responsible\n- name: expected_end_date\n  required: false\n  type: string\n  format: date\n  description: Planned end\n- name: actual_end_date\n  required: false\n  type: string\n  format: date\n  description: Set on close\n- name: playbook_ref\n  required: false\n  type: string\n  description: Playbook template this instantiates\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
+      campaign: 'entity: campaign\nlabel: Campaign\nlocation_pattern: 20-COMPANY/60-SALES/CAMPAIGNS/\ndescription: Campaign entity from DATAMODEL.md\nkey_fields:\n- campaign_name\n- campaign_type\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: campaign_name\n  type: string\n  required: true\n  description: Display name\n- name: campaign_type\n  type: string\n  required: true\n  enum:\n  - outbound\n  - inbound\n  - mixed\n  - nurture\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - paused\n  - completed\n  - archived\n- name: launch_date\n  required: false\n  type: string\n  format: date\n  description: When the campaign goes live\n- name: target_persona\n  required: false\n  type: string\n  description: e.g. "Head of Ops, 50-200 emp SaaS"\n- name: target_account_list\n  required: false\n  type: string\n  description: ICP segment or list reference\n- name: channels\n  required: false\n  type: array\n  description: email, linkedin, phone, ads, content\n- name: goal\n  required: false\n  type: string\n  description: MQLs, meetings, pipeline, brand\n- name: target_metric_value\n  required: false\n  type: number\n  description: Numeric goal\n- name: budget\n  required: false\n  type: number\n  description: Spend budget\n- name: owner\n  required: false\n  type: string\n  description: Person responsible\n- name: expected_end_date\n  required: false\n  type: string\n  format: date\n  description: Planned end\n- name: actual_end_date\n  required: false\n  type: string\n  format: date\n  description: Set on close\n- name: playbook_ref\n  required: false\n  type: string\n  description: Playbook template this instantiates\n- name: created\n  required: true\n  type: string\n  format: date\n',
       candidate: `entity: candidate
 label: Candidate
-
 location_pattern: 30-CLIENTS/{client-id}/05-HR/recruiting/ or 20-COMPANY/05-HR/recruiting/
 description: Candidate entity from DATAMODEL.md
 key_fields:
 - candidate_name
-- client_id
 - role
 - status
-- channel_ref
-- hiring_plan_ref
-- region
-- ranking
 fields:
 - name: type
   type: string
@@ -16071,11 +16057,6 @@ fields:
   type: string
   required: true
   description: Full name of the candidate
-- name: client_id
-  type: string
-  required: false
-  description: "Scoping FK \\u2014 required-by-convention for candidates under 30-CLIENTS/{id}/;\\
-    \\ omit for company-internal (20-COMPANY) hires"
 - name: role
   type: string
   required: true
@@ -16091,23 +16072,28 @@ fields:
   - hired
   - rejected
   - withdrawn
-- name: channel_ref
-  type: string
+- name: client_id
   required: false
+  type: string
+  description: "Scoping FK \\u2014 required-by-convention for candidates under 30-CLIENTS/{id}/;\\
+    \\ omit for company-internal (20-COMPANY) hires"
+- name: channel_ref
+  required: false
+  type: string
   description: Wikilink to the Recruiting Channel that sourced this candidate (the
     "Source" column)
 - name: hiring_plan_ref
-  type: string
   required: false
+  type: string
   description: Wikilink to the hiring-plan deliverable (output of the hiring skill)
     this candidate is being assessed against
 - name: region
-  type: string
   required: false
+  type: string
   description: Sourcing region / catchment (e.g. "Baarle-Nassau +25km")
 - name: ranking
-  type: number
   required: false
+  type: number
   description: Relative ranking among candidates for the role (1 = top)
 - name: source
   required: false
@@ -16165,11 +16151,9 @@ fields:
   required: true
   type: string
   format: date
-  description: "\\u2014"
 - name: tags
   required: false
   type: array
-  description: "\\u2014"
 status_lifecycle:
 - applied
 - screening
@@ -16179,10 +16163,9 @@ status_lifecycle:
 - rejected
 - withdrawn
 `,
-      certification: 'entity: certification\nlabel: Certification\n\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/CERTIFICATIONS/\ndescription: Certification entity from DATAMODEL.md\nkey_fields:\n- name\n- partner_ref\n- level\n- issued_date\n- expires_date\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: name\n  type: string\n  required: true\n  description: Certification name\n- name: partner_ref\n  type: string\n  required: true\n  description: "\\u2014"\n- name: level\n  type: string\n  required: false\n  description: e.g. Gold, Silver, Associate, Expert\n- name: issued_date\n  type: string\n  format: date\n  required: true\n  description: "\\u2014"\n- name: expires_date\n  type: string\n  format: date\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: true\n  enum:\n  - active\n  - expiring-soon\n  - expired\n  - renewed\n  - revoked\n- name: holder_ref\n  required: false\n  type: string\n  description: Person at the partner who holds it\n- name: issuing_body\n  required: false\n  type: string\n  description: "\\u2014"\n- name: certification_id\n  required: false\n  type: string\n  description: External credential ID\n- name: renewal_due_date\n  required: false\n  type: string\n  format: date\n  description: When renewal action needs to be taken\n- name: training_url\n  required: false\n  type: string\n  description: Link to training material\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
+      certification: "entity: certification\nlabel: Certification\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/CERTIFICATIONS/\ndescription: Certification entity from DATAMODEL.md\nkey_fields:\n- name\n- partner_ref\n- issued_date\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: name\n  type: string\n  required: true\n  description: Certification name\n- name: partner_ref\n  type: string\n  required: true\n- name: issued_date\n  type: string\n  format: date\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - active\n  - expiring-soon\n  - expired\n  - renewed\n  - revoked\n- name: level\n  required: false\n  type: string\n  description: e.g. Gold, Silver, Associate, Expert\n- name: expires_date\n  required: false\n  type: string\n  format: date\n- name: holder_ref\n  required: false\n  type: string\n  description: Person at the partner who holds it\n- name: issuing_body\n  required: false\n  type: string\n- name: certification_id\n  required: false\n  type: string\n  description: External credential ID\n- name: renewal_due_date\n  required: false\n  type: string\n  format: date\n  description: When renewal action needs to be taken\n- name: training_url\n  required: false\n  type: string\n  description: Link to training material\n- name: created\n  required: true\n  type: string\n  format: date\n",
       "chart-of-accounts": `entity: chart-of-accounts
 label: Chart of Accounts
-
 location_pattern: 20-COMPANY/06-FINANCE/COA/{jurisdiction}/
 description: Chart of Accounts entity from DATAMODEL.md
 key_fields: []
@@ -16230,7 +16213,7 @@ fields:
 - name: scheme_authority
   required: false
   type: string
-  description: Wikilink to legal-rule note defining the scheme, e.g. pcmn_mar_chart_of_accounts
+  description: Wikilink to legal-rule note defining the scheme, e.g. belgium_pcmn_statutory_accounts
 - name: class_digit
   required: false
   type: string
@@ -16281,106 +16264,18 @@ fields:
   required: true
   type: array
   description: Must include coa and {account_type}
+- name: entity
+  required: false
+  type: string
+  description: Legal entity the chart of accounts belongs to.
 `,
-      client: `entity: client
-label: Client
-
-location_pattern: 30-CLIENTS/{client-id}/00-PROFILE/
-description: Client entity from DATAMODEL.md
-key_fields:
-- client_id
-- client_name
-- status
-- regions
-- jurisdiction
-- legal_form
-- company_registration_number
-- company_registration_registry
-- vat_id
-fields:
-- name: type
-  type: string
-  required: true
-- name: client_id
-  type: string
-  required: true
-  description: "kebab-case mnemonic identifier, e.g. acme-corp, solvay. Internal handle\\
-    \\ \\u2014 independent of any external registry number"
-- name: client_name
-  type: string
-  required: true
-  description: Display name (legal name as registered)
-- name: status
-  type: string
-  required: true
-  description: "\\u2014"
-- name: regions
-  type: array
-  required: false
-  description: Operating regions for client work
-- name: jurisdiction
-  type: string
-  required: false
-  description: ISO-3166-1 alpha-2 code of country of incorporation (BE, UAE, UK, FR,
-    ...)
-- name: legal_form
-  type: string
-  required: false
-  description: Legal form abbreviation in source language (SA/NV, SRL/BV, ASBL/VZW
-    for BE; Ltd, PLC for UK; LLC for UAE; SARL for FR)
-- name: company_registration_number
-  type: string
-  required: false
-  description: Jurisdiction-agnostic company registration number (Belgian KBO/BCE
-    0403.091.220; UK Companies House 12345678; French SIRET; UAE Commercial Licence).
-    Always pair with company_registration_registry
-- name: company_registration_registry
-  type: string
-  required: false
-  description: 'Source registry tag: BE-KBO'
-- name: vat_id
-  type: string
-  required: false
-  description: VAT identification number with country prefix (BE0403091220, GB123456789,
-    AE100000000000003). Distinct from company_registration_number
-- name: profile_type
-  required: true
-  type: string
-  enum:
-  - company-overview
-  - contact-details
-  - brand-voice
-  - brand-system
-  - icp
-  - client-overview
-- name: location
-  required: false
-  type: string
-  description: Primary location
-- name: created
-  required: true
-  type: string
-  format: date
-  description: "\\u2014"
-- name: tags
-  required: true
-  type: array
-  description: Must include client-id value
-status_lifecycle:
-- prospect
-- active
-- inactive
-- on-hold
-- completed
-- archived
-`,
-      commission: 'entity: commission\nlabel: Commission\n\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/COMMISSIONS/\ndescription: Commission entity from DATAMODEL.md\nkey_fields:\n- reference\n- partner_ref\n- amount\n- status\n- period\n- earned_date\nfields:\n- name: type\n  type: string\n  required: true\n- name: reference\n  type: string\n  required: true\n  description: Commission ID/reference\n- name: partner_ref\n  type: string\n  required: true\n  description: Partner earning the commission\n- name: amount\n  type: number\n  required: true\n  description: Calculated amount\n- name: status\n  type: string\n  required: true\n  enum:\n  - pending\n  - earned\n  - paid\n  - disputed\n  - written-off\n- name: period\n  type: string\n  required: false\n  description: Accounting period (e.g. 2026-Q3)\n- name: earned_date\n  type: string\n  format: date\n  required: false\n  description: When deal closed won\n- name: deal_ref\n  required: false\n  type: string\n  description: Deal that triggered the commission\n- name: rate_pct\n  required: false\n  type: number\n  description: Commission rate percentage applied\n- name: currency\n  required: false\n  type: string\n  description: "\\u2014"\n- name: paid_date\n  required: false\n  type: string\n  format: date\n  description: When commission was disbursed\n- name: payment_ref\n  required: false\n  type: string\n  description: Bank transfer or invoice ref\n- name: notes\n  required: false\n  type: string\n  description: "\\u2014"\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
-      "comms-thread": 'entity: comms-thread\nlabel: Comms Thread\n\nlocation_pattern: 30-CLIENTS/{client-id}/03-COMMS/ or 20-COMPANY/55-LEADS/{lead-id}/03-COMMS/\ndescription: Comms Thread entity from DATAMODEL.md\nkey_fields:\n- client_id\n- end_client_id\n- project_id\n- project\n- thread_id\n- channel\n- account\n- subject\n- status\n- urgency\n- awaiting_reply\n- last_message_at\n- captured_in\nfields:\n- name: type\n  type: string\n  required: true\n- name: client_id\n  type: string\n  required: true\n  description: Must match a 30-CLIENTS/ folder. Set for client-scoped threads.\n- name: end_client_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: project_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: project\n  type: string\n  required: false\n  description: "\\u2014"\n- name: thread_id\n  type: string\n  required: true\n  description: Stable cross-session identifier (Gmail thread ID, WhatsApp chat ID,\n    Telegram chat+message ID)\n- name: channel\n  type: string\n  required: true\n  enum:\n  - email\n  - whatsapp\n  - telegram\n- name: account\n  type: string\n  required: false\n  description: Account/handle the thread was received on (e.g., gws account name,\n    WhatsApp number, Telegram bot/user)\n- name: subject\n  type: string\n  required: false\n  description: Email subject line, or first-line snippet for chat channels\n- name: status\n  type: string\n  required: true\n  enum:\n  - open\n  - awaiting-us\n  - awaiting-them\n  - closed\n- name: urgency\n  type: string\n  required: false\n  enum:\n  - urgent\n  - high\n  - normal\n  - low\n- name: awaiting_reply\n  type: boolean\n  required: true\n  description: "true when we owe a reply \\u2014 the toast trigger condition"\n- name: last_message_at\n  type: string\n  format: date\n  required: true\n  description: "ISO timestamp of most recent inbound or outbound message \\u2014 used\\\n    \\ to detect new messages on already-known threads"\n- name: captured_in\n  type: array\n  required: false\n  description: Wikilinks to meeting/decision/deliverable notes promoted from this\n    thread\n- name: lead_id\n  required: false\n  type: string\n  description: Must match a 20-COMPANY/55-LEADS/ folder. Set for lead-scoped threads\n    during outreach campaigns. Exactly one of client_id/lead_id should be set.\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
-      company: 'entity: company\nlabel: Company\n\nlocation_pattern: 20-COMPANY/00-PROFILE/\ndescription: Company entity from DATAMODEL.md\nkey_fields:\n- entity_id\n- title\n- status\n- regions\nfields:\n- name: type\n  type: string\n  required: true\n- name: entity_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: title\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\n- name: regions\n  type: array\n  required: false\n  description: "\\u2014"\n',
-      person: 'entity: person\nlabel: Person\n\nlocation_pattern: 10-ME/10-PEOPLE/ or 30-CLIENTS/{id}/10-PEOPLE/\ndescription: Person entity from DATAMODEL.md\nkey_fields:\n- name\n- company\n- role\n- person_category\n- relationship\n- client_id\nfields:\n- name: type\n  type: string\n  required: true\n- name: name\n  type: string\n  required: true\n  description: Full name\n- name: company\n  type: string\n  required: false\n  description: Organization they belong to\n- name: role\n  type: string\n  required: false\n  description: Job title or function\n- name: person_category\n  type: string\n  required: false\n  enum:\n  - employee\n  - freelancer\n  - contractor\n  - business-contact\n  - personal-contact\n  - prospect\n  - other\n- name: relationship\n  type: string\n  required: false\n  enum:\n  - client-contact\n  - partner\n  - supplier\n  - colleague\n  - prospect\n  - other\n- name: client_id\n  type: string\n  required: false\n  description: Required for client-scoped people under 30-CLIENTS/{id}/10-PEOPLE/\n    (enforced by the vault-validator location rule, which matches the folder); optional\n    for personal, partner, and community contacts under 10-ME/10-PEOPLE/ or 20-COMPANY/35-PARTNERS/\n    who have no client link\n- name: phone\n  required: false\n  type: string\n  description: Primary phone\n- name: linkedin_url\n  required: false\n  type: string\n  description: LinkedIn profile URL\n- name: linkedin_headline\n  required: false\n  type: string\n  description: Current LinkedIn headline\n- name: linkedin_current_role\n  required: false\n  type: string\n  description: Current role + company as shown on LinkedIn\n- name: linkedin_skills\n  required: false\n  type: array\n  description: Skills extracted from the LinkedIn profile\n- name: linkedin_fetched_date\n  required: false\n  type: string\n  format: date\n  description: When the LinkedIn data was last captured\n- name: last_contact\n  required: false\n  type: string\n  format: date\n  description: Last meaningful interaction\n- name: created\n  required: true\n  type: string\n  format: date\n  description: Record creation date\n- name: tags\n  required: false\n  type: array\n  description: "\\u2014"\n',
+      client: 'entity: client\nlabel: Client\nlocation_pattern: 30-CLIENTS/{client-id}/00-PROFILE/\ndescription: Client entity from DATAMODEL.md\nkey_fields:\n- client_id\n- client_name\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: client_id\n  type: string\n  required: true\n  description: "kebab-case mnemonic identifier, e.g. acme-corp, solvay. Internal handle\\\n    \\ \\u2014 independent of any external registry number"\n- name: client_name\n  type: string\n  required: true\n  description: Display name (legal name as registered)\n- name: status\n  type: string\n  required: true\n  enum:\n  - prospect\n  - active\n  - inactive\n  - on-hold\n  - completed\n  - archived\n- name: health\n  required: false\n  type: string\n  enum:\n  - green\n  - amber\n  - red\n  description: "Relationship RAG status, owner-assessed. Feeds the client_health_red_count\\\n    \\ KPI. Separate from `status`, which is commercial lifecycle: an active client\\\n    \\ can be red (at risk of churn) and an on-hold one green. Absent means never assessed\\\n    \\ and is excluded from the count rather than assumed green \\u2014 a client nobody\\\n    \\ has reviewed is not evidence of a healthy relationship."\n- name: regions\n  required: false\n  type: array\n  description: Operating regions for client work\n- name: jurisdiction\n  required: false\n  type: string\n  description: ISO-3166-1 alpha-2 code of country of incorporation (BE, UAE, UK, FR,\n    ...)\n- name: legal_form\n  required: false\n  type: string\n  description: Legal form abbreviation in source language (SA/NV, SRL/BV, ASBL/VZW\n    for BE; Ltd, PLC for UK; LLC for UAE; SARL for FR)\n- name: company_registration_number\n  required: false\n  type: string\n  description: Jurisdiction-agnostic company registration number (Belgian KBO/BCE\n    0403.091.220; UK Companies House 12345678; French SIRET; UAE Commercial Licence).\n    Always pair with company_registration_registry\n- name: company_registration_registry\n  required: false\n  type: string\n  description: \'Source registry tag: BE-KBO\'\n- name: vat_id\n  required: false\n  type: string\n  description: VAT identification number with country prefix (BE0403091220, GB123456789,\n    AE100000000000003). Distinct from company_registration_number\n- name: profile_type\n  required: true\n  type: string\n  enum:\n  - company-overview\n  - contact-details\n  - brand-voice\n  - brand-system\n  - icp\n  - client-overview\n- name: location\n  required: false\n  type: string\n  description: Primary location\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include client-id value\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n- name: archetype\n  required: false\n  type: array\n  description: >-\n    Business archetype slug(s) from business-baseline\'s KPI packs, ordered primary first.\n    Multi-valued because a real business can run more than one motion and scoring it as either\n    one alone hides half the business. Every value must be one of the 15 pack slugs \u2014 a\n    descriptive label like "Partner-Distributed Business Operating Brain" names a distribution\n    model, not an archetype, and no skill taking a `business-type` input can read it.\n  items:\n    type: string\n    enum:\n    - agency\n    - coach\n    - course-creator\n    - creator\n    - ecommerce\n    - enterprise-b2b\n    - franchise\n    - local\n    - manufacturing\n    - multi-channel-retail\n    - nonprofit\n    - real-estate\n    - saas\n    - service-provider\n    - technical-services\nstatus_lifecycle:\n- prospect\n- active\n- inactive\n- on-hold\n- completed\n- archived\n',
+      commission: "entity: commission\nlabel: Commission\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/COMMISSIONS/\ndescription: Commission entity from DATAMODEL.md\nkey_fields:\n- reference\n- partner_ref\n- amount\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: reference\n  type: string\n  required: true\n  description: Commission ID/reference\n- name: partner_ref\n  type: string\n  required: true\n  description: Partner earning the commission\n- name: amount\n  type: number\n  required: true\n  description: Calculated amount\n- name: status\n  type: string\n  required: true\n  enum:\n  - pending\n  - earned\n  - paid\n  - disputed\n  - written-off\n- name: period\n  required: false\n  type: string\n  description: Accounting period (e.g. 2026-Q3)\n- name: earned_date\n  required: false\n  type: string\n  format: date\n  description: When deal closed won\n- name: deal_ref\n  required: false\n  type: string\n  description: Deal that triggered the commission\n- name: rate_pct\n  required: false\n  type: number\n  description: Commission rate percentage applied\n- name: currency\n  required: false\n  type: string\n- name: paid_date\n  required: false\n  type: string\n  format: date\n  description: When commission was disbursed\n- name: payment_reference\n  required: false\n  type: string\n  description: Bank transfer or invoice reference\n- name: notes\n  required: false\n  type: string\n- name: created\n  required: true\n  type: string\n  format: date\n",
+      "comms-thread": 'entity: comms-thread\nlabel: Comms Thread\nlocation_pattern: 30-CLIENTS/{client-id}/03-COMMS/ or 20-COMPANY/55-LEADS/{lead-id}/03-COMMS/\n  or 10-ME/03-COMMS/ or 20-COMPANY/60-SALES/leads/03-COMMS/\ndescription: Comms Thread entity from DATAMODEL.md\nkey_fields:\n- thread_id\n- channel\n- status\n- awaiting_reply\n- last_message_at\nfields:\n- name: type\n  type: string\n  required: true\n- name: thread_id\n  type: string\n  required: true\n  description: Stable cross-session identifier (Gmail thread ID, WhatsApp chat ID,\n    Telegram chat+message ID)\n- name: channel\n  type: string\n  required: true\n  enum:\n  - email\n  - whatsapp\n  - telegram\n- name: status\n  type: string\n  required: true\n  enum:\n  - open\n  - awaiting-us\n  - awaiting-them\n  - closed\n- name: awaiting_reply\n  type: boolean\n  required: true\n  description: "true when we owe a reply \\u2014 the toast trigger condition"\n- name: last_message_at\n  type: string\n  required: true\n  description: "ISO timestamp of most recent inbound or outbound message \\u2014 used\\\n    \\ to detect new messages on already-known threads"\n- name: client_id\n  required: false\n  type: string\n  description: "Required only under 30-CLIENTS/ \\u2014 conditional, same group as\\\n    \\ deliverable/pm-artifact/project. A personal thread under 10-ME/03-COMMS/ has\\\n    \\ neither client nor lead"\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier\\\n    \\ or own company this record attaches to. Pair with company_type. For client records,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: end_client_id\n  required: false\n  type: string\n- name: project_id\n  required: false\n  type: string\n- name: project\n  required: false\n  type: string\n- name: account\n  required: false\n  type: string\n  description: Account/handle the thread was received on (e.g., gws account name,\n    WhatsApp number, Telegram bot/user)\n- name: subject\n  required: false\n  type: string\n  description: Email subject line, or first-line snippet for chat channels\n- name: urgency\n  required: false\n  type: string\n  enum:\n  - urgent\n  - high\n  - normal\n  - low\n- name: captured_in\n  required: false\n  type: array\n  description: Wikilinks to meeting/decision/deliverable notes promoted from this\n    thread\n- name: lead_id\n  required: false\n  type: string\n  description: Must match a 20-COMPANY/55-LEADS/ folder. Set for lead-scoped threads\n    during outreach campaigns. Exactly one of client_id/lead_id should be set.\n- name: created\n  required: true\n  type: string\n  format: date\n',
+      company: 'entity: company\nlabel: Company\nlocation_pattern: 20-COMPANY/00-PROFILE/\ndescription: Company entity from DATAMODEL.md\nkey_fields:\n- entity_id\n- title\n- status\n- regions\nfields:\n- name: type\n  type: string\n  required: true\n- name: entity_id\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - active\n  - inactive\n  - on-hold\n  - archived\n- name: regions\n  type: array\n  required: true\n- name: archetype\n  required: false\n  type: array\n  description: >-\n    Business archetype slug(s) from business-baseline\'s KPI packs, ordered primary first.\n    Multi-valued because a real business can run more than one motion and scoring it as either\n    one alone hides half the business. Every value must be one of the 15 pack slugs \u2014 a\n    descriptive label like "Partner-Distributed Business Operating Brain" names a distribution\n    model, not an archetype, and no skill taking a `business-type` input can read it.\n  items:\n    type: string\n    enum:\n    - agency\n    - coach\n    - course-creator\n    - creator\n    - ecommerce\n    - enterprise-b2b\n    - franchise\n    - local\n    - manufacturing\n    - multi-channel-retail\n    - nonprofit\n    - real-estate\n    - saas\n    - service-provider\n    - technical-services\n',
+      person: "entity: person\nlabel: Person\nlocation_pattern: 10-ME/10-PEOPLE/ or 30-CLIENTS/{client-id}/10-PEOPLE/ or 20-COMPANY/35-PARTNERS/{partner-id}/10-PEOPLE/\ndescription: Person entity from DATAMODEL.md\nkey_fields:\n- name\nfields:\n- name: type\n  type: string\n  required: true\n- name: name\n  type: string\n  required: true\n  description: Full name\n- name: company\n  required: false\n  type: string\n  description: Organization they belong to\n- name: role\n  required: false\n  type: string\n  description: Job title or function\n- name: person_category\n  required: false\n  type: string\n  enum:\n  - employee\n  - freelancer\n  - contractor\n  - business-contact\n  - personal-contact\n  - prospect\n  - other\n- name: relationship\n  required: false\n  type: string\n  enum:\n  - client-contact\n  - partner\n  - supplier\n  - colleague\n  - prospect\n  - other\n- name: client_id\n  required: false\n  type: string\n  description: Required for client-scoped people under 30-CLIENTS/{id}/10-PEOPLE/\n    (enforced by the vault-validator location rule, which matches the folder); optional\n    for personal, partner, and community contacts under 10-ME/10-PEOPLE/ or 20-COMPANY/35-PARTNERS/\n    who have no client link\n- name: phone\n  required: false\n  type: string\n  description: Primary phone\n- name: linkedin_url\n  required: false\n  type: string\n  description: LinkedIn profile URL\n- name: linkedin_headline\n  required: false\n  type: string\n  description: Current LinkedIn headline\n- name: linkedin_current_role\n  required: false\n  type: string\n  description: Current role + company as shown on LinkedIn\n- name: linkedin_skills\n  required: false\n  type: array\n  description: Skills extracted from the LinkedIn profile\n- name: linkedin_fetched_date\n  required: false\n  type: string\n  format: date\n  description: When the LinkedIn data was last captured\n- name: last_contact\n  required: false\n  type: string\n  format: date\n  description: Last meaningful interaction\n- name: created\n  required: true\n  type: string\n  format: date\n  description: Record creation date\n- name: tags\n  required: false\n  type: array\n",
       "corporate-tax-return": `entity: corporate-tax-return
 label: Corporate Tax Return
-
 location_pattern: 20-COMPANY/06-FINANCE/TAX/CT/
 description: Corporate Tax Return entity from DATAMODEL.md
 key_fields:
@@ -16389,7 +16284,6 @@ key_fields:
 - taxable_income
 - tax_rate
 - tax_payable
-- small_business_relief
 - status
 fields:
 - name: type
@@ -16419,11 +16313,6 @@ fields:
   required: true
   description: "taxable_income \\xD7 tax_rate / 100 (or 0 if small business relief\\
     \\ applies)"
-- name: small_business_relief
-  type: boolean
-  required: false
-  description: "true if revenue \\u2264 AED 3M and relief elected \\u2014 taxable income\\
-    \\ treated as zero"
 - name: status
   type: string
   required: true
@@ -16433,16 +16322,19 @@ fields:
   - paid
   - under-review
   - amended
+- name: small_business_relief
+  required: false
+  type: boolean
+  description: "true if revenue \\u2264 AED 3M and relief elected \\u2014 taxable income\\
+    \\ treated as zero"
 - name: tax_period_start
   required: true
   type: string
   format: date
-  description: "\\u2014"
 - name: tax_period_end
   required: true
   type: string
   format: date
-  description: "\\u2014"
 - name: filing_due
   required: true
   type: string
@@ -16506,12 +16398,11 @@ status_lifecycle:
 - under-review
 - amended
 `,
-      courseware: 'entity: courseware\nlabel: Courseware\n\nlocation_pattern: 20-COMPANY/50-MARKETING/skool/courseware/{course-id}/\ndescription: Courseware entity from DATAMODEL.md\nkey_fields:\n- title\n- platform\n- status\n- pack_tier\n- documented_skill_count\n- last_synced\n- published_url\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Course title (the shop-window title)\n- name: platform\n  type: string\n  required: true\n  enum:\n  - skool\n  - other\n- name: status\n  type: string\n  required: true\n  enum:\n  - planned\n  - drafting\n  - review\n  - published\n  - needs-update\n- name: pack_tier\n  type: string\n  required: false\n  description: pricing-tier of the product this course documents (e.g. pack-qms-pro,\n    starter); empty for standalone training\n- name: documented_skill_count\n  type: integer\n  required: false\n  description: "Skills the course currently documents \\u2014 compared to the live\\\n    \\ tier for drift detection"\n- name: last_synced\n  type: string\n  required: false\n  format: date\n  description: Date the course was last reconciled to the live product contents\n- name: published_url\n  type: string\n  required: false\n  description: URL of the live course once published\n- name: course_type\n  required: false\n  type: string\n  enum:\n  - pack\n  - standalone\n  - bundle\n- name: product_ref\n  required: false\n  type: string\n  description: Wikilink to the product / pack note\n- name: live_skill_count\n  required: false\n  type: integer\n  description: Live skill count at last sync (stamped by the reconcile script)\n- name: price\n  required: false\n  type: string\n  description: "Display price (e.g. \\u20AC297)"\n- name: owner\n  required: false\n  type: string\n  description: Person responsible for the course\n- name: client_id\n  required: false\n  type: string\n  description: Set when the course is client-specific training\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n- name: tags\n  required: true\n  type: array\n  description: Must include courseware\n',
-      deal: 'entity: deal\nlabel: Deal\n\nlocation_pattern: 30-CLIENTS/{client-id}/01-DEALS/\ndescription: Deal entity from DATAMODEL.md\nkey_fields:\n- title\n- client_id\n- end_client_id\n- project_id\n- project\n- owner\n- stage\n- deal_value\n- deal_source\n- probability\n- expected_close\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Deal display name\n- name: client_id\n  type: string\n  required: true\n  description: Must match parent Client folder\n- name: end_client_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: project_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: project\n  type: string\n  required: false\n  description: "\\u2014"\n- name: owner\n  type: string\n  required: false\n  description: Person responsible for the opportunity\n- name: stage\n  type: string\n  required: true\n  enum:\n  - lead\n  - qualified\n  - proposal\n  - negotiation\n  - won\n  - lost\n- name: deal_value\n  type: string\n  required: false\n  description: Opportunity value in primary currency\n- name: deal_source\n  type: string\n  required: false\n  enum:\n  - referral\n  - inbound\n  - outbound\n  - event\n  - partner\n- name: probability\n  type: number\n  required: false\n  description: 0-100, auto-set per stage (overridable)\n- name: expected_close\n  type: string\n  required: false\n  format: date\n  description: Expected close date\n- name: next_action\n  required: false\n  type: string\n  format: date\n  description: Follow-up date\n- name: next_action_note\n  required: false\n  type: string\n  description: Next step description\n- name: last_contact\n  required: false\n  type: string\n  format: date\n  description: Last meaningful interaction\n- name: closed_date\n  required: false\n  type: string\n  format: date\n  description: "Date the deal reached won/lost \\u2014 win-rate, deal-cycle, and new-revenue\\\n    \\ queries key on this, not modified (any unrelated edit resets modified)"\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n- name: tags\n  required: true\n  type: array\n  description: Must include deal and client-id\nstatus_lifecycle:\n- lead\n- qualified\n- proposal\n- negotiation\n- won\n- lost\n',
-      decision: 'entity: decision\nlabel: Decision\n\nlocation_pattern: 20-COMPANY/02-DECISIONS/\ndescription: Decision entity from DATAMODEL.md\nkey_fields:\n- status\n- client_id\n- end_client_id\n- project_id\n- project\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - proposed\n  - decided\n  - superseded\n- name: client_id\n  type: string\n  required: false\n  description: Optional client identifier when the decision is client-scoped\n- name: end_client_id\n  type: string\n  required: false\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  type: string\n  required: false\n  description: Canonical dated kebab-case project identifier\n- name: project\n  type: string\n  required: false\n  description: Full human-readable project name\n- name: decision_date\n  required: false\n  type: string\n  format: date\n  description: Date the decision was made\n- name: owner\n  required: false\n  type: string\n  description: Person or role responsible for the decision\n- name: rationale\n  required: false\n  type: string\n  description: Why this decision was made\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes, decisions, or deliverables\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
+      courseware: 'entity: courseware\nlabel: Courseware\nlocation_pattern: 20-COMPANY/50-MARKETING/skool/courseware/{course-id}/\ndescription: Courseware entity from DATAMODEL.md\nkey_fields:\n- title\n- platform\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Course title (the shop-window title)\n- name: platform\n  type: string\n  required: true\n  enum:\n  - skool\n  - other\n- name: status\n  type: string\n  required: true\n  enum:\n  - planned\n  - drafting\n  - review\n  - published\n  - needs-update\n- name: pack_tier\n  required: false\n  type: string\n  description: pricing-tier of the product this course documents (e.g. pack-qms-pro,\n    starter); empty for standalone training\n- name: documented_skill_count\n  required: false\n  type: integer\n  description: "Skills the course currently documents \\u2014 compared to the live\\\n    \\ tier for drift detection"\n- name: last_synced\n  required: false\n  type: string\n  format: date\n  description: Date the course was last reconciled to the live product contents\n- name: published_url\n  required: false\n  type: string\n  description: URL of the live course once published\n- name: course_type\n  required: false\n  type: string\n  enum:\n  - pack\n  - standalone\n  - bundle\n- name: product_ref\n  required: false\n  type: string\n  description: Wikilink to the product / pack note\n- name: live_skill_count\n  required: false\n  type: integer\n  description: Live skill count at last sync (stamped by the reconcile script)\n- name: price\n  required: false\n  type: string\n  description: "Display price (e.g. \\u20AC297)"\n- name: owner\n  required: false\n  type: string\n  description: Person responsible for the course\n- name: client_id\n  required: false\n  type: string\n  description: Set when the course is client-specific training\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include courseware\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: cover_image\n  required: false\n  type: string\n  description: Cover image path or wikilink.\n',
+      deal: 'entity: deal\nlabel: Deal\nlocation_pattern: 30-CLIENTS/{client-id}/01-DEALS/ or 20-COMPANY/35-PARTNERS/{partner-id}/01-DEALS/\ndescription: Deal entity from DATAMODEL.md\nkey_fields:\n- title\n- client_id\n- stage\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Deal display name\n- name: client_id\n  type: string\n  required: false\n  description: Must match parent Client folder when set; a partner or own-company\n    deal has none\n- name: stage\n  type: string\n  required: true\n  enum:\n  - lead\n  - qualified\n  - proposal\n  - negotiation\n  - won\n  - lost\n- name: partner_ref\n  required: false\n  type: string\n  description: Partner who sourced or co-sells this deal. Required in practice for\n    a partner-scoped deal under 20-COMPANY/35-PARTNERS/{partner-id}/01-DEALS/, which\n    has no client_id; it is also what the won-deal commission automation resolves\n    the commission rate from\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier\\\n    \\ or own company this record attaches to. Pair with company_type. For client records,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: end_client_id\n  required: false\n  type: string\n- name: project_id\n  required: false\n  type: string\n- name: project\n  required: false\n  type: string\n- name: owner\n  required: false\n  type: string\n  description: Person responsible for the opportunity\n- name: deal_value\n  required: false\n  type: number\n  description: Opportunity value as a plain number in currency; Process Harness treats it as\n    net of VAT\n- name: currency\n  required: false\n  type: string\n  description: ISO 4217 currency code; EUR is the Process Harness deployment default when omitted\n    at governed ingestion\n- name: deal_source\n  required: false\n  type: string\n  enum:\n  - referral\n  - inbound\n  - outbound\n  - event\n  - partner\n  - existing-client\n  - direct\n- name: probability\n  required: false\n  type: number\n  description: 0-100, auto-set per stage (overridable)\n- name: expected_close\n  required: false\n  type: string\n  format: date\n  description: Expected close date\n- name: next_action\n  required: false\n  type: string\n  format: date\n  description: Follow-up date\n- name: next_action_note\n  required: false\n  type: string\n  description: Next step description\n- name: last_contact\n  required: false\n  type: string\n  format: date\n  description: Last meaningful interaction\n- name: closed_date\n  required: false\n  type: string\n  format: date\n  description: "Date the deal reached won/lost \\u2014 win-rate, deal-cycle, and new-revenue\\\n    \\ queries key on this, not modified (any unrelated edit resets modified). REQUIRED\\\n    \\ when stage is won or lost (enforced 2026-08-30 via conditional_required):\\\n    \\ Salesforce makes Opportunity.CloseDate mandatory, which is exactly why it can\\\n    \\ compute cycle time and this vault could not \\u2014 4 of 5 closed deals carried\\\n    \\ no close date. Set it at the moment of close; never backfill a guess, an absent\\\n    \\ date is honest and a wrong one silently corrupts win-rate for every later report"\n- name: lost_reason\n  required: false\n  type: string\n  enum:\n  - price\n  - competitor\n  - no-budget\n  - no-decision\n  - timing\n  - not-a-fit\n  - lost-champion\n  - ceased-operations\n  - transferred\n  - unknown\n  description: "Why a deal reached stage: lost. Set it at the moment of loss \\u2014\\\n    \\ a reason recorded weeks later is a guess. Field name matches the pre-existing\\\n    \\ in-vault usage on nightingale-health rather than introducing a near-synonym.\\\n    \\ `unknown` is a real value and must stay honest: an absent or unknown reason\\\n    \\ means never debriefed, NOT not-a-fit, and recording it as the latter buries\\\n    \\ deals nobody ever asked about. `ceased-operations` and `transferred` are non-competitive\\\n    \\ exits and should be read out of win-rate rather than counted as defeats"\n- name: revisit_after\n  required: false\n  type: string\n  format: date\n  description: Date the stated lost_reason plausibly expires (a budget cycle, a contract\n    renewal). Blank means never revisit. Without it a resurrection sweep can only\n    sort by age, the least informative signal available\n- name: lost_to\n  required: false\n  type: string\n  description: Competitor the deal was lost to, where lost_reason is competitor\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include deal and client-id\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: canvas\n  required: false\n  type: array\n  description: "Plugin-owned (enhanced-canvas, enableFrontmatter: true). List of wikilinks\\\n    \\ to the canvases whose nodes reference this note; re-asserted by syncAllCanvasProperties()\\\n    \\ on startup. Removing it by hand does not stick \\u2014 delete or rebuild the\\\n    \\ canvas instead. The plugin also writes a second key named after the canvas basename,\\\n    \\ which is not a model field."\nconditional_required:\n- when:\n    stage: won\n  require:\n  - closed_date\n- when:\n    stage: lost\n  require:\n  - closed_date\nnotes: >-\n  `closed_date` is required once `stage` reaches `won` or `lost`, and `lost_reason` should be set\n  in the same edit that sets `lost` - both are guesses if recorded later. `title` is the deal\n  display name; the near-synonyms `name`, `client_name` and `last_activity` were retired\n  2026-08-30 in favour of `title`, `client_id` and `last_contact`.\n  The enhanced-canvas plugin also writes a per-note key named after the canvas basename\n  (`Context - profile`); it is plugin-owned, its name varies per note, and it is deliberately\n  not a model field.\n',
+      decision: "entity: decision\nlabel: Decision\nlocation_pattern: 20-COMPANY/02-DECISIONS/\ndescription: Decision entity from DATAMODEL.md\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - proposed\n  - decided\n  - superseded\n- name: client_id\n  required: false\n  type: string\n  description: Optional client identifier when the decision is client-scoped\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: decision_date\n  required: false\n  type: string\n  format: date\n  description: Date the decision was made\n- name: owner\n  required: false\n  type: string\n  description: Person or role responsible for the decision\n- name: rationale\n  required: false\n  type: string\n  description: Why this decision was made\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes, decisions, or deliverables\n- name: assumptions\n  required: false\n  type: array\n  description: What must be true for this decision to be right\n- name: review_date\n  required: false\n  type: string\n  format: date\n  description: Date or trigger for reviewing the decision outcome\n- name: outcome\n  required: false\n  type: string\n  enum:\n  - too-early\n  - validated\n  - partially-validated\n  - invalidated\n  - reversed\n  - adopted\n  description: 'adopted added 2026-08-10: the decision was put into practice but its\n    effect is not yet measured, which the validated/invalidated axis cannot express'\n- name: supersedes\n  required: false\n  type: string\n  description: Decision superseded by this decision\n- name: superseded_by\n  required: false\n  type: string\n  description: Later decision that supersedes this decision\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n",
       "deferred-tax": `entity: deferred-tax
 label: Deferred Tax
-
 location_pattern: 20-COMPANY/06-FINANCE/TAX/DEFERRED/
 description: Deferred Tax entity from DATAMODEL.md
 key_fields:
@@ -16556,7 +16447,6 @@ fields:
   required: true
   type: string
   format: date
-  description: "\\u2014"
 - name: asset_lines
   required: false
   type: array
@@ -16574,32 +16464,23 @@ fields:
 - name: reviewed_by
   required: false
   type: string
-  description: "\\u2014"
 - name: tags
   required: true
   type: array
   description: Must include deferred-tax, tax, and {period_id}
 `,
-      deliverable: 'entity: deliverable\nlabel: Deliverable\n\nlocation_pattern: 30-CLIENTS/{id}/{project}/ or 30-DELIVERABLES/\ndescription: Deliverable entity from DATAMODEL.md\nkey_fields:\n- client_id\n- end_client_id\n- project_id\n- project\n- status\n- related\nfields:\n- name: type\n  type: string\n  required: true\n- name: client_id\n  type: string\n  required: true\n  description: "\\u2014"\n- name: end_client_id\n  type: string\n  required: false\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  type: string\n  required: false\n  description: Canonical dated kebab-case project identifier\n- name: project\n  type: string\n  required: false\n  description: Full human-readable project name\n- name: status\n  type: string\n  required: true\n  description: "\\u2014"\n- name: related\n  type: array\n  required: false\n  description: Wikilinks to source research/analysis\n- name: deliverable_type\n  required: false\n  type: string\n  description: Category of deliverable (e.g. report, presentation, analysis, template,\n    design, video)\n- name: delivered_date\n  required: false\n  type: string\n  format: date\n  description: Date the deliverable was sent to the client\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\nstatus_lifecycle:\n- draft\n- review\n- approved\n- delivered\n',
-      "document-retention": 'entity: document-retention\nlabel: Document Retention\n\nlocation_pattern: 20-COMPANY/04-LEGAL/RETENTION/\ndescription: Document Retention entity from DATAMODEL.md\nkey_fields:\n- document_type\n- retention_period_years\n- destroy_after_date\n- responsible_person\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: document_type\n  type: string\n  required: false\n  description: "\\u2014"\n- name: retention_period_years\n  type: string\n  required: false\n  description: "\\u2014"\n- name: destroy_after_date\n  type: string\n  format: date\n  required: false\n  description: "\\u2014"\n- name: responsible_person\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\n',
-      "drive-asset": 'entity: drive-asset\nlabel: Drive Asset\n\nlocation_pattern: 30-CLIENTS/{client-id}/50-MARKETING/\ndescription: Drive Asset entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: drive_file_id\n  required: true\n  type: string\n  description: "\\u2014"\n- name: drive_filename\n  required: true\n  type: string\n  description: "\\u2014"\n- name: drive_path\n  required: true\n  type: string\n  enum:\n  - 30-DELIVERABLES\n  - 50-MARKETING\n  - 50-MARKETING/social-audits\n  - 50-MARKETING/video/demo-video\n  - 50-MARKETING/video/workflow-video/assets\n  - 50-MARKETING/video/workflow-video/narrated\n  - 60-SALES/partner-pitches/india-ketan\n- name: drive_root\n  required: true\n  type: string\n  enum:\n  - 12gRjAsXWDVp7qYqJ_Y9fmRoptJDS0TA0\n- name: drive_root_name\n  required: true\n  type: string\n  enum:\n  - GBL International\n- name: drive_url\n  required: true\n  type: string\n  description: "\\u2014"\n- name: format\n  required: true\n  type: string\n  enum:\n  - jpeg\n  - jpg\n  - mp4\n  - pdf\n  - png\n  - pptx\n  - svg\n- name: size_mb\n  required: true\n  type: number\n  description: "\\u2014"\n- name: tags\n  required: true\n  type: array\n  description: "\\u2014"\n- name: uploaded\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
-      "ecl-assessment": 'entity: ecl-assessment\nlabel: ECL Assessment\n\nlocation_pattern: 20-COMPANY/06-FINANCE/ECL/\ndescription: ECL Assessment entity from DATAMODEL.md\nkey_fields:\n- assessment_id\n- period_id\n- methodology\n- provision_matrix\n- total_ecl\n- closing_ecl\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: assessment_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: period_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: methodology\n  type: string\n  required: false\n  description: "\\u2014"\n- name: provision_matrix\n  type: string\n  required: false\n  description: "\\u2014"\n- name: total_ecl\n  type: number\n  required: false\n  description: "\\u2014"\n- name: closing_ecl\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\nstatus_lifecycle:\n- draft\n- reviewed\n- posted\n',
+      deliverable: 'entity: deliverable\nlabel: Deliverable\nlocation_pattern: 30-CLIENTS/{client-id}/{project}/ or 30-CLIENTS/{client-id}/30-DELIVERABLES/\n  or 20-COMPANY/35-PARTNERS/{partner-id}/ or 20-COMPANY/40-PRODUCTS/{product-id}/\ndescription: Deliverable entity from DATAMODEL.md\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - approved\n  - delivered\n- name: client_id\n  required: false\n  type: string\n  description: "Required for deliverables under 30-CLIENTS/ \\u2014 conditional, like\\\n    \\ person and meeting. A partner deliverable carries partner_id instead, and a\\\n    \\ generic product asset (the partner kit) carries neither"\n- name: partner_id\n  required: false\n  type: string\n  description: "Required for deliverables under 20-COMPANY/35-PARTNERS/{partner-id}/\\\n    \\ \\u2014 work produced for a specific partner rather than a client"\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to source research/analysis\n- name: deliverable_type\n  required: false\n  type: string\n  description: Category of deliverable (e.g. report, presentation, analysis, template,\n    design, video)\n- name: delivered_date\n  required: false\n  type: string\n  format: date\n  description: Date the deliverable was sent to the client\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: buyer_stage\n  required: false\n  type: string\n  description: Funnel stage the deliverable targets.\n- name: word_count_target\n  required: false\n  type: string\n  description: "Target length. Free text, not a number \\u2014 values are ranges like\\\n    \\ \'1200-1500\'."\n- name: primary_keyword\n  required: false\n  type: string\n  description: Primary SEO keyword.\n- name: meta_title\n  required: false\n  type: string\n  description: SEO meta title.\n- name: meta_description\n  required: false\n  type: string\n  description: SEO meta description.\n- name: doc_id\n  required: false\n  type: string\n  description: Stable document identifier, for versioned deliverables.\n- name: doc_version\n  required: false\n  type: string\n  description: Document version string, paired with `doc_id`.\n- name: target_audience\n  required: false\n  type: string\n  description: Who the deliverable is written for.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\nstatus_lifecycle:\n- draft\n- review\n- approved\n- delivered\n',
+      "document-retention": "entity: document-retention\nlabel: Document Retention\nlocation_pattern: 20-COMPANY/04-LEGAL/RETENTION/\ndescription: Document Retention entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: document_type\n  required: false\n  type: string\n- name: retention_period_years\n  required: false\n  type: string\n- name: destroy_after_date\n  required: false\n  type: string\n  format: date\n- name: responsible_person\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n",
+      "drive-asset": 'entity: drive-asset\nlabel: Drive Asset\nlocation_pattern: 30-CLIENTS/{client-id}/ or 20-COMPANY/35-PARTNERS/{partner-id}/\ndescription: Drive Asset entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: drive_file_id\n  required: true\n  type: string\n- name: drive_filename\n  required: true\n  type: string\n- name: drive_path\n  required: true\n  type: string\n  description: "Folder path within the Drive root \\u2014 open set, any vault-mirroring\\\n    \\ folder"\n- name: drive_root\n  required: true\n  type: string\n  description: Google Drive folder ID of the shared-drive root\n- name: drive_root_name\n  required: true\n  type: string\n  description: Human-readable name of the Drive root (one per client/partner drive)\n- name: drive_url\n  required: true\n  type: string\n- name: format\n  required: true\n  type: string\n  enum:\n  - jpeg\n  - jpg\n  - mp4\n  - pdf\n  - png\n  - pptx\n  - svg\n  - docx\n- name: size_mb\n  required: true\n  type: number\n- name: tags\n  required: true\n  type: array\n- name: uploaded\n  required: true\n  type: string\n  format: date\n',
+      "ecl-assessment": "entity: ecl-assessment\nlabel: ECL Assessment\nlocation_pattern: 20-COMPANY/06-FINANCE/ECL/\ndescription: ECL Assessment entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: assessment_id\n  required: false\n  type: string\n- name: period_id\n  required: false\n  type: string\n- name: methodology\n  required: false\n  type: string\n- name: provision_matrix\n  required: false\n  type: string\n- name: total_ecl\n  required: false\n  type: number\n- name: closing_ecl\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - draft\n  - reviewed\n  - posted\nstatus_lifecycle:\n- draft\n- reviewed\n- posted\n",
       feedback: `entity: feedback
 label: Feedback
-
 location_pattern: 30-CLIENTS/{id}/40-FEEDBACK/ or 20-COMPANY/30-SUPPLIERS/{id}/30-FEEDBACK/
 description: Feedback entity from DATAMODEL.md
 key_fields:
 - feedback_type
 - respondent
-- score
-- themes
-- sentiment
 - status
-- client_id
-- end_client_id
-- project_id
-- project
 fields:
 - name: type
   type: string
@@ -16623,23 +16504,6 @@ fields:
   type: string
   required: true
   description: Link to Person record who gave the feedback
-- name: score
-  type: number
-  required: false
-  description: Required for nps (0-10), csat (1-10), pmf (1-3). Not used for open-ended
-    types
-- name: themes
-  type: array
-  required: false
-  description: Extracted themes, e.g. ["communication", "deliverable-quality", "responsiveness"]
-- name: sentiment
-  type: string
-  required: false
-  enum:
-  - positive
-  - neutral
-  - negative
-  - mixed
 - name: status
   type: string
   required: true
@@ -16648,21 +16512,54 @@ fields:
   - reviewed
   - actioned
   - archived
-- name: client_id
-  type: string
-  required: true
-  description: Required for client feedback; must match 30-CLIENTS/ folder
-- name: end_client_id
-  type: string
+- name: score
   required: false
+  type: number
+  description: Required for nps (0-10), csat (1-10), pmf (1-3). Not used for open-ended
+    types
+- name: themes
+  required: false
+  type: array
+  description: Extracted themes, e.g. ["communication", "deliverable-quality", "responsiveness"]
+- name: sentiment
+  required: false
+  type: string
+  enum:
+  - positive
+  - neutral
+  - negative
+  - mixed
+- name: client_id
+  required: false
+  type: string
+  description: "Required for client feedback; must match 30-CLIENTS/ folder. Conditional\\
+    \\ \\u2014 supplier feedback (supplier_id set instead) has no client"
+- name: company_id
+  required: false
+  type: string
+  description: "Generalized org reference \\u2014 the id of the client, partner, supplier\\
+    \\ or own company this record attaches to. Pair with company_type. For client records,\\
+    \\ client_id is the shorthand and company_id may be omitted"
+- name: company_type
+  required: false
+  type: string
+  enum:
+  - client
+  - partner
+  - supplier
+  - own-company
+  description: Org type of company_id. Only needed to express a NON-client counterparty
+- name: end_client_id
+  required: false
+  type: string
   description: Ultimate end-client/beneficiary when different from client_id
 - name: project_id
-  type: string
   required: false
+  type: string
   description: Canonical dated kebab-case project identifier
 - name: project
-  type: string
   required: false
+  type: string
   description: Link to Project this feedback relates to
 - name: supplier_id
   required: false
@@ -16749,7 +16646,6 @@ fields:
   required: true
   type: string
   format: date
-  description: "\\u2014"
 - name: tags
   required: true
   type: array
@@ -16757,7 +16653,6 @@ fields:
 `,
       "financial-statement": `entity: financial-statement
 label: Financial Statement
-
 location_pattern: 20-COMPANY/06-FINANCE/REPORTS/
 description: Financial Statement entity from DATAMODEL.md
 key_fields:
@@ -16765,9 +16660,6 @@ key_fields:
 - period_id
 - trial_balance
 - lines
-- total_assets
-- total_liabilities
-- total_equity
 - status
 fields:
 - name: type
@@ -16784,7 +16676,6 @@ fields:
 - name: period_id
   type: string
   required: true
-  description: "\\u2014"
 - name: trial_balance
   type: string
   required: true
@@ -16793,19 +16684,6 @@ fields:
   type: array
   required: true
   description: '[{section, account_code, account_name, current_period, prior_period}]'
-- name: total_assets
-  type: number
-  required: false
-  description: 'Required for statement_type: sofp'
-- name: total_liabilities
-  type: number
-  required: false
-  description: 'Required for statement_type: sofp'
-- name: total_equity
-  type: number
-  required: false
-  description: "Required for statement_type: sofp. Must equal total_assets \\u2212\\
-    \\ total_liabilities"
 - name: status
   type: string
   required: true
@@ -16814,6 +16692,19 @@ fields:
   - reviewed
   - approved
   - published
+- name: total_assets
+  required: false
+  type: number
+  description: 'Required for statement_type: sofp'
+- name: total_liabilities
+  required: false
+  type: number
+  description: 'Required for statement_type: sofp'
+- name: total_equity
+  required: false
+  type: number
+  description: "Required for statement_type: sofp. Must equal total_assets \\u2212\\
+    \\ total_liabilities"
 - name: comparative_period_id
   required: false
   type: string
@@ -16822,11 +16713,9 @@ fields:
   required: true
   type: string
   format: date
-  description: "\\u2014"
 - name: reviewed_by
   required: false
   type: string
-  description: "\\u2014"
 - name: tags
   required: true
   type: array
@@ -16837,11 +16726,10 @@ status_lifecycle:
 - approved
 - published
 `,
-      "fixed-asset": 'entity: fixed-asset\nlabel: Fixed Asset\n\nlocation_pattern: 20-COMPANY/06-FINANCE/ASSETS/FIXED/\ndescription: Fixed Asset entity from DATAMODEL.md\nkey_fields:\n- asset_id\n- category\n- cost\n- accumulated_depreciation\n- carrying_amount\n- useful_life_years\n- depreciation_method\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: asset_id\n  type: number\n  required: false\n  description: "\\u2014"\n- name: category\n  type: string\n  required: false\n  description: "\\u2014"\n- name: cost\n  type: number\n  required: false\n  description: "\\u2014"\n- name: accumulated_depreciation\n  type: string\n  required: false\n  description: "\\u2014"\n- name: carrying_amount\n  type: number\n  required: false\n  description: "\\u2014"\n- name: useful_life_years\n  type: string\n  required: false\n  description: "\\u2014"\n- name: depreciation_method\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\nstatus_lifecycle:\n- active\n- fully-depreciated\n- impaired\n- disposed\n',
-      "free-zone-status": 'entity: free-zone-status\nlabel: Free Zone Status\n\nlocation_pattern: 20-COMPANY/04-LEGAL/FREEZONE/\ndescription: Free Zone Status entity from DATAMODEL.md\nkey_fields:\n- period_id\n- free_zone_authority\n- qualifying_income\n- non_qualifying_income\n- substance_test_passed\n- nexus_maintained\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: free_zone_authority\n  type: string\n  required: false\n  description: "\\u2014"\n- name: qualifying_income\n  type: number\n  required: false\n  description: "\\u2014"\n- name: non_qualifying_income\n  type: number\n  required: false\n  description: "\\u2014"\n- name: substance_test_passed\n  type: string\n  required: false\n  description: "\\u2014"\n- name: nexus_maintained\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\n',
+      "fixed-asset": "entity: fixed-asset\nlabel: Fixed Asset\nlocation_pattern: 20-COMPANY/06-FINANCE/ASSETS/FIXED/\ndescription: Fixed Asset entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: asset_id\n  required: false\n  type: number\n- name: category\n  required: false\n  type: string\n- name: cost\n  required: false\n  type: number\n- name: accumulated_depreciation\n  required: false\n  type: string\n- name: carrying_amount\n  required: false\n  type: number\n- name: useful_life_years\n  required: false\n  type: string\n- name: depreciation_method\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - active\n  - fully-depreciated\n  - impaired\n  - disposed\nstatus_lifecycle:\n- active\n- fully-depreciated\n- impaired\n- disposed\n",
+      "free-zone-status": "entity: free-zone-status\nlabel: Free Zone Status\nlocation_pattern: 20-COMPANY/04-LEGAL/FREEZONE/\ndescription: Free Zone Status entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  required: false\n  type: string\n- name: free_zone_authority\n  required: false\n  type: string\n- name: qualifying_income\n  required: false\n  type: number\n- name: non_qualifying_income\n  required: false\n  type: number\n- name: substance_test_passed\n  required: false\n  type: string\n- name: nexus_maintained\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n",
       "fs-notes": `entity: fs-notes
 label: FS Notes
-
 location_pattern: 20-COMPANY/06-FINANCE/REPORTS/
 description: FS Notes entity from DATAMODEL.md
 key_fields:
@@ -16858,7 +16746,6 @@ fields:
 - name: period_id
   type: string
   required: true
-  description: "\\u2014"
 - name: statement_refs
   type: array
   required: true
@@ -16891,12 +16778,11 @@ fields:
   type: array
   description: Must include fs-notes and {period_id}
 `,
-      "fx-rates-table": 'entity: fx-rates-table\nlabel: FX Rates Table\n\nlocation_pattern: 20-COMPANY/06-FINANCE/FX/\ndescription: FX Rates Table entity from DATAMODEL.md\nkey_fields:\n- period_id\n- rates_date\n- source\n- rates\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: rates_date\n  type: number\n  required: false\n  description: "\\u2014"\n- name: source\n  type: string\n  required: false\n  description: "\\u2014"\n- name: rates\n  type: array\n  required: false\n  description: "\\u2014"\n',
-      "gratuity-provision": 'entity: gratuity-provision\nlabel: Gratuity Provision\n\nlocation_pattern: 20-COMPANY/06-FINANCE/PROVISIONS/GRATUITY/\ndescription: Gratuity Provision entity from DATAMODEL.md\nkey_fields:\n- employee\n- start_date\n- basic_salary\n- years_of_service\n- accrued_gratuity\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: employee\n  type: string\n  required: true\n  description: Person record\n- name: start_date\n  type: string\n  format: date\n  required: true\n  description: Employment start date\n- name: basic_salary\n  type: number\n  required: true\n  description: "Current basic salary (AED/month) \\u2014 gratuity based on basic only,\\\n    \\ not allowances"\n- name: years_of_service\n  type: number\n  required: true\n  description: Calculated from start_date to assessment date\n- name: accrued_gratuity\n  type: number\n  required: true\n  description: Entitlement per UAE formula (see below)\n- name: status\n  type: string\n  required: true\n  enum:\n  - active\n  - paid\n  - forfeited\n- name: period_id\n  required: false\n  type: string\n  description: Accounting period of last accrual\n- name: tags\n  required: true\n  type: array\n  description: Must include gratuity and {employee_id}\nstatus_lifecycle:\n- active\n- paid\n- forfeited\n',
-      idea: 'entity: idea\nlabel: Idea\n\nlocation_pattern: 10-ME/30-IDEAS/\ndescription: Idea entity from DATAMODEL.md\nkey_fields:\n- status\n- priority\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - captured\n  - exploring\n  - parked\n  - promoted\n- name: priority\n  type: string\n  required: false\n  enum:\n  - low\n  - normal\n  - high\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
+      "fx-rates-table": "entity: fx-rates-table\nlabel: FX Rates Table\nlocation_pattern: 20-COMPANY/06-FINANCE/FX/\ndescription: FX Rates Table entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  required: false\n  type: string\n- name: rates_date\n  required: false\n  type: string\n  format: date\n- name: source\n  required: false\n  type: string\n- name: rates\n  required: false\n  type: array\n",
+      "gratuity-provision": 'entity: gratuity-provision\nlabel: Gratuity Provision\nlocation_pattern: 20-COMPANY/06-FINANCE/PROVISIONS/GRATUITY/\ndescription: Gratuity Provision entity from DATAMODEL.md\nkey_fields:\n- employee\n- start_date\n- basic_salary\n- years_of_service\n- accrued_gratuity\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: employee\n  type: string\n  required: true\n  description: Person record\n- name: start_date\n  type: string\n  format: date\n  required: true\n  description: Employment start date\n- name: basic_salary\n  type: number\n  required: true\n  description: "Current basic salary (AED/month) \\u2014 gratuity based on basic only,\\\n    \\ not allowances"\n- name: years_of_service\n  type: number\n  required: true\n  description: Calculated from start_date to assessment date\n- name: accrued_gratuity\n  type: number\n  required: true\n  description: Entitlement per UAE formula (see below)\n- name: status\n  type: string\n  required: true\n  enum:\n  - active\n  - paid\n  - forfeited\n- name: period_id\n  required: false\n  type: string\n  description: Accounting period of last accrual\n- name: tags\n  required: true\n  type: array\n  description: Must include gratuity and {employee_id}\nstatus_lifecycle:\n- active\n- paid\n- forfeited\n',
+      idea: "entity: idea\nlabel: Idea\nlocation_pattern: 10-ME/30-IDEAS/\ndescription: Idea entity from DATAMODEL.md\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - captured\n  - exploring\n  - parked\n  - promoted\n- name: priority\n  required: false\n  type: string\n  enum:\n  - low\n  - normal\n  - high\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n",
       inventory: `entity: inventory
 label: Inventory
-
 location_pattern: 20-COMPANY/06-FINANCE/INVENTORY/
 description: Inventory entity from DATAMODEL.md
 key_fields:
@@ -16905,7 +16791,6 @@ key_fields:
 - closing_qty
 - total_cost
 - net_realisable_value
-- write_down
 - status
 fields:
 - name: type
@@ -16933,10 +16818,6 @@ fields:
   type: number
   required: true
   description: Estimated selling price less costs to complete and sell
-- name: write_down
-  type: number
-  required: false
-  description: "max(0, total_cost \\u2212 net_realisable_value) \\u2014 IAS 2 write-down"
 - name: status
   type: string
   required: true
@@ -16944,10 +16825,13 @@ fields:
   - active
   - discontinued
   - written-off
+- name: write_down
+  required: false
+  type: number
+  description: "max(0, total_cost \\u2212 net_realisable_value) \\u2014 IAS 2 write-down"
 - name: description
   required: true
   type: string
-  description: "\\u2014"
 - name: category
   required: false
   type: string
@@ -16959,7 +16843,6 @@ fields:
 - name: opening_qty
   required: true
   type: number
-  description: "\\u2014"
 - name: opening_cost
   required: true
   type: number
@@ -16984,7 +16867,6 @@ fields:
 `,
       invoice: `entity: invoice
 label: Invoice
-
 location_pattern: 30-CLIENTS/{client-id}/02-INVOICES/
 description: Invoice entity from DATAMODEL.md
 key_fields:
@@ -16995,15 +16877,15 @@ key_fields:
 - amount
 - currency
 - payment_status
-- deal_ref
 fields:
 - name: type
   type: string
   required: true
 - name: client_id
   type: string
-  required: true
-  description: Must match parent Client folder
+  required: false
+  description: Must match parent Client folder when set; a partner-billed invoice
+    has none
 - name: invoice_id
   type: string
   required: true
@@ -17021,11 +16903,11 @@ fields:
 - name: amount
   type: number
   required: true
-  description: Invoice total in primary currency
+  description: Invoice total including VAT in currency
 - name: currency
   type: string
   required: true
-  description: AED, EUR, AUD, etc.
+  description: ISO 4217 currency code; EUR is the Process Harness deployment default
 - name: payment_status
   type: string
   required: true
@@ -17037,8 +16919,8 @@ fields:
   - disputed
   - written-off
 - name: deal_ref
-  type: string
   required: false
+  type: string
   description: Link to source Deal note
 - name: client_name
   required: true
@@ -17062,7 +16944,7 @@ fields:
   required: false
   type: string
   description: bank-transfer, stripe, cash, other. Required when paid
-- name: billing_summary_ref
+- name: billing_summary
   required: false
   type: string
   description: Link to invoice-description output
@@ -17084,7 +16966,6 @@ fields:
   required: true
   type: string
   format: date
-  description: "\\u2014"
 - name: tags
   required: true
   type: array
@@ -17092,7 +16973,7 @@ fields:
 - name: vat_rate
   required: false
   type: number
-  description: 0 or 5 (UAE VAT percent)
+  description: VAT percentage applicable to this invoice (for example 21 in Belgium)
 - name: vat_amount
   required: false
   type: number
@@ -17127,77 +17008,31 @@ fields:
   required: false
   type: number
   description: Individual ECL provision (AED). Populated for Stage 3 invoices only
-`,
-      issue: `entity: issue
-label: Issue
-
-location_pattern: 20-COMPANY/01-QMS/audits/
-description: Issue entity from DATAMODEL.md
-key_fields: []
-fields:
-- name: type
-  type: string
-  required: true
-- name: audit_id
-  required: true
-  type: string
-  enum:
-  - bob-adversarial-review-v2-2026-04-30
-- name: component
-  required: true
-  type: string
-  description: "\\u2014"
-- name: discovered_by
-  required: true
-  type: array
-  description: "\\u2014"
-- name: issue_id
-  required: true
-  type: string
-  description: "\\u2014"
-- name: location
-  required: true
-  type: string
-  description: "\\u2014"
-- name: reported_date
-  required: true
-  type: string
-  enum:
-  - '2026-04-30'
-  - '2026-05-01'
-- name: resolved_date
-  required: true
-  type: string
-  enum:
-  - '2026-05-01'
-- name: risk_class
-  required: true
-  type: string
-  description: "\\u2014"
-- name: severity
-  required: true
-  type: string
-  enum:
-  - Critical
-  - Major
-  - Minor
-- name: status
-  required: true
-  type: string
-  enum:
-  - Resolved
-- name: tags
-  required: true
-  type: array
-  description: "\\u2014"
-- name: audit_ref
+- name: transaction_currency
   required: false
   type: string
-  description: "\\u2014"
+  description: Original transaction ISO 4217 currency when different from currency
+- name: transaction_amount
+  required: false
+  type: number
+  description: Original transaction amount when currency conversion was applied
+- name: exchange_rate
+  required: false
+  type: number
+  description: Governed rate from transaction_currency to currency
+- name: exchange_rate_date
+  required: false
+  type: string
+  format: date
+  description: Effective date of the governed exchange rate
+- name: exchange_rate_source
+  required: false
+  type: string
+  description: Approved source used for the exchange rate
 `,
+      issue: 'entity: issue\nlabel: Issue\nlocation_pattern: 20-COMPANY/01-QMS/audits/\ndescription: Issue entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: audit_id\n  required: true\n  type: string\n  description: "Identifier of the audit that raised the issue \\u2014 open set, one\\\n    \\ per audit run"\n- name: component\n  required: true\n  type: string\n- name: discovered_by\n  required: true\n  type: array\n- name: issue_id\n  required: true\n  type: string\n- name: location\n  required: true\n  type: string\n- name: reported_date\n  required: true\n  type: string\n  format: date\n- name: resolved_date\n  required: true\n  type: string\n  format: date\n- name: risk_class\n  required: true\n  type: string\n- name: severity\n  required: true\n  type: string\n  enum:\n  - Critical\n  - Major\n  - Minor\n- name: status\n  required: true\n  type: string\n  enum:\n  - Open\n  - Resolved\n- name: tags\n  required: true\n  type: array\n- name: audit_ref\n  required: false\n  type: string\n',
       "journal-entry": `entity: journal-entry
 label: Journal Entry
-
 location_pattern: 20-COMPANY/06-FINANCE/JOURNALS/
 description: Journal Entry entity from DATAMODEL.md
 key_fields:
@@ -17208,7 +17043,6 @@ key_fields:
 - lines
 - total_debit
 - total_credit
-- source_document
 - status
 fields:
 - name: type
@@ -17253,11 +17087,6 @@ fields:
   type: number
   required: true
   description: "Sum of all credit amounts \\u2014 must equal total_debit"
-- name: source_document
-  type: string
-  required: false
-  description: Link to originating Invoice, Supplier Invoice, PO, bank statement,
-    etc.
 - name: status
   type: string
   required: true
@@ -17265,6 +17094,11 @@ fields:
   - draft
   - posted
   - reversed
+- name: source_document
+  required: false
+  type: string
+  description: Link to originating Invoice, Supplier Invoice, PO, bank statement,
+    etc.
 - name: description
   required: true
   type: string
@@ -17301,591 +17135,28 @@ status_lifecycle:
 - posted
 - reversed
 `,
-      "knowledge-base": 'entity: knowledge-base\nlabel: Knowledge Base\n\nlocation_pattern: 40-RESOURCES/\ndescription: Knowledge Base entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: tags\n  required: true\n  type: array\n  description: "\\u2014"\n- name: status\n  required: true\n  type: string\n  enum:\n  - draft\n  - final\n- name: title\n  required: true\n  type: string\n  description: "\\u2014"\n- name: created\n  required: true\n  type: string\n  description: "\\u2014"\n- name: source\n  required: false\n  type: string\n  description: "\\u2014"\n- name: author\n  required: false\n  type: string\n  description: "\\u2014"\n- name: platform\n  required: false\n  type: string\n  enum:\n  - linkedin\n  - tiktok\n  - youtube\n- name: domain_id\n  required: false\n  type: string\n  description: "\\u2014"\n- name: related\n  required: false\n  type: array\n  description: "\\u2014"\n- name: avg_score\n  required: false\n  type: number\n  description: "\\u2014"\n- name: cycle_date\n  required: false\n  type: string\n  description: "\\u2014"\n- name: entry_count\n  required: false\n  type: integer\n  description: "\\u2014"\n- name: provider\n  required: false\n  type: string\n  description: "\\u2014"\n- name: source_type\n  required: false\n  type: string\n  description: "\\u2014"\n- name: source_url\n  required: false\n  type: string\n  description: "\\u2014"\n- name: applicability\n  required: false\n  type: array\n  description: "\\u2014"\n- name: captured\n  required: false\n  type: string\n  description: "\\u2014"\n- name: channel\n  required: false\n  type: string\n  description: "\\u2014"\n- name: duration\n  required: false\n  type: string\n  description: "\\u2014"\n- name: entity\n  required: false\n  type: string\n  description: "\\u2014"\n- name: entity_id\n  required: false\n  type: string\n  description: "\\u2014"\n- name: industry\n  required: false\n  type: string\n  description: "\\u2014"\n- name: kb_category\n  required: false\n  type: string\n  description: "\\u2014"\n- name: last_reviewed\n  required: false\n  type: string\n  description: "\\u2014"\n- name: review_frequency\n  required: false\n  type: string\n  description: "\\u2014"\n- name: topic\n  required: false\n  type: string\n  description: "\\u2014"\n- name: url\n  required: false\n  type: string\n  description: "\\u2014"\n- name: version\n  required: false\n  type: number\n  description: "\\u2014"\n- name: aliases\n  required: false\n  type: array\n  description: "\\u2014"\n- name: applies_to_domains\n  required: false\n  type: array\n  description: "\\u2014"\n- name: applies_to_skills\n  required: false\n  type: array\n  description: "\\u2014"\n- name: as_of_date\n  required: false\n  type: string\n  description: "\\u2014"\n- name: author_role\n  required: false\n  type: string\n  description: "\\u2014"\n- name: authors\n  required: false\n  type: string\n  description: "\\u2014"\n- name: benchmark_results\n  required: false\n  type: string\n  description: "\\u2014"\n- name: case_study\n  required: false\n  type: string\n  description: "\\u2014"\n- name: content_type\n  required: false\n  type: string\n  description: "\\u2014"\n- name: creator\n  required: false\n  type: string\n  description: "\\u2014"\n- name: cssclasses\n  required: false\n  type: array\n  description: "\\u2014"\n- name: date_published\n  required: false\n  type: string\n  description: "\\u2014"\n- name: date_watched\n  required: false\n  type: string\n  description: "\\u2014"\n- name: description\n  required: false\n  type: string\n  description: "\\u2014"\n- name: field_guide\n  required: false\n  type: string\n  description: "\\u2014"\n- name: footerTemplate\n  required: false\n  type: string\n  description: "\\u2014"\n- name: headerTemplate\n  required: false\n  type: string\n  description: "\\u2014"\n- name: host\n  required: false\n  type: string\n  description: "\\u2014"\n- name: last_verified\n  required: false\n  type: string\n  description: "\\u2014"\n- name: printBackground\n  required: false\n  type: boolean\n  description: "\\u2014"\n- name: research_date\n  required: false\n  type: string\n  description: "\\u2014"\n- name: rule_jurisdiction\n  required: false\n  type: string\n  description: "\\u2014"\n- name: source_channel\n  required: false\n  type: string\n  description: "\\u2014"\n- name: speaker\n  required: false\n  type: string\n  description: "\\u2014"\n',
-      lead: `entity: lead
-label: Lead
-
-location_pattern: 20-COMPANY/55-LEADS/{lead-id}/
-description: Lead entity from DATAMODEL.md
-key_fields:
-- company_name
-- client_id
-- end_client_id
-- project_id
-- project
-- url
-- contact_name
-- status
-- owner
-fields:
-- name: type
-  type: string
-  required: true
-- name: company_name
-  type: string
-  required: true
-  description: Company display name
-- name: client_id
-  type: string
-  required: false
-  description: "\\u2014"
-- name: end_client_id
-  type: string
-  required: false
-  description: "\\u2014"
-- name: project_id
-  type: string
-  required: false
-  description: "\\u2014"
-- name: project
-  type: string
-  required: false
-  description: "\\u2014"
-- name: url
-  type: string
-  required: false
-  description: Company website
-- name: contact_name
-  type: string
-  required: true
-  description: Primary contact
-- name: status
-  type: string
-  required: true
-  enum:
-  - lead
-  - qualified
-  - nurture
-  - disqualified
-- name: owner
-  type: string
-  required: false
-  description: Person responsible for follow-up or qualification
-- name: industry
-  required: false
-  type: string
-  description: Industry vertical
-- name: company_size
-  required: false
-  type: string
-  description: Employee count or range
-- name: contact_title
-  required: false
-  type: string
-  description: Contact job title
-- name: contact_email
-  required: false
-  type: string
-  description: Contact email
-- name: contact_linkedin_url
-  required: false
-  type: string
-  description: LinkedIn profile URL of the primary contact
-- name: contact_linkedin_headline
-  required: false
-  type: string
-  description: Contact's current LinkedIn headline (captured by decision-maker-mapper)
-- name: company_linkedin_url
-  required: false
-  type: string
-  description: LinkedIn company page URL
-- name: source
-  required: true
-  type: string
-  enum:
-  - inbound
-  - outbound
-  - referral
-  - event
-  - partner
-- name: initial_request
-  required: false
-  type: string
-  description: What they asked for
-- name: lead_date
-  required: true
-  type: string
-  format: date
-  description: Date lead was received
-- name: prospect_score
-  required: false
-  type: number
-  description: 0-100, set by prospect-audit
-- name: prospect_grade
-  required: false
-  type: string
-  enum:
-  - A+
-  - A
-  - B
-  - C
-  - D
-- name: bant_score
-  required: false
-  type: number
-  description: 0-100, set by lead-qualifier
-- name: meddic_score
-  required: false
-  type: number
-  description: 0-100, set by lead-qualifier
-- name: confidence
-  required: false
-  type: string
-  enum:
-  - High
-  - Medium
-  - Low
-  - Very Low
-- name: deal_value_estimate
-  required: false
-  type: number
-  description: Estimated opportunity value
-- name: next_action
-  required: false
-  type: string
-  description: Next step description
-- name: next_action_date
-  required: false
-  type: string
-  format: date
-  description: Follow-up date
-- name: last_contact
-  required: false
-  type: string
-  format: date
-  description: Last meaningful lead interaction
-- name: related
-  required: false
-  type: string
-  description: Related notes, activities, research, or source artifact
-- name: disqualify_reason
-  required: false
-  type: string
-  description: Why lead was disqualified
-- name: promoted_to_client
-  required: false
-  type: string
-  description: Client ID if promoted
-- name: partner_ref
-  required: false
-  type: string
-  description: Partner who sourced this lead (when source=partner)
-- name: campaign_ref
-  required: false
-  type: string
-  description: Campaign that generated/enrolled this lead
-- name: sequence_ref
-  required: false
-  type: string
-  description: Active outbound sequence
-- name: sequence_touch_count
-  required: false
-  type: number
-  description: Current step in the sequence
-- name: sequence_status
-  required: false
-  type: string
-  enum:
-  - pending
-  - active
-  - engaged
-  - completed
-- name: tags
-  required: false
-  type: array
-  description: "\\u2014"
-status_lifecycle:
-- lead
-- qualified
-- nurture
-- disqualified
-`,
-      lease: 'entity: lease\nlabel: Lease\n\nlocation_pattern: 20-COMPANY/06-FINANCE/ASSETS/LEASES/\ndescription: Lease entity from DATAMODEL.md\nkey_fields:\n- lease_id\n- lessor\n- lease_start\n- lease_end\n- incremental_borrowing_rate\n- commencement_rou_asset\n- commencement_lease_liability\n- amortisation_schedule\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: lease_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: lessor\n  type: string\n  required: false\n  description: "\\u2014"\n- name: lease_start\n  type: string\n  format: date\n  required: false\n  description: "\\u2014"\n- name: lease_end\n  type: string\n  format: date\n  required: false\n  description: "\\u2014"\n- name: incremental_borrowing_rate\n  type: number\n  required: false\n  description: "\\u2014"\n- name: commencement_rou_asset\n  type: number\n  required: false\n  description: "\\u2014"\n- name: commencement_lease_liability\n  type: number\n  required: false\n  description: "\\u2014"\n- name: amortisation_schedule\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\nstatus_lifecycle:\n- active\n- modified\n- terminated\n- expired\n',
-      "legal-rule": 'entity: legal-rule\nlabel: Legal Rule\n\nlocation_pattern: 40-RESOURCES/legal/{jurisdiction}/\ndescription: Legal Rule entity from DATAMODEL.md\nkey_fields:\n- rule_jurisdiction\n- rule_source_type\n- rule_authority\n- rule_identifier\n- rule_effective_from\n- rule_effective_to\n- as_of_date\n- last_verified\n- source_url\n- confidence\n- supersedes\n- superseded_by\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: rule_jurisdiction\n  type: string\n  required: false\n  description: "\\u2014"\n- name: rule_source_type\n  type: string\n  required: false\n  description: "\\u2014"\n- name: rule_authority\n  type: string\n  required: false\n  description: "\\u2014"\n- name: rule_identifier\n  type: string\n  required: false\n  description: "\\u2014"\n- name: rule_effective_from\n  type: string\n  format: date\n  required: false\n  description: "\\u2014"\n- name: rule_effective_to\n  type: string\n  format: date\n  required: false\n  description: "\\u2014"\n- name: as_of_date\n  type: string\n  format: date\n  required: false\n  description: "\\u2014"\n- name: last_verified\n  type: string\n  required: false\n  description: "\\u2014"\n- name: source_url\n  type: string\n  required: false\n  description: "\\u2014"\n- name: confidence\n  type: string\n  required: false\n  description: "\\u2014"\n- name: supersedes\n  type: string\n  required: false\n  description: "\\u2014"\n- name: superseded_by\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\nstatus_lifecycle:\n- draft\n- verified\n- superseded\n- repealed\n',
-      "marketing-content": "entity: marketing-content\nlabel: Marketing Content\n\nlocation_pattern: 20-COMPANY/50-MARKETING/{channel}/\ndescription: Marketing Content entity from DATAMODEL.md\nkey_fields:\n- content_type\n- platform\n- pillar\n- source_content\n- derived_content\n- published_date\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: content_type\n  type: string\n  required: true\n  enum:\n  - post\n  - article\n  - email\n  - thread\n  - landing-page\n- name: platform\n  type: string\n  required: true\n  enum:\n  - linkedin\n  - substack\n  - twitter\n  - website\n  - skool\n- name: pillar\n  type: string\n  required: false\n  enum:\n  - product-showcase\n  - thought-leadership\n  - case-study\n- name: source_content\n  type: string\n  required: false\n  description: Original content this was derived from\n- name: derived_content\n  type: string\n  required: false\n  description: Content derived from this piece (repurposed versions)\n- name: published_date\n  type: string\n  format: date\n  required: false\n  description: Date published (filled when status = published)\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - scheduled\n  - published\n- name: title\n  required: true\n  type: string\n  description: Human-readable title\n- name: inspiration\n  required: false\n  type: string\n  description: Reference material that inspired this piece\n- name: campaign\n  required: false\n  type: string\n  description: Marketing campaign this belongs to\n- name: target_audience\n  required: false\n  type: string\n  description: Intended audience segment\n- name: tags\n  required: false\n  type: array\n  description: Topic tags\nstatus_lifecycle:\n- draft\n- review\n- scheduled\n- published\n",
-      meeting: `entity: meeting
-label: Meeting
-
-location_pattern: '*/20-MEETINGS/'
-description: Meeting entity from DATAMODEL.md
-key_fields:
-- context
-- date
-- attendees
-- status
-- client_id
-- end_client_id
-- project_id
-- project
-fields:
-- name: type
-  type: string
-  required: true
-- name: context
-  type: string
-  required: true
-  description: What the meeting is about
-- name: date
-  type: string
-  format: date
-  required: true
-  description: Meeting date
-- name: attendees
-  type: array
-  required: true
-  description: 'Wikilinks to Person records: ["person_name"]'
-- name: status
-  type: string
-  required: true
-  description: "\\u2014"
-- name: client_id
-  type: string
-  required: false
-  description: "Client shorthand \\u2014 set for meetings with a client (equivalent\\
-    \\ to company_type: client). Required for meetings filed under 30-CLIENTS/{id}/\\
-    \\ (enforced by the vault-validator location rule)"
-- name: end_client_id
-  type: string
-  required: false
-  description: Ultimate end-client/beneficiary when different from client_id
-- name: project_id
-  type: string
-  required: false
-  description: Canonical dated kebab-case project identifier
-- name: project
-  type: string
-  required: false
-  description: Full human-readable project name
-- name: company_id
-  required: false
-  type: string
-  description: "Generalized org reference \\u2014 the id of the client, partner, supplier,\\
-    \\ or own company the meeting is with. Pair with company_type. For client meetings,\\
-    \\ client_id is the shorthand and company_id may be omitted"
-- name: company_type
-  required: false
-  type: string
-  enum:
-  - client
-  - partner
-  - supplier
-  - own-company
-- name: meeting_type
-  required: false
-  type: string
-  description: Category of meeting (e.g. kickoff, review, planning, standup, retrospective,
-    demo, negotiation)
-- name: time
-  required: false
-  type: string
-  description: Start time
-- name: created
-  required: true
-  type: string
-  format: date
-  description: "\\u2014"
-status_lifecycle:
-- scheduled
-- completed
-- cancelled
-`,
-      partner: 'entity: partner\nlabel: Partner\n\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/\ndescription: Partner entity from DATAMODEL.md\nkey_fields:\n- partner_id\n- partner_name\n- status\n- relationship_type\n- my_role\n- agreement_type\nfields:\n- name: type\n  type: string\n  required: true\n- name: partner_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: partner_name\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\n- name: relationship_type\n  type: string\n  required: false\n  description: "\\u2014"\n- name: my_role\n  type: string\n  required: false\n  description: "\\u2014"\n- name: agreement_type\n  type: string\n  required: false\n  description: "\\u2014"\n- name: tags\n  required: false\n  type: array\n  description: "\\u2014"\nstatus_lifecycle:\n- lead\n- qualified\n- active\n- inactive\n- archived\n',
-      "performance-obligation": 'entity: performance-obligation\nlabel: Performance Obligation\n\nlocation_pattern: 30-CLIENTS/{client-id}/01-DEALS/\ndescription: Performance Obligation entity from DATAMODEL.md\nkey_fields:\n- po_id\n- deal_ref\n- satisfaction_type\n- allocated_transaction_price\n- revenue_recognised\n- revenue_remaining\n- progress_percentage\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: po_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: deal_ref\n  type: string\n  required: false\n  description: "\\u2014"\n- name: satisfaction_type\n  type: string\n  required: false\n  description: "\\u2014"\n- name: allocated_transaction_price\n  type: number\n  required: false\n  description: "\\u2014"\n- name: revenue_recognised\n  type: string\n  required: false\n  description: "\\u2014"\n- name: revenue_remaining\n  type: string\n  required: false\n  description: "\\u2014"\n- name: progress_percentage\n  type: number\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\nstatus_lifecycle:\n- not-started\n- in-progress\n- satisfied\n',
-      "period-close": 'entity: period-close\nlabel: Period Close\n\nlocation_pattern: 20-COMPANY/06-FINANCE/CLOSE/\ndescription: Period Close entity from DATAMODEL.md\nkey_fields:\n- close_id\n- period_id\n- close_type\n- checklist\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: close_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: period_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: close_type\n  type: string\n  required: false\n  description: "\\u2014"\n- name: checklist\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\nstatus_lifecycle:\n- in-progress\n- soft-closed\n- hard-closed\n',
-      playbook: `entity: playbook
-label: Playbook
-
-location_pattern: 00-CORE/Playbooks/ (library), 20-COMPANY/03-PROCESSES/Playbooks/,
-  10-ME/Playbooks/, 30-CLIENTS/{id}/Playbooks/
-description: Playbook entity from DATAMODEL.md
-key_fields:
-- trigger
-- outcome
-- total-steps
-- estimated-duration
-- workflow_video
-- status
-- value-chain
-- chain-coverage
-fields:
-- name: type
-  type: string
-  required: true
-- name: trigger
-  type: string
-  required: true
-  description: When/why this playbook is started
-- name: outcome
-  type: string
-  required: true
-  description: What "done" looks like
-- name: total-steps
-  type: number
-  required: true
-  description: Total steps in the playbook
-- name: estimated-duration
-  type: string
-  required: false
-  description: e.g. "2-3 hours active, 1-2 sessions"
-- name: workflow_video
-  type: string
-  required: false
-  description: Filename of workflow video (e.g. "content-launch-workflow.mp4"), empty
-    if none
-- name: status
-  type: string
-  required: true
-  enum:
-  - draft
-  - active
-  - retired
-- name: value-chain
-  type: string
-  required: false
-  description: 'Primary value chain this playbook serves. Valid: lead-to-cash, deliver-to-satisfaction,
-    record-to-insight, procure-to-pay, hire-to-productivity, plan-to-perform, order-to-fulfill,
-    plan-to-produce, market-to-order, concept-to-launch, service-to-renew, create-to-publish,
-    operating-controls'
-- name: chain-coverage
-  type: array
-  required: false
-  description: "Stages within the chain that this playbook covers (e.g. [propose,\\
-    \\ close]). Stage names are chain-specific \\u2014 see chain taxonomy reference."
-- name: maturity
-  required: false
-  type: array
-  description: Business maturity stage(s) this playbook targets, e.g. [foundation,
-    traction, scaling]. A playbook may apply to several stages.
-- name: tags
-  required: false
-  type: array
-  description: Topic/domain tags
-`,
-      product: 'entity: product\nlabel: Product\n\nlocation_pattern: 20-COMPANY/40-PRODUCTS/{product-id}/product.md\ndescription: Product entity from DATAMODEL.md\nkey_fields:\n- product_id\n- brand\n- product_name\n- descriptor\n- shorthand\n- category\n- pricing_model\n- list_price\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: product_id\n  type: string\n  required: true\n  description: Kebab-case identifier, e.g. thirdbrain-bob, starter-vault\n- name: brand\n  type: string\n  required: true\n  description: Brand name, e.g. ThirdBrain\n- name: product_name\n  type: string\n  required: true\n  description: Full product name, e.g. ThirdBrain BOB\n- name: descriptor\n  type: string\n  required: false\n  description: Explanatory phrase, e.g. The Business Operating Brain\n- name: shorthand\n  type: string\n  required: false\n  description: Short form for use after first introduction, e.g. BOB\n- name: category\n  type: string\n  required: true\n  enum:\n  - platform\n  - add-on\n  - pack\n  - service\n  - community\n- name: pricing_model\n  type: string\n  required: true\n  enum:\n  - one-time\n  - subscription\n  - free\n  - bundled\n- name: list_price\n  type: number\n  required: false\n  description: List price in primary currency\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - discontinued\n- name: launch_price\n  required: false\n  type: number\n  description: Launch/promotional price\n- name: currency\n  required: true\n  type: string\n  description: EUR, USD, AUD, etc.\n- name: includes\n  required: false\n  type: array\n  description: What ships with the product (skill count, components, etc.)\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n- name: tags\n  required: true\n  type: array\n  description: Must include product\n',
-      project: 'entity: project\nlabel: Project\n\nlocation_pattern: 30-CLIENTS/{client-id}/YYYY-MM-{name}/\ndescription: Project entity from DATAMODEL.md\nkey_fields:\n- project_id\n- project\n- client_id\n- end_client_id\n- status\n- priority\n- deadline\nfields:\n- name: type\n  type: string\n  required: true\n- name: project_id\n  type: string\n  required: true\n  description: Canonical dated kebab-case project identifier, e.g. 2026-03-advance-auto-google-ads-pilot\n- name: project\n  type: string\n  required: true\n  description: Full human-readable project name\n- name: client_id\n  type: string\n  required: true\n  description: Contracting/billing client identifier\n- name: end_client_id\n  type: string\n  required: false\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: status\n  type: string\n  required: true\n  description: "\\u2014"\n- name: priority\n  type: string\n  required: false\n  enum:\n  - low\n  - normal\n  - high\n- name: deadline\n  type: string\n  format: date\n  required: false\n  description: Target completion date\n- name: project_type\n  required: false\n  type: string\n  description: Category of project (e.g. consulting, implementation, audit, content,\n    campaign)\n- name: start_date\n  required: false\n  type: string\n  format: date\n  description: Project start date\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n- name: title\n  required: true\n  type: string\n  description: "\\u2014"\n- name: tags\n  required: false\n  type: array\n  description: "\\u2014"\nstatus_lifecycle:\n- planning\n- active\n- on-hold\n- completed\n- archived\n',
-      provision: 'entity: provision\nlabel: Provision\n\nlocation_pattern: 20-COMPANY/06-FINANCE/PROVISIONS/\ndescription: Provision entity from DATAMODEL.md\nkey_fields:\n- provision_id\n- provision_type\n- estimated_amount\n- probability\n- current_amount\n- movements\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: provision_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: provision_type\n  type: string\n  required: false\n  description: "\\u2014"\n- name: estimated_amount\n  type: number\n  required: false\n  description: "\\u2014"\n- name: probability\n  type: number\n  required: false\n  description: "\\u2014"\n- name: current_amount\n  type: number\n  required: false\n  description: "\\u2014"\n- name: movements\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\nstatus_lifecycle:\n- recognised\n- utilised\n- reversed\n- closed\n',
-      "purchase-order": `entity: purchase-order
-label: Purchase Order
-
-location_pattern: 20-COMPANY/06-FINANCE/AP/ORDERS/
-description: Purchase Order entity from DATAMODEL.md
-key_fields:
-- po_id
-- supplier_id
-- pr_ref
-- line_items
-- total_amount
-- payment_terms
-- approval_status
-- delivery_status
-fields:
-- name: type
-  type: string
-  required: true
-- name: po_id
-  type: string
-  required: true
-  description: 'Unique across vault: PO-{YYYY}-{NNN}'
-- name: supplier_id
-  type: string
-  required: true
-  description: Must match 20-COMPANY/30-SUPPLIERS/ folder
-- name: pr_ref
-  type: string
-  required: false
-  description: Link to originating Purchase Requisition
-- name: line_items
-  type: array
-  required: true
-  description: Services/items with description, qty, unit_price, total
-- name: total_amount
-  type: number
-  required: true
-  description: PO total value
-- name: payment_terms
-  type: string
-  required: true
-  description: e.g., Net 30, 50% upfront, 50% on delivery
-- name: approval_status
-  type: string
-  required: true
-  enum:
-  - draft
-  - approved
-  - issued
-  - partially-fulfilled
-  - fulfilled
-  - cancelled
-- name: delivery_status
-  type: string
-  required: false
-  enum:
-  - pending
-  - partial
-  - complete
-  - cancelled
-- name: supplier_name
-  required: true
-  type: string
-  description: Supplier display name
-- name: contract_ref
-  required: false
-  type: string
-  description: Reference to governing contract/agreement
-- name: currency
-  required: true
-  type: string
-  description: "\\u2014"
-- name: delivery_date
-  required: false
-  type: string
-  format: date
-  description: Expected delivery/completion date
-- name: milestones
-  required: false
-  type: array
-  description: 'For services: milestone description, date, amount'
-- name: approved_by
-  required: false
-  type: string
-  description: Required when approved or later
-- name: issued_date
-  required: false
-  type: string
-  format: date
-  description: Date PO was sent to supplier
-- name: invoice_refs
-  required: false
-  type: array
-  description: Wikilinks to supplier invoices matched to this PO
-- name: created
-  required: true
-  type: string
-  format: date
-  description: "\\u2014"
-- name: tags
-  required: true
-  type: array
-  description: Must include procurement, purchase-order, and {supplier-id}
-`,
-      "purchase-requisition": `entity: purchase-requisition
-label: Purchase Requisition
-
-location_pattern: 20-COMPANY/06-FINANCE/AP/REQUISITIONS/
-description: Purchase Requisition entity from DATAMODEL.md
-key_fields:
-- pr_id
-- requestor
-- category
-- estimated_amount
-- approval_status
-- po_ref
-fields:
-- name: type
-  type: string
-  required: true
-- name: pr_id
-  type: string
-  required: true
-  description: 'Unique across vault: PR-{YYYY}-{NNN}'
-- name: requestor
-  type: string
-  required: true
-  description: Person who needs the purchase
-- name: category
-  type: string
-  required: true
-  description: 'Spend category: it-infrastructure, software-licensing, professional-services,
-    marketing, facilities, office-supplies, travel, other'
-- name: estimated_amount
-  type: number
-  required: true
-  description: Estimated total cost
-- name: approval_status
-  type: string
-  required: true
-  enum:
-  - draft
-  - submitted
-  - approved
-  - rejected
-  - cancelled
-- name: po_ref
-  type: string
-  required: false
-  description: Link to resulting Purchase Order
-- name: title
-  required: true
-  type: string
-  description: Brief description of the purchase need
-- name: supplier_id
-  required: false
-  type: string
-  description: Preferred supplier if known (must match 20-COMPANY/30-SUPPLIERS/ folder)
-- name: currency
-  required: true
-  type: string
-  description: USD, EUR, AED, etc.
-- name: budget_code
-  required: false
-  type: string
-  description: Internal budget line reference
-- name: justification
-  required: true
-  type: string
-  description: Business case for the purchase
-- name: urgency
-  required: false
-  type: string
-  enum:
-  - routine
-  - urgent
-  - emergency
-- name: needed_by
-  required: false
-  type: string
-  format: date
-  description: Date by which goods/services are needed
-- name: line_items
-  required: false
-  type: array
-  description: Items/services with description, qty, and unit cost
-- name: approved_by
-  required: false
-  type: string
-  description: 'Required when approval_status: approved'
-- name: approved_date
-  required: false
-  type: string
-  format: date
-  description: 'Required when approval_status: approved'
-- name: rejection_reason
-  required: false
-  type: string
-  description: 'Required when approval_status: rejected'
-- name: created
-  required: true
-  type: string
-  format: date
-  description: "\\u2014"
-- name: tags
-  required: true
-  type: array
-  description: Must include procurement and purchase-requisition
-`,
+      "knowledge-base": 'entity: knowledge-base\nlabel: Knowledge Base\nlocation_pattern: 40-RESOURCES/ or 10-ME/90-INBOX/ or 00-CORE/Wiki/ or 20-COMPANY/07-KNOWLEDGE-BASE/\n  or 30-CLIENTS/{client-id}/07-KNOWLEDGE-BASE/ or 20-COMPANY/03-PROCESSES/BASELINE/\ndescription: Knowledge Base entity from DATAMODEL.md. 90-INBOX is pre-triage; Wiki\n  holds product documentation\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: tags\n  required: true\n  type: array\n- name: status\n  required: true\n  type: string\n  enum:\n  - draft\n  - final\n  - superseded\n  description: "superseded added 2026-08-10: a KB note whose content has been overtaken\\\n    \\ is neither a draft nor current-final, and without the value authors invented\\\n    \\ free text for it. Record *what* is stale in the body, not in the enum. (Do not\\\n    \\ name rejected values in backticks here \\u2014 the generator harvests every backticked\\\n    \\ token in this cell as an enum member)"\n- name: title\n  required: true\n  type: string\n- name: created\n  required: true\n  type: string\n- name: source\n  required: false\n  type: string\n- name: author\n  required: false\n  type: string\n- name: platform\n  required: false\n  type: string\n  enum:\n  - linkedin\n  - tiktok\n  - youtube\n  - web\n  - chatgpt\n  - notebooklm\n- name: domain_id\n  required: false\n  type: string\n- name: related\n  required: false\n  type: array\n- name: avg_score\n  required: false\n  type: number\n- name: cycle_date\n  required: false\n  type: string\n- name: entry_count\n  required: false\n  type: integer\n- name: provider\n  required: false\n  type: string\n- name: source_type\n  required: false\n  type: string\n- name: source_url\n  required: false\n  type: string\n- name: applicability\n  required: false\n  type: array\n- name: captured\n  required: false\n  type: string\n- name: channel\n  required: false\n  type: string\n- name: duration\n  required: false\n  type: string\n- name: entity\n  required: false\n  type: string\n- name: entity_id\n  required: false\n  type: string\n- name: industry\n  required: false\n  type: string\n- name: kb_category\n  required: false\n  type: string\n- name: last_reviewed\n  required: false\n  type: string\n- name: review_frequency\n  required: false\n  type: string\n- name: topic\n  required: false\n  type: string\n- name: url\n  required: false\n  type: string\n- name: version\n  required: false\n  type: number\n- name: aliases\n  required: false\n  type: array\n- name: applies_to_domains\n  required: false\n  type: array\n- name: applies_to_skills\n  required: false\n  type: array\n- name: as_of_date\n  required: false\n  type: string\n- name: author_role\n  required: false\n  type: string\n- name: authors\n  required: false\n  type: string\n- name: benchmark_results\n  required: false\n  type: string\n- name: case_study\n  required: false\n  type: string\n- name: content_type\n  required: false\n  type: string\n- name: creator\n  required: false\n  type: string\n- name: cssclasses\n  required: false\n  type: array\n- name: date_published\n  required: false\n  type: string\n- name: date_watched\n  required: false\n  type: string\n- name: description\n  required: false\n  type: string\n- name: field_guide\n  required: false\n  type: string\n- name: footerTemplate\n  required: false\n  type: string\n- name: headerTemplate\n  required: false\n  type: string\n- name: host\n  required: false\n  type: string\n- name: last_verified\n  required: false\n  type: string\n- name: printBackground\n  required: false\n  type: boolean\n- name: research_date\n  required: false\n  type: string\n- name: rule_jurisdiction\n  required: false\n  type: string\n- name: source_channel\n  required: false\n  type: string\n- name: speaker\n  required: false\n  type: string\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: published\n  required: false\n  type: string\n  description: Publication date of the source material. Mixed date and free-text values\n    in practice.\n- name: product\n  required: false\n  type: string\n  description: Product the note is about, when it is product-scoped.\n- name: staleness_signal\n  required: false\n  type: string\n  description: The condition that invalidates this note, in prose \u2014 the event to watch for,\n    not a date. Complements dateModified, which only records when the file was last written\n    and drifts whenever a batch edit rewrites a body without touching it. Example \u2014 "when the\n    Anthropic pricing page changes" or "when the plugin drops the legacy API". Absent means\n    the note has no known expiry condition.\n',
+      lead: "entity: lead\nlabel: Lead\nlocation_pattern: 20-COMPANY/55-LEADS/{lead-id}/ or 30-CLIENTS/{client-id}/55-LEADS/\ndescription: Lead entity from DATAMODEL.md\nkey_fields:\n- company_name\n- contact_name\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: company_name\n  type: string\n  required: true\n  description: Company display name\n- name: contact_name\n  type: string\n  required: true\n  description: Primary contact\n- name: title\n  required: false\n  type: string\n  description: >-\n    Opportunity headline, where the lead needs a display name that `company_name` cannot carry\n    (a named role, a scoped request, a multi-part opportunity). Not a synonym for `company_name`,\n    which stays the company identity and remains required.\n- name: status\n  type: string\n  required: true\n  enum:\n  - lead\n  - qualified\n  - nurture\n  - disqualified\n- name: client_id\n  required: false\n  type: string\n- name: end_client_id\n  required: false\n  type: string\n- name: project_id\n  required: false\n  type: string\n- name: project\n  required: false\n  type: string\n- name: url\n  required: false\n  type: string\n  description: Company website\n- name: owner\n  required: false\n  type: string\n  description: Person responsible for follow-up or qualification\n- name: industry\n  required: false\n  type: string\n  description: Industry vertical\n- name: company_size\n  required: false\n  type: string\n  description: Employee count or range\n- name: contact_title\n  required: false\n  type: string\n  description: Contact job title\n- name: contact_email\n  required: false\n  type: string\n  description: Contact email\n- name: contact_linkedin_url\n  required: false\n  type: string\n  description: LinkedIn profile URL of the primary contact\n- name: contact_linkedin_headline\n  required: false\n  type: string\n  description: Contact's current LinkedIn headline (captured by decision-maker-mapper)\n- name: company_linkedin_url\n  required: false\n  type: string\n  description: LinkedIn company page URL\n- name: source\n  required: true\n  type: string\n  enum:\n  - inbound\n  - outbound\n  - referral\n  - network\n  - event\n  - partner\n  description: >-\n    Sourcing method, not lead temperature or channel. At capture, use `partner` when a named\n    partner organisation deliberately routes, passes, or co-sells the opportunity to BRNCX; use\n    `referral` only when an individual who is not acting for a partner organisation makes the\n    introduction. A direct event, inbound message, outbound prospect, or existing-network contact\n    keeps its actual mechanism, even when the lead is warm. Set `partner_ref` for `partner`; set\n    `referred_by` for `referral` when the individual is known, and do not invent an unknown name.\n- name: source_platform\n  required: false\n  type: string\n  description: \"Where the sourcing happened \\u2014 linkedin, email, brn.cx, skool,\\\n    \\ substack, youtube, whatsapp, phone, in-person, upwork. Open text, not an enum:\\\n    \\ platforms appear faster than a closed vocabulary can be maintained\"\n- name: referred_by\n  required: false\n  type: string\n  description: >-\n    Person who made the introduction when `source: referral`. Use this only for an individual who\n    is not acting for a partner organisation. Record the person when known; if the note does not\n    identify them, leave this optional field blank rather than inventing a name. When a partner\n    organisation routed the opportunity, use `source: partner` and `partner_ref` instead.\n- name: initial_request\n  required: false\n  type: string\n  description: What they asked for\n- name: description\n  required: false\n  type: string\n  description: >-\n    One-line summary of the opportunity as a whole - role, scope, duration, end client. Distinct\n    from `initial_request`, which records only what the lead asked BRNCX for.\n- name: lead_date\n  required: true\n  type: string\n  format: date\n  description: Date lead was received\n- name: prospect_score\n  required: false\n  type: number\n  description: 0-100, set by prospect-audit\n- name: prospect_grade\n  required: false\n  type: string\n  enum:\n  - A+\n  - A\n  - B\n  - C\n  - D\n- name: bant_score\n  required: false\n  type: number\n  description: 0-100, set by lead-qualifier\n- name: meddic_score\n  required: false\n  type: number\n  description: 0-100, set by lead-qualifier\n- name: confidence\n  required: false\n  type: string\n  enum:\n  - High\n  - Medium\n  - Low\n  - Very Low\n- name: deal_value_estimate\n  required: false\n  type: number\n  description: Estimated opportunity value\n- name: next_action\n  required: false\n  type: string\n  description: Next step description\n- name: next_action_date\n  required: false\n  type: string\n  format: date\n  description: Follow-up date\n- name: last_contact\n  required: false\n  type: string\n  format: date\n  description: Last meaningful lead interaction\n- name: related\n  required: false\n  type: string\n  description: Related notes, activities, research, or source artifact\n- name: disqualify_reason\n  required: false\n  type: string\n  description: Why lead was disqualified\n- name: promoted_to_client\n  required: false\n  type: string\n  description: Client ID if promoted\n- name: converted_to_deal\n  required: false\n  type: string\n  description: >-\n    Wikilink `_ref` to the deal note this lead became. The vault copied Salesforce's lead/deal\n    split without its ConvertedOpportunityId, so a converted lead simply stopped being updated\n    and `source` could not be joined to `deal_source` to answer which sourcing produced revenue.\n    Set it at the moment the deal note is created; leave blank on a lead that never converted.\n- name: partner_ref\n  required: false\n  type: string\n  description: >-\n    Partner organisation that routed, passed, or co-sold this lead (required when `source: partner`);\n    a person's name alone does not establish partner sourcing.\n- name: campaign_ref\n  required: false\n  type: string\n  description: Campaign that generated/enrolled this lead\n- name: sequence_ref\n  required: false\n  type: string\n  description: Active outbound sequence\n- name: sequence_touch_count\n  required: false\n  type: number\n  description: Current step in the sequence\n- name: sequence_status\n  required: false\n  type: string\n  enum:\n  - pending\n  - active\n  - engaged\n  - completed\n- name: tags\n  required: false\n  type: array\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: canvas\n  required: false\n  type: array\n  description: \"Plugin-owned (enhanced-canvas, enableFrontmatter: true). List of wikilinks\\\n    \\ to the canvases whose nodes reference this note; re-asserted by syncAllCanvasProperties()\\\n    \\ on startup. Removing it by hand does not stick \\u2014 delete or rebuild the\\\n    \\ canvas instead. The plugin also writes a second key named after the canvas basename,\\\n    \\ which is not a model field.\"\n- name: signal\n  required: false\n  type: string\n  description: Buying signal that surfaced the lead.\nconditional_required:\n- when:\n    source: partner\n  require:\n  - partner_ref\nnotes: >-\n  Capture `source` using the first verified sourcing mechanism at the moment the lead is created.\n  Use `partner` when a named partner organisation deliberately routes, passes, or co-sells the\n  opportunity to BRNCX; set `partner_ref` to that organisation. Use `referral` only when an\n  individual who is not acting for a partner organisation makes the introduction; set `referred_by`\n  when the person is known, and do not invent an unknown name.\n  If neither test applies, use the actual mechanism (`inbound`, `outbound`, `event`, or `network`),\n  even when the lead is warm. Inspect the lead body or source artifact before deciding; never infer\n  `partner` or `referral` from warmth, tags, a person's name, or a partner's event alone.\n  The enhanced-canvas plugin also writes a per-note key named after the canvas basename\n  (`Context - profile`); it is plugin-owned, its name varies per note, and it is deliberately\n  not a model field.\nstatus_lifecycle:\n- lead\n- qualified\n- nurture\n- disqualified\n",
+      lease: "entity: lease\nlabel: Lease\nlocation_pattern: 20-COMPANY/06-FINANCE/ASSETS/LEASES/\ndescription: Lease entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: lease_id\n  required: false\n  type: string\n- name: lessor\n  required: false\n  type: string\n- name: lease_start\n  required: false\n  type: string\n  format: date\n- name: lease_end\n  required: false\n  type: string\n  format: date\n- name: incremental_borrowing_rate\n  required: false\n  type: number\n- name: commencement_rou_asset\n  required: false\n  type: number\n- name: commencement_lease_liability\n  required: false\n  type: number\n- name: amortisation_schedule\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - active\n  - modified\n  - terminated\n  - expired\nstatus_lifecycle:\n- active\n- modified\n- terminated\n- expired\n",
+      "legal-rule": "entity: legal-rule\nlabel: Legal Rule\nlocation_pattern: 40-RESOURCES/legal/{jurisdiction}/\ndescription: Legal Rule entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: rule_jurisdiction\n  required: false\n  type: string\n- name: rule_source_type\n  required: false\n  type: string\n- name: rule_authority\n  required: false\n  type: string\n- name: rule_identifier\n  required: false\n  type: string\n- name: rule_effective_from\n  required: false\n  type: string\n  format: date\n- name: rule_effective_to\n  required: false\n  type: string\n  format: date\n- name: as_of_date\n  required: false\n  type: string\n  format: date\n- name: last_verified\n  required: false\n  type: string\n- name: source_url\n  required: false\n  type: string\n- name: confidence\n  required: false\n  type: string\n- name: supersedes\n  required: false\n  type: string\n- name: superseded_by\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - draft\n  - verified\n  - superseded\n  - repealed\nstatus_lifecycle:\n- draft\n- verified\n- superseded\n- repealed\n",
+      "marketing-content": "entity: marketing-content\nlabel: Marketing Content\nlocation_pattern: 20-COMPANY/50-MARKETING/{channel}/ or 20-COMPANY/50-MARKETING/ or 30-CLIENTS/{client-id}/50-MARKETING/{channel}/\n  or 30-CLIENTS/{client-id}/50-MARKETING/ or 20-COMPANY/03-PROCESSES/BASELINE/\ndescription: Marketing Content entity from DATAMODEL.md\nkey_fields:\n- content_type\n- platform\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: content_type\n  type: string\n  required: true\n  enum:\n  - post\n  - article\n  - email\n  - thread\n  - landing-page\n  - video-script\n  - video\n  - video-series-format\n  - social-post\n  - linkedin-post\n  - carousel\n  - case-study\n  - content-plan\n  - report\n  - site-config\n  - reference\n  - tool\n  - reddit-post\n  - qa-note\n  - prompt\n  - note\n  - nlm-script\n  - faq\n  - explainer\n  - diagram\n  - copy-library\n  - community-copy\n  - cheatsheet\n  - channel-description\n  description: extended 2026-07-24 to match live usage; keep enum (Base filters need it)\n- name: platform\n  type: string\n  required: true\n  enum:\n  - linkedin\n  - substack\n  - twitter\n  - website\n  - skool\n  - youtube\n  - reddit\n  - notebooklm\n  - multi\n  - internal\n  description: lowercase kebab only; extended 2026-07-24\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - scheduled\n  - published\n- name: pillar\n  required: false\n  type: string\n  enum:\n  - product-showcase\n  - thought-leadership\n  - case-study\n  - thirdbrain\n  - own-your-ai-system\n  - bob-positioning\n  - lead-generation\n  - ai-billable-service-line\n  description: 'Content theme. Closed list, extended 2026-07-24 \u2014 no free-text pillars. Consolidated\n    2026-08-25: `positioning` and `product-positioning` were near-duplicates of `bob-positioning`;\n    both notes were migrated and the two values removed. `own-your-ai-system` (the argument\n    that you should own your AI system) and `thirdbrain` (product-branded content) were checked\n    and are genuinely distinct \u2014 do not merge. A client or product variant is not a pillar:\n    record it in `variant` and `client_id`, which is why `gbl-bob` was rejected.'\n- name: source_content\n  required: false\n  type: array\n  description: Wikilinks to original content this was derived from (array-typed 2026-07-24\n    \u2014 repurposing chains have multiple sources)\n- name: derived_content\n  required: false\n  type: array\n  description: Wikilinks to content repurposed from this piece (array-typed 2026-07-24)\n- name: published_date\n  required: false\n  type: string\n  format: date\n  description: Date published (filled when status = published)\n- name: title\n  required: true\n  type: string\n  description: Human-readable title\n- name: inspiration\n  required: false\n  type: string\n  description: Reference material that inspired this piece\n- name: campaign\n  required: false\n  type: string\n  description: Marketing campaign this belongs to\n- name: target_audience\n  required: false\n  type: string\n  description: Intended audience segment\n- name: tags\n  required: false\n  type: array\n  description: Topic tags\n- name: company_id\n  required: false\n  type: string\n  description: Generalized org reference \u2014 the id of the client, partner, supplier or own\n    company this record attaches to. Pair with company_type. For client records, client_id\n    is the shorthand and company_id may be omitted\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`; note\n    that batch edits routinely leave it stale.\n- name: video_slug\n  required: false\n  type: string\n  description: Slug identifying the video this content belongs to.\n- name: framework\n  required: false\n  type: string\n  description: Content framework the script follows.\n- name: target_length\n  required: false\n  type: string\n  description: Target runtime or length. Free text.\n- name: estimated_words\n  required: false\n  type: number\n  description: Estimated word count for the script.\n- name: speaking_pace\n  required: false\n  type: string\n  description: Intended delivery pace for voiceover timing.\n- name: final_angle_ref\n  required: false\n  type: string\n  description: Wikilink to the angle note the final script used.\n- name: final_angle_slug\n  required: false\n  type: string\n  description: Slug of the chosen angle.\n- name: final_video_title\n  required: false\n  type: string\n  description: Title the video actually shipped with.\n- name: angle_pivoted\n  required: false\n  type: boolean\n  description: True when the final angle differs from the originally selected one.\n- name: series_part\n  required: false\n  description: Position within a series. Deliberately untyped \u2014 24 notes hold an integer,\n    1 holds a string.\n- name: hero_image\n  required: false\n  type: string\n  description: Hero image path or wikilink.\n- name: source_angle\n  required: false\n  type: string\n  description: Angle note this content was generated from.\n- name: channel_id\n  required: false\n  type: string\n  description: Platform channel identifier.\n- name: youtube_id\n  required: false\n  type: string\n  description: YouTube video id.\n- name: youtube_url\n  required: false\n  type: string\n  description: Canonical YouTube watch URL.\n- name: episode\n  required: false\n  type: number\n  description: Episode number within a series.\n- name: made_for_kids\n  required: false\n  type: boolean\n  description: YouTube made-for-kids declaration.\n- name: seo_description\n  required: false\n  type: string\n  description: SEO description for the published page or video.\n- name: slug\n  required: false\n  type: string\n  description: URL slug.\n- name: scheduled\n  required: false\n  type: string\n  description: Scheduled publication date. Mixed date, datetime and string values in practice.\n- name: channel\n  required: false\n  type: string\n  description: Publishing channel.\n- name: variant\n  required: false\n  type: string\n  description: Variant label when several cuts of one piece exist.\n- name: privacy\n  required: false\n  type: string\n  description: Platform privacy setting at publication.\n- name: date\n  required: false\n  type: string\n  format: date\n  description: Content date.\n- name: url\n  required: false\n  type: string\n  description: External URL for the published item.\n- name: topic\n  required: false\n  type: string\n  description: Topic label.\n- name: source\n  required: false\n  type: string\n  description: Where the content originated.\n- name: format\n  required: false\n  type: string\n  description: Content format.\n- name: client_id\n  required: false\n  type: string\n  description: Client this content belongs to. Must match a 30-CLIENTS/ folder when set.\n- name: canvas\n  required: false\n  type: array\n  description: Plugin-owned (enhanced-canvas). Wikilinks to canvases referencing this note;\n    re-asserted on startup.\n- name: seo_title\n  required: false\n  type: string\n  description: SEO title for the published page.\n- name: subtitle\n  required: false\n  type: string\n  description: Subtitle or standfirst.\nstatus_lifecycle:\n- draft\n- review\n- scheduled\n- published\nnotes: '**`Process - Marketing Contents` is not a field.** It is an enhanced-canvas artifact:\n  with `enableFrontmatter: true` the plugin writes both `canvas:` and a second key named after\n  the canvas basename. The space in the name makes it unaddressable in Bases without bracket\n  syntax, and hand-removal does not stick \u2014 the plugin re-asserts it on startup. Same disposition\n  as the `Process - TaskNotes` key retired from `task` on 2026-08-19: delete or rebuild the\n  canvas.'\n",
+      meeting: 'entity: meeting\nlabel: Meeting\nlocation_pattern: 10-ME/20-MEETINGS/ or 20-COMPANY/20-MEETINGS/ or 20-COMPANY/{division}/20-MEETINGS/\n  or 20-COMPANY/35-PARTNERS/{partner-id}/20-MEETINGS/ or 20-COMPANY/55-LEADS/{lead-id}/20-MEETINGS/\n  or 30-CLIENTS/{client-id}/20-MEETINGS/\ndescription: Meeting entity from DATAMODEL.md\nkey_fields:\n- context\n- date\n- attendees\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: context\n  type: string\n  required: true\n  description: What the meeting is about\n- name: date\n  type: string\n  format: date\n  required: true\n  description: Meeting date\n- name: attendees\n  type: array\n  required: true\n  description: \'Wikilinks to Person records: ["person_name"]\'\n- name: status\n  type: string\n  required: true\n  enum:\n  - scheduled\n  - completed\n  - cancelled\n- name: client_id\n  required: false\n  type: string\n  description: "Client shorthand \\u2014 set for meetings with a client (equivalent\\\n    \\ to company_type: client). Required for meetings filed under 30-CLIENTS/{id}/\\\n    \\ (enforced by the vault-validator location rule)"\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier,\\\n    \\ or own company the meeting is with. Pair with company_type. For client meetings,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: meeting_type\n  required: false\n  type: string\n  description: Category of meeting (e.g. kickoff, review, planning, standup, retrospective,\n    demo, negotiation)\n- name: time\n  required: false\n  type: string\n  description: Start time\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: source_system\n  required: false\n  type: string\n  description: System the meeting record was imported from.\n- name: source_file\n  required: false\n  type: string\n  description: Path to the imported transcript or recording.\n- name: source_id\n  required: false\n  type: string\n  description: Identifier of the meeting in `source_system`.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\nstatus_lifecycle:\n- scheduled\n- completed\n- cancelled\n',
+      partner: "entity: partner\nlabel: Partner\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/\ndescription: Partner entity from DATAMODEL.md\nkey_fields:\n- partner_id\n- partner_name\n- status\n- relationship_type\n- my_role\n- agreement_type\nfields:\n- name: type\n  type: string\n  required: true\n- name: partner_id\n  type: string\n  required: true\n- name: partner_name\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - lead\n  - qualified\n  - active\n  - inactive\n  - archived\n- name: relationship_type\n  type: string\n  required: true\n  enum:\n  - co-sell\n  - co-build\n  - certification\n- name: my_role\n  type: string\n  required: true\n- name: agreement_type\n  type: string\n  required: true\n- name: commission_rate\n  required: false\n  type: number\n  description: Default commission percentage this partner earns on a sourced deal\n    (e.g. 15 for 15%). Read when a won deal auto-creates a commission record; when\n    absent the amount is left at 0 rather than guessed\n- name: tags\n  required: false\n  type: array\nstatus_lifecycle:\n- lead\n- qualified\n- active\n- inactive\n- archived\n",
+      "performance-obligation": "entity: performance-obligation\nlabel: Performance Obligation\nlocation_pattern: 30-CLIENTS/{client-id}/01-DEALS/\ndescription: Performance Obligation entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: po_id\n  required: false\n  type: string\n- name: deal_ref\n  required: false\n  type: string\n- name: satisfaction_type\n  required: false\n  type: string\n- name: allocated_transaction_price\n  required: false\n  type: number\n- name: revenue_recognised\n  required: false\n  type: string\n- name: revenue_remaining\n  required: false\n  type: string\n- name: progress_percentage\n  required: false\n  type: number\n- name: status\n  required: false\n  type: string\n  enum:\n  - not-started\n  - in-progress\n  - satisfied\nstatus_lifecycle:\n- not-started\n- in-progress\n- satisfied\n",
+      "period-close": "entity: period-close\nlabel: Period Close\nlocation_pattern: 20-COMPANY/06-FINANCE/CLOSE/\ndescription: Period Close entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: close_id\n  required: false\n  type: string\n- name: period_id\n  required: false\n  type: string\n- name: close_type\n  required: false\n  type: string\n- name: checklist\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - in-progress\n  - soft-closed\n  - hard-closed\nstatus_lifecycle:\n- in-progress\n- soft-closed\n- hard-closed\n",
+      playbook: 'entity: playbook\nlabel: Playbook\nlocation_pattern: 00-CORE/Playbooks/ or 20-COMPANY/03-PROCESSES/Playbooks/ or 10-ME/Playbooks/\n  or 30-CLIENTS/{client-id}/Playbooks/\ndescription: Playbook entity from DATAMODEL.md\nkey_fields:\n- trigger\n- outcome\n- total-steps\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: trigger\n  type: string\n  required: true\n  description: When/why this playbook is started\n- name: outcome\n  type: string\n  required: true\n  description: What "done" looks like\n- name: total-steps\n  type: number\n  required: true\n  description: Total steps in the playbook\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - retired\n- name: estimated-duration\n  required: false\n  type: string\n  description: e.g. "2-3 hours active, 1-2 sessions"\n- name: workflow_video\n  required: false\n  type: string\n  description: Filename of workflow video (e.g. "content-launch-workflow.mp4"), empty\n    if none\n- name: pricing-tier\n  required: true\n  type: string\n  description: Distribution visibility tier; private playbooks are excluded from shipping\n    indexes\n- name: value-chain\n  required: false\n  type: string\n  description: \'Primary value chain this playbook serves. Valid: lead-to-cash, deliver-to-satisfaction,\n    record-to-insight, procure-to-pay, hire-to-productivity, plan-to-perform, order-to-fulfill,\n    plan-to-produce, market-to-order, concept-to-launch, service-to-renew, create-to-publish,\n    operating-controls\'\n- name: chain-coverage\n  required: false\n  type: array\n  description: "Stages within the chain that this playbook covers (e.g. [propose,\\\n    \\ close]). Stage names are chain-specific \\u2014 see chain taxonomy reference."\n- name: maturity\n  required: false\n  type: array\n  description: Business maturity stage(s) this playbook targets, e.g. [foundation,\n    traction, scaling]. A playbook may apply to several stages.\n- name: tags\n  required: false\n  type: array\n  description: Topic/domain tags\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n',
+      product: "entity: product\nlabel: Product\nlocation_pattern: 20-COMPANY/40-PRODUCTS/{product-id}/product.md\ndescription: Product entity from DATAMODEL.md\nkey_fields:\n- product_id\n- brand\n- product_name\n- category\n- pricing_model\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: product_id\n  type: string\n  required: true\n  description: Kebab-case identifier, e.g. thirdbrain-bob, starter-vault\n- name: brand\n  type: string\n  required: true\n  description: Brand name, e.g. ThirdBrain\n- name: product_name\n  type: string\n  required: true\n  description: Full product name, e.g. ThirdBrain BOB\n- name: category\n  type: string\n  required: true\n  enum:\n  - platform\n  - add-on\n  - pack\n  - service\n  - community\n  - content-channel\n  - internal-demo\n- name: pricing_model\n  type: string\n  required: true\n  enum:\n  - one-time\n  - subscription\n  - free\n  - bundled\n  - ad-supported\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - discontinued\n  - research\n  description: pre-draft R&D stage, before the product concept is committed to a draft\n    spec\n- name: descriptor\n  required: false\n  type: string\n  description: Explanatory phrase, e.g. The Business Operating Brain\n- name: shorthand\n  required: false\n  type: string\n  description: Short form for use after first introduction, e.g. BOB\n- name: list_price\n  required: false\n  type: number\n  description: List price in primary currency\n- name: launch_price\n  required: false\n  type: number\n  description: Launch/promotional price\n- name: currency\n  required: true\n  type: string\n  description: EUR, USD, AUD, etc.\n- name: includes\n  required: false\n  type: array\n  description: What ships with the product (skill count, components, etc.)\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include product\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: version\n  required: false\n  type: string\n  description: Product version string.\n- name: description\n  required: false\n  type: string\n  description: Short product description.\n",
+      project: 'entity: project\nlabel: Project\nlocation_pattern: 30-CLIENTS/{client-id}/{project}/ or 20-COMPANY/{division}/{project}/\n  or 50-BRNCX-PROJECTS/{project}/\ndescription: Project entity from DATAMODEL.md\nkey_fields:\n- project_id\n- project\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: project_id\n  type: string\n  required: true\n  description: Canonical dated kebab-case project identifier, e.g. 2026-03-advance-auto-google-ads-pilot\n- name: project\n  type: string\n  required: true\n  description: Full human-readable project name\n- name: status\n  type: string\n  required: true\n  enum:\n  - planning\n  - active\n  - on-hold\n  - completed\n  - archived\n- name: client_id\n  required: false\n  type: string\n  description: "Required only under 30-CLIENTS/ \\u2014 conditional, like pm-artifact.\\\n    \\ An internal company project (product build, GTM, website work) has no client"\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: priority\n  required: false\n  type: string\n  enum:\n  - low\n  - normal\n  - high\n- name: delivery_cost_eur\n  required: false\n  type: number\n  description: "Cost to deliver this project (labour + subcontract + direct costs),\\\n    \\ EUR. The per-client cost source for margin_per_client_amber_count \\u2014 without\\\n    \\ it that KPI has no denominator and stays unavailable, because revenue minus\\\n    \\ nothing is not a margin. Optional: a client with no costed project is reported\\\n    \\ as uncosted and excluded from the count rather than being treated as 100% margin."\n- name: health\n  required: false\n  type: string\n  enum:\n  - green\n  - amber\n  - red\n  description: "Delivery RAG status, owner-assessed. Feeds the projects_at_risk_count\\\n    \\ KPI (amber or red = at risk). Deliberately separate from `status`: status is\\\n    \\ lifecycle position, health is whether it is in trouble \\u2014 an active project\\\n    \\ can be red and an on-hold one green. Absent means never assessed, which is NOT\\\n    \\ the same as green and is excluded from the KPI denominator."\n- name: deadline\n  required: false\n  type: string\n  format: date\n  description: Target completion date\n- name: project_type\n  required: false\n  type: string\n  description: Category of project (e.g. consulting, implementation, audit, content,\n    campaign)\n- name: start_date\n  required: false\n  type: string\n  format: date\n  description: Project start date\n- name: created\n  required: true\n  type: string\n  format: date\n- name: title\n  required: true\n  type: string\n- name: tags\n  required: false\n  type: array\nstatus_lifecycle:\n- planning\n- active\n- on-hold\n- completed\n- archived\n',
+      provision: "entity: provision\nlabel: Provision\nlocation_pattern: 20-COMPANY/06-FINANCE/PROVISIONS/\ndescription: Provision entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: provision_id\n  required: false\n  type: string\n- name: provision_type\n  required: false\n  type: string\n- name: estimated_amount\n  required: false\n  type: number\n- name: probability\n  required: false\n  type: number\n- name: current_amount\n  required: false\n  type: number\n- name: movements\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - recognised\n  - utilised\n  - reversed\n  - closed\nstatus_lifecycle:\n- recognised\n- utilised\n- reversed\n- closed\n",
+      "purchase-order": "entity: purchase-order\nlabel: Purchase Order\nlocation_pattern: 20-COMPANY/06-FINANCE/AP/ORDERS/\ndescription: Purchase Order entity from DATAMODEL.md\nkey_fields:\n- po_id\n- supplier_id\n- line_items\n- total_amount\n- payment_terms\n- approval_status\nfields:\n- name: type\n  type: string\n  required: true\n- name: po_id\n  type: string\n  required: true\n  description: 'Unique across vault: PO-{YYYY}-{NNN}'\n- name: supplier_id\n  type: string\n  required: true\n  description: Must match 20-COMPANY/30-SUPPLIERS/ folder\n- name: line_items\n  type: array\n  required: true\n  description: Services/items with description, qty, unit_price, total\n- name: total_amount\n  type: number\n  required: true\n  description: PO total value\n- name: payment_terms\n  type: string\n  required: true\n  description: e.g., Net 30, 50% upfront, 50% on delivery\n- name: approval_status\n  type: string\n  required: true\n  enum:\n  - draft\n  - approved\n  - issued\n  - partially-fulfilled\n  - fulfilled\n  - cancelled\n- name: pr_ref\n  required: false\n  type: string\n  description: Link to originating Purchase Requisition\n- name: delivery_status\n  required: false\n  type: string\n  enum:\n  - pending\n  - partial\n  - complete\n  - cancelled\n- name: supplier_name\n  required: true\n  type: string\n  description: Supplier display name\n- name: contract_ref\n  required: false\n  type: string\n  description: Wikilink to the governing Contract entity\n- name: currency\n  required: true\n  type: string\n- name: delivery_date\n  required: false\n  type: string\n  format: date\n  description: Expected delivery/completion date\n- name: milestones\n  required: false\n  type: array\n  description: 'For services: milestone description, date, amount'\n- name: approved_by\n  required: false\n  type: string\n  description: Required when approved or later\n- name: issued_date\n  required: false\n  type: string\n  format: date\n  description: Date PO was sent to supplier\n- name: invoice_refs\n  required: false\n  type: array\n  description: Wikilinks to supplier invoices matched to this PO\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include procurement, purchase-order, and {supplier-id}\n",
+      "purchase-requisition": "entity: purchase-requisition\nlabel: Purchase Requisition\nlocation_pattern: 20-COMPANY/06-FINANCE/AP/REQUISITIONS/\ndescription: Purchase Requisition entity from DATAMODEL.md\nkey_fields:\n- pr_id\n- requestor\n- category\n- estimated_amount\n- approval_status\nfields:\n- name: type\n  type: string\n  required: true\n- name: pr_id\n  type: string\n  required: true\n  description: 'Unique across vault: PR-{YYYY}-{NNN}'\n- name: requestor\n  type: string\n  required: true\n  description: Person who needs the purchase\n- name: category\n  type: string\n  required: true\n  description: 'Spend category: it-infrastructure, software-licensing, professional-services,\n    marketing, facilities, office-supplies, travel, other'\n- name: estimated_amount\n  type: number\n  required: true\n  description: Estimated total cost\n- name: approval_status\n  type: string\n  required: true\n  enum:\n  - draft\n  - submitted\n  - approved\n  - rejected\n  - cancelled\n- name: po_ref\n  required: false\n  type: string\n  description: Link to resulting Purchase Order\n- name: title\n  required: true\n  type: string\n  description: Brief description of the purchase need\n- name: supplier_id\n  required: false\n  type: string\n  description: Preferred supplier if known (must match 20-COMPANY/30-SUPPLIERS/ folder)\n- name: currency\n  required: true\n  type: string\n  description: USD, EUR, AED, etc.\n- name: budget_code\n  required: false\n  type: string\n  description: Internal budget line reference\n- name: justification\n  required: true\n  type: string\n  description: Business case for the purchase\n- name: urgency\n  required: false\n  type: string\n  enum:\n  - routine\n  - urgent\n  - emergency\n- name: needed_by\n  required: false\n  type: string\n  format: date\n  description: Date by which goods/services are needed\n- name: line_items\n  required: false\n  type: array\n  description: Items/services with description, qty, and unit cost\n- name: approved_by\n  required: false\n  type: string\n  description: 'Required when approval_status: approved'\n- name: approved_date\n  required: false\n  type: string\n  format: date\n  description: 'Required when approval_status: approved'\n- name: rejection_reason\n  required: false\n  type: string\n  description: 'Required when approval_status: rejected'\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include procurement and purchase-requisition\n",
       "recruiting-channel": `entity: recruiting-channel
 label: Recruiting Channel
-
 location_pattern: 30-CLIENTS/{client-id}/05-HR/recruiting/ or 20-COMPANY/05-HR/recruiting/
 description: Recruiting Channel entity from DATAMODEL.md
 key_fields:
 - channel_name
-- client_id
-- channel_type
-- region
 - status
-- hired_count
-- cost_per_hire
 fields:
 - name: type
   type: string
@@ -17895,14 +17166,21 @@ fields:
   required: true
   description: "Channel or recruiter display name (e.g. \\"Indeed.nl\\", \\"Referral\\
     \\ \\u2014 Mark's network\\", \\"TechRecruit BV\\")"
-- name: client_id
+- name: status
   type: string
+  required: true
+  enum:
+  - active
+  - paused
+  - closed
+- name: client_id
   required: false
+  type: string
   description: "Scoping FK \\u2014 required-by-convention for channels under 30-CLIENTS/{id}/;\\
     \\ omit for company-internal channels"
 - name: channel_type
-  type: string
   required: false
+  type: string
   enum:
   - job-board
   - recruiter
@@ -17911,23 +17189,16 @@ fields:
   - agency
   - direct
 - name: region
-  type: string
   required: false
+  type: string
   description: Region this channel covers (e.g. "NL", "Baarle-Nassau +25km")
-- name: status
-  type: string
-  required: true
-  enum:
-  - active
-  - paused
-  - closed
 - name: hired_count
-  type: integer
   required: false
+  type: integer
   description: Candidates hired via this channel
 - name: cost_per_hire
-  type: number
   required: false
+  type: number
   description: "Total channel cost \\xF7 hires, in the entity's functional currency"
 - name: recruiter
   required: false
@@ -17957,295 +17228,108 @@ fields:
   required: true
   type: string
   format: date
-  description: "\\u2014"
 - name: tags
   required: false
   type: array
-  description: "\\u2014"
 status_lifecycle:
 - active
 - paused
 - closed
 `,
-      reference: 'entity: reference\nlabel: Reference\n\nlocation_pattern: 20-COMPANY/\ndescription: Reference entity from DATAMODEL.md\nkey_fields:\n- title\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\n',
-      "regional-context": 'entity: regional-context\nlabel: Regional Context\n\nlocation_pattern: 40-RESOURCES/research/regions/{region}/\ndescription: Regional Context entity from DATAMODEL.md\nkey_fields:\n- region\n- last_reviewed\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: region\n  type: string\n  required: false\n  description: "\\u2014"\n- name: last_reviewed\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: research_type\n  required: true\n  type: string\n  enum:\n  - company-intelligence\n  - competitor-analysis\n  - industry-analysis\n  - market-research\n  - seo-audit\n  - website-audit\n  - executive-discovery\n- name: client_id\n  required: false\n  type: string\n  description: Required when client-specific\n- name: research_date\n  required: true\n  type: string\n  format: date\n  description: When research was conducted\n- name: researcher\n  required: false\n  type: string\n  description: Who conducted the research\n- name: provider\n  required: false\n  type: string\n  description: Data vendor or tool used as the primary source (e.g. Perplexity, Semrush,\n    Clearbit)\n- name: confidentiality\n  required: false\n  type: string\n  enum:\n  - public\n  - internal\n  - restricted\n  - confidential\n  - executive-discovery\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
-      registration: 'entity: registration\nlabel: Registration\n\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/REGISTRATIONS/\ndescription: Registration entity from DATAMODEL.md\nkey_fields:\n- title\n- partner_ref\n- status\n- value\n- submitted_date\n- expires_date\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Display name\n- name: partner_ref\n  type: string\n  required: true\n  description: Partner who submitted\n- name: status\n  type: string\n  required: true\n  enum:\n  - submitted\n  - approved\n  - rejected\n  - expired\n- name: value\n  type: number\n  required: false\n  description: Estimated deal value\n- name: submitted_date\n  type: string\n  format: date\n  required: true\n  description: "\\u2014"\n- name: expires_date\n  type: string\n  format: date\n  required: false\n  description: Registration validity window end\n- name: account_or_lead\n  required: false\n  type: string\n  description: Lead or client locked by this registration\n- name: deal_ref\n  required: false\n  type: string\n  description: Resulting deal (set on approval)\n- name: rejection_reason\n  required: false\n  type: string\n  description: Required when status=rejected\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
-      research: 'entity: research\nlabel: Research\n\nlocation_pattern: 30-CLIENTS/{id}/ or 40-RESOURCES/\ndescription: Research entity from DATAMODEL.md\nkey_fields:\n- research_type\n- client_id\n- research_date\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: research_type\n  type: string\n  required: true\n  enum:\n  - company-intelligence\n  - competitor-analysis\n  - industry-analysis\n  - market-research\n  - seo-audit\n  - website-audit\n  - executive-discovery\n- name: client_id\n  type: string\n  required: true\n  description: Required when client-specific\n- name: research_date\n  type: string\n  format: date\n  required: true\n  description: When research was conducted\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: researcher\n  required: false\n  type: string\n  description: Who conducted the research\n- name: provider\n  required: false\n  type: string\n  description: Data vendor or tool used as the primary source (e.g. Perplexity, Semrush,\n    Clearbit)\n- name: confidentiality\n  required: false\n  type: string\n  enum:\n  - public\n  - internal\n  - restricted\n  - confidential\n  - executive-discovery\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
-      "research-domain": `entity: research-domain
-label: Research Domain
-
-location_pattern: 40-RESOURCES/research/domains/
-description: Research Domain entity from DATAMODEL.md
+      reference: "entity: reference\nlabel: Reference\nlocation_pattern: unenforceable\ndescription: 'Reference entity from DATAMODEL.md. Location is deliberately unenforceable:\n  a reference note attaches to whatever it documents (a client folder, a partner kit, a marketing\n  run, a skill), so no path set describes it. Route by the parent artifact, not by a reference\n  folder.'\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - draft\n  - review\n  - active\n  - final\n  - superseded\n  - archived\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`; note\n    that batch edits routinely leave it stale.\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes. The vault-wide cross-reference idiom.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: template_category\n  required: false\n  type: string\n  description: Category of a document template reference.\n- name: rule_jurisdiction\n  required: false\n  type: string\n  description: Jurisdiction a legal or tax rule applies to.\n- name: retrieved\n  required: false\n  type: string\n  format: date\n  description: Date the source material was retrieved.\n- name: source_from\n  required: false\n  type: string\n  description: Sender, for references captured from email.\n- name: source_subject\n  required: false\n  type: string\n  description: Subject line, for references captured from email.\n- name: source_date\n  required: false\n  type: string\n  format: date\n  description: Date of the source message or document.\n- name: source_message_id\n  required: false\n  type: string\n  description: Message id of the source email.\n- name: original_filename\n  required: false\n  type: string\n  description: Filename of the ingested source document.\n- name: source\n  required: false\n  type: string\n  description: Where the reference came from.\n- name: source_url\n  required: false\n  type: string\n  description: URL of the source material.\n- name: source_file\n  required: false\n  type: string\n  description: Path to the ingested source file.\n- name: client_id\n  required: false\n  type: string\n  description: Client this reference belongs to. Must match a 30-CLIENTS/ folder when set.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n- name: entity\n  required: false\n  type: string\n  description: Named entity the reference is about.\n- name: entity_id\n  required: false\n  type: string\n  description: Identifier for `entity`.\n- name: description\n  required: false\n  type: string\n  description: Short description of the reference.\n- name: topic\n  required: false\n  type: string\n  description: Topic label.\n- name: date\n  required: false\n  type: string\n  description: Reference date. Mixed date and string values in practice.\n- name: error\n  required: false\n  type: string\n  description: Error recorded when the reference could not be captured cleanly.\n- name: prompt_id\n  required: false\n  type: string\n  description: Prompt-panel run. Identifier of the probe prompt (e.g. P001).\n- name: tier\n  required: false\n  type: number\n  description: Prompt-panel run. Prompt tier.\n- name: category\n  required: false\n  type: string\n  description: Prompt-panel run. Prompt category.\n- name: persona\n  required: false\n  type: string\n  description: Prompt-panel run. Buyer persona the prompt was asked as.\n- name: platform\n  required: false\n  type: string\n  description: Prompt-panel run. Answer engine probed \u2014 chatgpt, gemini, claude, google-ai-overviews.\n- name: run_index\n  required: false\n  type: number\n  description: Prompt-panel run. Repeat index for the same prompt/platform pair.\n- name: model\n  required: false\n  type: string\n  description: Prompt-panel run. Model that produced the answer.\n- name: method\n  required: false\n  type: string\n  description: Prompt-panel run. How the answer was captured.\n- name: result\n  required: false\n  type: string\n  description: Prompt-panel run. Outcome of the probe.\n- name: timestamp\n  required: false\n  type: string\n  description: Prompt-panel run. When the probe was executed.\n- name: cited_urls\n  required: false\n  type: array\n  description: Prompt-panel run. URLs the answer engine cited.\n- name: conditions\n  required: false\n  type: object\n  description: Prompt-panel run. Run conditions (locale, device, session state) as a nested\n    map.\n- name: staleness_signal\n  required: false\n  type: string\n  description: The condition that invalidates this note, in prose \u2014 the event to watch for,\n    not a date. Complements dateModified, which only records when the file was last written\n    and drifts whenever a batch edit rewrites a body without touching it. Example \u2014 \"when the\n    Anthropic pricing page changes\" or \"when the plugin drops the legacy API\". Absent means\n    the note has no known expiry condition.\nnotes: '**Prompt-panel runs are a declared `reference` sub-flavour (owner decision, 2026-08-23).**\n  265 notes under `20-COMPANY/50-MARKETING/GEO/prompt-panel/runs/` are one AI-answer probe\n  each, carrying the 12 `Prompt-panel run.` fields above. Promotion to their own entity type\n  was considered and rejected: no Base, Dataview block or skill script reads these fields\n  \u2014 verified 2026-08-23, the only files matching `prompt_id`/`cited_urls`/`run_index` are\n  the run files themselves \u2014 so a separate type would buy nothing a field description cannot.\n  They are declared rather than left undeclared so the drift detector stops re-raising them,\n  and they apply only to prompt-panel runs. Still open separately: the same run files misuse\n  `status` for outcome vocabulary.'\n",
+      "regional-context": 'entity: regional-context\nlabel: Regional Context\nlocation_pattern: 40-RESOURCES/research/regions/{region}/ or 10-ME/90-INBOX/\ndescription: "Regional Context entity from DATAMODEL.md. Kept separate from `research`\\\n  \\ \\u2014 not folded in as a `research_type` subtype \\u2014 because its routing is\\\n  \\ narrower than research\'s and `location_pattern` is declared per entity, not per\\\n  \\ subtype. Owner decision 2026-08-19."\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: research_type\n  required: true\n  type: string\n  enum:\n  - analysis\n  - article\n  - brand-architecture\n  - briefing\n  - company-intelligence\n  - competitor-analysis\n  - competitor-briefing\n  - comprehensive-audit\n  - content-strategy-audit\n  - cro-audit\n  - customer-discovery\n  - cycle-briefing\n  - daily-briefing\n  - digital-audit\n  - digital-footprint\n  - domain-knowledge\n  - executive-discovery\n  - external-conversation\n  - external-conversation-reply-draft\n  - implementation-pathways\n  - industry-analysis\n  - knowledge-base\n  - market-research\n  - methodology\n  - news-briefing\n  - persona-lens\n  - platform-integration\n  - platform-strategy\n  - procurement-ai\n  - prospect-qualification\n  - regional-context\n  - schema-audit\n  - seo-audit\n  - source-audit\n  - source-brief\n  - technical-research\n  - tone-analysis\n  - tool-evaluation\n  - tracking-audit\n  - trend-briefing\n  - video-angles\n  - video-note\n  - video-summary\n  - website-audit\n  - workflow-comparison\n  - yt-snapshot\n- name: client_id\n  required: false\n  type: string\n  description: Required when client-specific\n- name: research_date\n  required: true\n  type: string\n  format: date\n  description: When research was conducted\n- name: competitor\n  required: false\n  type: string\n  description: "Subject of the analysis, when research_type is competitor-analysis\\\n    \\ \\u2014 the key that makes \\"every analysis of competitor X\\" answerable"\n- name: threat-level\n  required: false\n  type: string\n  enum:\n  - low\n  - low-medium\n  - medium\n  - medium-high\n  - high\n  description: optional assessment on competitor analyses\n- name: researcher\n  required: false\n  type: string\n  description: Who conducted the research\n- name: provider\n  required: false\n  type: string\n  description: Data vendor or tool used as the primary source (e.g. Perplexity, Semrush,\n    Clearbit)\n- name: confidentiality\n  required: false\n  type: string\n  enum:\n  - public\n  - internal\n  - restricted\n  - confidential\n  - executive-discovery\n- name: created\n  required: true\n  type: string\n  format: date\n- name: region\n  required: false\n  type: string\n- name: last_reviewed\n  required: false\n  type: string\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: source_query_hash\n  required: false\n  type: string\n  description: Hash of the research query that produced this snapshot; changes when\n    the query is edited.\n- name: last_verified\n  required: false\n  type: string\n  format: date\n  description: Date the regional facts were last verified against sources.\n',
+      registration: "entity: registration\nlabel: Registration\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/REGISTRATIONS/\ndescription: Registration entity from DATAMODEL.md\nkey_fields:\n- title\n- partner_ref\n- status\n- submitted_date\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Display name\n- name: partner_ref\n  type: string\n  required: true\n  description: Partner who submitted\n- name: status\n  type: string\n  required: true\n  enum:\n  - submitted\n  - approved\n  - rejected\n  - expired\n- name: submitted_date\n  type: string\n  format: date\n  required: true\n- name: value\n  required: false\n  type: number\n  description: Estimated deal value\n- name: expires_date\n  required: false\n  type: string\n  format: date\n  description: Registration validity window end\n- name: account_or_lead\n  required: false\n  type: string\n  description: Lead or client locked by this registration\n- name: deal_ref\n  required: false\n  type: string\n  description: Resulting deal (set on approval)\n- name: rejection_reason\n  required: false\n  type: string\n  description: Required when status=rejected\n- name: created\n  required: true\n  type: string\n  format: date\n",
+      research: 'entity: research\nlabel: Research\nlocation_pattern: 30-CLIENTS/{client-id}/ or 40-RESOURCES/ or 10-ME/90-INBOX/ or 50-BRNCX-PROJECTS/{project}/\n  or 20-COMPANY/03-PROCESSES/BASELINE/\ndescription: Research entity from DATAMODEL.md. Research produced by a scheduled run\n  lands in the inbox for triage\nkey_fields:\n- research_type\n- client_id\n- research_date\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: research_type\n  type: string\n  required: true\n  enum:\n  - analysis\n  - article\n  - brand-architecture\n  - briefing\n  - company-intelligence\n  - competitor-analysis\n  - competitor-briefing\n  - comprehensive-audit\n  - content-strategy-audit\n  - cro-audit\n  - customer-discovery\n  - cycle-briefing\n  - daily-briefing\n  - digital-audit\n  - digital-footprint\n  - domain-knowledge\n  - executive-discovery\n  - external-conversation\n  - external-conversation-reply-draft\n  - implementation-pathways\n  - industry-analysis\n  - knowledge-base\n  - market-research\n  - methodology\n  - news-briefing\n  - persona-lens\n  - platform-integration\n  - platform-strategy\n  - procurement-ai\n  - prospect-qualification\n  - regional-context\n  - schema-audit\n  - seo-audit\n  - source-audit\n  - source-brief\n  - technical-research\n  - tone-analysis\n  - tool-evaluation\n  - tracking-audit\n  - trend-briefing\n  - video-angles\n  - video-note\n  - video-summary\n  - website-audit\n  - workflow-comparison\n  - yt-snapshot\n- name: client_id\n  type: string\n  required: false\n  description: Set when the research is for a client; own-company and market research\n    has none\n- name: research_date\n  type: string\n  format: date\n  required: true\n  description: When research was conducted\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: competitor\n  required: false\n  type: string\n  description: "Subject of the analysis, when research_type is competitor-analysis\\\n    \\ \\u2014 the key that makes \\"every analysis of competitor X\\" answerable"\n- name: threat-level\n  required: false\n  type: string\n  enum:\n  - low\n  - low-medium\n  - medium\n  - medium-high\n  - high\n  description: optional assessment on competitor analyses\n- name: region\n  required: false\n  type: string\n  description: "Geography a regional-context research note covers, e.g. uae, netherlands,\\\n    \\ belgium. Deliberately NOT an enum \\u2014 the value set is the world, and it\\\n    \\ is allowlisted in obsidian-bases/scripts/base-filter-open-properties.yaml"\n- name: researcher\n  required: false\n  type: string\n  description: Who conducted the research\n- name: provider\n  required: false\n  type: string\n  description: Data vendor or tool used as the primary source (e.g. Perplexity, Semrush,\n    Clearbit)\n- name: confidentiality\n  required: false\n  type: string\n  enum:\n  - public\n  - internal\n  - restricted\n  - confidential\n  - executive-discovery\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes. The vault-wide cross-reference idiom.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: domain_id\n  required: false\n  type: string\n  description: continuous-research domain this note belongs to.\n- name: cycle_date\n  required: false\n  type: string\n  description: Research cycle date. Mixed date and string values in practice.\n- name: source_kb\n  required: false\n  type: string\n  description: Knowledge-base note the research was distilled into.\n- name: source\n  required: false\n  type: string\n  description: Where the research material came from.\n- name: category\n  required: false\n  type: string\n  description: Category label within the domain.\n- name: entry_count\n  required: false\n  type: number\n  description: Number of entries in the cycle.\n- name: avg_score\n  required: false\n  type: number\n  description: Mean relevance score across the cycle\'s entries.\n- name: author\n  required: false\n  type: string\n  description: Author of the source material.\n- name: customer_id\n  required: false\n  type: string\n  description: Customer this research is scoped to.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n',
+      "research-domain": "entity: research-domain\nlabel: Research Domain\nlocation_pattern: 40-RESOURCES/research/domains/\ndescription: Research Domain entity from DATAMODEL.md\nkey_fields:\n- domain_id\n- name\n- provider\n- scope\n- exclusions\nfields:\n- name: type\n  type: string\n  required: true\n- name: domain_id\n  type: string\n  required: true\n  description: kebab-case identifier, unique across domains\n- name: name\n  type: string\n  required: true\n  description: Human-readable domain name\n- name: provider\n  type: string\n  required: true\n  enum:\n  - deepseek\n  - openai\n  - notebooklm\n  - perplexity\n  - tavily\n- name: scope\n  type: string\n  required: true\n  description: 2-3 sentences defining the research boundary\n- name: exclusions\n  type: array\n  required: true\n  description: Things to filter out of results\n- name: schedule\n  required: false\n  type: string\n  description: Cron expression (informational, used by CronCreate)\n- name: scoring_weights\n  required: false\n  type: object\n  description: \"Keys: feasibility, ease_of_implementation, business_impact, evidence_strength,\\\n    \\ skill_availability. Values: floats summing to 1.0. Required by continuous-research's\\\n    \\ scored-KB domains; regional-context domains never populate it \\u2014 a plain\\\n    \\ refresh has nothing to rank, so forcing it here would fabricate a scoring scheme\\\n    \\ with no consumer\"\n- name: product_context\n  required: false\n  type: string\n  description: If set, entries get a product_implication field\n- name: evidence_tiers\n  required: false\n  type: object\n  description: 'Keys: verified, inferred, speculative. Values: definitions. Same continuous-research-only\n    scope as scoring_weights'\n- name: output_sections\n  required: true\n  type: array\n  description: Sections to include in KB output\n- name: research_sources\n  required: false\n  type: array\n  description: 'For notebooklm provider: notebook IDs or URLs to add as sources'\n- name: status\n  required: true\n  type: string\n  enum:\n  - active\n  - paused\n  - retired\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include ai/research\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: region\n  required: false\n  type: string\n  description: Region the domain is scoped to.\n- name: refresh_frequency\n  required: false\n  type: string\n  description: How often the domain should be re-researched.\n- name: staleness_threshold_days\n  required: false\n  type: number\n  description: Days after which the domain's findings count as stale.\n- name: advisory_context\n  required: false\n  type: string\n  description: Standing context passed to every research cycle in this domain.\n",
+      "research-kb": "entity: research-kb\nlabel: Research KB\nlocation_pattern: 40-RESOURCES/research/kb/{domain-id}/\ndescription: Research KB entity from DATAMODEL.md\nkey_fields:\n- domain_id\n- cycle_date\n- provider\n- entry_count\n- avg_score\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: domain_id\n  type: string\n  required: true\n  description: Must match a Research Domain domain_id\n- name: cycle_date\n  type: string\n  format: date\n  required: true\n  description: Date this cycle was run\n- name: provider\n  type: string\n  required: true\n  description: 'Provider used: deepseek, openai, notebooklm, perplexity, tavily'\n- name: entry_count\n  type: integer\n  required: true\n  description: Number of scored entries in the body\n- name: avg_score\n  type: number\n  required: true\n  description: Average priority score across entries\n- name: status\n  type: string\n  required: true\n  description: \"Snapshot marker \\u2014 canonical current (latest; {domain-id}_kb_latest.md)\\\n    \\ or superseded (older cycle); draft while in progress. Free string (set per run),\\\n    \\ not enum-constrained\"\n- name: tags\n  required: true\n  type: array\n  description: Should include a research tag + {domain-id}\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Optional; cycle_date is the authoritative date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n",
+      sequence: "entity: sequence\nlabel: Sequence\nlocation_pattern: 20-COMPANY/60-SALES/SEQUENCES/\ndescription: Sequence entity from DATAMODEL.md\nkey_fields:\n- sequence_name\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: sequence_name\n  type: string\n  required: true\n  description: Display name\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - paused\n  - completed\n  - archived\n- name: campaign_ref\n  required: false\n  type: string\n  description: Parent campaign\n- name: total_touches\n  required: false\n  type: number\n  description: Number of touches in the cadence\n- name: duration_days\n  required: false\n  type: number\n  description: Sequence length\n- name: target_persona\n  required: false\n  type: string\n  description: Persona this sequence targets\n- name: channel_mix\n  required: false\n  type: array\n  description: email, linkedin, phone, sms\n- name: launch_date\n  required: false\n  type: string\n  format: date\n  description: When sequence starts running\n- name: expected_end_date\n  required: false\n  type: string\n  format: date\n- name: enrolled_count\n  required: false\n  type: number\n  description: Leads enrolled\n- name: reply_count\n  required: false\n  type: number\n  description: Leads that replied\n- name: meeting_count\n  required: false\n  type: number\n  description: Meetings booked from sequence\n- name: owner\n  required: false\n  type: string\n- name: created\n  required: true\n  type: string\n  format: date\n",
+      skill: 'entity: skill\nlabel: Skill\nlocation_pattern: 00-CORE/Agents/skills/{name}/SKILL.md\ndescription: Skill entity from DATAMODEL.md\nkey_fields:\n- category\n- version\n- disable-model-invocation\nfields:\n- name: type\n  type: string\n  required: true\n- name: category\n  type: string\n  required: true\n  enum:\n  - business\n  - compliance\n  - content\n  - development\n  - diagramming\n  - documents\n  - engineering\n  - finance\n  - human-resources\n  - images\n  - integrations\n  - marketing-ads\n  - marketing-analytics\n  - marketing-content\n  - marketing-funnel\n  - marketing-seo\n  - marketing-strategy\n  - obsidian\n  - operations\n  - product-management\n  - productivity\n  - project-management\n  - qms\n  - research\n  - sales\n  - utilities\n  - video\n  description: "the live set, taken from all 391 SKILL.md files on 2026-08-19. The\\\n    \\ previous enum declared 10 values of which 5 were never used, while 22 used values\\\n    \\ were undeclared \\u2014 it had never enforced anything because SKILL.md files\\\n    \\ are not validated as skill notes. development and engineering overlap semantically\\\n    \\ but both are in live use, so both stay until someone merges them at the source"\n- name: version\n  type: string\n  required: true\n  description: Semver version (e.g. "1.0.0")\n- name: disable-model-invocation\n  type: boolean\n  required: true\n  description: false = skill is enabled (auto-activated by agents); true = skill is\n    disabled\n- name: user-invocable\n  required: false\n  type: boolean\n  description: Whether the skill can be triggered directly by the user via /skill-name\n- name: pricing-tier\n  required: false\n  type: string\n  description: "Which sellable unit ships this skill. Open vocabulary, not an enum: the\n    live values are `starter` (the default-enabled set), `pack-<domain>-free` /\n    `pack-<domain>-pro` (one value per pack in 20-COMPANY/40-PRODUCTS/), and `private`\n    (never distributed). The enum here used to be [free, starter, pro, enterprise]; when\n    SKILL.md files were first validated as skill notes on 2026-09-07 it rejected 206 of\n    397 skills, because 3 of its 4 values were dead and all 14 pack values were\n    undeclared. Packs are created faster than this list would be governed, so the\n    constraint lives where it can be checked against reality instead: generate_skill_packs.py\n    warns on any tier with no product note, which catches a typo the enum never could."\n- name: dev-status\n  required: false\n  type: string\n  enum:\n  - integrated\n  - beta\n  - dev\n  - draft\n  - experimental\n  - deprecated\n- name: value-chains\n  required: false\n  type: array\n  description: \'Value chains this skill serves. Valid: lead-to-cash, deliver-to-satisfaction,\n    record-to-insight, procure-to-pay, hire-to-productivity, plan-to-perform, order-to-fulfill,\n    plan-to-produce, market-to-order, concept-to-launch, service-to-renew, create-to-publish,\n    operating-controls, infrastructure\'\n- name: name\n  required: true\n  type: string\n  description: Skill identifier (matches directory name)\n- name: description\n  required: true\n  type: string\n  description: One-line summary of what the skill does\n- name: pricing-status\n  required: false\n  type: string\n- name: pricing-price\n  required: false\n  type: string\n- name: pricing-published-to\n  required: false\n  type: array\n  description: Distribution channels (e.g. [github, marketplace])\n- name: dev-issues\n  required: false\n  type: string\n  description: Known issues or limitations\n- name: origin\n  required: false\n  type: string\n  description: Who authored or customized the skill\n- name: origin-repo\n  required: false\n  type: string\n- name: origin-url\n  required: false\n  type: string\n- name: license\n  required: false\n  type: string\n- name: compatibility\n  required: false\n  type: string\n  description: Runtime or plugin requirements\n- name: chain-stage\n  required: false\n  type: string\n  description: Primary stage within the value chain (optional)\n- name: apqc_ids\n  required: false\n  type: array\n  description: "APQC PCF activity ids this skill implements (Process Harness binding, e.g. [\\"\\\n    9.2.2\\"]) \\u2014 parallel to value-chains"\n- name: requires\n  required: false\n  type: array\n  description: Skills or tools this skill depends on\n- name: outbound_targets\n  required: false\n  type: array\n  description: Tools used for outbound access\n- name: outbound_data\n  required: false\n  type: string\n  description: What data is sent outbound (e.g. "vault-context-included")\n- name: gate_required\n  required: false\n  type: string\n  description: Approval gate before skill activates (NONE = no gate)\n- name: outbound\n  required: false\n  type: boolean\n  description: Whether the skill sends anything outside the vault. Carried by all 397\n    SKILL.md files and undeclared here until 2026-09-07 \u2014 the outbound_targets /\n    outbound_data / gate_required trio below it were declared without the flag they hang off.\n- name: cost\n  required: false\n  type: integer\n  description: Relative run cost used by the skill catalogue and the pack builders.\n    Carried by 393 of 397 SKILL.md files, always an integer.\n',
+      supplier: `entity: supplier
+label: Supplier
+location_pattern: 20-COMPANY/30-SUPPLIERS/
+description: Supplier entity from DATAMODEL.md
 key_fields:
-- domain_id
-- name
-- provider
-- schedule
-- scope
-- scoring_weights
-- exclusions
-- product_context
+- supplier_id
+- supplier_name
+- status
+- spend_category
+- contract_value_annual
+- payment_terms_default
 fields:
 - name: type
   type: string
   required: true
-- name: domain_id
+- name: supplier_id
   type: string
   required: true
-  description: kebab-case identifier, unique across domains
-- name: name
+- name: supplier_name
   type: string
   required: true
-  description: Human-readable domain name
-- name: provider
-  type: string
-  required: true
-  enum:
-  - deepseek
-  - openai
-  - notebooklm
-  - perplexity
-  - tavily
-- name: schedule
-  type: string
-  required: false
-  description: Cron expression (informational, used by CronCreate)
-- name: scope
-  type: string
-  required: true
-  description: 2-3 sentences defining the research boundary
-- name: scoring_weights
-  type: string
-  required: true
-  description: 'Keys: feasibility, ease_of_implementation, business_impact, evidence_strength,
-    skill_availability. Values: floats summing to 1.0'
-- name: exclusions
-  type: array
-  required: true
-  description: Things to filter out of results
-- name: product_context
-  type: string
-  required: false
-  description: If set, entries get a product_implication field
-- name: evidence_tiers
-  required: true
-  type: string
-  description: 'Keys: verified, inferred, speculative. Values: definitions'
-- name: output_sections
-  required: true
-  type: array
-  description: Sections to include in KB output
-- name: research_sources
-  required: false
-  type: array
-  description: 'For notebooklm provider: notebook IDs or URLs to add as sources'
 - name: status
-  required: true
   type: string
+  required: true
   enum:
   - active
-  - paused
-  - retired
-- name: created
-  required: true
-  type: string
-  format: date
-  description: "\\u2014"
-- name: tags
-  required: true
-  type: array
-  description: Must include ai/research
-`,
-      "research-kb": `entity: research-kb
-label: Research KB
-
-location_pattern: 40-RESOURCES/research/kb/{domain-id}/
-description: Research KB entity from DATAMODEL.md
-key_fields:
-- domain_id
-- cycle_date
-- provider
-- entry_count
-- avg_score
-- status
-fields:
-- name: type
+  - inactive
+  - on-hold
+  - archived
+- name: spend_category
   type: string
   required: true
-- name: domain_id
-  type: string
-  required: true
-  description: Must match a Research Domain domain_id
-- name: cycle_date
-  type: string
-  format: date
-  required: true
-  description: Date this cycle was run
-- name: provider
-  type: string
-  required: true
-  description: 'Provider used: deepseek, openai, notebooklm, perplexity, tavily'
-- name: entry_count
-  type: integer
-  required: true
-  description: Number of scored entries in the body
-- name: avg_score
+- name: contract_value_annual
   type: number
   required: true
-  description: Average priority score across entries
-- name: status
+  description: Annual contract value in primary currency
+- name: payment_terms_default
   type: string
   required: true
-  description: "Snapshot marker \\u2014 canonical current (latest; {domain-id}_kb_latest.md)\\
-    \\ or superseded (older cycle); draft while in progress. Free string (set per run),\\
-    \\ not enum-constrained"
-- name: tags
-  required: true
+- name: regions
+  required: false
   type: array
-  description: Should include a research tag + {domain-id}
-- name: created
+  description: Regions where this supplier operates or is contracted
+- name: default_payment_method
+  required: false
+  type: string
+  enum:
+  - bank-transfer
+  - credit-card
+  - direct-debit
+  - cash
+  - other
+  description: determines which payment details are required
+- name: default_payment_card
+  required: false
+  type: string
+  description: Wikilink to the payment-card normally charged. Required when method
+    is credit-card
+- name: beneficiary_name
+  required: false
+  type: string
+  description: "Account holder name on the supplier's bank account. Payment master\\
+    \\ data \\u2014 never sourced from an invoice document"
+- name: beneficiary_iban
+  required: false
+  type: string
+  description: "IBAN used for outgoing payments. Payment master data \\u2014 never\\
+    \\ sourced from an invoice document; changes require out-of-band verification before\\
+    \\ the next payment"
+- name: beneficiary_bic
+  required: false
+  type: string
+  description: BIC/SWIFT code matching beneficiary_iban
+- name: bank_details_verified_date
   required: false
   type: string
   format: date
-  description: Optional; cycle_date is the authoritative date
+  description: When the beneficiary details were last verified out-of-band (call-back
+    to a known contact, not a number taken from an invoice or email)
+- name: bank_details_verified_by
+  required: false
+  type: string
+  description: Person who performed the out-of-band verification
 `,
-      sequence: 'entity: sequence\nlabel: Sequence\n\nlocation_pattern: 20-COMPANY/60-SALES/SEQUENCES/\ndescription: Sequence entity from DATAMODEL.md\nkey_fields:\n- sequence_name\n- campaign_ref\n- status\n- total_touches\n- duration_days\nfields:\n- name: type\n  type: string\n  required: true\n- name: sequence_name\n  type: string\n  required: true\n  description: Display name\n- name: campaign_ref\n  type: string\n  required: false\n  description: Parent campaign\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - paused\n  - completed\n  - archived\n- name: total_touches\n  type: number\n  required: false\n  description: Number of touches in the cadence\n- name: duration_days\n  type: number\n  required: false\n  description: Sequence length\n- name: target_persona\n  required: false\n  type: string\n  description: Persona this sequence targets\n- name: channel_mix\n  required: false\n  type: array\n  description: email, linkedin, phone, sms\n- name: launch_date\n  required: false\n  type: string\n  format: date\n  description: When sequence starts running\n- name: expected_end_date\n  required: false\n  type: string\n  format: date\n  description: "\\u2014"\n- name: enrolled_count\n  required: false\n  type: number\n  description: Leads enrolled\n- name: reply_count\n  required: false\n  type: number\n  description: Leads that replied\n- name: meeting_count\n  required: false\n  type: number\n  description: Meetings booked from sequence\n- name: owner\n  required: false\n  type: string\n  description: "\\u2014"\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n',
-      skill: `entity: skill
-label: Skill
-
-location_pattern: 00-CORE/Agents/skills/{name}/SKILL.md
-description: Skill entity from DATAMODEL.md
-key_fields:
-- category
-- version
-- disable-model-invocation
-- user-invocable
-- pricing-tier
-- dev-status
-- value-chains
-fields:
-- name: type
-  type: string
-  required: true
-- name: category
-  type: string
-  required: true
-  enum:
-  - utilities
-  - crm
-  - finance
-  - marketing
-  - operations
-  - hr
-  - content
-  - research
-  - legal
-  - product
-- name: version
-  type: string
-  required: true
-  description: Semver version (e.g. "1.0.0")
-- name: disable-model-invocation
-  type: boolean
-  required: true
-  description: false = skill is enabled (auto-activated by agents); true = skill is
-    disabled
-- name: user-invocable
-  type: boolean
-  required: false
-  description: Whether the skill can be triggered directly by the user via /skill-name
-- name: pricing-tier
-  type: string
-  required: false
-  enum:
-  - free
-  - starter
-  - pro
-  - enterprise
-- name: dev-status
-  type: string
-  required: false
-  enum:
-  - integrated
-  - beta
-  - experimental
-  - deprecated
-- name: value-chains
-  type: array
-  required: false
-  description: 'Value chains this skill serves. Valid: lead-to-cash, deliver-to-satisfaction,
-    record-to-insight, procure-to-pay, hire-to-productivity, plan-to-perform, order-to-fulfill,
-    plan-to-produce, market-to-order, concept-to-launch, service-to-renew, create-to-publish,
-    operating-controls, infrastructure'
-- name: name
-  required: true
-  type: string
-  description: Skill identifier (matches directory name)
-- name: description
-  required: true
-  type: string
-  description: One-line summary of what the skill does
-- name: pricing-status
-  required: false
-  type: string
-  description: "\\u2014"
-- name: pricing-price
-  required: false
-  type: string
-  description: "\\u2014"
-- name: pricing-published-to
-  required: false
-  type: array
-  description: Distribution channels (e.g. [github, marketplace])
-- name: dev-issues
-  required: false
-  type: string
-  description: Known issues or limitations
-- name: origin
-  required: false
-  type: string
-  description: Who authored or customized the skill
-- name: origin-repo
-  required: false
-  type: string
-  description: "\\u2014"
-- name: origin-url
-  required: false
-  type: string
-  description: "\\u2014"
-- name: license
-  required: false
-  type: string
-  description: "\\u2014"
-- name: compatibility
-  required: false
-  type: string
-  description: Runtime or plugin requirements
-- name: chain-stage
-  required: false
-  type: string
-  description: Primary stage within the value chain (optional)
-- name: requires
-  required: false
-  type: array
-  description: Skills or tools this skill depends on
-- name: outbound_targets
-  required: false
-  type: array
-  description: Tools used for outbound access
-- name: outbound_data
-  required: false
-  type: string
-  description: What data is sent outbound (e.g. "vault-context-included")
-- name: gate_required
-  required: false
-  type: string
-  description: Approval gate before skill activates (NONE = no gate)
-`,
-      supplier: 'entity: supplier\nlabel: Supplier\n\nlocation_pattern: 20-COMPANY/30-SUPPLIERS/\ndescription: Supplier entity from DATAMODEL.md\nkey_fields:\n- supplier_id\n- supplier_name\n- status\n- spend_category\n- contract_value_annual\n- payment_terms_default\nfields:\n- name: type\n  type: string\n  required: true\n- name: supplier_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: supplier_name\n  type: string\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\n- name: spend_category\n  type: string\n  required: false\n  description: "\\u2014"\n- name: contract_value_annual\n  type: number\n  required: false\n  description: Annual contract value in primary currency\n- name: payment_terms_default\n  type: string\n  required: false\n  description: "\\u2014"\n- name: regions\n  required: false\n  type: array\n  description: Regions where this supplier operates or is contracted\n',
       "supplier-invoice": `entity: supplier-invoice
 label: Supplier Invoice
-
 location_pattern: 20-COMPANY/06-FINANCE/AP/INVOICES/
 description: Supplier Invoice entity from DATAMODEL.md
 key_fields:
@@ -18267,7 +17351,9 @@ fields:
 - name: internal_id
   type: string
   required: true
-  description: 'Our reference: SI-{YYYY}-{NNN}'
+  description: Our reference. Either SI-{YYYY}-{NNN} for manually filed invoices,
+    or the Process Harness procure-to-pay sequence AP-{NNNN} written by the procure-to-pay-standard
+    process
 - name: supplier_id
   type: string
   required: true
@@ -18314,7 +17400,6 @@ fields:
 - name: currency
   required: true
   type: string
-  description: "\\u2014"
 - name: line_items
   required: false
   type: array
@@ -18332,6 +17417,18 @@ fields:
   type: string
   format: date
   description: Actual delivery/acceptance date
+- name: matched_date
+  required: false
+  type: string
+  format: date
+  description: "Process Harness procure-to-pay-standard stage marker \\u2014 present only from\\
+    \\ the three-way-match stage onward (earlier stages assert it null)"
+- name: approved_for_payment_date
+  required: false
+  type: string
+  format: date
+  description: "Process Harness procure-to-pay-standard stage marker \\u2014 present only at payment-prep,\\
+    \\ after the human payment-approval gate"
 - name: paid_date
   required: false
   type: string
@@ -18349,7 +17446,6 @@ fields:
   required: true
   type: string
   format: date
-  description: "\\u2014"
 - name: tags
   required: true
   type: array
@@ -18380,23 +17476,17 @@ fields:
   type: string
   description: Journal entry posted by journal-entry-poster on approval and on payment
 `,
-      survey: 'entity: survey\nlabel: Survey\n\nlocation_pattern: 20-COMPANY/70-OPERATIONS/SURVEYS/\ndescription: Survey entity from DATAMODEL.md\nkey_fields:\n- title\n- client_id\n- end_client_id\n- project_id\n- project\n- survey_type\n- target_audience\n- tool\n- external_url\n- response_count\n- response_rate\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Survey campaign name\n- name: client_id\n  type: string\n  required: false\n  description: Optional client identifier when the survey is specific to one client\n- name: end_client_id\n  type: string\n  required: false\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  type: string\n  required: false\n  description: Canonical dated kebab-case project identifier\n- name: project\n  type: string\n  required: false\n  description: Full human-readable project name\n- name: survey_type\n  type: string\n  required: true\n  enum:\n  - nps\n  - csat\n  - pmf\n  - exit-survey\n  - supplier-review\n  - custom\n- name: target_audience\n  type: string\n  required: true\n  enum:\n  - clients\n  - prospects\n  - suppliers\n  - mixed\n- name: tool\n  type: string\n  required: false\n  description: surveymonkey, typeform, google-forms, manual, other\n- name: external_url\n  type: string\n  required: false\n  description: URL to the live survey in the external tool\n- name: response_count\n  type: number\n  required: false\n  description: Number of responses received\n- name: response_rate\n  type: number\n  required: false\n  description: "Percentage (response_count / sent_count \\xD7 100)"\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - closed\n  - analyzed\n- name: response_sheet_url\n  required: false\n  type: string\n  description: Google Sheet URL linked to a Google Form (for direct fetch via fetch-google-sheet)\n- name: external_id\n  required: false\n  type: string\n  description: Survey ID in the external tool (for API sync)\n- name: questions\n  required: false\n  type: array\n  description: Summary of questions included\n- name: sent_count\n  required: false\n  type: number\n  description: Number of invitations sent\n- name: avg_score\n  required: false\n  type: number\n  description: Average score across all responses (for scored surveys)\n- name: launch_date\n  required: false\n  type: string\n  format: date\n  description: When the survey was sent\n- name: close_date\n  required: false\n  type: string\n  format: date\n  description: When the survey was closed\n- name: synthesis_ref\n  required: false\n  type: string\n  description: Link to feedback synthesis document\n- name: created\n  required: true\n  type: string\n  format: date\n  description: "\\u2014"\n- name: tags\n  required: true\n  type: array\n  description: Must include survey\n',
-      task: "entity: task\nlabel: Task\n\nlocation_pattern: 00-CORE/TaskNotes/Tasks/\ndescription: Task entity from DATAMODEL.md\nkey_fields:\n- status\n- priority\n- due\n- size\n- projects\n- blockedBy\n- playbook\n- remaining-steps\n- awaiting\n- run_command\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - open\n  - in-progress\n  - awaiting-input\n  - done\n  - cancelled\n- name: priority\n  type: string\n  required: false\n  enum:\n  - none\n  - low\n  - normal\n  - high\n- name: due\n  type: string\n  format: date\n  required: false\n  description: Due date\n- name: size\n  type: string\n  required: false\n  enum:\n  - XS\n  - S\n  - M\n  - L\n  - XL\n- name: projects\n  type: array\n  required: false\n  description: Associated project references\n- name: blockedBy\n  type: array\n  required: false\n  description: Task dependencies\n- name: playbook\n  type: string\n  required: false\n  description: Links to the Playbook recipe being executed\n- name: remaining-steps\n  type: number\n  required: false\n  description: Countdown from playbook total-steps to 0. Agent decrements after each\n    step.\n- name: awaiting\n  type: string\n  required: false\n  description: What the agent needs from the human. Cleared when human responds. Only\n    set when status is awaiting-input.\n- name: run_command\n  type: string\n  required: false\n  description: Slash command to execute on schedule (e.g. /content-ingestion-pipeline\n    full-pipeline). Used by the scheduled task runner (run_scheduled_tasks.sh). Tasks\n    must also be tagged scheduled-run to be picked up.\n- name: contexts\n  required: false\n  type: array\n  description: Context tags\n- name: timeEstimate\n  required: false\n  type: number\n  description: Estimated minutes\n- name: cluster\n  required: false\n  type: string\n  description: Thematic grouping for personal backlog management\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags\nstatus_lifecycle:\n- open\n- in-progress\n- awaiting-input\n- done\n",
+      survey: 'entity: survey\nlabel: Survey\nlocation_pattern: 20-COMPANY/70-OPERATIONS/SURVEYS/\ndescription: Survey entity from DATAMODEL.md\nkey_fields:\n- title\n- survey_type\n- target_audience\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Survey campaign name\n- name: survey_type\n  type: string\n  required: true\n  enum:\n  - nps\n  - csat\n  - pmf\n  - exit-survey\n  - supplier-review\n  - custom\n- name: target_audience\n  type: string\n  required: true\n  enum:\n  - clients\n  - prospects\n  - suppliers\n  - mixed\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - closed\n  - analyzed\n- name: client_id\n  required: false\n  type: string\n  description: Optional client identifier when the survey is specific to one client\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: tool\n  required: false\n  type: string\n  description: surveymonkey, typeform, google-forms, manual, other\n- name: external_url\n  required: false\n  type: string\n  description: URL to the live survey in the external tool\n- name: response_count\n  required: false\n  type: number\n  description: Number of responses received\n- name: response_rate\n  required: false\n  type: number\n  description: "Percentage (response_count / sent_count \\xD7 100)"\n- name: response_sheet_url\n  required: false\n  type: string\n  description: Google Sheet URL linked to a Google Form (for direct fetch via fetch-google-sheet)\n- name: external_id\n  required: false\n  type: string\n  description: Survey ID in the external tool (for API sync)\n- name: questions\n  required: false\n  type: array\n  description: Summary of questions included\n- name: sent_count\n  required: false\n  type: number\n  description: Number of invitations sent\n- name: avg_score\n  required: false\n  type: number\n  description: Average score across all responses (for scored surveys)\n- name: launch_date\n  required: false\n  type: string\n  format: date\n  description: When the survey was sent\n- name: close_date\n  required: false\n  type: string\n  format: date\n  description: When the survey was closed\n- name: synthesis_reference\n  required: false\n  type: string\n  description: Link to feedback synthesis document\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include survey\n',
+      task: 'entity: task\nlabel: Task\nlocation_pattern: 00-CORE/TaskNotes/Tasks/ or 00-CORE/TaskNotes/Archive/\ndescription: "Task entity from DATAMODEL.md. Open tasks live in Tasks/, completed\\\n  \\ ones in Archive/ \\u2014 896 of 1,165 are archived, so omitting Archive made 77%\\\n  \\ of tasks read as misfiled"\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - open\n  - next\n  - in-progress\n  - awaiting-input\n  - done\n  - cancelled\n- name: priority\n  required: false\n  type: string\n  enum:\n  - none\n  - low\n  - normal\n  - high\n- name: due\n  required: false\n  type: string\n  format: date\n  description: Due date\n- name: size\n  required: false\n  type: string\n  enum:\n  - XS\n  - S\n  - M\n  - L\n  - XL\n- name: projects\n  required: false\n  type: array\n  description: Associated project references\n- name: blockedBy\n  required: false\n  type: array\n  description: Task dependencies\n- name: playbook\n  required: false\n  type: string\n  description: Links to the Playbook recipe being executed\n- name: remaining-steps\n  required: false\n  type: number\n  description: Countdown from playbook total-steps to 0. Agent decrements after each\n    step.\n- name: awaiting\n  required: false\n  type: string\n  description: What the agent needs from the human. Cleared when human responds. Only\n    set when status is awaiting-input.\n- name: run_command\n  required: false\n  type: string\n  description: Slash command to execute on schedule (e.g. /content-ingestion-pipeline\n    full-pipeline). Used by the scheduled task runner (run_scheduled_tasks.sh). Tasks\n    must also be tagged scheduled-run to be picked up.\n- name: contexts\n  required: false\n  type: array\n  description: Context tags\n- name: timeEstimate\n  required: false\n  type: number\n  description: Estimated minutes\n- name: cluster\n  required: false\n  type: string\n  description: Thematic grouping for personal backlog management\n- name: review_lane\n  required: false\n  type: string\n  enum:\n  - batch\n  description: Marks a note as an auto-generated review artifact (batch-review notes,\n    owner decision sheets) rather than parked human work. Absent means the owner lane.\n    `batch`-lane notes still render in the queue view but are excluded from the owner-review\n    WIP cap, so the cap measures real parked work rather than the triage process\'s\n    own output. Governed 2026-08-23.\n- name: assignee\n  required: false\n  type: array\n  description: roles, never people; bound to `status` (see Readiness binding below);\n    record who an external task waits on in `awaiting:`\n  items:\n    type: string\n    enum:\n    - agent\n    - owner\n    - external\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags\n- name: session_id\n  required: false\n  type: string\n  description: Claude Code session this note summarises. Written by task-wrapup\'s\n    session_close_wrapup.py on session-wrapup notes only; the note filename carries\n    the first 6 characters of the same id.\n- name: wrapup_tool_calls\n  required: false\n  type: number\n  description: Tool-call count the stored wrapup body describes. Compared against\n    the live session to decide whether the note is stale enough to refresh.\n- name: wrapup_written_at\n  required: false\n  type: string\n  description: Timestamp of the last automatic wrapup write. Enforces the minimum\n    interval between refreshes so a long session does not regenerate on every turn.\n- name: wrapup_body_stamp\n  required: false\n  type: string\n  description: Truncated SHA-256 of the wrapup body this script wrote. If the body\n    no longer hashes to this value a human edited the note, and it is never overwritten\n    again. Absent on notes predating the mechanism, which are treated the same way.\n- name: consolidated_into\n  required: false\n  type: string\n  description: \'Wikilink to the consolidated wrapup note that supersedes this one.\n    Historical: written by `consolidate_wrapups.py`, which closed stale, unedited,\n    fully-harvested session-wrapup TaskNotes so the closure pointed somewhere rather\n    than just disappearing from the queue. The script was retired 2026-08-30 when\n    wrapups stopped being tasks and the queue it drained ceased to exist. Nothing\n    writes this field now; 299 archived notes still carry it\'\n- name: model\n  required: false\n  type: string\n  description: "Scheduled-run contract. Model alias for the headless dispatch \\u2014\\\n    \\ `haiku`, `sonnet`, `opus`. Must be an alias, never a dated id: a bare `haiku-4-5`\\\n    \\ is rejected at dispatch and the run dies silently. Read by run_scheduled_tasks.sh\\\n    \\ via read_task_fields.py."\n- name: max_turns\n  required: false\n  type: number\n  description: Scheduled-run contract. Upper bound on agent turns for one headless\n    dispatch.\n- name: verify_path\n  required: false\n  type: string\n  description: Scheduled-run contract. File or directory the run must touch for the\n    runner to record SUCCESS. Without it the runner can report a false-positive SUCCESS\n    on a no-op; preflight_headless.py WARNs when it is absent.\n- name: verify_exempt\n  required: false\n  type: boolean\n  description: Scheduled-run contract. Declares that no-output is a valid outcome,\n    suppressing the preflight WARN for a missing verify_path. Use only for pollers.\n- name: noop_ok\n  required: false\n  type: boolean\n  description: "Scheduled-run contract. Exempts the task from the runner\'s `<10s`\\\n    \\ too-fast and UNVERIFIED failure paths so a clean empty run counts as SUCCESS.\\\n    \\ Do not set on a task that must always produce output \\u2014 it would mask a\\\n    \\ genuine no-write bug."\n- name: attempt_count\n  required: false\n  type: number\n  description: Scheduled-run contract. Incremented on each PERMANENT failure; transient\n    errors do not bump it. At max_attempts the runner flips status to awaiting-input.\n- name: max_attempts\n  required: false\n  type: number\n  description: Scheduled-run contract. Permanent-failure budget before the runner\n    parks the task as awaiting-input. Default 3.\n- name: next_run_after\n  required: false\n  type: string\n  description: "Scheduled-run contract. Set on failure to gate the retry until the\\\n    \\ exponential backoff window (600\\xB72^(attempts-1) seconds) has passed."\n- name: lock_until\n  required: false\n  type: string\n  description: Scheduled-run contract. Set on pickup to prevent double-dispatch; the\n    task is not ready again until it passes.\n- name: lock_lease_min\n  required: false\n  type: number\n  description: Scheduled-run contract. Minutes the dispatch lock is held. Default\n    60; long-runners set 240 to avoid the lease expiring mid-run.\n- name: domain_id\n  required: false\n  type: string\n  description: Binds a scheduled run TaskNote to its continuous-research domain config.\n- name: kpi_id\n  required: false\n  type: string\n  description: KPI-experiment TaskNote (bob-ai-audit/scripts/link_kpi_experiment.py).\n    Identifier of the KPI this experiment moves.\n- name: kpi_initiative_ref\n  required: false\n  type: string\n  description: KPI-experiment TaskNote. Link to the initiative the KPI belongs to.\n- name: baseline_value\n  required: false\n  type: number\n  description: KPI-experiment TaskNote. KPI value before the experiment.\n- name: target_value\n  required: false\n  type: number\n  description: KPI-experiment TaskNote. KPI value the experiment aims for.\n- name: measured_value\n  required: false\n  type: number\n  description: "KPI-experiment TaskNote. KPI value observed at review. Omit the field\\\n    \\ entirely when the KPI could not be measured \\u2014 do not write `n/a`."\n- name: measured_date\n  required: false\n  type: string\n  format: date\n  description: KPI-experiment TaskNote. When measured_value was taken.\n- name: review_date\n  required: false\n  type: string\n  format: date\n  description: KPI-experiment TaskNote. When the experiment is due for review.\n- name: outcome\n  required: false\n  type: string\n  description: KPI-experiment TaskNote. Result of the experiment against target_value.\n- name: related\n  required: false\n  type: array\n  description: "Provenance and cross-reference wikilinks \\u2014 the audit, analysis\\\n    \\ or note this task came from. The vault-wide idiom, also declared on reference,\\\n    \\ decision-log, analysis and strategy. Absorbed the former task-only `source`\\\n    \\ field on 2026-08-19."\n- name: client_id\n  required: false\n  type: string\n  description: Client this task belongs to. Must match a 30-CLIENTS/ folder when set.\n- name: total-steps\n  required: false\n  type: number\n  description: Playbook step count that remaining-steps counts down from.\n- name: run_id\n  required: false\n  type: string\n  description: Playbook-run identity shared by the TaskNote and its trace.\n- name: kpi_readings\n  required: false\n  type: object\n  description: "Playbook-runner observation record keyed by `run_id`; contains the\\\n    \\ mapped KPI stages, explicit unmapped stages, and `start`/`close` readings. Observation\\\n    \\ only \\u2014 no attribution or causal claim. See [[playbook-runner]] \\u2192 `references/kpi-readings.md`."\n- name: title\n  required: false\n  type: string\n  description: Plugin-owned (TaskNotes). Task title; the plugin, not the vault, defines\n    the contract.\n- name: dateCreated\n  required: false\n  type: string\n  description: "Plugin-owned (TaskNotes). Creation timestamp. Distinct from the vault-wide\\\n    \\ `created` convention used by non-task entities \\u2014 the two are disjoint,\\\n    \\ not synonyms."\n- name: dateModified\n  required: false\n  type: string\n  description: Plugin-owned (TaskNotes). Last-modified timestamp. Personal-Backlog.base\n    keys staleness on it, with an mtime fallback.\n- name: scheduled\n  required: false\n  type: string\n  format: date\n  description: Plugin-owned (TaskNotes). Next scheduled date; the scheduled-run runner\n    treats it as the due gate.\n- name: completedDate\n  required: false\n  type: string\n  format: date\n  description: "Plugin-owned (TaskNotes). Completion date. The canonical spelling\\\n    \\ \\u2014 `dateCompleted` and `completed` are retired archive-only synonyms."\n- name: recurrence\n  required: false\n  type: string\n  description: Plugin-owned (TaskNotes). RRULE-style recurrence, e.g. DTSTART:20260407;daily.\n    The scheduled-run runner derives its interval from it.\n- name: complete_instances\n  required: false\n  type: array\n  description: Plugin-owned (TaskNotes). Dates on which a recurring task was completed.\n- name: skipped_instances\n  required: false\n  type: array\n  description: Plugin-owned (TaskNotes). Dates on which a recurring task was skipped.\n- name: canvas\n  required: false\n  type: array\n  description: "Plugin-owned (enhanced-canvas, enableFrontmatter: true). List of wikilinks\\\n    \\ to the canvases whose nodes reference this note; re-asserted by syncAllCanvasProperties()\\\n    \\ on startup. Removing it by hand does not stick \\u2014 delete or rebuild the\\\n    \\ canvas instead. The plugin also writes a second key named after the canvas basename,\\\n    \\ which is not a model field."\nstatus_lifecycle:\n- open\n- next\n- in-progress\n- awaiting-input\n- done\n- cancelled\nnotes: "**Readiness binding (DoR/DoD, governed 2026-08-29).** `status` and `assignee`\\\n  \\ are bound: `open` = Definition of Ready unmet, assignee `owner` (the task needs\\\n  \\ specification, not work); `next` = DoR met, assignee `agent`, ready for manual\\\n  \\ pickup or scheduled dispatch; `in-progress` = agent working; `awaiting-input`\\\n  \\ = parked on an owner decision, assignee `owner`, with `awaiting:` saying what.\\\n  \\ The gate is the `## Ready When` body section evaluated by `00-CORE/Agents/skills/tasknotes/scripts/readiness_check.py`\\\n  \\ \\u2014 the start-of-work twin of the `## Done When` completion gate \\u2014 and\\\n  \\ that script is the only writer of the `open \\u2192 next` flip. Kind-specific criteria\\\n  \\ templates live in the tasknotes skill\'s `references/readiness_profiles.md`. Scheduled-run\\\n  \\ tasks are not exempt: their static readiness is the scheduled-run profile, while\\\n  \\ `lock_until`/`next_run_after`/`scheduled` remain dynamic dispatch gates deciding\\\n  \\ *when*, never *whether*; their recurring steady state is `next` \\u2192 `in-progress`\\\n  \\ \\u2192 `next`. The backfill transition closed 2026-08-29: every gated task carries\\\n  \\ a `## Ready When` section, so `open` is no longer dispatchable \\u2014 `tasknote_gate.py\\\n  \\ check-ready` refuses it and `discover_scheduled_runs.py` dispatches only `next`/`in-progress`.\\\n  \\ `external` is never overwritten by the binding: it records that a task waits on\\\n  \\ someone outside the vault, which no status can re-derive.\\n\\n**Field ownership.**\\\n  \\ Three writers own `task` frontmatter and only one of them is the vault. Fields\\\n  \\ marked *Plugin-owned* are written by the TaskNotes plugin \\u2014 `.obsidian/plugins/tasknotes/data.json`\\\n  \\ \\u2192 `fieldMapping` is the authority for that set, not this file. Fields marked\\\n  \\ *Scheduled-run contract* are written by `00-CORE/Agents/skills/tasknotes/scripts/run_scheduled_tasks.sh`;\\\n  \\ see that skill\'s `references/scheduled_task_runner.md`. The rest are vault-owned.\\n\\\n  \\n**`parent` and `id` are not task fields.** The plugin has no subtask key: `getSubtasks()`\\\n  \\ reverse-looks-up `projects`, so a `parent:` value is invisible to the plugin\'s\\\n  \\ own Subtasks panel. Record hierarchy in `projects`. `id` is not in `fieldMapping`\\\n  \\ and nothing reads it.\\n\\n**Retired names, historical only (Archive/).** `created`\\\n  \\ (108) and `modified` (55) are the vault-wide convention leaking onto tasks, where\\\n  \\ the plugin\'s `dateCreated`/`dateModified` own the contract; `dateCompleted` (30)\\\n  \\ and `completed` (29) are superseded by `completedDate`. The live `Tasks/` tree\\\n  \\ was migrated on 2026-08-19 and the archived notes were deliberately left alone.\\\n  \\ Do not re-introduce these on a new task.\\n\\n**Retired 2026-08-19, do not re-declare.**\\\n  \\ `roi_score`, `roi_band`, `quick_win`, `stale_flag`, `untouched_days` were frontmatter\\\n  \\ copies of scores `00-CORE/Bases/Personal-Backlog.base` computes live; `value-chain`,\\\n  \\ `chain-stage`, `audit_ref`, `closure_pass`, `tasknotes-dependency-map`, `source`,\\\n  \\ `Process - TaskNotes` were closed-campaign or plugin scratch.\\n\\n**Not model fields.**\\\n  \\ Closed-campaign and session scratch surviving only in `Archive/`: `tasknotes-critical-only`,\\\n  \\ `tasknotes-blocked`, `tasknotes-ready`, `bob-audit-v2-critical-path`, `depends-on`\\\n  \\ (use `blockedBy`), `deliverable`, `generated`, `superseded_by`, `installation_ref`,\\\n  \\ `requested_by`, `closed_early`, `source_period`, `source_count`, `suggestion_count`,\\\n  \\ `assignee-note`, `channel`, `invoked_by`, `original_user_input`, `command_classified`,\\\n  \\ `started_at` and `recently_run_skills` are **playbook-runner run-state**, written\\\n  \\ by `write_tasknote()` in `playbook-runner/scripts/runtime_runner.py` alongside\\\n  \\ `run_id`, `kpi_readings` and a `## Step log` body. That function does a whole-file\\\n  \\ `write_text()`, so a note passed as `--tasknote` is replaced, not merged \\u2014\\\n  \\ never point it at a hand-authored note."\n',
       testimonial: `entity: testimonial
 label: Testimonial
-
 location_pattern: 30-CLIENTS/{id}/50-TESTIMONIALS/
 description: Testimonial entity from DATAMODEL.md
 key_fields:
 - client_id
-- end_client_id
-- project_id
-- project
 - respondent
 - format
 - permission_level
-- use_cases
-- used_in
 - status
 fields:
 - name: type
@@ -18404,20 +17494,9 @@ fields:
   required: true
 - name: client_id
   type: string
-  required: true
-  description: Must match 30-CLIENTS/ folder
-- name: end_client_id
-  type: string
   required: false
-  description: Ultimate end-client/beneficiary when different from client_id
-- name: project_id
-  type: string
-  required: false
-  description: Canonical dated kebab-case project identifier
-- name: project
-  type: string
-  required: false
-  description: Link to the engagement/project it references
+  description: Must match 30-CLIENTS/ folder when set; a partner or product testimonial
+    has none
 - name: respondent
   type: string
   required: true
@@ -18437,16 +17516,6 @@ fields:
   - public
   - anonymized
   - internal-only
-- name: use_cases
-  type: array
-  required: false
-  description: 'Where this can be used: website, proposal, case-study, social-media,
-    sales-deck, email'
-- name: used_in
-  type: array
-  required: false
-  description: Wikilinks to marketing content, proposals, or deliverables where this
-    testimonial has been used
 - name: status
   type: string
   required: true
@@ -18456,6 +17525,43 @@ fields:
   - approved
   - published
   - expired
+- name: company_id
+  required: false
+  type: string
+  description: "Generalized org reference \\u2014 the id of the client, partner, supplier\\
+    \\ or own company this record attaches to. Pair with company_type. For client records,\\
+    \\ client_id is the shorthand and company_id may be omitted"
+- name: company_type
+  required: false
+  type: string
+  enum:
+  - client
+  - partner
+  - supplier
+  - own-company
+  description: Org type of company_id. Only needed to express a NON-client counterparty
+- name: end_client_id
+  required: false
+  type: string
+  description: Ultimate end-client/beneficiary when different from client_id
+- name: project_id
+  required: false
+  type: string
+  description: Canonical dated kebab-case project identifier
+- name: project
+  required: false
+  type: string
+  description: Link to the engagement/project it references
+- name: use_cases
+  required: false
+  type: array
+  description: 'Where this can be used: website, proposal, case-study, social-media,
+    sales-deck, email'
+- name: used_in
+  required: false
+  type: array
+  description: Wikilinks to marketing content, proposals, or deliverables where this
+    testimonial has been used
 - name: respondent_name
   required: true
   type: string
@@ -18500,16 +17606,14 @@ fields:
   required: true
   type: string
   format: date
-  description: "\\u2014"
 - name: tags
   required: true
   type: array
   description: Must include testimonial and client-id
 `,
-      "transfer-pricing": 'entity: transfer-pricing\nlabel: Transfer Pricing\n\nlocation_pattern: 20-COMPANY/06-FINANCE/TAX/TP/\ndescription: Transfer Pricing entity from DATAMODEL.md\nkey_fields:\n- period_id\n- related_party\n- transaction_type\n- transaction_amount\n- arm_length_method\n- documented\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  type: string\n  required: false\n  description: "\\u2014"\n- name: related_party\n  type: string\n  required: false\n  description: "\\u2014"\n- name: transaction_type\n  type: string\n  required: false\n  description: "\\u2014"\n- name: transaction_amount\n  type: number\n  required: false\n  description: "\\u2014"\n- name: arm_length_method\n  type: string\n  required: false\n  description: "\\u2014"\n- name: documented\n  type: boolean\n  required: false\n  description: "\\u2014"\n- name: status\n  type: string\n  required: false\n  description: "\\u2014"\n',
+      "transfer-pricing": "entity: transfer-pricing\nlabel: Transfer Pricing\nlocation_pattern: 20-COMPANY/06-FINANCE/TAX/TP/\ndescription: Transfer Pricing entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  required: false\n  type: string\n- name: related_party\n  required: false\n  type: string\n- name: transaction_type\n  required: false\n  type: string\n- name: transaction_amount\n  required: false\n  type: number\n- name: arm_length_method\n  required: false\n  type: string\n- name: documented\n  required: false\n  type: boolean\n- name: status\n  required: false\n  type: string\n",
       "trial-balance": `entity: trial-balance
 label: Trial Balance
-
 location_pattern: 20-COMPANY/06-FINANCE/REPORTS/
 description: Trial Balance entity from DATAMODEL.md
 key_fields:
@@ -18577,7 +17681,6 @@ status_lifecycle:
 `,
       "vat-return": `entity: vat-return
 label: VAT Return
-
 location_pattern: 20-COMPANY/06-FINANCE/TAX/VAT/
 description: VAT Return entity from DATAMODEL.md
 key_fields:
@@ -18605,12 +17708,10 @@ fields:
   type: string
   format: date
   required: true
-  description: "\\u2014"
 - name: period_end
   type: string
   format: date
   required: true
-  description: "\\u2014"
 - name: output_vat
   type: number
   required: true
@@ -18682,9 +17783,9 @@ status_lifecycle:
 - under-review
 - amended
 `,
-      "wps-record": 'entity: wps-record\nlabel: WPS Record\n\nlocation_pattern: 20-COMPANY/05-HR/WPS/\ndescription: WPS Record entity from DATAMODEL.md\nkey_fields:\n- wps_id\n- payroll_month\n- sif_file_ref\n- total_payroll_aed\n- moi_confirmation\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: wps_id\n  type: string\n  required: true\n  description: WPS-{YYYY}-{MM}\n- name: payroll_month\n  type: string\n  required: true\n  format: date\n  description: First day of salary month\n- name: sif_file_ref\n  type: string\n  required: true\n  description: Salary Information File reference submitted to bank\n- name: total_payroll_aed\n  type: number\n  required: true\n  description: Total net salaries (AED)\n- name: moi_confirmation\n  type: boolean\n  required: true\n  description: MOL portal confirmed receipt\n- name: status\n  type: string\n  required: true\n  enum:\n  - pending\n  - submitted\n  - confirmed\n  - failed\n- name: total_employees\n  required: true\n  type: number\n  description: "\\u2014"\n- name: bank_transfer_date\n  required: true\n  type: string\n  format: date\n  description: Date salaries were transferred\n- name: bank_reference\n  required: false\n  type: string\n  description: Bank transaction reference\n- name: je_ref\n  required: false\n  type: string\n  description: Payroll journal entry\n- name: tags\n  required: true\n  type: array\n  description: Must include wps, payroll, and month\n',
-      "youtube-video": 'entity: youtube-video\nlabel: Youtube Video\n\nlocation_pattern: 20-COMPANY/50-MARKETING/video/youtube/\ndescription: Youtube Video entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: category\n  required: true\n  type: string\n  enum:\n  - demo\n  - workflow\n  - explainer\n- name: channel\n  required: true\n  type: string\n  description: "YouTube channel handle, e.g. @thirdbrain-bob \\u2014 a free identifier,\\\n    \\ never an enum"\n- name: playlist\n  required: true\n  type: string\n  description: Playlist ID the video belongs to; empty string if none\n- name: privacy\n  required: true\n  type: string\n  enum:\n  - public\n  - unlisted\n  - private\n- name: skill\n  required: true\n  type: string\n  description: Skill or playbook the video documents\n- name: tags\n  required: true\n  type: array\n  description: "\\u2014"\n- name: thumbnail\n  required: true\n  type: string\n  description: "\\u2014"\n- name: title\n  required: true\n  type: string\n  description: "\\u2014"\n- name: wave\n  required: true\n  type: integer\n  description: "\\u2014"\n- name: youtube-id\n  required: true\n  type: string\n  description: "YouTube video ID, or the literal pending before upload \\u2014 a unique\\\n    \\ per-video value, never an enum"\n- name: youtube-url\n  required: true\n  type: string\n  description: "Full youtu.be URL \\u2014 a unique per-video value, never an enum"\n- name: embed-allowed\n  required: false\n  type: boolean\n  description: "\\u2014"\n',
-      kpi: 'entity: kpi\nlabel: KPI\n\nlocation_pattern: 20-COMPANY/80-MANAGEMENT/REPORTS/kpi/\ndescription: KPI entity from DATAMODEL.md\nkey_fields:\n- kpi_category\n- title\n- last_updated\n- update_frequency\nfields:\n- name: type\n  type: string\n  required: true\n- name: kpi_category\n  type: string\n  required: true\n  enum:\n  - revenue\n  - pipeline\n  - cash\n  - clients\n  - capacity\n  - strategy\n  - marketing\n  - product\n- name: title\n  type: string\n  required: true\n  description: KPI display name\n- name: last_updated\n  type: string\n  required: true\n  format: date\n  description: Date values were last refreshed\n- name: update_frequency\n  type: string\n  required: true\n  enum:\n  - daily\n  - weekly\n  - monthly\n  - quarterly\n- name: thresholds\n  required: false\n  type: object\n  description: "Nested map: metric_key \\u2192 {target, warning, red} numeric values\\\n    \\ per metric"\n- name: tags\n  required: false\n  type: array\n  description: Domain tags\n'
+      "wps-record": "entity: wps-record\nlabel: WPS Record\nlocation_pattern: 20-COMPANY/05-HR/WPS/\ndescription: WPS Record entity from DATAMODEL.md\nkey_fields:\n- wps_id\n- payroll_month\n- sif_file_path\n- total_payroll_aed\n- moi_confirmation\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: wps_id\n  type: string\n  required: true\n  description: WPS-{YYYY}-{MM}\n- name: payroll_month\n  type: string\n  required: true\n  format: date\n  description: First day of salary month\n- name: sif_file_path\n  type: string\n  required: true\n  description: Filesystem path to the generated SIF file\n- name: total_payroll_aed\n  type: number\n  required: true\n  description: Total net salaries (AED)\n- name: moi_confirmation\n  type: boolean\n  required: true\n  description: MOL portal confirmed receipt\n- name: status\n  type: string\n  required: true\n  enum:\n  - pending\n  - submitted\n  - confirmed\n  - failed\n- name: sif_file_ref\n  required: true\n  type: string\n  description: Salary Information File reference submitted to bank\n- name: total_employees\n  required: true\n  type: number\n- name: bank_transfer_date\n  required: true\n  type: string\n  format: date\n  description: Date salaries were transferred\n- name: bank_reference\n  required: false\n  type: string\n  description: Bank transaction reference\n- name: je_ref\n  required: false\n  type: string\n  description: Payroll journal entry\n- name: tags\n  required: true\n  type: array\n  description: Must include wps, payroll, and month\n",
+      "youtube-video": 'entity: youtube-video\nlabel: Youtube Video\nlocation_pattern: 20-COMPANY/50-MARKETING/video/youtube/ or 30-CLIENTS/{client-id}/50-MARKETING/video/youtube/\ndescription: Youtube Video entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: category\n  required: true\n  type: string\n  enum:\n  - demo\n  - workflow\n  - explainer\n- name: channel\n  required: true\n  type: string\n  description: "YouTube channel handle, e.g. @thirdbrain-bob \\u2014 a free identifier,\\\n    \\ never an enum"\n- name: playlist\n  required: true\n  type: string\n  description: Playlist ID the video belongs to; empty string if none\n- name: privacy\n  required: true\n  type: string\n  enum:\n  - public\n  - unlisted\n  - private\n- name: skill\n  required: true\n  type: string\n  description: Skill or playbook the video documents\n- name: tags\n  required: true\n  type: array\n- name: thumbnail\n  required: true\n  type: string\n- name: title\n  required: true\n  type: string\n- name: wave\n  required: true\n  type: integer\n- name: youtube-id\n  required: true\n  type: string\n  description: "YouTube video ID, or the literal pending before upload \\u2014 a unique\\\n    \\ per-video value, never an enum"\n- name: youtube-url\n  required: true\n  type: string\n  description: "Full youtu.be URL \\u2014 a unique per-video value, never an enum"\n- name: embed-allowed\n  required: false\n  type: boolean\n- name: published\n  required: false\n  type: string\n  format: date\n  description: Publication date. Null while unpublished.\n',
+      kpi: 'entity: kpi\nlabel: KPI\nlocation_pattern: 20-COMPANY/80-MANAGEMENT/REPORTS/kpi/\ndescription: KPI entity from DATAMODEL.md\nkey_fields:\n- kpi_category\n- title\n- last_updated\n- update_frequency\nfields:\n- name: type\n  type: string\n  required: true\n- name: kpi_category\n  type: string\n  required: true\n  enum:\n  - revenue\n  - pipeline\n  - cash\n  - clients\n  - capacity\n  - strategy\n  - marketing\n  - product\n  - operations\n  - delivery\n  - compliance\n  - margin\n  - data-quality\n  description: "KPI domain. Must stay in step with the domain tables in 20-COMPANY/80-MANAGEMENT/KPI-REGISTRY.md\\\n    \\ \\u2014 `delivery`, `compliance`, `margin` and `data-quality` were registry domains\\\n    \\ with no enum member, so any note using them failed validation and the domain\\\n    \\ could not be surfaced at all."\n- name: title\n  type: string\n  required: true\n  description: KPI display name\n- name: last_updated\n  type: string\n  required: true\n  format: date\n  description: Date values were last refreshed\n- name: update_frequency\n  type: string\n  required: true\n  enum:\n  - daily\n  - weekly\n  - monthly\n  - quarterly\n- name: domain_status\n  required: false\n  type: string\n  enum:\n  - red\n  - amber\n  - green\n  - unknown\n  description: "RAG rollup consumed by the statusRag and severity formulas in KPI.base.\\\n    \\ Do not backtick those formula names \\u2014 regenerate.py treats every backticked\\\n    \\ token in this cell as a legal enum value"\n- name: thresholds\n  required: false\n  type: object\n  description: "Nested map: metric_key \\u2192 {target, warning, red} numeric values\\\n    \\ per metric"\n- name: tags\n  required: false\n  type: array\n  description: Domain tags\n- name: headline\n  required: false\n  type: string\n  description: Headline phrasing of the KPI for dashboard display.\n- name: trend\n  required: false\n  type: string\n  description: Direction of travel since the last measurement.\nschema_overrides:\n  patternProperties:\n    # Producer-specific KPI fields are currently heterogeneous. The pattern\n    # constrains their names; declared properties above retain their own types.\n    "^[a-z][a-z0-9_]*$": {}\n  additionalProperties: false\n'
     }
   }
 };

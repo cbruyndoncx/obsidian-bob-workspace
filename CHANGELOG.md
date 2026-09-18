@@ -4,6 +4,17 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [Unreleased]
+
+### Fixed
+
+- The BOB workspace template's embedded schemas were an outdated copy of the data model: applying the template to a vault whose schema folder was empty seeded 74 stale entity files (missing later fields such as `lost_reason` on deal, still carrying retired ones). The template now embeds the canonical schema source verbatim.
+
+### Added
+
+- `npm run sync-schemas` (`scripts/sync-template-schemas.mjs`) refreshes the template's embedded schemas from the canonical source; `--check` reports drift.
+- `tests/template-schemas-canonical.test.js` guards the embedded schemas' shape and, when the canonical folder is reachable, their byte-identity with it.
+
 ## [1.3.1] — 2026-09-07
 
 ### Fixed

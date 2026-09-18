@@ -12,6 +12,7 @@ require('./productivity-weeks-flow.test');
 require('./bar-chart-geometry.test');
 require('./project-note.test');
 require('./template-bundle.test');
+require('./template-schemas-canonical.test');
 require('./template-validate.test');
 require('./xlsx-bundle.test');
 require('./export-view-filter.test');
