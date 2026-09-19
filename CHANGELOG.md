@@ -4,6 +4,12 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [1.3.3] — 2026-09-19
+
+### Changed
+
+- The BOB workspace template's embedded `knowledge-base` schema is re-synced from the canonical source: `platform` now accepts `github`.
+
 ## [1.3.2] — 2026-09-18
 
 ### Fixed
