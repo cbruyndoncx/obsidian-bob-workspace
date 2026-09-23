@@ -2,8 +2,8 @@
   "_template": {
     "id": "cadence-classic",
     "label": "Cadence Classic",
-    "description": "Original Cadence navigation: Planner, CRM, PRM and Client Work. Uses Cadence/ folder structure.",
-    "order": 2
+    "description": "Legacy Cadence layout: original Planner, CRM, PRM and Client Work navigation using Cadence/ folders. For users migrating from the upstream Cadence plugin.",
+    "order": 5
   },
   "schemas": {
     "enabled": false,

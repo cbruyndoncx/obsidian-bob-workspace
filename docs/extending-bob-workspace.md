@@ -19,7 +19,7 @@ The plugin has several layers. Later layers should refine or override earlier la
    - Canonical source for BOB Workspace entity definitions when schema support is enabled.
    - Defines entity identity, location, field keys, types, enums, required flags,
      create defaults, and lifecycles.
-   - Edited visually from Settings -> BOB Workspace -> Schemas -> Data model designer.
+   - Edited visually from Settings -> BOB Workspace -> Data model -> Data model designer.
 
 3. **Base layer**
    - `.base` files anywhere in the vault; bare filenames resolve under `settings.basesFolder` (default `00-CORE/Bases`).

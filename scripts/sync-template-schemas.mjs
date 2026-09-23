@@ -17,8 +17,7 @@
 // Usage:
 //   node scripts/sync-template-schemas.mjs [--source DIR] [--template FILE] [--check]
 //
-//   --source    canonical schema folder; default $BOB_CANONICAL_SCHEMAS, else
-//               /mnt/c/users/bruyn/documents/brncx-skills/00-CORE/Schemas/source
+//   --source    canonical schema folder; default $BOB_CANONICAL_SCHEMAS
 //   --template  template to update; default templates/workspace-bob.json
 //   --check     report drift and exit 1 if any body differs; write nothing
 //
@@ -29,10 +28,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const DEFAULT_CANONICAL_SOURCE = '/mnt/c/users/bruyn/documents/brncx-skills/00-CORE/Schemas/source';
+export const DEFAULT_CANONICAL_SOURCE = '';
 
 export function canonicalSource(explicit) {
-  return explicit || process.env.BOB_CANONICAL_SCHEMAS || DEFAULT_CANONICAL_SOURCE;
+  return explicit || process.env.BOB_CANONICAL_SCHEMAS || '';
 }
 
 // Compare (and optionally refresh) every embedded schema against <source>/<entity>.yaml.

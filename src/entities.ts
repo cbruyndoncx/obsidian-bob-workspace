@@ -887,7 +887,7 @@ export function getDealStages(def: EntityDef): string[] {
 }
 
 /* Resolve which entity an arbitrary file belongs to, by frontmatter `type`
-   first, then path-prefix fallback. Returns null if not a Cadence entity. */
+   first, then path-prefix fallback. Returns null if not a recognized entity. */
 export function entityKeyFromFile(app: App, file: TFile | null): string | null {
   if (!file) return null;
   const cache = app.metadataCache.getFileCache(file);

@@ -3,7 +3,7 @@
     "id": "crm-only",
     "label": "CRM Only",
     "description": "Focused CRM workspace: Pipeline, Contacts, Clients, Leads, Campaigns, Activities and Reports. No Finance, PRM or Procurement modules.",
-    "order": 3
+    "order": 2
   },
   "schemas": {
     "enabled": false,

@@ -53,6 +53,7 @@ export class BobWorkspaceSetupModal extends obsidian.Modal {
       try {
         const meta = await applyWorkspaceTemplate(this.app, this.plugin, this.selected);
         this.close();
+        await this.plugin.openApp('home');
         new obsidian.Notice(`BOB Workspace: "${meta.label}" template applied.`);
       } catch (e) {
         applyBtn.disabled = false;

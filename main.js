@@ -17795,8 +17795,8 @@ var workspace_cadence_default = {
   _template: {
     id: "cadence-classic",
     label: "Cadence Classic",
-    description: "Original Cadence navigation: Planner, CRM, PRM and Client Work. Uses Cadence/ folder structure.",
-    order: 2
+    description: "Legacy Cadence layout: original Planner, CRM, PRM and Client Work navigation using Cadence/ folders. For users migrating from the upstream Cadence plugin.",
+    order: 5
   },
   schemas: {
     enabled: false,
@@ -19632,7 +19632,7 @@ var workspace_crm_default = {
     id: "crm-only",
     label: "CRM Only",
     description: "Focused CRM workspace: Pipeline, Contacts, Clients, Leads, Campaigns, Activities and Reports. No Finance, PRM or Procurement modules.",
-    order: 3
+    order: 2
   },
   schemas: {
     enabled: false,
@@ -21306,7 +21306,7 @@ var workspace_emai_default = {
     id: "emai",
     label: "EMAI Starter",
     description: "PARA-style personal workspace: Human (tasks, projects, areas, resources, people, daily, reviews), Content (videos, briefs, calendar, research), and Machine (workflows, SOPs, agents, code, skills). Schema-driven; brings its own entity definitions.",
-    order: 5
+    order: 3
   },
   schemas: {
     enabled: true,
@@ -28011,6 +28011,7 @@ var BobWorkspaceSetupModal = class extends obsidian13.Modal {
       try {
         const meta = await applyWorkspaceTemplate(this.app, this.plugin, this.selected);
         this.close();
+        await this.plugin.openApp("home");
         new obsidian13.Notice(`BOB Workspace: "${meta.label}" template applied.`);
       } catch (e) {
         applyBtn.disabled = false;
@@ -31463,14 +31464,25 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     if (!config) {
       const surface = SURFACE_BY_ID[surfaceId] || {};
       if (!opts.skipHeader) {
-        this._renderPageHeader(root, surface.label || surfaceId || "Dashboard", "No dashboard configuration found");
+        this._renderPageHeader(root, surface.label || surfaceId || "Dashboard", surfaceId === "home" ? "Welcome to your vault workspace" : "No dashboard configuration found");
       }
       const card = root.createDiv({ cls: "bob-dash-card" });
       const body = card.createDiv({ cls: "bob-dash-card-body" });
-      body.createDiv({
-        cls: "bob-empty",
-        text: `Add dashboards.${surfaceId} to workspace.json to render this surface.`
-      });
+      if (surfaceId === "home") {
+        const welcome = body.createDiv({ cls: "bob-empty-state" });
+        welcome.createDiv({ cls: "bob-empty-state-title", text: "Welcome to BOB Workspace" });
+        welcome.createDiv({ cls: "bob-empty-state-desc", text: "Choose a starter workspace template to set up your navigation, dashboards, and views." });
+        const setupBtn = welcome.createEl("button", { cls: "bob-btn primary", text: "\u2728 Choose a starter template" });
+        setupBtn.addEventListener("click", async () => {
+          const templates = await loadWorkspaceTemplates(this.app);
+          if (templates.length) new BobWorkspaceSetupModal(this.app, this.plugin, templates).open();
+        });
+      } else {
+        body.createDiv({
+          cls: "bob-empty",
+          text: `Add dashboards.${surfaceId} to workspace.json to render this surface.`
+        });
+      }
       return;
     }
     root.toggleClass("bob-report", config.kind === "report" || String(surfaceId || "").startsWith("reports."));
@@ -36900,14 +36912,12 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
     this._schemaBackupPaths = /* @__PURE__ */ new Set();
     containerEl.createEl("h2", { text: "BOB Workspace" });
     const fork = containerEl.createEl("p", { cls: "setting-item-description" });
-    fork.appendText("BOB Workspace is a fork of the ");
+    fork.appendText("A unified, vault-native workspace for CRM, PRM, client work, finance, projects, and planning on plain markdown. Forked with attribution from ");
     fork.createEl("a", {
-      text: "Upstream Cadence Planner",
+      text: "Cadence Planner",
       href: "https://github.com/iotool/obsidian-cadence-planner"
     }).setAttribute("target", "_blank");
-    fork.appendText(" Obsidian plugin, extended with canonical schema editing, .base files, vault-aware entity mapping, and configurable folders. ");
-    fork.createEl("strong", { text: "Folder structure alignment with upstream Cadence is available, but should be verified in any mixed-vault setup" });
-    fork.appendText(" \u2014 if you switch between forks, back up your vault first.");
+    fork.appendText(".");
     const TAB_IDS = ["workspace", "review", "navigation", "dashboards", "widgets", "modules", "data-model", "planner", "app", "exports", "data"];
     const TAB_LABELS = ["Workspace", "Review", "Navigation", "Dashboards", "Widgets", "Modules", "Data model", "Planner", "App", "Exports", "Data"];
     if (!this._activeSettingsTab) this._activeSettingsTab = "workspace";

@@ -30,9 +30,8 @@ for (const [entity, body] of Object.entries(schemas)) {
   assert.strictEqual(declared, entity, `schema ${entity} declares entity: ${declared}`);
 }
 
-const DEFAULT_CANONICAL_SOURCE = '/mnt/c/users/bruyn/documents/brncx-skills/00-CORE/Schemas/source';
-const source = process.env.BOB_CANONICAL_SCHEMAS || DEFAULT_CANONICAL_SOURCE;
-if (fs.existsSync(source) && fs.statSync(source).isDirectory()) {
+const source = process.env.BOB_CANONICAL_SCHEMAS;
+if (source && fs.existsSync(source) && fs.statSync(source).isDirectory()) {
   const drift = [];
   for (const [entity, body] of Object.entries(schemas)) {
     const file = path.join(source, `${entity}.yaml`);
@@ -42,5 +41,5 @@ if (fs.existsSync(source) && fs.statSync(source).isDirectory()) {
   assert.deepStrictEqual(drift, [], `bob template schemas drifted from ${source}: ${drift.join(', ')} — run npm run sync-schemas`);
   console.log(`template-schemas-canonical.test.js: ok (${entities.length} schemas match ${source})`);
 } else {
-  console.log(`template-schemas-canonical.test.js: ok (structure only; canonical folder not found: ${source})`);
+  console.log(`template-schemas-canonical.test.js: ok (structure only; BOB_CANONICAL_SCHEMAS not set)`);
 }

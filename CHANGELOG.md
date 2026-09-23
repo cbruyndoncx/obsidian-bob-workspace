@@ -4,6 +4,22 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [1.4.0] — 2026-09-23
+
+### Added
+- **Beginner onboarding & first-run flow:** Applying a starter template in the setup modal now automatically opens the BOB Workspace Home tab (`openApp('home')`).
+- **Empty Home onboarding state:** When opening BOB Workspace before applying a template, a friendly welcome card with a 1-click `✨ Choose a starter template` button is shown instead of developer configuration notices.
+
+### Changed
+- **Positioning & descriptions:** Refreshed product identity and marketplace descriptions across `manifest.json`, `package.json`, and `README.md` to highlight BOB Workspace as a **fully configurable GUI workspace and application layer** over plain markdown.
+- **Template ordering & clarity:** Re-ordered starter templates (`BOB Workspace` #1, `CRM Only` #2, `EMAI Starter` #3, `Minimal` #4, `Cadence Classic` #5) and clearly documented `Cadence Classic` as a legacy migration option for upstream users.
+- **Settings tab header:** Replaced the alarming warning banner with a clean, welcoming intro and upstream attribution to Cadence Planner.
+- **Documentation:** Updated `README.md` with accurate 11-tab Settings documentation, a comprehensive Command Palette inventory table, and theme compatibility notes. Corrected Data model path in `docs/extending-bob-workspace.md`.
+
+### Fixed
+- **Build & test portability:** Removed machine-specific path assumptions in canonical schema validation tests and sync scripts; tests now use `process.env.BOB_CANONICAL_SCHEMAS`, allowing clean, deterministic test runs in CI and across diverse developer environments.
+- **Legacy cleanup:** Updated lingering internal code comments referring to Cadence in `entities.ts`, `nav.ts`, and `app-view.ts`.
+
 ## [1.3.3] — 2026-09-19
 
 ### Changed

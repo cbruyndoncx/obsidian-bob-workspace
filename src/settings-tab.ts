@@ -302,14 +302,12 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
     containerEl.createEl('h2', { text: 'BOB Workspace' });
 
     const fork = containerEl.createEl('p', { cls: 'setting-item-description' });
-    fork.appendText('BOB Workspace is a fork of the ');
+    fork.appendText('A unified, vault-native workspace for CRM, PRM, client work, finance, projects, and planning on plain markdown. Forked with attribution from ');
     fork.createEl('a', {
-      text: 'Upstream Cadence Planner',
+      text: 'Cadence Planner',
       href: 'https://github.com/iotool/obsidian-cadence-planner',
     }).setAttribute('target', '_blank');
-    fork.appendText(' Obsidian plugin, extended with canonical schema editing, .base files, vault-aware entity mapping, and configurable folders. ');
-    fork.createEl('strong', { text: 'Folder structure alignment with upstream Cadence is available, but should be verified in any mixed-vault setup' });
-    fork.appendText(' — if you switch between forks, back up your vault first.');
+    fork.appendText('.');
 
     /* ─── Settings tab bar ─── */
     const TAB_IDS = ['workspace', 'review', 'navigation', 'dashboards', 'widgets', 'modules', 'data-model', 'planner', 'app', 'exports', 'data'];

@@ -1,10 +1,12 @@
-# BOB Workspace — a workspace for working life
+# BOB Workspace — a configurable GUI layer for Obsidian
 
-A unified Obsidian plugin for **CRM, PRM, project management, daily planning, and reminders** — all on top of plain markdown. No server, no sync service, no lock-in. Your vault stays your vault.
+A **fully configurable GUI application layer** built on top of plain markdown. BOB Workspace turns Obsidian into an interactive, visually rich workspace for **CRM, deal pipelines, project management, client engagements, custom dashboards, and daily planning** — with zero servers, no cloud lock-in, and 100% portable markdown.
 
-This repository is a BOB Workspace customization of the original Cadence plugin. The plugin is intended to stay vault-model aware: built-in fields are only fallbacks, while real vault behavior should come from schemas, Bases, and `workspace.json` overrides. When schema support is enabled and the source folder is empty, the plugin can bootstrap canonical schema YAML from the current workspace entity definitions and then regenerate the derived FileClasses and JSON Schema outputs.
+Instead of navigating disconnected notes or juggling dozens of fragmented tools, BOB Workspace provides a unified, app-grade graphical user interface that writes directly to standard markdown files in your vault.
 
-Start with the [empty-vault quickstart](docs/empty-vault-quickstart.md) or [existing-vault installation guide](docs/installing-into-existing-vault.md). For extension guidance, see [Extending BOB Workspace Without Code Changes](docs/extending-bob-workspace.md), including its current editing limitations.
+Whether starting fresh or organizing an existing vault, BOB Workspace provides starter templates to get you running in minutes. Built-in defaults work out of the box, while the visual **Surface Designer**, schema YAML editor, and Obsidian Bases integration let you reshape every dashboard, list, and navigation element to fit your exact workflow.
+
+Start with the [empty-vault quickstart](docs/empty-vault-quickstart.md) or [existing-vault installation guide](docs/installing-into-existing-vault.md). For extension guidance, see [Extending BOB Workspace Without Code Changes](docs/extending-bob-workspace.md).
 
 💬 **Docs, support, and community:** join the **ThirdBrain BOB** Skool community → https://www.skool.com/thirdbrain-tech-3102
 
@@ -27,8 +29,11 @@ Start with the [empty-vault quickstart](docs/empty-vault-quickstart.md) or [exis
 
 ## Why BOB Workspace
 
-Most "second brain" plugins do *one* thing well. BOB Workspace is the opposite: a coherent **workspace** that brings together the surfaces a working person actually moves between every day — today's tasks, the week ahead, deals in flight, contacts, projects, recurring reminders — and presents them in a single tab with one familiar nav.
+Most "second brain" plugins do *one* thing well. BOB Workspace is the opposite: a coherent **graphical operating system** that brings together the surfaces a working person actually moves between every day — today's tasks, the week ahead, deals in flight, contacts, projects, recurring reminders — and presents them in a single tab with one familiar nav.
 
+- **A fully configurable GUI layer.** Not a rigid pre-packaged app. Use the built-in **Surface Designer** to compose custom dashboards, metric cards, charts, task lists, and activity heatmaps with live preview.
+- **Visual Data Model & Schema Designer.** Define your own record types visually in Settings (fields, data types, enums, required validation, folder locations) without writing code.
+- **Obsidian Bases integration.** Bind `.base` files to drive filters, sorting, grouping, and views directly from Obsidian Bases.
 - **Markdown is the source of truth.** Every contact, deal, project, activity is a `.md` file with frontmatter. Tasks, Dataview, Templater all keep working. Move to a different vault tomorrow — your data goes with you.
 - **One tab, many surfaces.** A left rail lets you flip between Home → Today → Pipeline → Contacts → Projects → Inbox → Reports without ever leaving the workspace tab.
 - **Module toggles.** Turn off CRM, PRM or Planner if you only want some of it.
@@ -118,13 +123,13 @@ The plugin then creates note folders on demand as you use the surfaces. It does 
 ### Starter templates
 The shipped templates are:
 
-- **BOB Workspace** - the full vault model: Planner, CRM, PRM, Client Work, Finance, Suppliers & Procurement, Reports, AI Workspace.
-- **EMAI Starter** - a PARA-style personal workspace: **Human** (tasks, projects, areas, resources, people, daily, reviews), **Content** (videos, briefs, calendar, research), and **Machine** (workflows, SOPs, agents, code, skills).
-- **CRM Only** - a narrower workspace focused on CRM, Planner basics, and Reports.
-- **Cadence Classic** - the original Cadence-style layout with the legacy folder model.
-- **Minimal** - a blank starting point with only Home and Settings.
+- **BOB Workspace** — the full business suite: Planner, CRM, PRM, Client Work, Finance, Suppliers & Procurement, Reports, and AI Workspace. Schema-driven.
+- **CRM Only** — a focused sales & CRM workspace: Pipeline kanban, Contacts, Clients, Leads, Campaigns, Activities, and Reports.
+- **EMAI Starter** — a PARA-style personal workspace: **Human** (tasks, projects, areas, resources, people, daily, reviews), **Content** (videos, briefs, calendar, research), and **Machine** (workflows, SOPs, agents, code, skills).
+- **Minimal** — a blank slate with only Home and Settings. Build your own navigation and dashboards from scratch.
+- **Cadence Classic** — legacy layout using Cadence/ folder conventions for users migrating from the upstream Cadence plugin.
 
-Use **BOB Workspace** for the full business model, **EMAI Starter** for a PARA personal-productivity workspace, **CRM Only** for a lighter start, or **Minimal** to build everything by hand.
+Use **BOB Workspace** for the full business model, **CRM Only** for a lighter sales-focused start, **EMAI Starter** for a PARA personal-productivity workspace, or **Minimal** to build everything by hand.
 
 **Templates bring their own entities.** A template can embed its entity definitions (schema YAML) and `.base` files. Applying it writes *exactly* those into the configured schema/Bases folders, so a template like EMAI Starter provisions only its own entities on a fresh vault — it never falls back to the full built-in business model. BOB Workspace also ships its full schema and Base assets; it does not rely on the lean built-in entity defaults for a fresh installation.
 
@@ -148,20 +153,19 @@ BOB Workspace creates folders on demand. The shipped defaults follow a numbered 
 
 ## Configuration
 
-Settings → BOB Workspace:
+Settings → BOB Workspace provides tabbed configuration for every layer of your workspace:
 
-The surface areas are easiest to understand in this order:
-
-1. **Workspace** - the source-of-truth `workspace.json` for schemas, Bases, navigation, dashboards, templates, and workbook groups.
-2. **Data model** - canonical schema YAML, plus bootstrap/regenerate actions when the schema folder is empty. Also home to the **Bases folder** setting (default location for bare `.base` filenames) and the **Generate missing bases** action (creates a starter `.base` for any entity — built-in or schema-defined — that lacks one).
-3. **Bases** - view configuration for each entity, either through `workspace.json.bases` or the Base selectors in Settings. Changing the Bases folder changes resolution only for bare filenames such as `People.base`. Paths such as `20-COMPANY/skills.base` are honored verbatim; changing the setting does not move files.
-4. **Navigation** - the left rail, secondary tabs, and module groups.
-5. **Dashboards** - Home, CRM, Reports, and any custom surfaces composed from widgets.
-6. **Widgets** - the widget catalog and inventory used by dashboards and reports.
-7. **Modules** - Planner / CRM / PRM / Client Work / Finance / Procurement toggles.
-8. **App** - startup behavior, tab choice, week start, daily-note folder, task/journal headings, and similar portable defaults.
-9. **Reminders** - reminder notifications and cleanup.
-10. **Currency** - money formatting across the workspace.
+1. **Workspace** — apply starter templates, check active template status, view/edit the raw `workspace.json`, and manage recovery snapshots.
+2. **Review** — live audit panel showing registered surfaces, entity folders, active modules, and configuration health.
+3. **Navigation** — organize the left-rail navigation: reorder groups, change labels, choose icons, and manage secondary tabs.
+4. **Dashboards** — configure surfaces, widgets, and layout blueprints with deep links to the Surface Designer.
+5. **Widgets** — widget catalog, data sources, and field bindings for dashboard and report cards.
+6. **Modules** — enable or disable core modules (Planner, CRM, PRM, Client Work, Finance, Procurement) and configure entity folders.
+7. **Data model** — canonical schema designer, FileClass and JSON Schema generation, Bases folder setting, and the **Generate missing bases** action.
+8. **Planner** — configure daily note folder location, section headings (Tasks, Journal), checkbox formats, and TaskNotes behavior.
+9. **App** — startup behavior ("Open BOB Workspace on startup"), default surface, week start day, built-in theme override, reminder notifications, and currency symbol.
+10. **Exports** — define multi-sheet XLSX export groups.
+11. **Data** — import/export operations, CSV column mapping, and data integrity tools.
 
 When you are customizing a vault, use this order:
 
@@ -175,21 +179,28 @@ When you are customizing a vault, use this order:
 
 ---
 
-## Hotkeys
+## Commands & Hotkeys
 
-| Action | Shortcut |
-| --- | --- |
-| Open BOB Workspace | (assignable, no default) |
-| Quick capture (with optional reminder) | `Cmd+Shift+I` (`Ctrl+Shift+I` on Windows/Linux) |
-| Open BOB Workspace — Home | (assignable) |
-| Open BOB Workspace — Today | (assignable) |
-| Open BOB Workspace — Calendar | (assignable) |
-| Open BOB Workspace — Pipeline | (assignable) |
-| Open BOB Workspace — Inbox | (assignable) |
-| Import from CSV | (assignable) |
-| New today entry (creates if missing) | (assignable) |
+| Command Palette Action | Default Shortcut | Description |
+| --- | --- | --- |
+| **Quick capture (with optional reminder)** | `Cmd+Shift+I` (`Ctrl+Shift+I`) | Quick note capture with optional date, time, and recurrence |
+| **Open BOB Workspace** | *(assignable)* | Opens the full BOB Workspace application tab |
+| **Open BOB Workspace — Home** | *(assignable)* | Jump straight to the Home command centre |
+| **Open BOB Workspace — Today** | *(assignable)* | Jump straight to Today's planner and journal |
+| **Open BOB Workspace — Calendar** | *(assignable)* | Open the weekly calendar view |
+| **Open BOB Workspace — Pipeline** | *(assignable)* | Open the visual deal kanban board |
+| **Open BOB Workspace — Inbox** | *(assignable)* | View all captures, reminders, and project tasks |
+| **Open BOB Workspace — Canvases** | *(assignable)* | Open the canvas manager |
+| **Open BOB Workspace — Surface Designer** | *(assignable)* | Open the live dashboard & widget layout designer |
+| **BOB: Context canvas for active note** | *(assignable)* | Generate a visual context canvas around the current note |
+| **Import from CSV** | *(assignable)* | Import contacts, deals, or records from a spreadsheet |
+| **Export all entities to XLSX** | *(assignable)* | Export entities to a multi-sheet Excel workbook |
+| **Import entities from XLSX workbook** | *(assignable)* | Import edited entities back from an Excel workbook |
+| **Apply workspace template…** | *(assignable)* | Open the template picker to apply or switch templates |
+| **Reload workspace.json** | *(assignable)* | Reload the active workspace configuration from disk |
+| **New today entry (creates if missing)** | *(assignable)* | Open or create today's daily note |
 
-Bind your favourites under Settings → Hotkeys → search "BOB Workspace".
+Assign any command to a hotkey under **Settings → Hotkeys → search "BOB Workspace"**.
 
 ---
 
@@ -214,9 +225,11 @@ With schema support enabled, the plugin also writes canonical schema YAML to the
 
 ---
 
-## Companion theme
+## Themes and Appearance
 
-A matching **Cadence** theme is available separately for vaults that want a fully-tuned visual system (warm paper surfaces, emerald accents, Geist + JetBrains Mono typography). The plugin works with any Obsidian theme; the theme is purely cosmetic.
+BOB Workspace is designed to look great with **any** Obsidian theme (including the default theme) and adapts automatically to Obsidian's dark and light modes. It also includes its own dark mode toggle in the workspace top bar if you want BOB Workspace in dark mode independently of your Obsidian theme.
+
+*(Optional)* If you want a warm paper aesthetic with emerald accents and Geist + JetBrains Mono typography, the upstream **Cadence** community theme pairs nicely with BOB Workspace.
 
 ---
 

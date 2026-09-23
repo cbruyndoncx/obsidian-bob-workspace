@@ -11,6 +11,8 @@ import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, f
 import { BobReminderEditModal } from '../modals/capture';
 import { BobPromptModal, confirmModal } from '../modals/common';
 import { BobEntityCreateModal } from '../modals/entity-create';
+import { BobWorkspaceSetupModal } from '../modals/workspace-setup';
+import { loadWorkspaceTemplates } from '../workspace-templates';
 import { CERT_WARN_DAYS, REG_WARN_DAYS, dealAtRisk, dealPartnerName, daysUntil, maybeCreateCommissionForWonDeal, nakedRef } from '../partner-automation';
 import { BobImportModal } from '../modals/import';
 import { ALL_SURFACES, NAV_GROUPS, SECONDARY_TABS, SURFACE_BY_ID, VIEW_TYPE_BOB_APP, cloneConfig, reorderPinnedList } from '../nav';
@@ -409,7 +411,7 @@ export class BobAppView extends obsidian.ItemView {
   async openEntityDetailFromFile(file: obsidian.TFile, entityKey: string | null = null) {
     const key = entityKey || entityKeyFromFile(this.app, file);
     if (!key) {
-      // Not a Cadence entity — fall back to opening the markdown
+      // Not a recognized entity — fall back to opening the markdown
       this.app.workspace.openLinkText(file.path, '', false);
       return;
     }
@@ -2041,14 +2043,25 @@ export class BobAppView extends obsidian.ItemView {
     if (!config) {
       const surface = SURFACE_BY_ID[surfaceId] || ({} as NavSurface);
       if (!opts.skipHeader) {
-        this._renderPageHeader(root, surface.label || surfaceId || 'Dashboard', 'No dashboard configuration found');
+        this._renderPageHeader(root, surface.label || surfaceId || 'Dashboard', surfaceId === 'home' ? 'Welcome to your vault workspace' : 'No dashboard configuration found');
       }
       const card = root.createDiv({ cls: 'bob-dash-card' });
       const body = card.createDiv({ cls: 'bob-dash-card-body' });
-      body.createDiv({
-        cls: 'bob-empty',
-        text: `Add dashboards.${surfaceId} to workspace.json to render this surface.`,
-      });
+      if (surfaceId === 'home') {
+        const welcome = body.createDiv({ cls: 'bob-empty-state' });
+        welcome.createDiv({ cls: 'bob-empty-state-title', text: 'Welcome to BOB Workspace' });
+        welcome.createDiv({ cls: 'bob-empty-state-desc', text: 'Choose a starter workspace template to set up your navigation, dashboards, and views.' });
+        const setupBtn = welcome.createEl('button', { cls: 'bob-btn primary', text: '✨ Choose a starter template' });
+        setupBtn.addEventListener('click', async () => {
+          const templates = await loadWorkspaceTemplates(this.app);
+          if (templates.length) new BobWorkspaceSetupModal(this.app, this.plugin, templates).open();
+        });
+      } else {
+        body.createDiv({
+          cls: 'bob-empty',
+          text: `Add dashboards.${surfaceId} to workspace.json to render this surface.`,
+        });
+      }
       return;
     }
     root.toggleClass('bob-report', config.kind === 'report' || String(surfaceId || '').startsWith('reports.'));

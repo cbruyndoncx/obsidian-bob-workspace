@@ -1,8 +1,7 @@
 # Submission walkthrough
 
 Step-by-step to get BOB Workspace into the Obsidian community plugin store.
-Follow in order. Commands are copy-paste runnable from the repo root
-(`/home/cb/projects/github/obsidian-bob-workspace`).
+Follow in order. Commands are copy-paste runnable from the repo root.
 
 > **Version-agnostic:** the commands below read the version from `manifest.json`
 > so this doc never goes stale. Set it once per session:

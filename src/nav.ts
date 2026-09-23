@@ -5,7 +5,7 @@ import type { DashboardConfig, JsonValue, NavGroup, NavSurface, SecondaryTab, Wo
 export const VIEW_TYPE_BOB_APP = 'bob-workspace-app';
 
 /* ─────────── Nav structure ─────────── */
-/* Mirrors the Cadence web-app left nav exactly. Groups can be collapsed.
+/* Built-in left nav fallback. Groups can be collapsed.
    Built surfaces have a render method; the rest fall through to the
    coming-soon placeholder, which describes what each surface will do. */
 export const BUILTIN_NAV_GROUPS: NavGroup[] = [

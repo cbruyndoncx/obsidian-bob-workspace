@@ -1,9 +1,9 @@
 {
   "id": "bob-workspace",
   "name": "BOB Workspace",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "minAppVersion": "1.4.0",
-  "description": "Runs CRM, PRM, client work, finance, procurement, and planning as a configurable, vault-native workspace on plain markdown.",
+  "description": "Transforms your vault into a fully configurable GUI workspace with custom dashboards, visual pipelines, interactive tables, entity schemas, and daily planning.",
   "author": "cbruyndoncx",
   "authorUrl": "https://github.com/cbruyndoncx",
   "isDesktopOnly": false
