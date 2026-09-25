@@ -1,6 +1,6 @@
 # Domain Detection — Folder-to-Domain Mapping
 
-Folder structure is the authoritative source for domain grouping. No value-chain mapping, no upfront user question. Folder = domain.
+Use the dominant note folder as a domain hint. This table is an example for the original BOB folder layout; other vaults may use entirely different paths. Domain is an optional schema annotation, not a required folder convention.
 
 ## Default mapping table
 
@@ -30,14 +30,14 @@ Folder structure is the authoritative source for domain grouping. No value-chain
 
 ## Resolution rule
 
-For each detected `type:`, take the mode (most common) of parent-folder paths. Match against the longest-prefix folder pattern above. That's the domain.
+For each detected `type:`, take the most common parent-folder path. Use the longest matching prefix above when there is one. Otherwise the script proposes `general`; choose a better label from the actual vault structure when reviewing the proposal.
 
 ## Special cases
 
 - **Person entities split across domains**: `10-ME/10-PEOPLE/` → Personal, `30-CLIENTS/{id}/10-PEOPLE/` → Clients & Delivery. Same `type: person`, two domains — present in both groups in `workspace.json`.
 - **Invoice entities split**: `30-CLIENTS/{id}/02-INVOICES/` → Clients & Delivery (AR), `20-COMPANY/06-FINANCE/AP/INVOICES/` → Finance (AP). Disambiguate by folder, surface both in proposal.
-- **Unmapped folders**: if a `type:`'s dominant folder doesn't match any prefix above, surface in proposal as "ungrouped — user should assign domain or rename folder."
+- **Unmapped folders**: keep their existing paths. The proposal uses `general` until a suitable domain is chosen.
 
 ## User override
 
-User can edit `99-TMP/OUTPUT/bob-workspace-bootstrap-proposal.md` to reassign domain before confirmation. Re-run reads the edits.
+User can edit `BOB Workspace/Reports/bob-workspace-bootstrap-proposal.md` to reassign domain before confirmation. Re-run reads the edits.

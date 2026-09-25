@@ -11,7 +11,7 @@ my-vault/
 │   │   └── bob-workspace/
 │   │       ├── manifest.json     (v0.14.x)
 │   │       ├── workspace.json    (empty or absent)
-│   │       └── data.json
+│   │       └── main.js
 │   └── templates.json             ({"folder": "Templates"})
 ├── Templates/
 │   ├── client.md          (frontmatter: type, client_name, status, regions)
@@ -19,7 +19,7 @@ my-vault/
 │   └── invoice.md         (frontmatter: type, amount, currency, due_date)
 ├── Clients/
 │   ├── acme/
-│   │   ├── profile.md     (type: client, 1 note)
+│   │   ├── profile.md     (type: client, 1 note in this client folder)
 │   │   ├── meetings/      (type: meeting, 14 notes)
 │   │   └── invoices/      (type: invoice, 8 notes)
 │   └── ...               (23 client folders total)
@@ -45,7 +45,7 @@ Reported:
 ```
 Templates folder: Templates/ (from .obsidian/templates.json)
 BOB Workspace plugin: v0.14.4 → useSchemas: true
-Schemas folder: 00-CORE/Schemas/source (default)
+Schemas folder: 00-CORE/Schemas/source (plugin default; `workspace.json` may override it)
 Existing YAML source files: 0
 Existing workspace.json: empty
 
@@ -64,13 +64,13 @@ Domain mapping (from folder):
   Clients/ → "Clients & Delivery"
 ```
 
-## Phase 2 — Proposal (writes only to 99-TMP/OUTPUT/)
+## Phase 2 — Proposal (writes only to BOB Workspace/Reports/)
 
 ```bash
 # Agent constructs proposal report from detection JSON
 ```
 
-Report at `99-TMP/OUTPUT/bob-workspace-bootstrap-proposal.md`:
+Report at `BOB Workspace/Reports/bob-workspace-bootstrap-proposal.md`:
 
 ```markdown
 # BOB Workspace Bootstrap — Proposal
@@ -86,7 +86,6 @@ Report at `99-TMP/OUTPUT/bob-workspace-bootstrap-proposal.md`:
 - 00-CORE/Schemas/source/client.yaml  (new)
 - 00-CORE/Schemas/source/meeting.yaml (new)
 - 00-CORE/Schemas/source/invoice.yaml (new)
-- .obsidian/plugins/bob-workspace/workspace.json (new — 1 dashboard)
 
 ## Next step after confirmation
 Open Obsidian → Settings → BOB Workspace → click Regenerate. The plugin will:
@@ -101,11 +100,12 @@ User replies: `proceed`
 ## Phase 3 — Write YAML source
 
 ```bash
-for ent in client meeting invoice; do
-  uv run scripts/generate_yaml.py --vault my-vault --entity $ent \
-    --label "$(label-for $ent)" --location-pattern "Clients/{slug}/..." \
-    --domain clients-delivery
-done
+uv run scripts/generate_yaml.py --vault my-vault --entity client \
+  --label Client --location-pattern 'Clients/' --domain clients-delivery
+uv run scripts/generate_yaml.py --vault my-vault --entity meeting \
+  --label Meeting --location-pattern 'Clients/' --domain clients-delivery
+uv run scripts/generate_yaml.py --vault my-vault --entity invoice \
+  --label Invoice --location-pattern 'Clients/' --domain clients-delivery
 ```
 
 Each YAML follows the canonical shape:
@@ -115,12 +115,10 @@ entity: client
 label: Client
 type_value: client
 location_pattern: Clients/{slug}/
-description: Client entity inferred from vault census (5 fields).
+description: Client entity inferred from vault census (6 fields).
 domain: clients-delivery
+key_fields: [client_name]
 fields:
-  - name: type
-    type: string
-    required: true
   - name: client_name
     type: string
     required: true
@@ -134,6 +132,9 @@ fields:
     format: date
   - name: tags
     type: array
+  - name: type
+    type: string
+    required: true
 ```
 
 No `workspace.json` is written here — that is the UI half, owned by [[bob-workspace-compose]] and the plugin's `Apply workspace template…` command. The `domain: clients-delivery` annotation on each YAML source is what compose later uses to group these three entities into one dashboard.

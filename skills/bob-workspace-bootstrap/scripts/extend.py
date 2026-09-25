@@ -7,7 +7,7 @@
 
 Two modes:
   --propose : detect coverage gap (vault entities vs existing YAML source), write a markdown
-              merge report to 99-TMP/OUTPUT/. No writes elsewhere.
+              merge report to BOB Workspace/Reports/. No schema writes.
   --execute : write YAML source files for the entities listed in --entities. Refuses to
               overwrite existing YAML. Does NOT touch workspace.json — UI composition is
               owned by the bob-workspace-compose skill / the plugin's Apply-template command.
@@ -31,6 +31,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent))
 from frontmatter_census import census  # noqa: E402
+from workspace_paths import output_path, reports_folder, schema_source  # noqa: E402
 
 DOMAIN_PREFIXES = [
     ("20-COMPANY/06-FINANCE", "finance"),
@@ -63,7 +64,7 @@ def domain_for(folder: str) -> str:
 
 def load_existing_yaml(src_dir: Path) -> dict[str, dict]:
     out = {}
-    for f in src_dir.glob("*.yaml"):
+    for f in sorted((*src_dir.glob("*.yaml"), *src_dir.glob("*.yml"))):
         try:
             d = yaml.safe_load(f.read_text()) or {}
             if "entity" in d:
@@ -90,12 +91,14 @@ def bucket(n: int) -> str:
 
 
 def propose(vault: Path, output: Path) -> dict:
-    src = vault / "00-CORE/Schemas/source"
+    src = schema_source(vault)
     existing = load_existing_yaml(src) if src.is_dir() else {}
     existing_types = set()
+    existing_by_type = {}
     for ent, info in existing.items():
         existing_types.add(ent)
         existing_types.add(info["type_value"])
+        existing_by_type[info["type_value"]] = info
 
     cen = census(vault, min_count=1)
     detected = {t: e for t, e in cen["entities"].items() if e.get("count", 0) >= 3}
@@ -109,7 +112,7 @@ def propose(vault: Path, output: Path) -> dict:
     # Field drift on covered entities
     drift = {}
     for t in covered:
-        ent_info = existing.get(t) or existing.get(detected[t].get("type_value", t))
+        ent_info = existing_by_type.get(t) or existing.get(t)
         if not ent_info:
             continue
         declared = ent_info["fields"]
@@ -177,7 +180,7 @@ def propose(vault: Path, output: Path) -> dict:
     lines += ["", "## Next step",
               "",
               "After review, run --execute with --entities listing the slugs you want YAML for. ",
-              "Defaults to high-volume + medium when the agent invokes it without explicit selection."]
+              "Review the report and select entity slugs explicitly before executing."]
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("\n".join(lines), encoding="utf-8")
@@ -190,7 +193,7 @@ def propose(vault: Path, output: Path) -> dict:
 
 
 def execute(vault: Path, entities: list[str], location_overrides: dict[str, str]) -> dict:
-    src = vault / "00-CORE/Schemas/source"
+    src = schema_source(vault)
     src.mkdir(parents=True, exist_ok=True)
     cen = census(vault, min_count=1)
     generate_script = Path(__file__).parent / "generate_yaml.py"
@@ -198,7 +201,7 @@ def execute(vault: Path, entities: list[str], location_overrides: dict[str, str]
     written = []
     skipped = []
     for ent in entities:
-        if (src / f"{ent}.yaml").exists():
+        if (src / f"{ent}.yaml").exists() or (src / f"{ent}.yml").exists():
             skipped.append((ent, "exists"))
             continue
         e = cen["entities"].get(ent)
@@ -245,7 +248,7 @@ def main() -> int:
     )
     p.add_argument("--vault", required=True, help="Absolute path to vault root")
     mode = p.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--propose", action="store_true", help="Write merge report to 99-TMP/OUTPUT/; no other writes")
+    mode.add_argument("--propose", action="store_true", help="Write merge report under BOB Workspace/Reports; no other writes")
     mode.add_argument("--execute", action="store_true", help="Write YAML for the listed entities via generate_yaml.py")
     p.add_argument("--entities", help="Comma-separated entity slugs to write (required with --execute)")
     p.add_argument(
@@ -253,7 +256,7 @@ def main() -> int:
         dest="location_patterns",
         help="Override location patterns. Format: entityA=20-COMPANY/X/,entityB=30-CLIENTS/{client-id}/Y/",
     )
-    p.add_argument("--output", help="Output path for --propose (default: 99-TMP/OUTPUT/bob-workspace-bootstrap-merge.md)")
+    p.add_argument("--output", help="Vault-relative report path for --propose (default: BOB Workspace/Reports/bob-workspace-bootstrap-merge.md)")
     args = p.parse_args()
 
     vault = Path(args.vault).resolve()
@@ -262,7 +265,7 @@ def main() -> int:
         return 2
 
     if args.propose:
-        out = Path(args.output) if args.output else vault / "99-TMP/OUTPUT/bob-workspace-bootstrap-merge.md"
+        out = output_path(vault, args.output) if args.output else reports_folder(vault) / "bob-workspace-bootstrap-merge.md"
         result = propose(vault, out)
         print(json.dumps(result, indent=2))
         return 0

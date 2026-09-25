@@ -829,7 +829,7 @@ select.bob-cell-input { padding: 5px 8px; }
   display: flex; gap: 12px; padding: 16px 32px 24px 32px; overflow-x: auto;
 }
 .bob-kanban-col {
-  flex: 0 0 240px; max-width: 280px;
+  flex: 0 0 240px; max-width: 280px; min-width: 0;
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 10px;
@@ -840,9 +840,29 @@ select.bob-cell-input { padding: 5px 8px; }
 .bob-kanban-col-head {
   padding: 12px; border-bottom: 1px solid var(--background-modifier-border);
 }
+.bob-kanban-col-head-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
 .bob-kanban-col-title {
   font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--text-normal);
+}
+.bob-kanban-col-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 auto; min-width: 20px; height: 20px; padding: 0 5px;
+  border: 1px solid var(--background-modifier-border); border-radius: 999px;
+  color: var(--text-muted); background: var(--background-primary);
+  font: 11px/1 var(--font-monospace);
+}
+.bob-kanban-collapse-button {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 24px; width: 24px; height: 24px; margin: -3px -4px 0 0;
+  padding: 0; border: 1px solid var(--background-modifier-border);
+  border-radius: 5px; color: var(--text-muted); background: var(--background-primary);
+  font-size: 18px; line-height: 1; cursor: pointer;
+}
+.bob-kanban-collapse-button:hover {
+  color: var(--text-normal); border-color: var(--interactive-accent);
 }
 .bob-kanban-col-meta {
   font-size: 11px; color: var(--text-muted); margin-top: 2px;
@@ -852,6 +872,31 @@ select.bob-cell-input { padding: 5px 8px; }
   padding: 8px; display: flex; flex-direction: column; gap: 6px;
   overflow-y: auto;
   min-height: 60px;
+}
+.bob-kanban-col-collapsed {
+  flex: 0 0 52px; max-width: 52px; min-width: 52px; min-height: 260px;
+}
+.bob-kanban-col-collapsed .bob-kanban-col-head {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 8px 4px;
+}
+.bob-kanban-col-collapsed .bob-kanban-col-head-row {
+  flex-direction: column-reverse; align-items: center; gap: 8px;
+}
+.bob-kanban-col-collapsed .bob-kanban-col-title {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  text-align: left; white-space: nowrap;
+}
+.bob-kanban-col-collapsed .bob-kanban-col-meta {
+  writing-mode: vertical-rl; margin: 0;
+}
+.bob-kanban-col-collapsed .bob-kanban-col-count {
+  writing-mode: horizontal-tb; transform: none;
+}
+.bob-kanban-col-collapsed .bob-kanban-col-limit,
+.bob-kanban-col-collapsed .bob-kanban-col-description,
+.bob-kanban-col-collapsed .bob-kanban-col-list {
+  display: none;
 }
 .bob-kanban-card {
   background: var(--background-primary);

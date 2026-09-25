@@ -66,8 +66,11 @@ def value_kind(value) -> str:
 
 def walk_vault(vault: Path):
     for p in vault.rglob("*.md"):
-        parts = set(p.relative_to(vault).parts)
+        relative_parts = p.relative_to(vault).parts
+        parts = set(relative_parts)
         if parts & SKIP_DIRS:
+            continue
+        if relative_parts[:2] == ("BOB Workspace", "Reports"):
             continue
         if p.name.startswith("_") and p.name != "_index.md":
             continue

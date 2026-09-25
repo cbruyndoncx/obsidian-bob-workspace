@@ -19,11 +19,12 @@ Check a `workspace.json` against the full composition schema without mutating an
 
 ## Acceptance contract
 
-The validator (render guard ON) must report **0 errors** on the live `workspace.json` and all four plugin templates (`workspace-minimal/crm/bob/cadence.json`). If it errors on a known-good file, the validator is wrong, not the file — a checker that false-rejects a config the plugin renders is worse than none. Regression-test after any validator change:
+The validator (render guard ON) must report **0 errors** on the live `workspace.json` and any custom template files in the installed plugin folder. If the BOB source checkout is available, also check its five `templates/workspace-*.json` files after changing the validator. A normal plugin install does not provide those files separately from `main.js`.
 
 ```bash
 d=<vault>/.obsidian/plugins/bob-workspace
 for f in "$d/workspace.json" "$d"/templates/*.json; do
+  [ -f "$f" ] || continue
   uv run scripts/validate_workspace.py "$f" | tail -1
 done
 ```

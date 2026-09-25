@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://thirdbrain.bob/workspace.schema.json",
   "title": "BOB Workspace workspace.json",
-  "description": "Structural schema for the BOB Workspace plugin's workspace.json UI-composition file. Reverse-engineered from the live config plus the four plugin templates (minimal/crm/bob/cadence) and confirmed against main.js. Structurally typed but ENUM-PERMISSIVE: open vocabularies (widget kind, accent, source string) are documented in references but NOT locked here, because the renderer tolerates values this schema cannot enumerate from a minified bundle. additionalProperties is true at every object level for forward compatibility. The authoritative pass/fail check is scripts/validate_workspace.py; this schema is the formal contract and documentation.",
+  "description": "Structural schema for BOB Workspace workspace.json, informed by the live config and the five bundled template sources (minimal, crm, bob, cadence, emai). Open vocabularies remain permissive for forward compatibility. The authoritative local check is scripts/validate_workspace.py.",
   "type": "object",
   "additionalProperties": true,
   "properties": {

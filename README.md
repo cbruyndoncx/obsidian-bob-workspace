@@ -251,8 +251,17 @@ described above:
 - **[`bob-workspace-bootstrap`](skills/bob-workspace-bootstrap/SKILL.md)** — census a vault's templates/frontmatter and write canonical schema YAML (the datamodel half).
 - **[`bob-workspace-compose`](skills/bob-workspace-compose/SKILL.md)** — author `workspace.json` (dashboards, widgets, navigation, Base wiring — the UI half).
 
-They're reference material, not part of the plugin — drop the folders into your
-own agent's skills directory to use them.
+They're companion agent skills, not code loaded by the Obsidian plugin. Copy
+both folders into your agent's skills directory, then point the agent at the
+Obsidian vault you want to maintain. They work together without installing the
+brncx-skills vault or its context-pack skill. The bootstrap scripts require
+Python 3.11+ and `uv` (which installs their declared PyYAML dependency).
+
+The skills read the active schema folder from that vault's installed
+`.obsidian/plugins/bob-workspace/workspace.json`; their reports go to
+`BOB Workspace/Reports/`. A schema's `location_pattern` must contain a real
+vault-relative folder path. The plugin does not expand agent context keys in
+schema YAML.
 
 ## Development
 

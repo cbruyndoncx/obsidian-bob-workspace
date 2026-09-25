@@ -28,6 +28,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent))
 from frontmatter_census import census  # noqa: E402
+from workspace_paths import schema_file  # noqa: E402
 
 ENUM_MAX_CARDINALITY = 12
 ENUM_DISTINCT_RATIO = 0.15
@@ -46,7 +47,7 @@ def write_yaml(path: Path, data: dict) -> None:
 
 
 def analyze(vault: Path, entity: str) -> dict:
-    src = vault / "00-CORE/Schemas/source" / f"{entity}.yaml"
+    src = schema_file(vault, entity)
     if not src.exists():
         return {"error": f"no YAML source for entity '{entity}' at {src}"}
 
@@ -132,7 +133,7 @@ def apply(
     add_enum: list[str],
     mark_required: list[str],
 ) -> dict:
-    src = vault / "00-CORE/Schemas/source" / f"{entity}.yaml"
+    src = schema_file(vault, entity)
     if not src.exists():
         return {"error": f"no YAML source for entity '{entity}'"}
 

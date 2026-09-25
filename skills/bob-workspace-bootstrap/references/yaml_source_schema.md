@@ -1,6 +1,6 @@
 # YAML Source Schema — Canonical Shape
 
-The BOB Workspace plugin's `loadCanonicalSchemaSources` parses every `*.yaml` (or `*.yml`) file under the configured schemas folder (default `00-CORE/Schemas/source/`). Each file defines one entity. The plugin validates via `validateSourceSchemaDefinition` and rejects malformed files at regen time.
+The BOB Workspace plugin's `loadCanonicalSchemaSources` parses every `*.yaml` (or `*.yml`) file under its configured schema folder. Resolve top-level `workspace.json.schemas.folder`, then `workspace.json.settings.schemasFolder`, then the default `00-CORE/Schemas/source`. Each file defines one entity. The plugin validates via `validateSourceSchemaDefinition` and rejects malformed files at regeneration time.
 
 ## Canonical example
 

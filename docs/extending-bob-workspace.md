@@ -345,6 +345,31 @@ For the built-in task-note mode, use `workspace.json.templates.taskNote` to defi
 
 Workspace-owned plugin settings also live under `workspace.json.settings`. That block carries the portable knobs that should travel with the vault, including schema enablement, Base mappings, navigation visibility, modules, task-note mode, task-note folders, workbook export folders, icon-driven workspace layout and entity folder configuration.
 
+### Status-driven file routing
+
+Vaults can move Markdown records automatically when a configured status field changes. Add `statusFolderRouting` to `workspace.json`, keyed by the record's frontmatter `type`; `folders` maps exact status values to vault-relative folder paths:
+
+```json
+{
+  "statusFolderRouting": {
+    "job": {
+      "statusField": "status",
+      "folders": {
+        "Captured": "Job Search/Jobs/Inbox",
+        "Reviewing": "Job Search/Jobs/Jobs Desk",
+        "Applied": "Job Search/Jobs/Jobs Desk",
+        "Declined": "Job Search/Jobs/Archive",
+        "Rejected": "Job Search/Jobs/Archive"
+      }
+    }
+  }
+}
+```
+
+The plugin snapshots existing status values at startup and moves a matching file only after it observes a subsequent status change. It creates destination folders as needed and uses Obsidian's file manager so links are updated. Statuses absent from the map do not trigger a move. This is a file-organization rule; the Markdown frontmatter remains the source of truth.
+
+Dashboard entity sources can set `ignoreViewFilter: true` to ignore the selected Base **view** filter while retaining its global filters. This is useful when a dashboard (such as a pipeline) supplies its own filters and must not inherit a narrower default list view.
+
 The Data model designer supports creating entity schema sources and editing
 identity, icon, type value, location pattern, key fields, lifecycle values,
 co-required relationships, discriminators, import field aliases, ordered

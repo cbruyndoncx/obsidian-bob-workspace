@@ -5,14 +5,13 @@
 # ///
 """Compare vault reality against the current BOB Workspace UI state. Write a priority-tiered gap report.
 
-Read-only — writes nothing outside 99-TMP/OUTPUT/.
+Reads vault data and writes one report under BOB Workspace/Reports by default.
 
 Usage:
     uv run diagnose.py --vault <path> [--output <md>]
 """
 import argparse
 import datetime as dt
-import json
 import re
 import sys
 from pathlib import Path
@@ -22,6 +21,7 @@ import yaml
 # Reuse census logic
 sys.path.insert(0, str(Path(__file__).parent))
 from frontmatter_census import census  # noqa: E402
+from workspace_paths import output_path, reports_folder, schema_root, schema_source, workspace_config  # noqa: E402
 
 FM_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
@@ -30,17 +30,14 @@ def load_workspace_json(vault: Path) -> dict | None:
     p = vault / ".obsidian" / "plugins" / "bob-workspace" / "workspace.json"
     if not p.is_file():
         return None
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
+    return workspace_config(vault)
 
 
 def load_fileclasses(vault: Path) -> dict[str, dict]:
     out = {}
     for base in (
         vault / ".obsidian" / "plugins" / "metadata-menu" / "fileClasses",
-        vault / "00-CORE" / "Schemas" / "fileClasses",
+        schema_root(vault) / "fileClasses",
     ):
         if not base.is_dir():
             continue
@@ -61,20 +58,51 @@ def load_fileclasses(vault: Path) -> dict[str, dict]:
     return out
 
 
+def visible_entity_types(vault: Path, workspace: dict) -> set[str]:
+    """Collect note-facing types used by configured nav, tabs, and dashboards."""
+    keys: set[str] = set()
+
+    def collect(value):
+        if isinstance(value, dict):
+            for field in ("entityKey", "entity"):
+                candidate = value.get(field)
+                if isinstance(candidate, str) and candidate:
+                    keys.add(candidate)
+            for child in value.values():
+                collect(child)
+        elif isinstance(value, list):
+            for child in value:
+                collect(child)
+
+    navigation = workspace.get("navigation") or {}
+    if isinstance(navigation, dict):
+        collect(navigation.get("groups", []))
+        collect(navigation.get("secondaryTabs", {}))
+    collect(workspace.get("dashboards", {}))
+    collect(workspace.get("planner", {}))
+
+    # `entity` is the runtime key; `type_value` is the note's frontmatter type.
+    type_by_key = {}
+    for path in list(schema_source(vault).glob("*.yaml")) + list(schema_source(vault).glob("*.yml")):
+        try:
+            schema = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError):
+            continue
+        if not isinstance(schema, dict) or not schema.get("entity"):
+            continue
+        entity = str(schema["entity"])
+        runtime_key = "contact" if entity == "person" else entity
+        type_by_key[runtime_key] = str(schema.get("type_value") or entity)
+    return {type_by_key.get(key, key) for key in keys}
+
+
 def diagnose(vault: Path) -> dict:
     cen = census(vault, min_count=1)
     ws = load_workspace_json(vault)
     fcs = load_fileclasses(vault)
 
     findings = []
-    ws_types = set()
-    ws_domains = []
-    if ws:
-        for d in ws.get("domains", []):
-            ws_domains.append(d.get("id"))
-            for e in d.get("entries", []):
-                if "type" in e:
-                    ws_types.add(e["type"])
+    ws_types = visible_entity_types(vault, ws) if ws else set()
 
     typed_entities = {t: e for t, e in cen["entities"].items() if not e.get("skip")}
 
@@ -86,7 +114,7 @@ def diagnose(vault: Path) -> dict:
                 "category": "entity_missing_from_ui",
                 "entity": t,
                 "detail": f"{e['count']} notes, dominant folder `{e['dominant_folder']}`",
-                "remediation": "run bob-workspace-bootstrap extend",
+                "remediation": "add an entityKey navigation item or a dashboard widget for this type in workspace.json",
             })
 
     # P2: field in notes, missing from fileClass
@@ -197,10 +225,10 @@ def render_markdown(report: dict) -> str:
 def main() -> int:
     p = argparse.ArgumentParser(
         description="Compare vault reality vs BOB Workspace UI state; emit priority-tiered gap report.",
-        epilog="Example: uv run diagnose.py --vault /home/me/my-vault --output 99-TMP/OUTPUT/diagnose.md",
+        epilog="Example: uv run diagnose.py --vault /home/me/my-vault --output 'BOB Workspace/Reports/diagnose.md'",
     )
     p.add_argument("--vault", required=True, help="Absolute path to the vault root")
-    p.add_argument("--output", help="Output markdown path; defaults to 99-TMP/OUTPUT/bob-workspace-diagnose-{date}.md")
+    p.add_argument("--output", help="Vault-relative markdown path; defaults to BOB Workspace/Reports/bob-workspace-diagnose-{date}.md")
     args = p.parse_args()
 
     vault = Path(args.vault).resolve()
@@ -212,10 +240,10 @@ def main() -> int:
     md = render_markdown(report)
 
     if args.output:
-        out_path = Path(args.output)
+        out_path = output_path(vault, args.output)
     else:
         date = dt.date.today().isoformat()
-        out_path = vault / "99-TMP" / "OUTPUT" / f"bob-workspace-diagnose-{date}.md"
+        out_path = reports_folder(vault) / f"bob-workspace-diagnose-{date}.md"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(md, encoding="utf-8")
 

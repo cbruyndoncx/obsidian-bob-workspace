@@ -1,87 +1,70 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = []
-# ///
-"""Recover the vault after a BOB Workspace template apply.
+#!/usr/bin/env python3
+"""Restore missing Base files recorded by a BOB template-switch journal.
 
-Applying a workspace template (Settings -> BOB Workspace -> "Apply workspace
-template...") ARCHIVES the live `00-CORE/Bases/` and `00-CORE/Schemas/` dirs to
-`00-CORE/Bases-archive-bob-workspace-<ts>/` and does NOT regenerate them. That
-empties them and breaks every base-backed widget + frontmatter validation
-vault-wide until restored. This script restores both:
-
-  - Bases   : copies missing .base files from the newest non-empty Bases archive
-  - Schemas : regenerates source/json-schema/fileClasses from DATAMODEL-FULL.md
-
-Idempotent: if Bases/Schemas are already healthy it changes nothing (just reports).
-Run it after any template apply, or whenever base widgets show "not found".
+The plugin writes ``template-switch-*.json`` before archiving outgoing assets.
+It seeds the new template's schemas and regenerates derived schema output.
+This helper needs no brncx-skills vault scripts, context pack, or Python packages.
 
 Usage:
-  uv run recover_after_apply.py --vault .            # restore
-  uv run recover_after_apply.py --vault . --dry-run  # report only
+    python3 recover_after_apply.py --vault /path/to/vault --dry-run
+    python3 recover_after_apply.py --vault /path/to/vault
 """
-from __future__ import annotations
+
 import argparse
-import subprocess
+import json
+import shutil
 from pathlib import Path
 
 
+def inside_vault(vault: Path, relative: str) -> Path:
+    path = Path(relative)
+    if path.is_absolute():
+        raise ValueError(f"expected a vault-relative path: {relative}")
+    resolved = (vault / path).resolve()
+    if not resolved.is_relative_to(vault):
+        raise ValueError(f"journal path leaves vault: {relative}")
+    return resolved
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(
-        description="Restore Bases + Schemas after a BOB Workspace template apply.",
-        epilog="Example: uv run recover_after_apply.py --vault . --dry-run")
-    ap.add_argument("--vault", default=".", help="vault root (default: current dir)")
-    ap.add_argument("--dry-run", action="store_true", help="report only; change nothing")
-    args = ap.parse_args()
-    V = Path(args.vault).resolve()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--vault", required=True, help="Obsidian vault root")
+    parser.add_argument("--journal", help="Specific template-switch journal (defaults to latest)")
+    parser.add_argument("--dry-run", action="store_true", help="show missing Bases without copying")
+    args = parser.parse_args()
 
-    bases = V / "00-CORE" / "Bases"
-    live_n = len(list(bases.glob("*.base"))) if bases.exists() else 0
-    print(f"Live 00-CORE/Bases/: {live_n} .base file(s)")
+    vault = Path(args.vault).resolve()
+    plugin_dir = vault / ".obsidian/plugins/bob-workspace"
+    if not plugin_dir.is_dir():
+        parser.error("BOB Workspace plugin folder is missing from the selected vault")
+    journals = sorted(plugin_dir.glob("template-switch-*.json"), key=lambda p: p.stat().st_mtime)
+    journal = Path(args.journal).resolve() if args.journal else (journals[-1] if journals else None)
+    if not journal or not journal.is_file() or not journal.is_relative_to(plugin_dir.resolve()):
+        parser.error("no valid template-switch journal found in the plugin folder")
 
-    archives = sorted(
-        (d for d in (V / "00-CORE").glob("Bases-archive-bob-workspace-*")
-         if d.is_dir() and any(d.glob("*.base"))),
-        key=lambda d: d.name, reverse=True)
-
-    if not archives:
-        if live_n:
-            print("  No archive found and Bases populated -> nothing to restore (healthy).")
-        else:
-            print("  WARNING: Bases empty and NO archive to restore from -> "
-                  "re-run bob-workspace-bootstrap to regenerate from the datamodel.")
-    else:
-        src = archives[0]
-        missing = [p for p in src.glob("*.base") if not (bases / p.name).exists()]
-        print(f"  Newest archive: {src.name} ({len(list(src.glob('*.base')))} .base)")
-        print(f"  {'would restore' if args.dry_run else 'restoring'} "
-              f"{len(missing)} missing .base file(s)")
-        if not args.dry_run and missing:
-            bases.mkdir(parents=True, exist_ok=True)
-            for p in missing:
-                (bases / p.name).write_bytes(p.read_bytes())
-            print(f"  restored {len(missing)} file(s) to 00-CORE/Bases/")
-
-    js = V / "00-CORE" / "Schemas" / "json-schema"
-    js_n = len(list(js.glob("*.json"))) if js.exists() else 0
-    print(f"Live 00-CORE/Schemas/json-schema/: {js_n} schema(s)")
-    regen = V / "00-CORE" / "Schemas" / "regenerate.py"
-    if regen.exists():
-        cmd = ["uv", "run", str(regen),
-               "--bootstrap-from-datamodel", "--write-source", "--write"]
-        if args.dry_run:
-            print("  would regenerate schemas: regenerate.py --bootstrap-from-datamodel "
-                  "--write-source --write")
-        else:
-            print("  regenerating schemas from DATAMODEL-FULL...")
-            r = subprocess.run(cmd, cwd=str(V), capture_output=True, text=True)
-            tail = (r.stdout.strip().splitlines() or ["(no output)"])[-1]
-            print(f"    {tail}")
-    else:
-        print("  WARNING: 00-CORE/Schemas/regenerate.py not found.")
-
-    print("\nDone. Reload Obsidian; base-backed widgets and validation should resolve.")
+    data = json.loads(journal.read_text(encoding="utf-8"))
+    moves = data.get("moves") or []
+    if not isinstance(moves, list):
+        parser.error("journal moves must be an array")
+    restored = 0
+    for move in moves:
+        if not isinstance(move, dict):
+            continue
+        from_name, to_name = move.get("from"), move.get("to")
+        if not isinstance(from_name, str) or not isinstance(to_name, str) or not from_name.lower().endswith(".base"):
+            continue
+        target = inside_vault(vault, from_name)
+        archived = inside_vault(vault, to_name)
+        if target.exists() or not archived.is_file():
+            continue
+        print(f"{'Would restore' if args.dry_run else 'Restoring'} {target.relative_to(vault)} from {archived.relative_to(vault)}")
+        if not args.dry_run:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(archived, target)
+        restored += 1
+    print(f"{restored} missing Base file(s) {'found' if args.dry_run else 'restored'} from {journal.name}")
+    if restored and not args.dry_run:
+        print("Reload BOB Workspace. Use its Data model > Regenerate action if schema outputs also need repair.")
     return 0
 
 

@@ -28,7 +28,7 @@ Toggles schema-driven rendering and points at the YAML source folder owned by [[
 { "enabled": true, "folder": "00-CORE/Schemas/source" }
 ```
 
-When `enabled: true`, entity field types / enums / status lifecycles come from the schemas (parsed from DATAMODEL-FULL.md), so this file does not re-declare them.
+When `enabled: true`, entity fields and enums come from canonical YAML files in the configured schema source folder, so `workspace.json` does not re-declare them.
 
 ## 2. `navigation`
 
@@ -122,7 +122,7 @@ Maps an entity to its Obsidian `.base` file. This is where composition delegates
 { "contact": { "file": "00-CORE/Bases/People.base" } }
 ```
 
-Authoring `.base` files themselves is out of scope — use the [[obsidian-bases]] skill. This section only wires an existing `.base` to an entity for `base-link` / `base-embed` widgets.
+This section wires an existing `.base` to an entity for `base-link` / `base-embed` widgets. The sibling bootstrap skill's `bases` route has a standalone example for authoring a basic `.base` file.
 
 ## 6. `settings`
 

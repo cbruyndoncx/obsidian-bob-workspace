@@ -39,6 +39,8 @@ interface RawWidgetSource {
   valueField?: string;
   labels?: JsonValue[];
   filters?: RawBaseFilter;
+  /** Ignore the selected Base view filter while keeping its global filters. */
+  ignoreViewFilter?: boolean;
   groupBy?: string;
   sort?: RawWidgetSortItem | RawWidgetSortItem[];
   limit?: number;
@@ -59,6 +61,7 @@ type NormalizedWidgetSource = {
   field?: string | null;
   labels?: JsonValue[] | null;
   filters?: any;
+  ignoreViewFilter?: boolean;
   groupBy?: string | null;
   sort?: any;
   limit?: number | null;
@@ -170,6 +173,7 @@ export function normalizeWidgetSourceConfig(source: RawWidgetSource | string | n
     field: source.field || source.valueField || null,
     labels: Array.isArray(source.labels) ? source.labels : null,
     filters: source.filters || null,
+    ignoreViewFilter: source.ignoreViewFilter === true,
     groupBy: source.groupBy || null,
     sort: source.sort || null,
     limit: source.limit || null,
@@ -311,7 +315,7 @@ export async function resolveWidgetSource(app: App, source: unknown, fallbackEnt
     return { entityKey: entityKey || null, def: null, entities: [], warnings, source: normalized, metadata, displayFields: [] };
   }
   let def = ENTITIES[entityKey];
-  let entities = listEntities(app, entityKey);
+  let entities = listEntities(app, entityKey, { ignoreViewFilter: normalized.ignoreViewFilter });
   if (basePath) {
     const baseFile = app.vault.getAbstractFileByPath(basePath);
     if (!(baseFile instanceof obsidian.TFile)) {
@@ -356,4 +360,3 @@ export async function resolveWidgetSource(app: App, source: unknown, fallbackEnt
     displayFields: Array.isArray(def?.fields) ? def.fields : [],
   };
 }
-

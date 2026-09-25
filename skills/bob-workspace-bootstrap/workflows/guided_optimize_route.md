@@ -19,12 +19,12 @@ Agent drives the loop: pick next entity in current domain → analyze → presen
 
 ## Pre-condition
 
-- `00-CORE/Schemas/source/*.yaml` files exist
+- `{schema-folder}/*.yaml` files exist
 - User has run the plugin's "Regenerate" at least once successfully
 
 ## Pacing rule
 
-Per domain → per entity within domain → per decision per entity. Never cross domains until current is closed. State log at `99-TMP/OUTPUT/bob-workspace-optimize-state.md`.
+Per domain → per entity within domain → per decision per entity. Never cross domains until current is closed. State log at `BOB Workspace/Reports/bob-workspace-optimize-state.md`.
 
 ## Steps
 
@@ -81,4 +81,4 @@ Continue until all domains complete or user stops. State preserved for resume.
 - Decisions A/B/C closed for each entity in each domain
 - All accepted changes written into existing YAML source (additive merge only)
 - User reminded to click Regenerate after each domain
-- Zero writes outside `00-CORE/Schemas/source/` and `99-TMP/OUTPUT/`
+- Zero writes outside `{schema-folder}/` and `BOB Workspace/Reports/`

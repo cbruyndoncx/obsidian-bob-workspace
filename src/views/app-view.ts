@@ -2084,6 +2084,7 @@ export class BobAppView extends obsidian.ItemView {
         view: normalized.view,
         section: normalized.section || null,
         filters: normalized.filters || null,
+        ignoreViewFilter: normalized.ignoreViewFilter === true,
         groupBy: normalized.groupBy || null,
         sort: normalized.sort || null,
         limit: normalized.limit,
@@ -2239,7 +2240,7 @@ export class BobAppView extends obsidian.ItemView {
         const col = cols.createDiv({ cls: 'bob-dash-col' });
         for (const card of (Array.isArray(colDef) ? colDef : [colDef])) {
           if (this._renderSeq !== dashboardRenderSeq) return;
-          await this._renderConfigCard(col, card, getWidgetEntities, dashboardContext);
+          await this._renderConfigCard(col, card, getWidgetEntities, dashboardContext, surfaceId);
         }
       }
     }
@@ -2252,7 +2253,7 @@ export class BobAppView extends obsidian.ItemView {
       const extra = root.createDiv({ cls: 'bob-dash-cols' });
       for (const card of cr.cards) {
         if (this._renderSeq !== dashboardRenderSeq) return;
-        await this._renderConfigCard(extra.createDiv({ cls: 'bob-dash-col' }), card, getWidgetEntities, dashboardContext);
+        await this._renderConfigCard(extra.createDiv({ cls: 'bob-dash-col' }), card, getWidgetEntities, dashboardContext, surfaceId);
       }
     }
 
@@ -2268,10 +2269,10 @@ export class BobAppView extends obsidian.ItemView {
     if (config.legend === 'finance-statements') this._renderFinanceStatementLegend(root);
   }
 
-  async _renderConfigCard(col: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities, dashboardContext: DashboardState = {}) {
+  async _renderConfigCard(col: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities, dashboardContext: DashboardState = {}, surfaceId = '') {
     try {
       const resolvedCard = applyDashboardContext(card, dashboardContext);
-      if (await this._renderWidgetByKind(col, resolvedCard, getWidgetEntities)) return;
+      if (await this._renderWidgetByKind(col, resolvedCard, getWidgetEntities, surfaceId)) return;
       const rows = await this._resolveCardRows(resolvedCard, getWidgetEntities);
       this._dashCardSection(col, resolvedCard.title, rows, resolvedCard.empty || '');
     } catch (error) {
@@ -2668,11 +2669,11 @@ export class BobAppView extends obsidian.ItemView {
     ];
   }
 
-  async _renderWidgetByKind(col: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
+  async _renderWidgetByKind(col: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities, surfaceId = '') {
     const kind = String(card.kind || '').trim().toLowerCase();
     if (!kind) return false;
     if (kind === 'kanban') {
-      await this._renderKanbanWidget(col, card, getWidgetEntities);
+      await this._renderKanbanWidget(col, card, getWidgetEntities, surfaceId);
       return true;
     }
     if (kind === 'list') {
@@ -3692,7 +3693,7 @@ export class BobAppView extends obsidian.ItemView {
     footer.createSpan({ text: `Peak ${Math.round(max * 10) / 10}` });
   }
 
-  async _renderKanbanWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities) {
+  async _renderKanbanWidget(root: HTMLElement, card: CardLike, getWidgetEntities: GetWidgetEntities, surfaceId = '') {
     const resolved = await getWidgetEntities(this._widgetSourceSpec(card, card.entity), card.entity);
     const def = resolved.def || ENTITIES[resolved.entityKey || card.entity];
     const entities = resolved.entities || [];
@@ -3708,6 +3709,11 @@ export class BobAppView extends obsidian.ItemView {
       ? card.cardMetaFields
       : (Array.isArray(card.metaFields) && card.metaFields.length ? card.metaFields : [groupBy, valueField, 'company'].filter(Boolean));
     const sortMode = String(card.sort || 'mtime-desc').trim().toLowerCase();
+    const collapseStateKey = `kanbanCollapsed:${String(card.title || card.label || card.entity || 'kanban').trim()}`;
+    const dashboardState = surfaceId ? this._dashboardStateFor(surfaceId) : {};
+    const collapsedGroups = new Set<string>(Array.isArray(dashboardState[collapseStateKey])
+      ? dashboardState[collapseStateKey].map((value: unknown) => String(value))
+      : []);
 
     const normalizeGroup = (entry: KanbanGroupInput) => {
       if (entry == null) return null;
@@ -3778,10 +3784,42 @@ export class BobAppView extends obsidian.ItemView {
       const col = board.createDiv({ cls: 'bob-kanban-col' });
       if (overLimit) col.addClass('bob-kanban-col-over-limit');
       col.dataset.stage = group.value;
+      col.dataset.count = String(items.length);
+      let collapsed = collapsedGroups.has(group.value);
+      if (collapsed) col.addClass('bob-kanban-col-collapsed');
       const head = col.createDiv({ cls: 'bob-kanban-col-head' });
-      head.createDiv({ cls: 'bob-kanban-col-title', text: group.label });
+      const headRow = head.createDiv({ cls: 'bob-kanban-col-head-row' });
+      headRow.createDiv({ cls: 'bob-kanban-col-title', text: group.label });
+      headRow.createSpan({ cls: 'bob-kanban-col-count', text: String(items.length), attr: { 'aria-label': `${items.length} jobs` } });
+      const collapseButton = headRow.createEl('button', {
+        cls: 'bob-kanban-collapse-button',
+        text: collapsed ? '›' : '‹',
+        attr: {
+          type: 'button',
+          'aria-label': `${collapsed ? 'Expand' : 'Collapse'} ${group.label} stage`,
+          'aria-expanded': String(!collapsed),
+          title: `${collapsed ? 'Expand' : 'Collapse'} ${group.label}`,
+        },
+      });
+      collapseButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        collapsed = !collapsed;
+        col.toggleClass('bob-kanban-col-collapsed', collapsed);
+        collapseButton.setText(collapsed ? '›' : '‹');
+        collapseButton.setAttr('aria-label', `${collapsed ? 'Expand' : 'Collapse'} ${group.label} stage`);
+        collapseButton.setAttr('aria-expanded', String(!collapsed));
+        collapseButton.setAttr('title', `${collapsed ? 'Expand' : 'Collapse'} ${group.label}`);
+        if (collapsed) collapsedGroups.add(group.value);
+        else collapsedGroups.delete(group.value);
+        if (surfaceId) {
+          dashboardState[collapseStateKey] = [...collapsedGroups];
+          void this._persistDashboardState();
+        }
+      });
       const headMeta = head.createDiv({ cls: 'bob-kanban-col-meta' });
-      headMeta.setText(`${items.length}${valueField ? ` · ${fmtValue(columnValue, 'currency')}` : ''}`);
+      headMeta.setText(valueField ? fmtValue(columnValue, 'currency') : '');
+      headMeta.hidden = !valueField;
       if (groupLimit > 0) {
         const limitChip = head.createSpan({ cls: 'bob-kanban-col-limit', text: `${items.length}/${groupLimit}` });
         if (overLimit) limitChip.addClass('is-over-limit');
@@ -3796,9 +3834,41 @@ export class BobAppView extends obsidian.ItemView {
         try {
           const file = this.app.vault.getAbstractFileByPath(filePath);
           if (!(file instanceof obsidian.TFile)) return;
+          const currentStatus = String(this.app.metadataCache.getFileCache(file)?.frontmatter?.[groupBy] ?? '');
+          if (currentStatus === group.value) return;
+          const reasonStatuses = Array.isArray(card.reasonPromptStatuses)
+            ? card.reasonPromptStatuses.map((status: unknown) => String(status))
+            : [];
+          let closeReason: string | null = null;
+          if (reasonStatuses.includes(group.value)) {
+            closeReason = await new Promise<string | null>((resolve) => {
+              new BobPromptModal(this.app, {
+                title: `Reason for ${group.label.toLowerCase()}`,
+                placeholder: 'Add a short note for the job history',
+                cta: `Move to ${group.label}`,
+                onSubmit: resolve,
+              }).open();
+            });
+            if (!closeReason) return;
+          }
           await this.app.fileManager.processFrontMatter(file, (fm) => {
             fm[groupBy] = group.value;
           });
+          if (closeReason) {
+            const content = await this.app.vault.read(file);
+            const lines = content.split('\n');
+            const headingIndex = lines.findIndex((line) => line.trim() === '## Activity');
+            let activityBody = '';
+            if (headingIndex >= 0) {
+              let endIndex = lines.length;
+              for (let i = headingIndex + 1; i < lines.length; i++) {
+                if (/^##\s/.test(lines[i])) { endIndex = i; break; }
+              }
+              activityBody = lines.slice(headingIndex + 1, endIndex).join('\n').trim();
+            }
+            const entry = `- ${ymd(new Date())} — Moved to ${group.label}: ${closeReason}`;
+            await this.app.vault.modify(file, replaceSection(content, '## Activity', [activityBody, entry].filter(Boolean).join('\n')));
+          }
           new obsidian.Notice(`Moved to ${group.label}`);
           // A deal reaching a won stage is the trigger for partner commission.
           // Fire-and-report: a failure here must not make the move look failed.

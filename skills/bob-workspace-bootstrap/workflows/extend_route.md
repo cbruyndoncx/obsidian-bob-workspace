@@ -7,7 +7,7 @@ Vault already has some YAML source files. Detect, preserve verbatim, add new YAM
 `scripts/extend.py` drives both passes:
 
 ```bash
-# Propose — writes 99-TMP/OUTPUT/bob-workspace-bootstrap-merge.md, no other writes
+# Propose — writes BOB Workspace/Reports/bob-workspace-bootstrap-merge.md, no other writes
 uv run scripts/extend.py --vault <path> --propose
 
 # Execute — writes YAML for the selected entities via generate_yaml.py (no overwrite)
@@ -36,7 +36,7 @@ For Covered entities, list fields observed in census but not in existing YAML. S
 
 ### 5. Write merge report
 
-`99-TMP/OUTPUT/bob-workspace-bootstrap-merge.md`:
+`BOB Workspace/Reports/bob-workspace-bootstrap-merge.md`:
 - Covered entities (preserved)
 - Uncovered entities (will write)
 - Drift candidates per Covered entity (optimize later)
@@ -54,7 +54,7 @@ uv run scripts/generate_yaml.py --vault <vault> --entity <slug> \
   --location-pattern "<folder>" --domain <domain>
 ```
 
-Script refuses to overwrite existing YAML. Field-name dedup is built in — required after the dup-`status` bug in v2.x where baseline fields collided with observed enum fields and broke plugin Regenerate.
+The script refuses to overwrite existing YAML. It keeps observed field values and avoids duplicate field names.
 
 ### 8. Tell user
 
@@ -66,4 +66,4 @@ Script refuses to overwrite existing YAML. Field-name dedup is built in — requ
 - New YAML written only for Uncovered entities
 - No existing YAML touched
 - User offered `guided-optimize` follow-up
-- Zero writes outside `00-CORE/Schemas/source/` and `99-TMP/OUTPUT/`
+- Zero writes outside `{schema-folder}/` and `BOB Workspace/Reports/`

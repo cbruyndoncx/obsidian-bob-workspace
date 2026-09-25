@@ -5,11 +5,9 @@
 # ///
 """Generate a single YAML schema source file for one entity, deduped and validated.
 
-Reads vault frontmatter census for the named entity, infers fields, appends baseline
-system fields (status / created / tags), then DEDUPES by field name before writing —
-this prevents the BOB Workspace plugin's `regenerateSchemaOutputs` from failing with
-'duplicate field' errors when a baseline field name (e.g. `status`) collides with an
-observed enum field of the same name.
+Reads vault frontmatter census for the named entity and infers fields from observed
+notes. Adds the required `type` field when needed, then deduplicates by field name.
+It does not impose a generic status enum or required dates on an unrelated vault.
 
 Usage:
     uv run generate_yaml.py --vault <path> --entity <slug> [--location-pattern <p>]
@@ -25,12 +23,10 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent))
 from frontmatter_census import census  # noqa: E402
+from workspace_paths import output_path, schema_file, schema_source  # noqa: E402
 
 BASELINE_FIELDS = [
     {"name": "type", "type": "string", "required": True},
-    {"name": "status", "type": "string", "enum": ["draft", "review", "final", "archived"]},
-    {"name": "created", "type": "string", "format": "date", "required": True},
-    {"name": "tags", "type": "array"},
 ]
 
 
@@ -77,12 +73,12 @@ def build_schema(
     include_baseline: bool,
 ) -> dict:
     cen = census(vault, min_count=1)
-    ent = cen["entities"].get(entity, {})
+    ent = cen["entities"].get(type_value, {})
     observed = ent.get("fields", {})
 
     fields: list[dict] = []
     # Observed first (preserves enums + presence-derived required flags)
-    SYS = {"type", "tags"}  # baseline rewrites these
+    SYS = {"type"}  # the required identity field is controlled by the baseline
     sorted_obs = sorted(observed.items(), key=lambda kv: (-kv[1]["presence_ratio"], kv[0]))
     for fname, finfo in sorted_obs:
         if fname.startswith("_"):
@@ -92,13 +88,12 @@ def build_schema(
         fields.append(field_from_census(fname, finfo))
 
     if include_baseline:
-        fields = BASELINE_FIELDS + fields
+        fields = fields + BASELINE_FIELDS
 
     fields = dedupe(fields)
 
     # Pick a real display/title field as the primary. The plugin uses
-    # key_fields[0] (else the first field) as the primary/basename — without this
-    # the baseline `status` field would become the record title. Prefer an
+    # key_fields[0] (else the first field) as the primary/basename. Prefer an
     # obvious name/title field; fall back to the first non-baseline field.
     field_names = [f["name"] for f in fields]
     preferred = [
@@ -141,8 +136,8 @@ def main() -> int:
     p.add_argument("--label", help="Display label (default: Title Case of entity)")
     p.add_argument("--location-pattern", required=True, help="Canonical folder pattern (e.g. 30-CLIENTS/{client-id}/00-PROFILE/)")
     p.add_argument("--domain", help="Annotation for downstream composition (optional)")
-    p.add_argument("--output", help="Path to write YAML (default: <vault>/00-CORE/Schemas/source/<entity>.yaml)")
-    p.add_argument("--no-baseline", action="store_true", help="Skip baseline status/created/tags fields")
+    p.add_argument("--output", help="Vault-relative YAML path (default: the schema folder configured in workspace.json)")
+    p.add_argument("--no-baseline", action="store_true", help="Do not inject the required type field")
     p.add_argument("--force", action="store_true", help="Overwrite existing file")
     args = p.parse_args()
 
@@ -153,7 +148,17 @@ def main() -> int:
 
     type_value = args.type_value or args.entity
     label = args.label or " ".join(w.capitalize() for w in args.entity.split("-"))
-    out = Path(args.output) if args.output else (vault / "00-CORE/Schemas/source" / f"{args.entity}.yaml")
+    try:
+        out = output_path(vault, args.output) if args.output else schema_file(vault, args.entity)
+    except (ValueError, OSError) as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
+    if out.parent != schema_source(vault) or out.suffix.lower() not in {".yaml", ".yml"}:
+        print(f"ERROR: YAML output must be inside the configured schema folder: {schema_source(vault)}", file=sys.stderr)
+        return 2
+    if "`" in args.location_pattern:
+        print("ERROR: location_pattern must be a concrete vault path without Markdown backticks", file=sys.stderr)
+        return 2
 
     if out.exists() and not args.force:
         print(f"ERROR: file exists (use --force to overwrite): {out}", file=sys.stderr)

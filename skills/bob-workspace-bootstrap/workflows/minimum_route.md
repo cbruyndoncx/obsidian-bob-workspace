@@ -1,6 +1,6 @@
 # Minimum Route Workflow
 
-First-pass bootstrap. Goal: write canonical YAML source files to `00-CORE/Schemas/source/` so the user can click "Regenerate" in BOB Workspace settings and get a working UI.
+First-pass bootstrap. Write canonical YAML source files to `{schema-folder}/` so the plugin can load the entity definitions after regeneration. Add a workspace layout through the companion compose skill or BOB's template picker.
 
 ## Pipeline
 
@@ -22,7 +22,7 @@ Census vault → propose YAML → user confirms → write YAML → tell user to 
 
 1. Verify `<vault>/.obsidian/` exists; abort if not.
 2. Verify BOB Workspace plugin installed (`<vault>/.obsidian/plugins/bob-workspace/manifest.json`); warn if absent.
-3. Read plugin `data.json` to find the configured schemas folder (default `00-CORE/Schemas/source`).
+3. Resolve `{schema-folder}` from the installed plugin's `workspace.json` using `scripts/workspace_paths.py`: `schemas.folder`, then `settings.schemasFolder`, then `00-CORE/Schemas/source`. Do not use `data.json` for this setting.
 4. Locate templates folder via `.obsidian/templates.json` or `.obsidian/plugins/templater-obsidian/data.json`. Fall back to common defaults.
 5. Snapshot existing YAML source files (treat all as authoritative).
 
@@ -40,6 +40,7 @@ For each detected entity above threshold:
 entity: <type slug>
 type_value: <type value>      # if differs from entity
 label: <Display>
+location_pattern: <concrete vault-relative folder pattern>
 domain: <inferred-domain>     # annotation for downstream compose skill
 fields:
   - name: <field>
@@ -52,10 +53,11 @@ fields:
 ```
 
 Skip entity if a YAML source file already exists (handled by `extend` route).
+Resolve the proposed `location_pattern` from observed note paths. The plugin reads it literally; context keys and Markdown formatting do not belong in YAML values.
 
 ### 4. Write proposal report
 
-`99-TMP/OUTPUT/bob-workspace-bootstrap-proposal.md` with:
+`BOB Workspace/Reports/bob-workspace-bootstrap-proposal.md` with:
 - Detected types + counts + dominant folders + enum candidates
 - Existing YAML source files preserved (listed verbatim)
 - New YAML files to be written (full paths)
@@ -78,7 +80,7 @@ uv run scripts/generate_yaml.py \
   --domain <domain-slug>
 ```
 
-The script handles: baseline fields injection (`type`, `status`, `created`, `tags`), observed-field merging from census, **field-name deduplication** (first occurrence wins, `required:` flag merged in from any duplicate), and refuses overwrite without `--force`. Never hand-roll the field list inline — duplicate field names cause the plugin's `regenerateSchemaOutputs` to abort with `Schema validation failed`.
+The script preserves observed field types and enum values, adds the required `type` field if needed, deduplicates field names, and refuses to overwrite an existing schema without `--force`. It rejects output outside the configured schema folder.
 
 ### 6b. UI is NOT written here — hand off
 
@@ -90,7 +92,7 @@ The `domain` annotation written into each YAML source (step 3) is what the compo
 
 Tell the user, verbatim:
 
-> Wrote N new YAML source files to `00-CORE/Schemas/source/`. Open Obsidian → Settings → **BOB Workspace** → click **Regenerate**. The plugin will produce fileClasses, JSON Schemas, and update DATAMODEL.md / DATAMODEL-FULL.md. If regen fails with "Schema validation failed", reply with the error and I will fix the offending YAML.
+> Wrote N new YAML source files to `{schema-folder}/`. Open Obsidian → Settings → **BOB Workspace** → click **Regenerate**. The plugin will produce fileClasses, JSON Schemas, and update DATAMODEL.md / DATAMODEL-FULL.md. If regen fails with "Schema validation failed", reply with the error and I will fix the offending YAML.
 >
 > Your entities now exist but the workspace panel needs a UI. To get one: run the plugin command **"Apply workspace template…"** to drop in a starter layout (CRM / BOB / Cadence / minimal — note this replaces your current `workspace.json`, keeping one rolling `workspace.backup.json`), or use the **[[bob-workspace-compose]]** skill to add/compose dashboards with durable timestamped backups.
 
@@ -100,5 +102,5 @@ Tell the user, verbatim:
 - N YAML source files written under the configured schemas folder
 - No existing YAML file overwritten
 - `workspace.json` NOT touched (UI handed off to [[bob-workspace-compose]] / the plugin's Apply-template command)
-- Zero writes outside `00-CORE/Schemas/source/` and `99-TMP/OUTPUT/`
+- Zero writes outside `{schema-folder}/` and `BOB Workspace/Reports/`
 - User clearly told to click Regenerate in plugin settings

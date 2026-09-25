@@ -1,10 +1,10 @@
 # Bases Route Workflow
 
-Generates one `.base` file per entity under `00-CORE/Bases/`. Reads YAML source files for the entity field inventory, follows [[obsidian-bases]] conventions for the `.base` shape.
+Generates one `.base` file per entity under `{bases-folder}/`. Reads YAML source files for the entity field inventory and uses the Base shape below. It needs no separate Bases skill.
 
 ## Pre-condition
 
-- YAML source files for the target entities exist under `00-CORE/Schemas/source/`
+- YAML source files for the target entities exist under `{schema-folder}/`
 - Plugin has run Regenerate at least once (so the entity is materialized in fileClasses + JSON Schemas)
 
 ## Inputs
@@ -14,13 +14,13 @@ Generates one `.base` file per entity under `00-CORE/Bases/`. Reads YAML source 
 
 ## Steps
 
-### 1. Read obsidian-bases conventions
+### 1. Resolve paths and inspect existing Bases
 
-Before writing, read `00-CORE/Agents/skills/obsidian-bases/references/examples.md` and `functions.md` to confirm current `.base` syntax. Do NOT guess — Bases YAML shape evolves with the Obsidian version.
+Resolve `{schema-folder}` and `{bases-folder}` from the vault's installed BOB `workspace.json` using `scripts/workspace_paths.py`. If the vault already has a `.base` file, inspect its syntax. Use the minimal example below for new files; it uses only fields supported by Obsidian Bases and BOB Workspace.
 
 ### 2. Inventory existing Bases
 
-List every `.base` file under `00-CORE/Bases/`. For each, peek at the `filters:` line to capture the `note.type` it serves. Build the set of already-covered types.
+List every `.base` file under `{bases-folder}/`. For each, peek at the `filters:` line to capture the `note.type` it serves. Build the set of already-covered types.
 
 ### 3. Resolve target entities
 
@@ -73,11 +73,11 @@ Rules:
 
 ### 6. Write `.base` files
 
-`00-CORE/Bases/<Entity-Label>.base`. Skip if file with same path exists.
+`{bases-folder}/<Entity-Label>.base`. Skip if file with same path exists.
 
 ### 7. Done When
 
 - One `.base` per target entity written
 - No existing `.base` overwritten
-- All written files follow obsidian-bases conventions read in Step 1
+- All written files use the Base shape in this workflow and open in Obsidian
 - User can open Bases in Obsidian and see the entity records listed

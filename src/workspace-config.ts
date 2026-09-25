@@ -117,6 +117,23 @@ export function validateWorkspaceConfig(config: WorkspaceConfig): WorkspaceConfi
   if (config.bases != null && (typeof config.bases !== 'object' || Array.isArray(config.bases))) {
     throw new Error('bases must be an object keyed by entity type');
   }
+  if (config.statusFolderRouting != null && (typeof config.statusFolderRouting !== 'object' || Array.isArray(config.statusFolderRouting))) {
+    throw new Error('statusFolderRouting must be an object keyed by frontmatter type');
+  }
+  for (const [recordType, route] of Object.entries(config.statusFolderRouting || {})) {
+    if (!recordType || !route || typeof route !== 'object' || Array.isArray(route)) {
+      throw new Error(`statusFolderRouting "${recordType}" must be an object`);
+    }
+    const folders = (route as { folders?: unknown }).folders;
+    if (!folders || typeof folders !== 'object' || Array.isArray(folders) || !Object.keys(folders).length) {
+      throw new Error(`statusFolderRouting "${recordType}" needs a non-empty folders map`);
+    }
+    for (const [status, folder] of Object.entries(folders)) {
+      if (!status || typeof folder !== 'string' || !folder.trim() || folder.startsWith('/') || folder.split('/').includes('..')) {
+        throw new Error(`statusFolderRouting "${recordType}" has an invalid folder for status "${status}"`);
+      }
+    }
+  }
   for (const [entityKey, base] of Object.entries(config.bases || {})) {
     if (!base || typeof base !== 'object' || Array.isArray(base) || !String(base.file || (base as WorkspaceBaseRef & { base?: string }).base || '').trim()) {
       throw new Error(`bases "${entityKey}" needs a file path`);
@@ -202,7 +219,7 @@ export function dashboardWidgetSchema(kind: string): DashboardWidgetSchema | nul
       label: 'Kanban',
       allowSourceOnly: true,
       requiresEntityOrSource: true,
-      supports: ['entity', 'source', 'groupBy', 'groups', 'columns', 'sort', 'titleFields', 'metaFields', 'valueField'],
+      supports: ['entity', 'source', 'groupBy', 'groups', 'columns', 'sort', 'titleFields', 'metaFields', 'valueField', 'reasonPromptStatuses'],
     },
     'base-link': {
       label: 'Base link',

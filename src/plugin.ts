@@ -59,6 +59,7 @@ interface StoredReminder extends Reminder {
 
 export class BobPlugin extends obsidian.Plugin {
   settings: BobSettings;
+  private statusFolderRouteSnapshot = new Map<string, string>();
   // Set by the Modules settings "Edit dashboard" action to deep-link the Surface
   // Designer to a specific surface; consumed (once) by renderDashboardEditor.
   pendingDesignerSurface: string | null = null;
@@ -80,6 +81,19 @@ export class BobPlugin extends obsidian.Plugin {
     this.registerEvent(this.app.vault.on('delete', dropScanCache));
     this.registerEvent(this.app.vault.on('rename', dropScanCache));
     this.registerEvent(this.app.metadataCache.on('changed', dropScanCache));
+
+    // A configured record lifecycle can route notes to matching folders after
+    // the status frontmatter changes. Seed a snapshot after startup so enabling
+    // routing never moves existing files as a side effect of plugin load.
+    this.app.workspace.onLayoutReady(() => { this.seedStatusFolderRouteSnapshot(); });
+    this.registerEvent(this.app.metadataCache.on('changed', (file) => {
+      if (file instanceof obsidian.TFile) void this.routeFileForStatus(file);
+    }));
+    this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
+      const priorStatus = this.statusFolderRouteSnapshot.get(oldPath);
+      this.statusFolderRouteSnapshot.delete(oldPath);
+      if (priorStatus !== undefined) this.statusFolderRouteSnapshot.set(file.path, priorStatus);
+    }));
 
     // Partner certifications/registrations expire silently: the date sits in
     // frontmatter and nothing ever looks at it, so a partner drops out of a tier
@@ -320,6 +334,54 @@ export class BobPlugin extends obsidian.Plugin {
     // Optional: open BOB Workspace Home on Obsidian startup.
     if (this.settings.openOnStartup) {
       this.app.workspace.onLayoutReady(() => this.openApp('home'));
+    }
+  }
+
+  private statusFolderRouteSnapshotSeeded = false;
+
+  private seedStatusFolderRouteSnapshot() {
+    this.statusFolderRouteSnapshot.clear();
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      const status = fm?.status;
+      if (fm?.type && status != null) this.statusFolderRouteSnapshot.set(file.path, String(status));
+    }
+    this.statusFolderRouteSnapshotSeeded = true;
+  }
+
+  private async routeFileForStatus(file: obsidian.TFile) {
+    if (!this.statusFolderRouteSnapshotSeeded) return;
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+    const type = String(fm?.type || '');
+    const route = WORKSPACE_CONFIG.statusFolderRouting?.[type];
+    if (!route) return;
+    const statusField = route.statusField || 'status';
+    const status = String(fm?.[statusField] ?? '');
+    if (!status) return;
+    const previousStatus = this.statusFolderRouteSnapshot.get(file.path);
+    this.statusFolderRouteSnapshot.set(file.path, status);
+    if (previousStatus === undefined || previousStatus === status) return;
+
+    const destination = route.folders[status]?.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    if (!destination || file.parent?.path === destination) return;
+    const targetPath = `${destination}/${file.name}`;
+    if (this.app.vault.getAbstractFileByPath(targetPath)) {
+      new obsidian.Notice(`BOB Workspace: cannot auto-file ${file.name}; a note already exists at ${targetPath}.`);
+      return;
+    }
+
+    try {
+      const parts = destination.split('/');
+      let path = '';
+      for (const part of parts) {
+        path = path ? `${path}/${part}` : part;
+        if (!this.app.vault.getAbstractFileByPath(path)) await this.app.vault.createFolder(path);
+      }
+      await this.app.fileManager.renameFile(file, targetPath);
+      this.statusFolderRouteSnapshot.delete(file.path);
+      this.statusFolderRouteSnapshot.set(targetPath, status);
+    } catch (error) {
+      new obsidian.Notice(`BOB Workspace: could not auto-file ${file.name} — ${String(error)}`);
     }
   }
 
@@ -676,5 +738,3 @@ export class BobPlugin extends obsidian.Plugin {
     await reloadEntityConfiguration(this.app, this.settings);
   }
 }
-
-

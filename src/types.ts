@@ -332,6 +332,11 @@ export interface WorkspaceBaseRef {
 export interface WorkspaceConfig {
   schemas?: WorkspaceSchemasConfig;
   bases?: Record<string, WorkspaceBaseRef>;
+  /** Optional status-driven folder routing, keyed by frontmatter `type` value. */
+  statusFolderRouting?: Record<string, {
+    statusField?: string;
+    folders: Record<string, string>;
+  }>;
   navigation?: WorkspaceNavigationConfig;
   workbookGroups?: WorkbookExportGroup[];
   dashboards?: Record<string, DashboardConfig>;
@@ -371,4 +376,3 @@ export interface SchemaSource {
 }
 
 /* ── Misc shared shapes ───────────────────────────────────── */
-

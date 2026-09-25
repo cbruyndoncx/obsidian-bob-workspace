@@ -126,8 +126,8 @@ export const DASHBOARD_WIDGET_CATALOG: DashboardWidgetCatalogEntry[] = [
     id: 'kanban',
     label: 'Kanban board',
     status: 'implemented',
-    description: 'Grouped entity board for stage-style workflows. Supports group ordering, custom labels, WIP limits, drag/drop stage changes and per-column totals.',
-    config: ['entity', 'source', 'groupBy', 'groups', 'columns', 'sort', 'titleFields', 'metaFields', 'cardTitleFields', 'cardMetaFields', 'valueField', 'wipLimit'],
+    description: 'Grouped entity board for stage-style workflows. Supports group ordering, custom labels, collapsible columns, WIP limits, drag/drop stage changes and per-column totals.',
+    config: ['entity', 'source', 'groupBy', 'groups', 'columns', 'sort', 'titleFields', 'metaFields', 'cardTitleFields', 'cardMetaFields', 'valueField', 'wipLimit', 'reasonPromptStatuses'],
     examples: ['crm.pipeline'],
   },
   {

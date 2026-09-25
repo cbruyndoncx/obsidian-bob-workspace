@@ -22034,8 +22034,8 @@ var DASHBOARD_WIDGET_CATALOG = [
     id: "kanban",
     label: "Kanban board",
     status: "implemented",
-    description: "Grouped entity board for stage-style workflows. Supports group ordering, custom labels, WIP limits, drag/drop stage changes and per-column totals.",
-    config: ["entity", "source", "groupBy", "groups", "columns", "sort", "titleFields", "metaFields", "cardTitleFields", "cardMetaFields", "valueField", "wipLimit"],
+    description: "Grouped entity board for stage-style workflows. Supports group ordering, custom labels, collapsible columns, WIP limits, drag/drop stage changes and per-column totals.",
+    config: ["entity", "source", "groupBy", "groups", "columns", "sort", "titleFields", "metaFields", "cardTitleFields", "cardMetaFields", "valueField", "wipLimit", "reasonPromptStatuses"],
     examples: ["crm.pipeline"]
   },
   {
@@ -22860,6 +22860,23 @@ function validateWorkspaceConfig(config) {
   if (config.bases != null && (typeof config.bases !== "object" || Array.isArray(config.bases))) {
     throw new Error("bases must be an object keyed by entity type");
   }
+  if (config.statusFolderRouting != null && (typeof config.statusFolderRouting !== "object" || Array.isArray(config.statusFolderRouting))) {
+    throw new Error("statusFolderRouting must be an object keyed by frontmatter type");
+  }
+  for (const [recordType, route] of Object.entries(config.statusFolderRouting || {})) {
+    if (!recordType || !route || typeof route !== "object" || Array.isArray(route)) {
+      throw new Error(`statusFolderRouting "${recordType}" must be an object`);
+    }
+    const folders = route.folders;
+    if (!folders || typeof folders !== "object" || Array.isArray(folders) || !Object.keys(folders).length) {
+      throw new Error(`statusFolderRouting "${recordType}" needs a non-empty folders map`);
+    }
+    for (const [status, folder] of Object.entries(folders)) {
+      if (!status || typeof folder !== "string" || !folder.trim() || folder.startsWith("/") || folder.split("/").includes("..")) {
+        throw new Error(`statusFolderRouting "${recordType}" has an invalid folder for status "${status}"`);
+      }
+    }
+  }
   for (const [entityKey, base] of Object.entries(config.bases || {})) {
     if (!base || typeof base !== "object" || Array.isArray(base) || !String(base.file || base.base || "").trim()) {
       throw new Error(`bases "${entityKey}" needs a file path`);
@@ -22935,7 +22952,7 @@ function dashboardWidgetSchema(kind) {
       label: "Kanban",
       allowSourceOnly: true,
       requiresEntityOrSource: true,
-      supports: ["entity", "source", "groupBy", "groups", "columns", "sort", "titleFields", "metaFields", "valueField"]
+      supports: ["entity", "source", "groupBy", "groups", "columns", "sort", "titleFields", "metaFields", "valueField", "reasonPromptStatuses"]
     },
     "base-link": {
       label: "Base link",
@@ -28203,7 +28220,7 @@ var WIDGET_GUIDES = {
   progress: { what: "A horizontal bar filling toward a target.", use: "Progress toward a goal (e.g. days active this month).", fields: [["Field", "the value"], ["Max", "the target"], ["Suffix", "text after the number"], ["Label", "caption under the bar"]] },
   heatmap: { what: "A calendar grid coloured by activity per day.", use: "Streaks / cadence over recent days.", fields: [["Date field", "the date each record is placed on"], ["Field", "value that sets colour intensity"], ["Days", "how many days back"], ["Columns", "grid width (7 = weeks)"]] },
   "bar-chart": { what: "Bars comparing a value across groups.", use: "Counts or totals by status, owner, month\u2026", fields: [["Entity", "which records"], ["Group by", "field that defines the bars"], ["Metric", "count / sum of\u2026"], ["Field", "value to aggregate (for sum/avg)"]] },
-  kanban: { what: "A board of cards in columns you can drag between.", use: "A pipeline or status board.", fields: [["Entity", "which records"], ["Group by", "field that defines the columns"], ["Groups", "fixed column order (optional)"], ["Title/Meta fields", "what each card shows"]] },
+  kanban: { what: "A board of cards in columns you can drag between. Collapse columns from their headers to save horizontal space; collapsed columns remain drop targets.", use: "A pipeline or status board.", fields: [["Entity", "which records"], ["Group by", "field that defines the columns"], ["Groups", "fixed column order (optional)"], ["Title/Meta fields", "what each card shows"]] },
   selector: { what: "A dropdown that filters the other widgets on this dashboard.", use: "Let the viewer pick a client, stage, month\u2026", fields: [["Key", "the filter name other widgets read (required)"], ["Entity/Field", "where the options come from"], ["All label", "text for the \u201Cno filter\u201D option"]] },
   "date-range": { what: "A date-range picker that filters the dashboard.", use: "This month / last 30 days / custom.", fields: [["Key", "the filter name (required)"], ["Default", "the range selected on load"], ["Presets", "the ranges offered"]] },
   markdown: { what: "A block of formatted text.", use: "Notes, instructions, links, headings.", fields: [["Body / Text", "the markdown to render"], ["Section", "or pull text from a note heading"]] },
@@ -29667,6 +29684,7 @@ function normalizeWidgetSourceConfig(source, fallbackEntityKey = null) {
     field: source.field || source.valueField || null,
     labels: Array.isArray(source.labels) ? source.labels : null,
     filters: source.filters || null,
+    ignoreViewFilter: source.ignoreViewFilter === true,
     groupBy: source.groupBy || null,
     sort: source.sort || null,
     limit: source.limit || null
@@ -29798,7 +29816,7 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
     return { entityKey: entityKey || null, def: null, entities: [], warnings, source: normalized, metadata, displayFields: [] };
   }
   let def = ENTITIES[entityKey];
-  let entities = listEntities(app, entityKey);
+  let entities = listEntities(app, entityKey, { ignoreViewFilter: normalized.ignoreViewFilter });
   if (basePath) {
     const baseFile = app.vault.getAbstractFileByPath(basePath);
     if (!(baseFile instanceof obsidian17.TFile)) {
@@ -31504,6 +31522,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         view: normalized.view,
         section: normalized.section || null,
         filters: normalized.filters || null,
+        ignoreViewFilter: normalized.ignoreViewFilter === true,
         groupBy: normalized.groupBy || null,
         sort: normalized.sort || null,
         limit: normalized.limit,
@@ -31643,7 +31662,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         const col = cols.createDiv({ cls: "bob-dash-col" });
         for (const card of Array.isArray(colDef) ? colDef : [colDef]) {
           if (this._renderSeq !== dashboardRenderSeq) return;
-          await this._renderConfigCard(col, card, getWidgetEntities, dashboardContext);
+          await this._renderConfigCard(col, card, getWidgetEntities, dashboardContext, surfaceId);
         }
       }
     }
@@ -31655,7 +31674,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       const extra = root.createDiv({ cls: "bob-dash-cols" });
       for (const card of cr.cards) {
         if (this._renderSeq !== dashboardRenderSeq) return;
-        await this._renderConfigCard(extra.createDiv({ cls: "bob-dash-col" }), card, getWidgetEntities, dashboardContext);
+        await this._renderConfigCard(extra.createDiv({ cls: "bob-dash-col" }), card, getWidgetEntities, dashboardContext, surfaceId);
       }
     }
     if (dashboardWarnings.length) {
@@ -31668,10 +31687,10 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
     }
     if (config.legend === "finance-statements") this._renderFinanceStatementLegend(root);
   }
-  async _renderConfigCard(col, card, getWidgetEntities, dashboardContext = {}) {
+  async _renderConfigCard(col, card, getWidgetEntities, dashboardContext = {}, surfaceId = "") {
     try {
       const resolvedCard = applyDashboardContext(card, dashboardContext);
-      if (await this._renderWidgetByKind(col, resolvedCard, getWidgetEntities)) return;
+      if (await this._renderWidgetByKind(col, resolvedCard, getWidgetEntities, surfaceId)) return;
       const rows = await this._resolveCardRows(resolvedCard, getWidgetEntities);
       this._dashCardSection(col, resolvedCard.title, rows, resolvedCard.empty || "");
     } catch (error) {
@@ -32045,11 +32064,11 @@ ${snippet}` : "- No markdown content");
       { title: "Streak", meta: `${builtInData.streak ?? 0}d` }
     ];
   }
-  async _renderWidgetByKind(col, card, getWidgetEntities) {
+  async _renderWidgetByKind(col, card, getWidgetEntities, surfaceId = "") {
     const kind = String(card.kind || "").trim().toLowerCase();
     if (!kind) return false;
     if (kind === "kanban") {
-      await this._renderKanbanWidget(col, card, getWidgetEntities);
+      await this._renderKanbanWidget(col, card, getWidgetEntities, surfaceId);
       return true;
     }
     if (kind === "list") {
@@ -32975,7 +32994,7 @@ ${snippet}` : "- No markdown content");
     footer.createSpan({ text: `${buckets.length} days` });
     footer.createSpan({ text: `Peak ${Math.round(max * 10) / 10}` });
   }
-  async _renderKanbanWidget(root, card, getWidgetEntities) {
+  async _renderKanbanWidget(root, card, getWidgetEntities, surfaceId = "") {
     const resolved = await getWidgetEntities(this._widgetSourceSpec(card, card.entity), card.entity);
     const def = resolved.def || ENTITIES[resolved.entityKey || card.entity];
     const entities = resolved.entities || [];
@@ -32986,6 +33005,9 @@ ${snippet}` : "- No markdown content");
     const titleFields = Array.isArray(card.cardTitleFields) && card.cardTitleFields.length ? card.cardTitleFields : Array.isArray(card.titleFields) && card.titleFields.length ? card.titleFields : ["title", "name"];
     const metaFields = Array.isArray(card.cardMetaFields) && card.cardMetaFields.length ? card.cardMetaFields : Array.isArray(card.metaFields) && card.metaFields.length ? card.metaFields : [groupBy, valueField, "company"].filter(Boolean);
     const sortMode = String(card.sort || "mtime-desc").trim().toLowerCase();
+    const collapseStateKey = `kanbanCollapsed:${String(card.title || card.label || card.entity || "kanban").trim()}`;
+    const dashboardState = surfaceId ? this._dashboardStateFor(surfaceId) : {};
+    const collapsedGroups = new Set(Array.isArray(dashboardState[collapseStateKey]) ? dashboardState[collapseStateKey].map((value) => String(value)) : []);
     const normalizeGroup = (entry) => {
       if (entry == null) return null;
       if (typeof entry === "object" && !Array.isArray(entry)) {
@@ -33049,10 +33071,42 @@ ${snippet}` : "- No markdown content");
       const col = board.createDiv({ cls: "bob-kanban-col" });
       if (overLimit) col.addClass("bob-kanban-col-over-limit");
       col.dataset.stage = group.value;
+      col.dataset.count = String(items.length);
+      let collapsed = collapsedGroups.has(group.value);
+      if (collapsed) col.addClass("bob-kanban-col-collapsed");
       const head = col.createDiv({ cls: "bob-kanban-col-head" });
-      head.createDiv({ cls: "bob-kanban-col-title", text: group.label });
+      const headRow = head.createDiv({ cls: "bob-kanban-col-head-row" });
+      headRow.createDiv({ cls: "bob-kanban-col-title", text: group.label });
+      headRow.createSpan({ cls: "bob-kanban-col-count", text: String(items.length), attr: { "aria-label": `${items.length} jobs` } });
+      const collapseButton = headRow.createEl("button", {
+        cls: "bob-kanban-collapse-button",
+        text: collapsed ? "\u203A" : "\u2039",
+        attr: {
+          type: "button",
+          "aria-label": `${collapsed ? "Expand" : "Collapse"} ${group.label} stage`,
+          "aria-expanded": String(!collapsed),
+          title: `${collapsed ? "Expand" : "Collapse"} ${group.label}`
+        }
+      });
+      collapseButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        collapsed = !collapsed;
+        col.toggleClass("bob-kanban-col-collapsed", collapsed);
+        collapseButton.setText(collapsed ? "\u203A" : "\u2039");
+        collapseButton.setAttr("aria-label", `${collapsed ? "Expand" : "Collapse"} ${group.label} stage`);
+        collapseButton.setAttr("aria-expanded", String(!collapsed));
+        collapseButton.setAttr("title", `${collapsed ? "Expand" : "Collapse"} ${group.label}`);
+        if (collapsed) collapsedGroups.add(group.value);
+        else collapsedGroups.delete(group.value);
+        if (surfaceId) {
+          dashboardState[collapseStateKey] = [...collapsedGroups];
+          void this._persistDashboardState();
+        }
+      });
       const headMeta = head.createDiv({ cls: "bob-kanban-col-meta" });
-      headMeta.setText(`${items.length}${valueField ? ` \xB7 ${fmtValue(columnValue, "currency")}` : ""}`);
+      headMeta.setText(valueField ? fmtValue(columnValue, "currency") : "");
+      headMeta.hidden = !valueField;
       if (groupLimit > 0) {
         const limitChip = head.createSpan({ cls: "bob-kanban-col-limit", text: `${items.length}/${groupLimit}` });
         if (overLimit) limitChip.addClass("is-over-limit");
@@ -33066,9 +33120,42 @@ ${snippet}` : "- No markdown content");
         try {
           const file = this.app.vault.getAbstractFileByPath(filePath);
           if (!(file instanceof obsidian18.TFile)) return;
+          const currentStatus = String(this.app.metadataCache.getFileCache(file)?.frontmatter?.[groupBy] ?? "");
+          if (currentStatus === group.value) return;
+          const reasonStatuses = Array.isArray(card.reasonPromptStatuses) ? card.reasonPromptStatuses.map((status) => String(status)) : [];
+          let closeReason = null;
+          if (reasonStatuses.includes(group.value)) {
+            closeReason = await new Promise((resolve) => {
+              new BobPromptModal(this.app, {
+                title: `Reason for ${group.label.toLowerCase()}`,
+                placeholder: "Add a short note for the job history",
+                cta: `Move to ${group.label}`,
+                onSubmit: resolve
+              }).open();
+            });
+            if (!closeReason) return;
+          }
           await this.app.fileManager.processFrontMatter(file, (fm) => {
             fm[groupBy] = group.value;
           });
+          if (closeReason) {
+            const content = await this.app.vault.read(file);
+            const lines = content.split("\n");
+            const headingIndex = lines.findIndex((line) => line.trim() === "## Activity");
+            let activityBody = "";
+            if (headingIndex >= 0) {
+              let endIndex = lines.length;
+              for (let i = headingIndex + 1; i < lines.length; i++) {
+                if (/^##\s/.test(lines[i])) {
+                  endIndex = i;
+                  break;
+                }
+              }
+              activityBody = lines.slice(headingIndex + 1, endIndex).join("\n").trim();
+            }
+            const entry = `- ${ymd(/* @__PURE__ */ new Date())} \u2014 Moved to ${group.label}: ${closeReason}`;
+            await this.app.vault.modify(file, replaceSection(content, "## Activity", [activityBody, entry].filter(Boolean).join("\n")));
+          }
           new obsidian18.Notice(`Moved to ${group.label}`);
           await this._maybeCreateCommissionForWonDeal(file, groupBy, String(group.value));
         } catch (e) {
@@ -39111,9 +39198,11 @@ var obsidian21 = __toESM(require("obsidian"));
 var BobPlugin = class extends obsidian21.Plugin {
   constructor() {
     super(...arguments);
+    this.statusFolderRouteSnapshot = /* @__PURE__ */ new Map();
     // Set by the Modules settings "Edit dashboard" action to deep-link the Surface
     // Designer to a specific surface; consumed (once) by renderDashboardEditor.
     this.pendingDesignerSurface = null;
+    this.statusFolderRouteSnapshotSeeded = false;
     /** Last seen stage per deal path, so a commission is created on the transition
      * into a won stage and not on every subsequent save of an already-won deal.
      * Seeded once at layout-ready: without the seed, the first metadata event after
@@ -39134,6 +39223,17 @@ var BobPlugin = class extends obsidian21.Plugin {
     this.registerEvent(this.app.vault.on("delete", dropScanCache));
     this.registerEvent(this.app.vault.on("rename", dropScanCache));
     this.registerEvent(this.app.metadataCache.on("changed", dropScanCache));
+    this.app.workspace.onLayoutReady(() => {
+      this.seedStatusFolderRouteSnapshot();
+    });
+    this.registerEvent(this.app.metadataCache.on("changed", (file) => {
+      if (file instanceof obsidian21.TFile) void this.routeFileForStatus(file);
+    }));
+    this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
+      const priorStatus = this.statusFolderRouteSnapshot.get(oldPath);
+      this.statusFolderRouteSnapshot.delete(oldPath);
+      if (priorStatus !== void 0) this.statusFolderRouteSnapshot.set(file.path, priorStatus);
+    }));
     this.app.workspace.onLayoutReady(() => {
       void this.refreshPartnerExpiryStatuses();
     });
@@ -39347,6 +39447,48 @@ var BobPlugin = class extends obsidian21.Plugin {
     });
     if (this.settings.openOnStartup) {
       this.app.workspace.onLayoutReady(() => this.openApp("home"));
+    }
+  }
+  seedStatusFolderRouteSnapshot() {
+    this.statusFolderRouteSnapshot.clear();
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      const status = fm?.status;
+      if (fm?.type && status != null) this.statusFolderRouteSnapshot.set(file.path, String(status));
+    }
+    this.statusFolderRouteSnapshotSeeded = true;
+  }
+  async routeFileForStatus(file) {
+    if (!this.statusFolderRouteSnapshotSeeded) return;
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+    const type = String(fm?.type || "");
+    const route = WORKSPACE_CONFIG.statusFolderRouting?.[type];
+    if (!route) return;
+    const statusField = route.statusField || "status";
+    const status = String(fm?.[statusField] ?? "");
+    if (!status) return;
+    const previousStatus = this.statusFolderRouteSnapshot.get(file.path);
+    this.statusFolderRouteSnapshot.set(file.path, status);
+    if (previousStatus === void 0 || previousStatus === status) return;
+    const destination = route.folders[status]?.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+    if (!destination || file.parent?.path === destination) return;
+    const targetPath = `${destination}/${file.name}`;
+    if (this.app.vault.getAbstractFileByPath(targetPath)) {
+      new obsidian21.Notice(`BOB Workspace: cannot auto-file ${file.name}; a note already exists at ${targetPath}.`);
+      return;
+    }
+    try {
+      const parts = destination.split("/");
+      let path = "";
+      for (const part of parts) {
+        path = path ? `${path}/${part}` : part;
+        if (!this.app.vault.getAbstractFileByPath(path)) await this.app.vault.createFolder(path);
+      }
+      await this.app.fileManager.renameFile(file, targetPath);
+      this.statusFolderRouteSnapshot.delete(file.path);
+      this.statusFolderRouteSnapshot.set(targetPath, status);
+    } catch (error) {
+      new obsidian21.Notice(`BOB Workspace: could not auto-file ${file.name} \u2014 ${String(error)}`);
     }
   }
   /* ── Quick capture API ── */

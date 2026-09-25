@@ -41,7 +41,7 @@ dangling base ref looks empty but does not break the panel, and flagging it hard
 would false-reject an owner-shipped template.
 
 Acceptance contract: this script must report 0 errors on the live workspace.json
-and all four plugin templates (minimal/crm/bob/cadence) — render guard included.
+and the five bundled template source files when the BOB repository is available — render guard included.
 
 Usage:
     uv run validate_workspace.py <path-to-workspace.json>

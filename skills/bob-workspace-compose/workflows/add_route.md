@@ -18,4 +18,4 @@ Insert a NEW element into an existing `workspace.json` — a dashboard, a widget
 ## Notes
 
 - Adding a nav item bound to a `module` that is off in `settings.modules` means it won't show — enable the module (an `update` on `settings`) or pick an always-on group.
-- To add a `base-link`/`base-embed` widget for an entity, ensure `bases[<entity>]` points at a real `.base` file first. Authoring the `.base` is [[obsidian-bases]]' job.
+- To add a `base-link`/`base-embed` widget for an entity, ensure `bases[<entity>]` points at a real `.base` file first. The sibling bootstrap skill's `bases` route includes a standalone Base example.
