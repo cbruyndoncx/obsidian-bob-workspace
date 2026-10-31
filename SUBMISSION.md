@@ -28,18 +28,27 @@ Confirm these:
 
 ## Step 1 — Screenshots
 
-The current store set already lives in `docs/screenshots/` (referenced by the
-README gallery). They were captured from a **fictional demo vault** (Acme /
-Contoso / Fabrikam — no real client data) with only BOB Workspace enabled (clean
-chrome), at Full-HD width:
+The current store set lives in `docs/screenshots/`, each image placed beside its
+feature section in the README. Captured 2026-10-31 from a **fictional demo vault**
+(Acme / Contoso / Fabrikam / Northwind / Adventure Works — no real client data) with
+the ThirdBrain BOB theme, the workspace `locale` set to `en-US`, and the window at
+1920 px wide:
 
 1. `01-home.png` — Home command centre
-2. `02-pipeline.png` — CRM Pipeline kanban across stages
-3. `03-crm-dashboard.png` — CRM Dashboard (metrics + recent leads/activity)
-4. `04-clients.png` — Clients entity list
-5. `05-projects.png` — Projects with milestone progress
-6. `06-invoices.png` — Customer Invoices (finance surfaces)
-7. `07-playbooks.png` — AI Playbooks
+2. `02-today.png` — Planner Today
+3. `03-calendar.png` — Planner Calendar
+4. `04-pipeline.png` — CRM Pipeline kanban
+5. `05-crm-dashboard.png` — CRM Dashboard
+6. `06-contacts.png` — Contacts list
+7. `07-partners.png` — PRM Partners overview
+8. `08-client-work.png` — Client Work overview
+9. `09-invoices.png` — Customer Invoices
+10. `10-suppliers.png` — Suppliers & Procurement
+11. `11-projects.png` — Projects
+12. `12-pipeline-report.png` — Pipeline Report
+13. `13-canvases.png` — Canvases
+14. `14-playbooks.png` — AI Playbooks
+15. `15-tasknotes.png` — TaskNotes (Bases-backed view)
 
 **To regenerate** (e.g. after a UI change): build the demo vault and drive the
 capture from WSL with the `bob-workspace-screenshots` skill —

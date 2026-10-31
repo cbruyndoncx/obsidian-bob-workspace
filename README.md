@@ -10,20 +10,9 @@ Start with the [empty-vault quickstart](docs/empty-vault-quickstart.md) or [exis
 
 💬 **Docs, support, and community:** join the **ThirdBrain BOB** Skool community → https://www.skool.com/thirdbrain-tech-3102
 
-![BOB Workspace Home](docs/screenshots/01-home.png)
+![BOB Workspace Home — today's tasks, pipeline and reminders in one tab](docs/screenshots/01-home.png)
 
-## Screenshots
-
-|  |  |
-|---|---|
-| **CRM Pipeline** — deal kanban across stages | **CRM Dashboard** — metrics, recent leads & activity |
-| ![CRM Pipeline](docs/screenshots/02-pipeline.png) | ![CRM Dashboard](docs/screenshots/03-crm-dashboard.png) |
-| **Clients** — entity list with rich frontmatter | **Projects** — milestone progress across active work |
-| ![Clients](docs/screenshots/04-clients.png) | ![Projects](docs/screenshots/05-projects.png) |
-| **Customer Invoices** — finance & accounting surfaces | **AI Playbooks** — reusable, schema-backed workflows |
-| ![Customer Invoices](docs/screenshots/06-invoices.png) | ![AI Playbooks](docs/screenshots/07-playbooks.png) |
-
-*(Screenshots use a fictional demo vault — Acme / Contoso / Fabrikam — not real client data.)*
+*Screenshots throughout this README come from a fictional demo vault (Acme, Contoso, Fabrikam, Northwind, Adventure Works) — no real client data.*
 
 ---
 
@@ -52,25 +41,45 @@ Two-column dashboard: today's tasks (tickable inline) · this week's progress ·
 - **Projects** — status-grouped card grid with milestone progress and next-up dates
 - **Inbox** — universal capture + reminders; items grouped by Now / Today / This Week / Later
 
+![Planner Today — the daily note's tasks and journal](docs/screenshots/02-today.png)
+
+![Planner Calendar — tasks per day across the week](docs/screenshots/03-calendar.png)
+
 ### CRM
 - **Dashboard** — pipeline-by-stage bars, hot deals (top by value), stale deals (no edits in 14+ days), recent activity, customer base mini-stats
 - **Pipeline** — kanban board across deal stages; drag-and-drop a card to update its `stage` frontmatter; Won column gets a soft emerald tint
 - **Contacts / Companies / Activities** — sortable list views with rich frontmatter editing
 
+![CRM Pipeline — deal kanban with weighted forecast](docs/screenshots/04-pipeline.png)
+
+![CRM Dashboard — leads, contacts, campaigns and activities](docs/screenshots/05-crm-dashboard.png)
+
+![Contacts — a sortable entity list backed by markdown frontmatter](docs/screenshots/06-contacts.png)
+
 ### PRM
 Partners · Registrations · Commissions · Leads · Certifications · Analytics — same entity-list pattern, in their own folders, with status enums and Reports that aggregate across them.
+
+![PRM Partners — pending registrations, open commissions and expiring certifications](docs/screenshots/07-partners.png)
 
 ### Client Work
 A delivery overview across everything you do *for* a client after the deal is won: Meetings, Comms, Deliverables, Feedback, Surveys, Testimonials, Decisions — each its own tab, with client/project selectors that filter the whole workspace to one engagement.
 
+![Client Work — meetings, deliverables, comms, feedback and decisions for every engagement](docs/screenshots/08-client-work.png)
+
 ### Finance
 Customer Invoices, General Ledger, Finance Setup, Assets & Close, and Tax — accounting-period, bank-reconciliation, chart-of-accounts, VAT/corporate-tax and compliance record types, each with its own list and detail view. Built for tracking the finance side of a services business, not double-entry bookkeeping.
+
+![Customer Invoices — the invoice list with status and due dates](docs/screenshots/09-invoices.png)
 
 ### Suppliers & Procurement
 Suppliers, Supplier Invoices, Purchase Requisitions, Purchase Orders — the mirror image of the CRM/Finance pipeline for what you buy instead of what you sell.
 
+![Suppliers & Procurement — open supplier invoices, requisitions and purchase orders](docs/screenshots/10-suppliers.png)
+
 ### Project Management
 Click a project, get a **real PM surface** — not a markdown editor. Hero with status/priority pills, owner, due date, color-banded progress bar. Left column: tickable milestones (date + title + delete on hover) and tasks with `+ Add` buttons. Right column: Brief, Scope, Risks, Stakeholders, Notes — all autosaving textareas writing back to their H2 sections. `Open as note` for full body editing in Obsidian's editor.
+
+![Projects — milestone progress across active work](docs/screenshots/11-projects.png)
 
 ### Reminders
 Quick-capture with `Cmd+Shift+I` → modal with text, optional datetime, optional repeat (daily/weekly). The plugin ticks every 30 seconds and fires due reminders as in-app notices (and optionally desktop notifications). Snooze 15m / 1h / tomorrow on any reminder. The nav badge shows live overdue count.
@@ -78,11 +87,17 @@ Quick-capture with `Cmd+Shift+I` → modal with text, optional datetime, optiona
 ### Reports
 Pipeline · Sales · Partners · Activity · Productivity · KPI Scoreboard. These surfaces are config-driven dashboards with widget catalogs rather than separate hardcoded report screens. Productivity follows the configured task mode: daily note checkboxes, TaskNotes, or hybrid. TaskNotes history includes the active TaskNotes folder plus the configured archive folder.
 
+![Pipeline Report — filters, weighted forecast and open value by stage](docs/screenshots/12-pipeline-report.png)
+
 ### Canvas surfaces — context, not just diagrams
 BOB treats Obsidian's native **Canvas** as a render target for *operational context*, not a manual drawing tool. From any entity, generate a standard `.canvas` file: an **Entity Context** canvas (the record at centre, surrounded by its evidence, people/systems, outputs and risks, drawn from links + backlinks), an **Agent Audit** canvas for AI-run notes, a **Process runway** for anything with a stage/status lifecycle, or a **Pipeline board**. Regenerating refreshes BOB's own nodes while keeping anything you added by hand. The `.canvas` files are 100% standard JSON Canvas — portable to any tool that reads the format. See [Canvas surfaces](docs/canvas-surfaces.md).
 
+![Canvases — every canvas in the vault, with Generate for new context canvases](docs/screenshots/13-canvases.png)
+
 ### AI Workspace — Playbooks & Skills
 A place to keep your own reusable playbooks and AI agent skills as plain markdown/`SKILL.md` records — trigger, outcome, steps, duration — browsable and filterable like any other entity. BOB ships the record types, not content: a fresh vault starts with empty Playbooks/Skills lists ready for your own library.
+
+![AI Playbooks — trigger, outcome, steps and duration for each playbook](docs/screenshots/14-playbooks.png)
 
 ### More schema-backed domains
 The shipped **BOB Workspace** template also includes **Marketing** (content), **HR & People** (Recruiting, Payroll), **Research & Knowledge** (a research hub), and **Audit** (Operational Audit) — configured entirely through schema YAML and `workspace.json`, not hardcoded plugin code, so they're a starting point you're expected to reshape for your own vault.
@@ -98,6 +113,8 @@ Export your entities to a multi-sheet `.xlsx` workbook (one sheet per entity typ
 
 ### Bases-backed views
 Entity lists can be driven by Obsidian **Bases** (`.base`) files for richer filtering, sorting, and column control. The **Bases folder** setting resolves bare filenames; explicit vault paths stay at their configured locations, and **Generate missing bases** creates a starter `.base` (filter + table view) for any entity that doesn't have one — including entities you define purely via schema YAML. See *Configuration* below.
+
+![TaskNotes — a list driven by a Base view (This Week), with Open Base for the native view](docs/screenshots/15-tasknotes.png)
 
 ---
 

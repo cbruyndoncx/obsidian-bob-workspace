@@ -6,6 +6,11 @@ All notable changes to BOB Workspace are documented here. Format follows
 
 ## [Unreleased]
 
+### Documentation
+
+- README screenshots replaced: 15 current images from the demo vault, each beside its feature
+  section (was a 7-image gallery from 2026-07 with a stray backslash on Home).
+
 ### Added
 
 - **Date and number format** (Settings → App, `locale` in `workspace.json`): a language tag such as
