@@ -6,6 +6,15 @@ All notable changes to BOB Workspace are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Schema `location_pattern` values may name folders through context-pack keys
+  (`{client.profile-root}/`, `{partner.commissions}/`), as the canonical BOB schemas now do. BOB
+  resolves them through the vault's `context.yaml`, merged over the framework default pack
+  (embedded as `vendor/context-default.json`, `npm run sync-context`). Before this, 73 of the 74
+  template schemas resolved to no folder and new records fell back to built-in folders.
+- The BOB template's embedded schemas are re-synced from the canonical data model (all 74).
+
 ### Documentation
 
 - README screenshots replaced: 15 current images from the demo vault, each beside its feature

@@ -276,9 +276,10 @@ Python 3.11+ and `uv` (which installs their declared PyYAML dependency).
 
 The skills read the active schema folder from that vault's installed
 `.obsidian/plugins/bob-workspace/workspace.json`; their reports go to
-`BOB Workspace/Reports/`. A schema's `location_pattern` must contain a real
-vault-relative folder path. The plugin does not expand agent context keys in
-schema YAML.
+`BOB Workspace/Reports/`. A schema's `location_pattern` is either a vault-relative
+folder path or a context-pack key such as `{client.profile-root}/`. BOB resolves keys
+through the vault's root `context.yaml` (merged over the framework default pack when it
+says `extends: default`), or the default pack when the vault has none.
 
 ## Development
 

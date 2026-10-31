@@ -11812,6 +11812,109 @@ function matchesEnumSelection(value, selected) {
   return selected === void 0 || selected.has(String(value ?? ""));
 }
 
+// vendor/context-default.json
+var context_default_default = {
+  origin: "context-pack skill, assets/default-context.yaml (synced verbatim by scripts/sync-context-default.mjs)",
+  yaml: "# Default context pack \u2014 the framework's canonical numbered tree.\n# This is the layout every starter vault ships with, so a workspace with no pack of its own\n# uses the seven-group marketing template. Existing vaults migrate or declare legacy paths.\n# Copy it with `init_context_pack.py` to author a pack for a\n# workspace whose folders are named differently; never edit this file to describe one customer.\npack: default\nschema: 1\ntitle: Framework default layout\nsummary: Numbered vault tree \u2014 10-ME, 20-COMPANY, 30-CLIENTS, 40-RESOURCES, 50-PROJECTS\n\nroots:\n  workspace: .\n  me: 10-ME\n  company: 20-COMPANY\n  clients: 30-CLIENTS\n  resources: 40-RESOURCES\n  projects: 50-PROJECTS\n  core: 00-CORE\n  skills: 00-CORE/Agents/skills\n  schemas: 00-CORE/Schemas\n  templates: 00-CORE/Templates\n  tasks: 00-CORE/TaskNotes/Tasks\n  scratch: 99-TMP/OUTPUT\n  tmp: 99-TMP\n\n# Logical keys. `{id}` is the client, project, lead or partner identifier; keys without `{id}`\n# resolve without one. A trailing `/` marks a folder. `summary` says what an agent will find\n# there so it can decide whether to open it. `required: true` means validation fails when the\n# path is absent on disk, and `template:` names the file under the templates folder a scaffold\n# seeds it from. `scaffold: false` marks a folder the pack describes but a fresh workspace is not\n# given empty \u2014 an evidence folder its first run creates reads as a department when it ships.\nkeys:\n  me.profile:\n    path: 10-ME/00-PROFILE/profile.md\n    template: context/profile_personal.md\n    required: true\n    summary: Owner identity, role, working preferences\n  me.root:\n    path: 10-ME/\n    summary: The owner's personal root folder\n  me.constitution:\n    path: 10-ME/00-PROFILE/constitution.md\n    summary: Owner values and trade-offs, written by personal-context-builder\n  me.comms:\n    path: 10-ME/03-COMMS/\n    summary: Personal communication threads \u2014 messages that belong to no client or company file\n  me.people:\n    path: 10-ME/10-PEOPLE/\n    summary: Person notes for contacts that belong to no client\n  me.meetings:\n    path: 10-ME/20-MEETINGS/\n    summary: Personal meetings with no company or client in the room\n  me.ideas:\n    path: 10-ME/30-IDEAS/\n    summary: Unshaped ideas and what-if scripts\n  me.decisions:\n    path: 10-ME/02-DECISIONS/\n    scaffold: false  # created by the first personal decision\n    summary: The owner's personal decisions with no company or client scope \u2014 the same type decision record as company.decisions; check before re-deciding\n  me.inbox:\n    path: 10-ME/90-INBOX/\n    summary: Unfiled captures, briefly\n  me.playbooks:\n    path: 10-ME/Playbooks/\n    summary: Personal executable procedures\n  me.personas:\n    path: 10-ME/00-PROFILE/personas/\n    summary: The owner's personal personas \u2014 the audience the owner writes as or for, separate from the company's buyer personas\n\n  company.profile:\n    path: 20-COMPANY/00-PROFILE/profile.md\n    template: context/profile_company.md\n    required: true\n    summary: Legal identity, entity_id, jurisdiction, finance calendar \u2014 read before any company, finance or jurisdiction-sensitive routing\n  company.root:\n    path: 20-COMPANY/\n    summary: The company root folder itself \u2014 every company-owned area sits under it\n  company.clients:\n    path: 30-CLIENTS/\n    summary: The clients root \u2014 one folder per client relationship; use client.root with an id for one client\n  company.projects:\n    path: 50-PROJECTS/\n    summary: The internal projects root \u2014 one folder per project; use project.root with an id for one project\n  company.icp:\n    path: 20-COMPANY/00-PROFILE/icp.md\n    summary: Ideal customer profile \u2014 the canonical buyer\n  company.offerings:\n    path: 20-COMPANY/00-PROFILE/offerings.md\n    summary: Services and products sold, with pricing posture\n  company.marketing-context:\n    path: 20-COMPANY/00-PROFILE/marketing_context.md\n    summary: Positioning, messaging, competitive landscape, customer language\n  company.brand:\n    path: 20-COMPANY/00-PROFILE/brand/\n    scaffold: false  # created by the brand skills when the company has a brand spec\n    summary: Brand spec, colours, logo assets\n  company.personas:\n    path: 20-COMPANY/00-PROFILE/personas/\n    summary: Buyer personas\n  company.decisions:\n    path: 20-COMPANY/02-DECISIONS/\n    summary: Closed decisions, including the ones that closed \"no\" \u2014 check before recommending\n  company.processes:\n    path: 20-COMPANY/03-PROCESSES/\n    summary: Process definitions and policies\n  company.process-definitions:\n    path: 20-COMPANY/03-PROCESSES/definitions/\n    summary: The process library \u2014 one folder per defined process, holding its definition and policies\n  company.process-audits:\n    path: 20-COMPANY/03-PROCESSES/audits/\n    summary: Process audit records \u2014 findings, waste observations and the AI initiatives raised from them\n  company.processes.playbooks:\n    path: 20-COMPANY/03-PROCESSES/Playbooks/\n    summary: Playbooks that belong to a documented process rather than to the canonical playbook library\n  company.runs:\n    path: 20-COMPANY/03-PROCESSES/runs/\n    summary: Run evidence for company operations \u2014 traces, patch logs, audit notes\n  company.schedule-runs:\n    path: 20-COMPANY/03-PROCESSES/schedule-runs/\n    summary: Scheduled-job evidence \u2014 raw run logs under logs/, distilled metrics, crontab backups\n  company.legal:\n    path: 20-COMPANY/04-LEGAL/\n    summary: Contracts and templates\n  company.legal.contracts:\n    path: 20-COMPANY/04-LEGAL/CONTRACTS/\n    scaffold: false  # created when the first signed agreement is filed\n    summary: Signed agreements the company is party to, insurance policies included \u2014 one note per contract\n  company.legal.retention:\n    path: 20-COMPANY/04-LEGAL/RETENTION/\n    scaffold: false  # created when a retention schedule is first written\n    summary: Document-retention schedules \u2014 what must be kept, for how long, and under which rule\n  company.legal.freezone:\n    path: 20-COMPANY/04-LEGAL/FREEZONE/\n    scaffold: false  # only a free-zone registered entity has these\n    summary: Free-zone licence and status records for the company's registered entities\n  company.hr:\n    path: 20-COMPANY/05-HR/\n    summary: People operations \u2014 the company layer of people files (framework, values, cycle dates, role templates); names no individual\n  company.performance-framework:\n    path: 20-COMPANY/05-HR/performance-framework.md\n    scaffold: false  # written by performance-framework's render route when a business adopts the framework\n    summary: The company's layered performance framework instance \u2014 compliance gates, six universal dimensions with level anchors and evidence types, role-family modules, industry overlay, scale, cadences, version and valid-from\n  company.hr.recruiting:\n    path: 20-COMPANY/05-HR/recruiting/\n    scaffold: false  # created by the first open role\n    summary: Candidates and the sourcing channels they came through, for the company's own open roles\n  company.hr.wps:\n    path: 20-COMPANY/05-HR/WPS/\n    scaffold: false  # only a jurisdiction with a wage protection system has these\n    summary: Wage Protection System filings \u2014 the salary transfer records a labour authority requires\n  company.hr.employees:\n    path: 20-COMPANY/05-HR/EMPLOYEES/\n    summary: One note per person employed after hire \u2014 role, start date, pay band, contract reference; the record `person` and `candidate` leave open\n  company.hr.payroll:\n    path: 20-COMPANY/05-HR/PAYROLL/\n    summary: Payroll runs \u2014 one per pay period, carrying the per-person amounts the filings are built from\n  company.hr.timesheets:\n    path: 20-COMPANY/05-HR/TIMESHEETS/\n    summary: Hours worked per person per period, split across the clients and projects they were worked on\n  company.finance:\n    path: 20-COMPANY/06-FINANCE/\n    summary: The books \u2014 ledger, invoices, bank, tax\n  company.finance.ledger:\n    path: 20-COMPANY/06-FINANCE/BEANCOUNT/ledger/\n    scaffold: false  # created by the beancount setup, which also writes its files\n    summary: The company's plain-text accounting ledger files\n  company.finance.expenses:\n    path: 20-COMPANY/06-FINANCE/AP/EXPENSES/\n    summary: Employee expense claims and the receipts backing them \u2014 the accounts-payable side of spend someone paid for personally\n  company.finance.ap:\n    path: 20-COMPANY/06-FINANCE/AP/\n    summary: Accounts payable \u2014 what the company owes, from requisition through purchase order to the supplier invoice that settles it\n  company.finance.ap-invoices:\n    path: 20-COMPANY/06-FINANCE/AP/INVOICES/\n    summary: Invoices suppliers have sent the company, one note per invoice \u2014 the payable side of the ledger\n  company.finance.ap-orders:\n    path: 20-COMPANY/06-FINANCE/AP/ORDERS/\n    summary: Purchase orders the company has issued \u2014 what was committed to a supplier before the invoice arrives\n  company.finance.ap-requisitions:\n    path: 20-COMPANY/06-FINANCE/AP/REQUISITIONS/\n    summary: Internal purchase requests awaiting approval \u2014 the step before a purchase order exists\n  company.finance.bank:\n    path: 20-COMPANY/06-FINANCE/BANK/\n    summary: Bank accounts and their reconciliations \u2014 the statement side the ledger is agreed against\n  company.finance.tax:\n    path: 20-COMPANY/06-FINANCE/TAX/\n    summary: Tax filings and positions \u2014 corporate tax, VAT, deferred tax and transfer pricing each sit one level down\n  company.finance.tax-ct:\n    path: 20-COMPANY/06-FINANCE/TAX/CT/\n    summary: Corporate tax returns and the computations behind them, one per tax period\n  company.finance.tax-vat:\n    path: 20-COMPANY/06-FINANCE/TAX/VAT/\n    summary: VAT returns and the workings for each filing period\n  company.finance.tax-deferred:\n    path: 20-COMPANY/06-FINANCE/TAX/DEFERRED/\n    summary: Deferred tax computations \u2014 temporary differences and the balances they carry forward\n  company.finance.tax-tp:\n    path: 20-COMPANY/06-FINANCE/TAX/TP/\n    summary: Transfer pricing documentation for related-party transactions\n  company.finance.assets-fixed:\n    path: 20-COMPANY/06-FINANCE/ASSETS/FIXED/\n    summary: The fixed-asset register \u2014 one note per asset with cost, depreciation, impairment and disposal\n  company.finance.assets-leases:\n    path: 20-COMPANY/06-FINANCE/ASSETS/LEASES/\n    summary: Leases as accounted for \u2014 right-of-use assets and the liability schedule behind each one\n  company.finance.periods:\n    path: 20-COMPANY/06-FINANCE/PERIODS/\n    summary: Accounting periods and whether each is open or closed \u2014 read before posting anything dated\n  company.finance.close:\n    path: 20-COMPANY/06-FINANCE/CLOSE/\n    scaffold: false  # written by the first period close, not shipped empty\n    summary: Period-close checklists and the evidence each close produced\n  company.finance.journals:\n    path: 20-COMPANY/06-FINANCE/JOURNALS/\n    summary: Manual journal entries posted outside the ledger's own automation\n  company.finance.coa:\n    path: 20-COMPANY/06-FINANCE/COA/\n    summary: Charts of accounts, one per jurisdiction the company keeps books in\n  company.finance.reports:\n    path: 20-COMPANY/06-FINANCE/REPORTS/\n    summary: Financial statements, their notes and the trial balances they are built from\n  company.finance.provisions:\n    path: 20-COMPANY/06-FINANCE/PROVISIONS/\n    scaffold: false  # written when a provision is first recognised\n    summary: Provisions recognised against future obligations, with the basis each was measured on\n  company.finance.provisions-gratuity:\n    path: 20-COMPANY/06-FINANCE/PROVISIONS/GRATUITY/\n    scaffold: false  # written by the first end-of-service computation\n    summary: End-of-service gratuity provisions per employee under the applicable labour law\n  company.finance.inventory:\n    path: 20-COMPANY/06-FINANCE/INVENTORY/\n    scaffold: false  # opened only by a company that carries stock\n    summary: Inventory counts and valuations \u2014 quantities on hand and what they are carried at\n  company.finance.fx:\n    path: 20-COMPANY/06-FINANCE/FX/\n    summary: Foreign-exchange rate tables the books translate with, one per period and source\n  company.finance.ecl:\n    path: 20-COMPANY/06-FINANCE/ECL/\n    scaffold: false  # evidence folder, written by the first expected-credit-loss assessment\n    summary: Expected-credit-loss assessments on receivables \u2014 the IFRS 9 impairment working\n  company.finance.audit:\n    path: 20-COMPANY/06-FINANCE/AUDIT/\n    scaffold: false  # opened when an external audit is actually engaged\n    summary: External audit engagements \u2014 scope, the auditor's requests and the responses given\n  company.finance.payment-cards:\n    path: 20-COMPANY/06-FINANCE/PAYMENT-CARDS/\n    scaffold: false  # written when the first card is registered\n    summary: Company payment cards, their holders and limits \u2014 the spend channel behind card transactions\n  company.finance.ai-ledger:\n    path: 20-COMPANY/06-FINANCE/AI-LEDGER/\n    scaffold: false  # evidence folder, written by the first ai-session-ledger run\n    summary: AI session cost log, one note per day and client \u2014 the basis for recharging AI spend\n  company.finance.entity:\n    path: 20-COMPANY/06-FINANCE/ENTITY.md\n    scaffold: false  # written by the bookkeeping setup, not shipped with the workspace\n    summary: The company's books profile \u2014 reporting currency, fiscal calendar and the accounting policies its own ledger is kept under\n  company.knowledge-base:\n    path: 20-COMPANY/07-KNOWLEDGE-BASE/\n    summary: Methodology the company owns and reuses across engagements\n  company.people:\n    path: 20-COMPANY/10-PEOPLE/\n    summary: Restricted per-person layer \u2014 one folder per staff member holding goals, 1:1 notes, reviews, development plans and compliance-gate records; never placed in a shared or released folder\n  company.meetings:\n    path: 20-COMPANY/20-MEETINGS/\n    summary: Internal meetings \u2014 no client in the room\n  company.suppliers:\n    path: 20-COMPANY/30-SUPPLIERS/\n    summary: Someone the company pays\n  company.partners:\n    path: 20-COMPANY/35-PARTNERS/\n    summary: Someone who resells or co-delivers\n  company.products:\n    path: 20-COMPANY/40-PRODUCTS/\n    summary: Product definitions, pricing tiers, release configs\n  company.products.installations:\n    path: 20-COMPANY/40-PRODUCTS/installations/\n    summary: Deployed installations of the company's products \u2014 one note per customer install and its version\n  company.marketing:\n    path: 20-COMPANY/50-MARKETING/\n    summary: The company's own content and channels\n  company.marketing.channels:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/accounts/\n    summary: The company's own social channels \u2014 handle, audience and posting cadence per channel\n  company.marketing.email:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/email/\n    summary: Email sequences the company sends on its own behalf, separate from the sales pipeline's outbound\n  company.marketing.geo-runs:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/GEO/prompt-panel/runs/\n    scaffold: false  # evidence folder, written by the first prompt-panel run\n    summary: Generative-engine visibility probe runs \u2014 one folder per run, one per platform inside it\n  company.marketing.skool-courseware:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/skool/courseware/\n    summary: Skool course material \u2014 one folder per course, holding its modules and lessons\n  company.marketing.skool-tracker:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/skool/tracker/\n    summary: Weekly Skool community metrics \u2014 one note per week\n  company.marketing.youtube:\n    path: 20-COMPANY/50-MARKETING/05-PRODUCTION/video/youtube/\n    summary: The company's own YouTube videos \u2014 scripts, metadata and publishing state per video\n  company.leads:\n    path: 20-COMPANY/55-LEADS/\n    summary: Prospects that are not yet clients \u2014 one folder per lead\n  company.sales:\n    path: 20-COMPANY/60-SALES/\n    summary: Pipeline mechanics \u2014 proposals, campaigns, never the won relationship\n  company.sales.proposals:\n    path: 20-COMPANY/60-SALES/PROPOSALS/\n    summary: Proposals and quotes in flight \u2014 the pipeline artefact, not the won client's copy\n  company.sales.price-lists:\n    path: 20-COMPANY/60-SALES/PRICE-LISTS/\n    summary: Versioned standard, partner and internal pricing a quote or timesheet cites by version; a client's negotiated rate card lives in that client's own sales folder\n  company.sales.campaigns:\n    path: 20-COMPANY/60-SALES/CAMPAIGNS/\n    summary: Outbound campaigns \u2014 target list, offer and results per campaign\n  company.sales.sequences:\n    path: 20-COMPANY/60-SALES/SEQUENCES/\n    summary: Outbound message sequences the campaigns send, one note per sequence\n  company.operations:\n    path: 20-COMPANY/70-OPERATIONS/\n    summary: Systems and support\n  company.operations.surveys:\n    path: 20-COMPANY/70-OPERATIONS/SURVEYS/\n    summary: Surveys the company runs and the responses they gathered\n  company.management:\n    path: 20-COMPANY/80-MANAGEMENT/\n    summary: Management reporting, KPI registry, current state, strategy\n  company.strategy:\n    path: 20-COMPANY/80-MANAGEMENT/STRATEGY/\n    summary: Company-wide strategy documents \u2014 the whole business, not one division; a division's own strategy is division.strategy\n  company.decision-journal:\n    path: 00-CORE/Bases/Decisions.base\n    summary: The decision log, read as the Decisions Base over the per-decision records in company.decisions, client.decisions and me.decisions; the single-note decision_journal.md is retired (superseded) and no longer written\n  company.project-management:\n    path: 20-COMPANY/80-MANAGEMENT/projects/\n    summary: Company project-management artifacts \u2014 registers, decisions and change logs; the company twin of client.project-management\n  company.rocks:\n    path: 20-COMPANY/80-MANAGEMENT/rocks/\n    scaffold: false  # written by the first quarterly planning session\n    summary: Quarterly rocks, one folder per quarter \u2014 the small number of outcomes that quarter commits to\n  company.weather-forecast:\n    path: 20-COMPANY/WEATHER-FORECAST/\n    scaffold: false  # demo entity for the weather-forecast skill, not a department\n    summary: Weather forecast notes written by the weather-forecast demo skill\n  company.reports:\n    path: 20-COMPANY/80-MANAGEMENT/REPORTS/\n    summary: Management reports \u2014 team status, sprint and KPI reports\n  company.kpi-reports:\n    path: 20-COMPANY/80-MANAGEMENT/REPORTS/kpi/\n    summary: KPI report notes and their history\n  company.risks:\n    path: 20-COMPANY/80-MANAGEMENT/RISKS/\n    summary: The business risk register \u2014 forward-looking risks across the whole business, separate from the process-scoped QMS findings and issues\n  company.inbox:\n    path: 20-COMPANY/90-INBOX/\n    summary: Unfiled company captures\n\n  client.root:\n    path: 30-CLIENTS/{id}/\n    required: true\n    summary: One folder per client relationship; the folder name is the client_id\n  client.profile:\n    path: 30-CLIENTS/{id}/00-PROFILE/profile.md\n    required: true\n    summary: Client identity, status, jurisdiction, engagement scope\n  client.profile-root:\n    path: 30-CLIENTS/{id}/00-PROFILE/\n    summary: One client's profile notes and supporting context \u2014 identity, brand, contacts\n  client.contacts:\n    path: 30-CLIENTS/{id}/00-PROFILE/contact_details.md\n    summary: Primary contacts and channels\n  client.icp:\n    path: 30-CLIENTS/{id}/00-PROFILE/icp.md\n    summary: Client's ideal customer profile \u2014 the canonical buyer for their business\n  client.offerings:\n    path: 30-CLIENTS/{id}/00-PROFILE/offerings.md\n    summary: Client's services and products sold, with pricing posture\n  client.marketing-context:\n    path: 30-CLIENTS/{id}/00-PROFILE/marketing_context.md\n    summary: Client's positioning, messaging, competitive landscape, customer language\n  client.brand:\n    path: 30-CLIENTS/{id}/00-PROFILE/brand/\n    summary: One client's brand spec, colours and logo assets \u2014 the client twin of company.brand\n  client.personas:\n    path: 30-CLIENTS/{id}/00-PROFILE/personas/\n    summary: Buyer personas for one client's business \u2014 the client twin of company.personas\n  client.deals:\n    path: 30-CLIENTS/{id}/01-DEALS/\n    summary: Deal notes with stage flow\n  client.credit-checks:\n    path: 30-CLIENTS/{id}/01-DEALS/credit-checks/\n    summary: Credit checks run on one client before extending exposure \u2014 verdict, exposure and the AR position behind it\n  client.invoices:\n    path: 30-CLIENTS/{id}/02-INVOICES/\n    summary: Billing records\n  client.comms:\n    path: 30-CLIENTS/{id}/03-COMMS/\n    summary: Communication threads\n  client.hr:\n    path: 30-CLIENTS/{id}/05-HR/\n    summary: People operations run for one client \u2014 the client-scoped equivalent of company.hr\n  client.hr.employees:\n    path: 30-CLIENTS/{id}/05-HR/EMPLOYEES/\n    summary: Employees of one client whose employment this workspace administers \u2014 never the company's own staff\n  client.hr.recruiting:\n    path: 30-CLIENTS/{id}/05-HR/recruiting/\n    summary: Candidates and sourcing channels for roles this workspace recruits on one client's behalf\n  client.people:\n    path: 30-CLIENTS/{id}/10-PEOPLE/\n    summary: Client-side contacts as person notes\n  client.research:\n    path: 30-CLIENTS/{id}/10-RESEARCH/\n    summary: Research gathered about the client's own market, competitors and industry\n  client.analysis:\n    path: 30-CLIENTS/{id}/20-ANALYSIS/\n    summary: Analysis built on that research \u2014 SWOT, USP, growth, risk\n  client.testimonials:\n    path: 30-CLIENTS/{id}/50-TESTIMONIALS/\n    summary: Testimonials this client has given, as publishable quotes\n  client.leads:\n    path: 30-CLIENTS/{id}/55-LEADS/\n    summary: Prospects the client is pursuing \u2014 leads owned by the client, not by the company\n  client.meetings:\n    path: 30-CLIENTS/{id}/20-MEETINGS/\n    summary: Every meeting with this client \u2014 one history per client, not per project\n  client.marketing:\n    path: 30-CLIENTS/{id}/50-MARKETING/\n    summary: Marketing work for one client \u2014 content, campaigns, audits\n  client.marketing.youtube:\n    path: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/video/youtube/\n    summary: One client's YouTube videos \u2014 scripts, metadata and publishing state per video\n  client.knowledge-base:\n    path: 30-CLIENTS/{id}/07-KNOWLEDGE-BASE/\n    summary: Client knowledge base \u2014 product, marketing and operating knowledge\n  client.deliverables:\n    path: 30-CLIENTS/{id}/30-DELIVERABLES/\n    summary: Delivered work products\n  client.finance:\n    path: 30-CLIENTS/{id}/06-FINANCE/\n    summary: Books kept for one client \u2014 the client-scoped equivalent of company.finance\n  client.finance.coa:\n    path: 30-CLIENTS/{id}/06-FINANCE/COA/\n    summary: Charts of accounts for one client's books, one per jurisdiction\n  client.finance.journals:\n    path: 30-CLIENTS/{id}/06-FINANCE/JOURNALS/\n    summary: Manual journal entries posted in one client's books\n  client.finance.periods:\n    path: 30-CLIENTS/{id}/06-FINANCE/PERIODS/\n    summary: Accounting periods for one client's books and whether each is open or closed\n  client.finance.entity:\n    path: 30-CLIENTS/{id}/06-FINANCE/ENTITY.md\n    summary: The books profile for one client \u2014 reporting currency, fiscal calendar and accounting policies\n  client.feedback:\n    path: 30-CLIENTS/{id}/40-FEEDBACK/\n    summary: Feedback and testimonials received\n  client.sales:\n    path: 30-CLIENTS/{id}/60-SALES/\n    summary: Proposals and pipeline work for this client\n  client.projects:\n    path: 30-CLIENTS/{id}/\n    glob: \"[0-9][0-9][0-9][0-9]-[0-9][0-9]-*/\"\n    summary: Engagements as YYYY-MM-name folders; completed ones move to archive\n  client.project-management:\n    path: 30-CLIENTS/{id}/80-MANAGEMENT/projects/\n    summary: Client project-management artifacts \u2014 registers, decisions and change logs\n  client.archive:\n    path: 30-CLIENTS/{id}/99-ARCHIVE/\n    summary: Completed engagements\n  client.playbooks:\n    path: 30-CLIENTS/{id}/Playbooks/\n    scaffold: false  # written when a playbook is first run for this client\n    summary: Executable procedures that belong to one client \u2014 the client twin of company.playbooks and me.playbooks\n  client.business-baseline:\n    path: 30-CLIENTS/{id}/03-business-baseline/\n    scaffold: false  # written by the first business-baseline session for this client\n    summary: One client's business-baseline session \u2014 mapped processes, session state and the summary it produced\n  client.business-baseline.processes:\n    path: 30-CLIENTS/{id}/03-business-baseline/processes/\n    scaffold: false  # written by the first business-baseline session for this client\n    summary: The client-scope process notes a business-baseline session maps \u2014 the source of truth every diagram is derived from\n  client.business-baseline.waste:\n    path: 30-CLIENTS/{id}/03-business-baseline/waste/\n    scaffold: false  # written by the first process-kaizen waste audit for this client\n    summary: The client-scope audit-waste notes a process-kaizen waste audit writes, one per process and waste category; the client twin of company.process-audits\n\n  lead.root:\n    path: 20-COMPANY/55-LEADS/{id}/\n    summary: One folder per prospect the company is pursuing\n  lead.profile:\n    path: 20-COMPANY/55-LEADS/{id}/profile.md\n    summary: Lead identity, source, qualification\n  lead.comms:\n    path: 20-COMPANY/55-LEADS/{id}/03-COMMS/\n    summary: Communication threads with one prospect, before any client folder exists\n  lead.meetings:\n    path: 20-COMPANY/55-LEADS/{id}/20-MEETINGS/\n    summary: Meetings held with one prospect while it is still a lead\n  lead.deals:\n    path: 20-COMPANY/55-LEADS/{id}/01-DEALS/\n    scaffold: false  # written when a prospect's first opportunity is opened\n    summary: Opportunities being worked with one prospect before it converts to a client\n\n  partner.root:\n    path: 20-COMPANY/35-PARTNERS/{id}/\n    summary: One folder per reseller or co-delivery partner\n  partner.deals:\n    path: 20-COMPANY/35-PARTNERS/{id}/01-DEALS/\n    summary: Deals sourced or co-delivered with one partner\n  partner.people:\n    path: 20-COMPANY/35-PARTNERS/{id}/10-PEOPLE/\n    summary: Partner-side contacts as person notes\n  partner.meetings:\n    path: 20-COMPANY/35-PARTNERS/{id}/20-MEETINGS/\n    summary: Every meeting with this partner \u2014 one history per partner\n  partner.accounts:\n    path: 20-COMPANY/35-PARTNERS/{id}/ACCOUNTS/\n    summary: The end-customer accounts one partner holds, as profile notes \u2014 who the partner sells to, not the partner itself\n  partner.certifications:\n    path: 20-COMPANY/35-PARTNERS/{id}/CERTIFICATIONS/\n    scaffold: false  # written when a partner first certifies\n    summary: Certifications one partner's people hold, with their levels and expiry dates\n  partner.commissions:\n    path: 20-COMPANY/35-PARTNERS/{id}/COMMISSIONS/\n    scaffold: false  # written when the first commission is earned\n    summary: Commission records owed to or paid to one partner, per deal or period\n  partner.registrations:\n    path: 20-COMPANY/35-PARTNERS/{id}/REGISTRATIONS/\n    scaffold: false  # written when the first deal is registered\n    summary: Deal registrations one partner has submitted, with their status and protection window\n\n  supplier.root:\n    path: 20-COMPANY/30-SUPPLIERS/{id}/\n    summary: One folder per supplier the company pays\n  supplier.profile:\n    path: 20-COMPANY/30-SUPPLIERS/{id}/profile.md\n    summary: One supplier's own profile note \u2014 what they supply, on what terms, and who the contact is\n  supplier.feedback:\n    path: 20-COMPANY/30-SUPPLIERS/{id}/30-FEEDBACK/\n    summary: Feedback recorded about one supplier's delivery and service\n  supplier.subscriptions:\n    path: 20-COMPANY/30-SUPPLIERS/{id}/SUBSCRIPTIONS/\n    summary: Recurring commitments to one supplier and the dates they renew \u2014 the line items behind that supplier's annual spend\n\n  # A division is a sub-folder of the company root that runs its own file tree. The data model\n  # names its placeholder `{division}`, so the key carries the pack's `{id}` and renders it as\n  # `{division}` in a schema `location_pattern`. A division is a company sub-tree WITH its own\n  # vocabulary (2026-09-21 decision, key-coverage audit F3): six entity types declare a location\n  # under `{company.root}/{division}/`, so the scope names the folder they land in rather than\n  # leaving the entity types with a declared location and no key.\n  division.root:\n    path: 20-COMPANY/{id}/\n    summary: One company division's folder \u2014 the sub-tree a division files its own analyses, research, reports, knowledge base, projects and strategy in\n  division.meetings:\n    path: 20-COMPANY/{id}/20-MEETINGS/\n    summary: Meetings owned by one company division rather than by the company as a whole\n  division.strategy:\n    path: 20-COMPANY/{id}/strategy/\n    scaffold: false  # a division writes one when it has a strategy of its own\n    summary: One division's own strategy documents; the company-wide strategy is company.strategy\n\n  # A product is a folder under the products root that carries its own definition and release\n  # history. Its `{id}` renders as `{product-id}` in a schema `location_pattern`.\n  product.root:\n    path: 20-COMPANY/40-PRODUCTS/{id}/\n    summary: One product's folder \u2014 its definition, pricing tiers, release configuration and the deliverables shipped with it\n  product.profile:\n    path: 20-COMPANY/40-PRODUCTS/{id}/product.md\n    summary: One product's definition note \u2014 what it is, who it is for, and the tiers it is sold in\n  product.release-notes:\n    path: 20-COMPANY/40-PRODUCTS/{id}/release-notes/\n    scaffold: false  # written by the first release of that product\n    summary: Release notes for one product, one note per released version\n\n  # A process definition is a folder in the process library that carries its own definition and\n  # policies. Its `{id}` renders as `{process-id}` in a schema `location_pattern`.\n  process.root:\n    path: 20-COMPANY/03-PROCESSES/definitions/{id}/\n    summary: One defined process's folder \u2014 its definition note and the policies that govern it\n  process.policies:\n    path: 20-COMPANY/03-PROCESSES/definitions/{id}/policies/\n    summary: The policies governing one defined process \u2014 the rules a run of it must hold to\n\n  project.root:\n    path: 50-PROJECTS/{id}/\n    summary: Internal projects that belong to no client\n  project.charter:\n    path: 50-PROJECTS/{id}/charter.md\n    summary: Scope, objectives, stakeholders\n  project.research:\n    path: 50-PROJECTS/{id}/10-RESEARCH/\n    summary: Research gathered for one project \u2014 market, competitor, industry, company intelligence\n  project.analysis:\n    path: 50-PROJECTS/{id}/20-ANALYSIS/\n    summary: Analysis built on a project's research \u2014 SWOT, USP, growth, risk\n  project.management:\n    path: 50-PROJECTS/{id}/40-PROJECT/\n    summary: PMBOK project artifacts \u2014 charter, WBS, schedule, registers, status and closure\n  project.deliverables:\n    path: 50-PROJECTS/{id}/deliverables/\n    summary: Work products a project hands over\n  project.paper-notes:\n    path: 50-PROJECTS/{id}/10-papers/notes/\n    scaffold: false  # written by the first paper a research project reads\n    summary: Reading notes on the papers a research project cites, one note per paper\n\n  resource.root:\n    path: 40-RESOURCES/\n    summary: Knowledge and reference material not owned by the company or a client\n  resource.research-kb:\n    path: 40-RESOURCES/research/kb/\n    summary: Research knowledge base \u2014 one folder per continuous-research domain\n  resource.research-domains:\n    path: 40-RESOURCES/research/domains/\n    summary: Continuous-research domain configs, `region-*.md` among them \u2014 the schedule and scope each recurring research run is driven by\n  # Until 2026-09-21 this key globbed `region-*.md` inside the domains folder \u2014 the research\n  # *configs* \u2014 while every consuming skill and the `regional-context` entity meant the business\n  # environment notes those configs produce. Two paths, one name; the config half already had a\n  # key of its own above, so this one now names the notes (key-coverage audit F2 reconciliation).\n  resource.regions:\n    path: 40-RESOURCES/research/regions/\n    summary: Regional business-environment notes, one folder per region \u2014 geopolitics, economy and regulation a client's operating region imposes\n  resource.arxiv:\n    path: 40-RESOURCES/arxiv/\n    scaffold: false  # evidence folder, written by the first arXiv search\n    summary: Saved arXiv searches and their result sets\n  resource.legal:\n    path: 40-RESOURCES/legal/\n    summary: Legal rules and reference material by jurisdiction \u2014 not the company's own contracts\n\n  output.scratch:\n    path: 99-TMP/OUTPUT/\n    summary: Disposable intermediates \u2014 excluded from every release, may be cleaned any time\n  output.tmp:\n    path: 99-TMP/\n    summary: The temporary root \u2014 scratch, inputs and logs; excluded from every release\n  output.tasks:\n    path: 00-CORE/TaskNotes/Tasks/\n    summary: Run-tracking task notes for real runs\n  vault.tasknotes:\n    path: 00-CORE/TaskNotes/\n    summary: The TaskNotes root \u2014 active tasks under Tasks/, closed ones under Archive/, the folder's own guidance\n  vault.tasknotes-archive:\n    path: 00-CORE/TaskNotes/Archive/\n    summary: Completed and cancelled task notes moved out of the active task folder\n\n  # Shipped workspace sub-folders. No entity in the data model claims these as a\n  # `location_pattern`, but a released vault ships them empty so an owner can see where asset\n  # buckets, per-channel content and working sub-trees belong. Until 2026-09-19 they were a\n  # hand list (`CURATED_EXTRA`) inside vault-release/scripts/generate_empty_dirs.py; the release\n  # skeleton now derives from this file, so the layout is described in exactly one place.\n  me.inbox-attachments:\n    path: 10-ME/90-INBOX/attachments/\n    summary: Files dropped beside an unfiled personal capture, kept until the capture is filed\n  company.assets:\n    path: 20-COMPANY/00-PROFILE/assets/\n    summary: Company-owned media and document assets that generated deliverables embed\n  company.assets-banners:\n    path: 20-COMPANY/00-PROFILE/assets/banners/\n    summary: Banner images for company channels, decks and reports\n  company.assets-brand-guidelines:\n    path: 20-COMPANY/00-PROFILE/assets/brand-guidelines/\n    summary: The company's brand-theme notes \u2014 colour, type and usage rules a generated deliverable renders with\n  company.assets-logos:\n    path: 20-COMPANY/00-PROFILE/assets/logos/\n    summary: Company logo files in the variants a deliverable may need\n  company.assets-report-templates:\n    path: 20-COMPANY/00-PROFILE/assets/report-templates/\n    summary: Document shells reports are rendered into \u2014 letterheads, styled Word and HTML bases\n  company.assets-templates:\n    path: 20-COMPANY/00-PROFILE/assets/templates/\n    summary: Other reusable document and asset shells owned by the company\n  company.board:\n    path: 20-COMPANY/00-PROFILE/board/\n    summary: Board composition, mandates and board-level papers\n  company.qms.reports:\n    path: 20-COMPANY/01-QMS/reports/\n    summary: Generated QMS reports \u2014 gate runs, corpus sweeps, certification summaries\n  company.qms.archive:\n    path: 20-COMPANY/01-QMS/_archive/\n    summary: Superseded QMS records kept for traceability \u2014 scorecards and reviews no longer current\n  company.qms.three-lens-reviews:\n    path: 20-COMPANY/01-QMS/three-lens-reviews/\n    summary: Three-lens skill reviews \u2014 one record per skill reviewed across the three lenses\n  company.process-baseline:\n    path: 20-COMPANY/03-PROCESSES/BASELINE/\n    summary: The as-is process baseline the company measures improvements against\n  company.process-baseline-diagrams:\n    path: 20-COMPANY/03-PROCESSES/BASELINE/diagrams/\n    summary: Rendered diagrams of the process baseline\n  company.finance.accounting:\n    path: 20-COMPANY/06-FINANCE/ACCOUNTING/\n    summary: Bookkeeping working files \u2014 statements, reconciliations, journals outside the ledger\n  company.finance.analysis:\n    path: 20-COMPANY/06-FINANCE/FINANCIAL-ANALYSIS/\n    summary: Financial analysis \u2014 margin, runway and scenario work built on the books\n  company.knowledge-base.baseline:\n    path: 20-COMPANY/07-KNOWLEDGE-BASE/business-baseline/\n    summary: The business baseline chapter of the company's own methodology\n  company.knowledge-base.baseline-diagrams:\n    path: 20-COMPANY/07-KNOWLEDGE-BASE/business-baseline/diagrams/\n    summary: Rendered diagrams belonging to the business-baseline chapter\n  company.marketing.content-engine:\n    path: 20-COMPANY/50-MARKETING/02-PLANNING/CONTENT-ENGINE/\n    summary: The content pipeline's working files \u2014 briefs, calendars, repurposing state\n  company.marketing.images:\n    path: 20-COMPANY/50-MARKETING/06-ASSETS/images/\n    summary: Images used by the company's own marketing content\n  company.marketing.linkedin:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/linkedin/\n    summary: LinkedIn posts and comment drafts for the company's own channel\n  company.marketing.substack:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/substack/\n    summary: The company's Substack newsletter \u2014 drafts, notes and published posts\n  company.marketing.substack-drafts:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/substack/drafts/\n    summary: Substack issues still being written; nothing here has been scheduled\n  company.marketing.substack-notes:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/substack/notes/\n    summary: Short Substack Notes, separate from full issues\n  company.marketing.substack-posts:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/substack/posts/\n    summary: Substack issues that have been published\n  company.marketing.twitter:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/twitter/\n    summary: X/Twitter posts and threads for the company's own channel\n  company.sales.lead-comms:\n    path: 20-COMPANY/60-SALES/leads/03-COMMS/\n    summary: Communication threads filed with the sales pipeline's own lead working files\n  company.operations.support:\n    path: 20-COMPANY/70-OPERATIONS/SUPPORT/\n    summary: Support procedures, tickets and escalation notes\n  company.operations.systems:\n    path: 20-COMPANY/70-OPERATIONS/SYSTEMS/\n    summary: The systems the company runs on \u2014 inventory, access, configuration notes\n\n  # Framework and tooling locations. These are standard keys because skills may need to invoke\n  # another skill or read the vault's governance tooling without knowing this vault's layout.\n  skills.root:\n    path: 00-CORE/Agents/skills/\n    summary: Installed skill folders and their scripts\n  company.qms.root:\n    path: 20-COMPANY/01-QMS/\n    summary: Quality management system records and controls\n  company.qms.accepted-noise:\n    path: 20-COMPANY/01-QMS/accepted-noise-types.md\n    summary: Deliberately unmodelled note types with reasons for excluding them from diagnostics\n  company.qms.mapping:\n    path: 20-COMPANY/01-QMS/skill-quality-mapping.md\n    summary: Skill-to-quality-requirement mapping\n  company.qms.rubrics:\n    path: 20-COMPANY/01-QMS/rubrics/\n    summary: Quality review rubrics\n  company.qms.maturity:\n    path: 20-COMPANY/01-QMS/maturity/\n    scaffold: false  # evidence folder, written by the first maturity measurement\n    summary: Vault and quality maturity measurements\n  company.qms.standards:\n    path: 20-COMPANY/01-QMS/quality-standards.md\n    summary: Quality standards used by the QMS\n  company.qms.audits:\n    path: 20-COMPANY/01-QMS/audits/\n    summary: QMS audit records and findings\n  company.qms.model-cards:\n    path: 20-COMPANY/01-QMS/model-cards/\n    summary: Model cards for certified process-harness activity skills\n  company.qms.skill-proposals:\n    path: 20-COMPANY/01-QMS/skill-proposals/\n    summary: Draft skill-change proposals raised from repeated run failures\n  company.qms.skill-docs-screenshots:\n    path: 20-COMPANY/01-QMS/skill-docs-screenshots/\n    scaffold: false  # evidence folder, written by skill-doc-generator\n    summary: Screenshots embedded in generated skill-doc notes\n  company.qms.skill-docs:\n    path: 20-COMPANY/01-QMS/skill-docs/\n    summary: Generated and reviewed skill documentation records\n  company.qms.spec-reviews:\n    path: 20-COMPANY/01-QMS/spec-reviews/\n    summary: Skill specification review records\n  company.qms.spec-reviews-individual:\n    path: 20-COMPANY/01-QMS/spec-reviews/individual/\n    summary: Per-skill specification reviews, one record each, beneath the batch summaries above them\n  company.qms.corpus-integrity:\n    path: 20-COMPANY/01-QMS/corpus-integrity/\n    scaffold: false  # evidence folder, written by the first corpus run\n    summary: Corpus integrity reports and evidence\n  company.qms.scores:\n    path: 20-COMPANY/01-QMS/skill-scores/\n    summary: Skill quality scores\n  company.qms.scores-archive:\n    path: 20-COMPANY/01-QMS/skill-scores/_archive/\n    summary: Superseded skill scorecards, kept so a score's history can be read back\n  company.qms.role-relevance:\n    path: 20-COMPANY/01-QMS/role_relevance.json\n    summary: Role relevance scoring configuration\n  company.qms.qa-reports:\n    path: 20-COMPANY/01-QMS/qa-reports/\n    summary: Quality assurance reports\n  company.qms.registry:\n    path: 20-COMPANY/01-QMS/quality-registry.md\n    summary: Quality registry and certification state\n  company.qms.provenance-standard:\n    path: 20-COMPANY/01-QMS/provenance-standard.md\n    summary: Provenance requirements for governed artifacts\n  company.compliance:\n    path: 20-COMPANY/02-COMPLIANCE/\n    scaffold: false  # opened only by a company with a compliance obligation\n    summary: Company compliance records and controls\n  company.playbooks:\n    path: 00-CORE/Playbooks/\n    summary: Canonical company and operational playbooks\n  company.playbooks-upgrade:\n    path: 00-CORE/Playbooks/UPGRADE/\n    summary: Compatibility alias for playbook upgrade references\n  company.roles:\n    path: 20-COMPANY/\n    glob: \"company_roles*.json\"\n    summary: Company role and responsibility definitions\n  company.config.google-sheets:\n    path: 20-COMPANY/00-PROFILE/google_sheets.md\n    summary: Google Sheets integration configuration\n  # Owner-specific values vault-release reads instead of carrying them in the skill folder,\n  # which the MCP server serves in full (owner decision 2026-09-26). A workspace that has not\n  # written them gets a clear refusal from the release tooling, never the library owner's values.\n  company.config.release-ops:\n    path: 20-COMPANY/40-PRODUCTS/release-ops.yaml\n    scaffold: false  # written by the owner when a release-history repository is set up\n    summary: Release operations settings \u2014 release-history repository (GitHub name, local folder), Drive account, product aliases and partner/retired product lists, recipient names scanned for in historic builds\n  company.config.client-content-allowlist:\n    path: 20-COMPANY/40-PRODUCTS/client-content-allowlist.yaml\n    scaffold: false  # absent = the client-content gate grants no exemptions\n    summary: Client names the release client-content gate lets through, per path and product, each with a reason\n  # Owner-specific WordPress routing wordpress-publisher's routing guard reads instead of carrying it in\n  # the skill folder (served in full over MCP). Absent = local dev ports are not cross-checked (warning).\n  company.config.wordpress-routing:\n    path: 20-COMPANY/50-MARKETING/wordpress-routing.yaml\n    scaffold: false  # written by the owner when a local WordPress dev stack is registered\n    summary: WordPress routing registry \u2014 local dev port to site_domain, cli_service and db_name, and site_domain to cli_service, checked before every publish\n  company.themes:\n    path: 20-COMPANY/themes/\n    scaffold: false  # created when a site or publishing theme is first added\n    summary: Company website and publishing themes\n  company.profile-root:\n    path: 20-COMPANY/00-PROFILE/\n    summary: Company profile notes and supporting context\n  me.profile-root:\n    path: 10-ME/00-PROFILE/\n    summary: Owner profile notes and supporting context\n  input.root:\n    path: 99-TMP/INPUT/\n    summary: Disposable inbound files awaiting processing\n  output.scripts:\n    path: 99-TMP/SCRIPTS/\n    summary: Disposable generated scripts and script inputs\n  output.tts:\n    path: 99-TMP/tts/\n    summary: Temporary text-to-speech outputs\n  vault.core:\n    path: 00-CORE/\n    summary: Core vault schemas, tasks, templates and framework notes\n  vault.agents:\n    path: 00-CORE/Agents/\n    summary: Agent runtime area \u2014 skills, sessions, logs, skill tests and requirements\n  vault.sessions:\n    path: 00-CORE/Agents/Sessions/\n    summary: Session wrap-up notes written at the end of agent sessions\n  vault.agent-logs:\n    path: 00-CORE/Agents/Agent Client Logfiles/\n    summary: Raw agent client session logs\n  vault.schemas:\n    path: 00-CORE/Schemas/\n    summary: Vault schema tree \u2014 entity source YAML, generated schemas and the schema tooling (the frontmatter validator is vault.validator)\n  vault.json-schema:\n    path: 00-CORE/Schemas/json-schema/\n    summary: Generated JSON Schemas, one per entity type; rebuilt by regenerate.py\n  vault.fileclasses:\n    path: 00-CORE/Schemas/fileClasses/\n    summary: Generated entity fileClass notes consumed by Metadata Menu\n  vault.schemas.source:\n    path: 00-CORE/Schemas/source/\n    summary: Entity schema source YAML; generated schemas and DATAMODEL.md are rebuilt from it\n  # Ships inside the vault-validator skill, so it follows the skills library (`$SKILLS_ROOT`, the\n  # declared skills folder, or an MCP cache) rather than the workspace; the schema DATA it reads\n  # stays in the workspace (`vault.json-schema`). Owner decision 2026-09-26.\n  vault.validator:\n    path: \"{skills.root}/vault-validator/scripts/validate_frontmatter.py\"\n    summary: Frontmatter validation script (vault-validator skill); skips with exit 3 when the workspace has no generated JSON Schemas\n  vault.templates:\n    path: 00-CORE/Templates/\n    summary: Note and artifact templates\n  # Generated, disposable, and only present on a workspace that SHIPS its templates. The source\n  # tree above stays in `{key}` notation because it is the distributable source, so Obsidian's\n  # Templates plugin reading it inserts `{client.root}` into a note instead of a folder name.\n  # `bob-install/scripts/render_templates.py --runtime --write` renders the source tree here and\n  # points the plugin at this key; an installed workspace has its templates rendered in place and\n  # never grows this folder, which is why it is `scaffold: false` and not `required`.\n  vault.templates-runtime:\n    path: 99-TMP/TEMPLATES-RUNTIME/\n    scaffold: false\n    summary: Rendered copy of the note templates that Obsidian's Templates plugin inserts from \u2014 generated by render_templates.py --runtime, disposable, rebuilt from vault.templates\n  vault.bases:\n    path: 00-CORE/Bases/\n    summary: Obsidian Bases and saved views\n  vault.wiki:\n    path: 00-CORE/Wiki/\n    summary: Core wiki and reference notes\n  vault.dataview:\n    path: 00-CORE/Dataview/\n    summary: Dataview queries and views\n  vault.assets:\n    path: 00-CORE/Assets/\n    summary: Framework brand assets \u2014 mascot and logo images used by video and document skills\n  vault.attachments:\n    path: 00-CORE/Attachments/\n    summary: Vault attachments\n  vault.periodic-notes:\n    path: 00-CORE/PeriodicNotes/\n    summary: Periodic notes\n  vault.daily-notes:\n    path: 00-CORE/PeriodicNotes/Daily/\n    summary: Daily journal notes \u2014 the folder Obsidian's Daily Notes plugin files a new day into\n  vault.weekly-notes:\n    path: 00-CORE/PeriodicNotes/Weekly/\n    summary: Weekly periodic notes \u2014 the folder Obsidian's Periodic Notes plugin files a new week into\n  vault.monthly-notes:\n    path: 00-CORE/PeriodicNotes/Monthly/\n    summary: Monthly periodic notes \u2014 the folder Obsidian's Periodic Notes plugin files a new month into\n  vault.requirements:\n    path: 00-CORE/Agents/requirements.yaml\n    summary: Agent dependency requirements\n  vault.plugins-note:\n    path: OBSIDIAN-PLUGINS.md\n    summary: Obsidian plugin configuration and inventory\n\n  # \u2500\u2500 Client finance twins (skill audit 2026-10-08, round 2, added 2026-10-09): one client.finance.* key per company.finance.* folder, so {scope.finance.x} resolves for both scopes \u2500\u2500\n  client.finance.ledger:\n    path: 30-CLIENTS/{id}/06-FINANCE/BEANCOUNT/ledger/\n    scaffold: false\n    summary: \"Client twin of company.finance.ledger: The company's plain-text accounting ledger files\"\n  client.finance.expenses:\n    path: 30-CLIENTS/{id}/06-FINANCE/AP/EXPENSES/\n    scaffold: false\n    summary: \"Client twin of company.finance.expenses: Employee expense claims and the receipts backing them\"\n  client.finance.ap:\n    path: 30-CLIENTS/{id}/06-FINANCE/AP/\n    scaffold: false\n    summary: \"Client twin of company.finance.ap: Accounts payable\"\n  client.finance.ap-invoices:\n    path: 30-CLIENTS/{id}/06-FINANCE/AP/INVOICES/\n    scaffold: false\n    summary: \"Client twin of company.finance.ap-invoices: Invoices suppliers have sent the company, one note per invoice\"\n  client.finance.ap-orders:\n    path: 30-CLIENTS/{id}/06-FINANCE/AP/ORDERS/\n    scaffold: false\n    summary: \"Client twin of company.finance.ap-orders: Purchase orders the company has issued\"\n  client.finance.ap-requisitions:\n    path: 30-CLIENTS/{id}/06-FINANCE/AP/REQUISITIONS/\n    scaffold: false\n    summary: \"Client twin of company.finance.ap-requisitions: Internal purchase requests awaiting approval\"\n  client.finance.bank:\n    path: 30-CLIENTS/{id}/06-FINANCE/BANK/\n    scaffold: false\n    summary: \"Client twin of company.finance.bank: Bank accounts and their reconciliations\"\n  client.finance.tax:\n    path: 30-CLIENTS/{id}/06-FINANCE/TAX/\n    scaffold: false\n    summary: \"Client twin of company.finance.tax: Tax filings and positions\"\n  client.finance.tax-ct:\n    path: 30-CLIENTS/{id}/06-FINANCE/TAX/CT/\n    scaffold: false\n    summary: \"Client twin of company.finance.tax-ct: Corporate tax returns and the computations behind them, one per tax period\"\n  client.finance.tax-vat:\n    path: 30-CLIENTS/{id}/06-FINANCE/TAX/VAT/\n    scaffold: false\n    summary: \"Client twin of company.finance.tax-vat: VAT returns and the workings for each filing period\"\n  client.finance.tax-deferred:\n    path: 30-CLIENTS/{id}/06-FINANCE/TAX/DEFERRED/\n    scaffold: false\n    summary: \"Client twin of company.finance.tax-deferred: Deferred tax computations\"\n  client.finance.tax-tp:\n    path: 30-CLIENTS/{id}/06-FINANCE/TAX/TP/\n    scaffold: false\n    summary: \"Client twin of company.finance.tax-tp: Transfer pricing documentation for related-party transactions\"\n  client.finance.assets-fixed:\n    path: 30-CLIENTS/{id}/06-FINANCE/ASSETS/FIXED/\n    scaffold: false\n    summary: \"Client twin of company.finance.assets-fixed: The fixed-asset register\"\n  client.finance.assets-leases:\n    path: 30-CLIENTS/{id}/06-FINANCE/ASSETS/LEASES/\n    scaffold: false\n    summary: \"Client twin of company.finance.assets-leases: Leases as accounted for\"\n  client.finance.close:\n    path: 30-CLIENTS/{id}/06-FINANCE/CLOSE/\n    scaffold: false\n    summary: \"Client twin of company.finance.close: Period-close checklists and the evidence each close produced\"\n  client.finance.reports:\n    path: 30-CLIENTS/{id}/06-FINANCE/REPORTS/\n    scaffold: false\n    summary: \"Client twin of company.finance.reports: Financial statements, their notes and the trial balances they are built from\"\n  client.finance.provisions:\n    path: 30-CLIENTS/{id}/06-FINANCE/PROVISIONS/\n    scaffold: false\n    summary: \"Client twin of company.finance.provisions: Provisions recognised against future obligations, with the basis each was measured on\"\n  client.finance.provisions-gratuity:\n    path: 30-CLIENTS/{id}/06-FINANCE/PROVISIONS/GRATUITY/\n    scaffold: false\n    summary: \"Client twin of company.finance.provisions-gratuity: End-of-service gratuity provisions per employee under the applicable labour law\"\n  client.finance.inventory:\n    path: 30-CLIENTS/{id}/06-FINANCE/INVENTORY/\n    scaffold: false\n    summary: \"Client twin of company.finance.inventory: Inventory counts and valuations\"\n  client.finance.fx:\n    path: 30-CLIENTS/{id}/06-FINANCE/FX/\n    scaffold: false\n    summary: \"Client twin of company.finance.fx: Foreign-exchange rate tables the books translate with, one per period and source\"\n  client.finance.ecl:\n    path: 30-CLIENTS/{id}/06-FINANCE/ECL/\n    scaffold: false\n    summary: \"Client twin of company.finance.ecl: Expected-credit-loss assessments on receivables\"\n  client.finance.audit:\n    path: 30-CLIENTS/{id}/06-FINANCE/AUDIT/\n    scaffold: false\n    summary: \"Client twin of company.finance.audit: External audit engagements\"\n  client.finance.payment-cards:\n    path: 30-CLIENTS/{id}/06-FINANCE/PAYMENT-CARDS/\n    scaffold: false\n    summary: \"Client twin of company.finance.payment-cards: Company payment cards, their holders and limits\"\n  client.finance.ai-ledger:\n    path: 30-CLIENTS/{id}/06-FINANCE/AI-LEDGER/\n    scaffold: false\n    summary: \"Client twin of company.finance.ai-ledger: AI session cost log, one note per day and client\"\n  client.finance.accounting:\n    path: 30-CLIENTS/{id}/06-FINANCE/ACCOUNTING/\n    scaffold: false\n    summary: \"Client twin of company.finance.accounting: Bookkeeping working files\"\n  client.finance.analysis:\n    path: 30-CLIENTS/{id}/06-FINANCE/FINANCIAL-ANALYSIS/\n    scaffold: false\n    summary: \"Client twin of company.finance.analysis: Financial analysis\"\n  client.marketing.email:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/email/\n    scaffold: false\n    summary: \"Email sequences sent on one client's behalf \u2014 client twin of company.marketing.email\"\n  resource.youtube-summaries:\n    path: 40-RESOURCES/youtube/\n    scaffold: false\n    summary: \"YouTubeIQ video summary notes, one per processed video under INITIAL/AUTHOR/; a dedicated YouTube vault maps this key to its own folder in context.yaml\"\n  me.assets:\n    path: 10-ME/00-PROFILE/assets/\n    scaffold: false\n    summary: \"The owner's own media assets (face photos, headshots, logos) that generated content embeds; pairs with company.assets and client.assets\"\n  client.marketing.lead-magnets:\n    path: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/lead-magnets/\n    scaffold: false\n    summary: \"Lead magnets built for one client's audience \u2014 client twin of company.marketing.lead-magnets\"\n  client.gdrive-archive:\n    path: 30-CLIENTS/{id}/00-GDRIVE-ARCHIVE/\n    scaffold: false\n    summary: \"Archive of a client's Google Drive files and its gdrive-index.md, written by google-workspace\"\n  # \u2500\u2500 Round-2 pack gaps (skill audit 2026-10-08, owner ruling V2\u2013V5, added 2026-10-09) \u2500\u2500\n  # Every location a skill wrote as a literal numbered folder, or as a broad key with a folder\n  # glued on, now has a key of its own. Client folders that have a company twin take the company's\n  # number (V3: operations is 70-, as 20-COMPANY/70-OPERATIONS and the live client folders have it);\n  # client folders with no company twin keep the name the skills and the live vault already use.\n  # A `company.x` / `client.x` pair with the same suffix is what makes `{scope.x}` legal.\n\n  # Owner \u2014 the job-search workspace. Promoted from this vault's own pack (context.yaml) because\n  # four shipped skills (linkedin-mcp, review-job, prepare-application, skill-gap-learning-path)\n  # resolve these keys; same names, same paths.\n  me.job-search:\n    path: 10-ME/40-JOB-SEARCH/\n    scaffold: false  # a personal workspace the owner opens only when job hunting\n    summary: The owner's job search \u2014 opportunities, employers, candidate profile, application materials\n  me.job-search.jobs:\n    path: 10-ME/40-JOB-SEARCH/Jobs/\n    scaffold: false  # created with the job-search workspace\n    summary: Applicant-side vacancy notes (type vacancy, side applicant), filed by application_status into Inbox, Jobs Desk, Accepted and Archive\n  me.job-search.inbox:\n    path: 10-ME/40-JOB-SEARCH/Jobs/Inbox/\n    scaffold: false  # created with the job-search workspace\n    summary: Fresh vacancy captures (application_status captured), including Web Clipper and linkedin-mcp output\n  # The other three application_status folders of an applicant vacancy, promoted 2026-10-31: the\n  # shipped vacancy schema routes by them (BOB statusFolderRouting.vacancy), so a release without\n  # this vault's context.yaml rendered them as literal `{me.job-search.desk}` tokens.\n  me.job-search.desk:\n    path: 10-ME/40-JOB-SEARCH/Jobs/Jobs Desk/\n    scaffold: false  # created with the job-search workspace\n    summary: Vacancies under review or in the application process (application_status reviewing to offer)\n  me.job-search.accepted:\n    path: 10-ME/40-JOB-SEARCH/Jobs/Accepted/\n    scaffold: false  # created with the job-search workspace\n    summary: Roles and freelance assignments the owner accepted; a freelance one names its billing client\n  me.job-search.archive:\n    path: 10-ME/40-JOB-SEARCH/Jobs/Archive/\n    scaffold: false  # created with the job-search workspace\n    summary: Closed vacancies (declined, rejected, withdrawn, archived)\n  me.job-search.profile:\n    path: 10-ME/40-JOB-SEARCH/Profile/Candidate Profile.md\n    scaffold: false  # written by the owner when the job-search workspace is opened\n    summary: Approved candidate profile \u2014 the only evidence source for fit reviews and application drafts\n  me.job-search.materials:\n    path: 10-ME/40-JOB-SEARCH/Materials/\n    scaffold: false  # created by the first application draft\n    summary: Application materials \u2014 cover letters, intros, tailored CV drafts \u2014 one folder per vacancy\n  me.job-search.skill-gap-cases:\n    path: 10-ME/40-JOB-SEARCH/Research/Skill Gap Cases/\n    scaffold: false  # written by the first skill-gap case\n    summary: Skill-gap learning cases written by skill-gap-learning-path\n\n  # Company \u2014 sub-folders skills wrote as `{company.x}` plus a literal.\n  company.deliverables:\n    path: 20-COMPANY/30-DELIVERABLES/\n    scaffold: false  # created by the first company-scope deliverable (a brand review, a showcase)\n    summary: Work products made for the company itself \u2014 brand reviews, showcases, previews \u2014 the twin of client.deliverables\n  company.ai-receipts:\n    path: 20-COMPANY/06-FINANCE/AI-RECEIPTS/\n    scaffold: false  # evidence folder, written by the first ai-receipt run\n    summary: Virtual AI-receipts for company work \u2014 agency cost versus actual AI cost, one note and image per receipt\n  company.hr.compensation:\n    path: 20-COMPANY/05-HR/compensation/\n    scaffold: false  # created by the first compensation plan\n    summary: Compensation plans, commission structures and pay benchmarks\n  company.sales.outbound:\n    path: 20-COMPANY/60-SALES/outbound/\n    scaffold: false  # created by the first outbound campaign\n    summary: Outbound campaign working files \u2014 cold email, cold call and LinkedIn outreach drafts and sequence designs, by campaign slug\n  company.operations.inbox-digest:\n    path: 20-COMPANY/70-OPERATIONS/inbox-digest/\n    scaffold: false  # evidence folder, written by the first email-triage digest\n    summary: Daily inbox digests and weekly email reports from email triage\n  company.knowledge-base.product:\n    path: 20-COMPANY/07-KNOWLEDGE-BASE/product/\n    scaffold: false  # created by the first product-craft analysis\n    summary: Product-management knowledge \u2014 discovery, prioritisation, OKR, JTBD, experiment and decision-framework analyses\n  company.marketing.sea:\n    path: 20-COMPANY/50-MARKETING/04-CAMPAIGNS/SEA/\n    scaffold: false  # created by the first paid-search or paid-social campaign\n    summary: Paid advertising (SEA and paid social) \u2014 campaigns, creatives, scripts and performance reports\n  company.marketing.seo:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/SEO/\n    summary: Search-engine optimisation \u2014 strategy, schema markup, entity submissions\n  company.marketing.social:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/social/\n    summary: Organic social content \u2014 drafted posts, publishing logs and performance notes\n  company.marketing.lead-magnets:\n    path: 20-COMPANY/50-MARKETING/05-PRODUCTION/lead-magnets/\n    scaffold: false  # created by the first lead magnet\n    summary: Lead magnets \u2014 one folder per magnet with the asset and its promotion posts\n  company.marketing.skool-lead-magnets:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/skool/lead-magnets/\n    scaffold: false  # created by the first community lead magnet\n    summary: Lead magnets published to the Skool community \u2014 guides and pipeline explainers, one folder per magnet\n\n  # Client \u2014 twins of company folders, and the client-only folders skills already write.\n  client.qms.root:\n    path: 30-CLIENTS/{id}/01-QMS/\n    scaffold: false  # created by the first approval workflow or audit trail run for this client\n    summary: Quality records for one client's work \u2014 approval workflows and audit trails; the twin of company.qms.root\n  client.decisions:\n    path: 30-CLIENTS/{id}/02-DECISIONS/\n    scaffold: false  # created by the first decision taken for this client\n    summary: Decisions taken for one client \u2014 board and sparring decision briefs, including the ones that closed \"no\"\n  client.processes:\n    path: 30-CLIENTS/{id}/03-PROCESSES/\n    scaffold: false  # created by the first process or transformation session for this client\n    summary: How one client's business runs and is being changed \u2014 transformation scopes and coaching session records; process notes themselves sit in client.business-baseline.processes\n  client.catalogue:\n    path: 30-CLIENTS/{id}/05-CATALOGUE/\n    scaffold: false  # written by the first catalogue import\n    summary: One client's product catalogue \u2014 one note per SKU under products/ and the catalogue-index.json import manifest\n  client.catalogue.products:\n    path: 30-CLIENTS/{id}/05-CATALOGUE/products/\n    scaffold: false  # written by the first catalogue import\n    summary: One product note per catalogue SKU (type product, product_type catalogue-item), written by catalog-csv-ingest beside the catalogue-index.json manifest in client.catalogue\n  client.assets:\n    path: 30-CLIENTS/{id}/00-PROFILE/assets/\n    scaffold: false  # created when the client's first logo or photo is filed\n    summary: One client's media assets \u2014 logos, profile and face photos, images deliverables embed; the twin of company.assets\n  client.knowledge-base.product:\n    path: 30-CLIENTS/{id}/07-KNOWLEDGE-BASE/product/\n    scaffold: false  # created by the first product-craft analysis for this client\n    summary: Product-management knowledge for one client's product \u2014 the twin of company.knowledge-base.product\n  client.deliverables.operations:\n    path: 30-CLIENTS/{id}/30-DELIVERABLES/operations/\n    scaffold: false  # created by the first operations report for this client\n    summary: Operations work products for one client \u2014 bills of materials, material requirements, availability checks\n  client.deliverables.inventory:\n    path: 30-CLIENTS/{id}/30-DELIVERABLES/operations/inventory/\n    scaffold: false  # created by the first inventory report\n    summary: Inventory health, reorder, ABC-XYZ, stock-variance reports and warehouse layouts for one client\n  client.deliverables.orders:\n    path: 30-CLIENTS/{id}/30-DELIVERABLES/operations/orders/\n    scaffold: false  # created by the first order report\n    summary: Order status, fulfilment, backlog, returns and demand reports for one client\n  client.deliverables.logistics:\n    path: 30-CLIENTS/{id}/30-DELIVERABLES/operations/logistics/\n    scaffold: false  # created by the first logistics report\n    summary: Shipment status, carrier, cost, route and packaging reports for one client\n  client.deliverables.production:\n    path: 30-CLIENTS/{id}/30-DELIVERABLES/operations/production/\n    scaffold: false  # created by the first production report\n    summary: Manufacturing-order status, capacity, BOM, schedule and scrap reports for one client\n  client.deliverables.quality-control:\n    path: 30-CLIENTS/{id}/30-DELIVERABLES/operations/qc/\n    scaffold: false  # created by the first quality-control document\n    summary: Inspection checklists, defect logs and quality reports for one client\n  client.products:\n    path: 30-CLIENTS/{id}/40-PRODUCTS/\n    scaffold: false  # created when the client's first product is defined\n    summary: One client's products, one folder per product with its product.md; the twin of company.products\n  client.marketing.sea:\n    path: 30-CLIENTS/{id}/50-MARKETING/04-CAMPAIGNS/SEA/\n    scaffold: false  # created by the first paid campaign for this client\n    summary: One client's paid advertising \u2014 campaigns, creatives, scripts and performance reports\n  client.marketing.seo:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/SEO/\n    scaffold: false  # created by the first SEO strategy or schema work for this client\n    summary: One client's search-engine optimisation \u2014 strategy, schema markup, entity submissions\n  client.marketing.social:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/social/\n    scaffold: false  # created by the first social post drafted for this client\n    summary: One client's organic social content \u2014 drafted posts, publishing logs and performance notes\n  client.operations:\n    path: 30-CLIENTS/{id}/70-OPERATIONS/\n    scaffold: false  # created by the first operations note for this client\n    summary: How one client runs day to day \u2014 systems, onboarding, operational legal templates; the twin of company.operations\n  client.handoff:\n    path: 30-CLIENTS/{id}/90-HANDOFF/\n    scaffold: false  # written by the first handoff\n    summary: Handoff package, sign-off checklist, knowledge transfer and co-worker handoff for one client\n  client.offboarding:\n    path: 30-CLIENTS/{id}/offboarding/\n    scaffold: false  # written when an engagement closes\n    summary: Engagement close-out \u2014 results summary, testimonial and referral asks, exit survey, handover package\n  client.issues:\n    path: 30-CLIENTS/{id}/issues/\n    scaffold: false  # written by the first triaged issue\n    summary: Triaged issue records for one client, one ISS-{date}-{slug} note each\n  client.ai-receipts:\n    path: 30-CLIENTS/{id}/ai-receipts/\n    scaffold: false  # evidence folder, written by the first client-context ai-receipt\n    summary: Virtual AI-receipts for one client's work \u2014 our cost evidence, not the client's books; the twin of company.ai-receipts\n  client.data:\n    path: 30-CLIENTS/{id}/data/\n    scaffold: false  # created when the client first drops an export\n    summary: Raw data drops from the client's systems (ERP exports such as data/odoo shipments, stock, orders) awaiting analysis\n  client.themes:\n    path: 30-CLIENTS/{id}/themes/\n    scaffold: false  # created by the first theme built for this client\n    summary: One client's website themes and design tokens; the twin of company.themes\n\n  # Thin scopes.\n  supplier.people:\n    path: 20-COMPANY/30-SUPPLIERS/{id}/10-PEOPLE/\n    scaffold: false  # created when the first supplier contact is filed\n    summary: Person notes for one supplier's contacts; the twin of partner.people\n  product.brand:\n    path: 20-COMPANY/40-PRODUCTS/{id}/brand/\n    scaffold: false  # created by the brand skills when the product has its own brand spec\n    summary: Where one product's brand spec lives \u2014 DESIGN.md, UI and media standards, brand assets; the product variant of company.brand and client.brand\n\n  # Resources.\n  resource.research:\n    path: 40-RESOURCES/research/\n    summary: Research notes owned by nobody in particular \u2014 use-case discoveries, market and competitor intelligence; its sub-folders kb, domains, regions and signals have keys of their own\n  resource.research-signals:\n    path: 40-RESOURCES/research/signals/\n    scaffold: false  # created by the first trigger-event signal config\n    summary: Trigger-event signal configs, one per customer, with kb/{customer}/ cycle logs and seen-logs\n  resource.reference:\n    path: 40-RESOURCES/reference/\n    summary: Reference material \u2014 tool and model notes, prompts, research reports\n  resource.input-data:\n    path: 40-RESOURCES/reference/input-data/\n    scaffold: false  # created by the first fetched sheet\n    summary: Input data fetched from external sources (Google Sheets exports as JSON) that scripts read\n  resource.clippings:\n    path: 40-RESOURCES/Clippings/\n    scaffold: false  # created by the first Web Clipper capture\n    summary: Pages captured with the Obsidian Web Clipper, awaiting reading or filing\n  resource.web-extracts:\n    path: 40-RESOURCES/web/\n    scaffold: false  # created by the first web page kept as reference\n    summary: Clean markdown extracts of web pages kept as reference (defuddle), one note per page\n\n  # Framework-owned and tooling locations.\n  vault.wiki.bob:\n    path: 00-CORE/Wiki/01-BOB/\n    summary: The BOB product wiki \u2014 onboarding, user manual and workspace guides\n  vault.wiki.onboarding:\n    path: 00-CORE/Wiki/01-BOB/Onboarding/\n    summary: End-user onboarding copy for BOB \u2014 what SME owners read, as opposed to skill files\n  vault.wiki.user-manual:\n    path: 00-CORE/Wiki/01-BOB/user-manual/\n    summary: The BOB user manual, one chapter per note\n  vault.wiki.workspace-guide:\n    path: 00-CORE/Wiki/01-BOB/BOB Workspace/\n    summary: The BOB Workspace plugin guide and its screenshots\n  vault.wiki.cadence-guide:\n    path: 00-CORE/Wiki/01-BOB/cadence-guide/\n    summary: The operating-cadence guide and its screenshots\n  vault.telegram-bridge:\n    path: 00-CORE/Agents/telegram-bridge/\n    scaffold: false  # installed only where the Telegram bridge is set up\n    summary: The Telegram bridge \u2014 its configuration and the scheduled-job hooks that post to Telegram\n  vault.n8n-workflows:\n    path: n8n-workflows/default/personal/\n    scaffold: false  # created by the obsidian-n8n plugin when it syncs an n8n instance\n    summary: Workflow JSON files the obsidian-n8n plugin syncs with the n8n instance (instance default, project personal)\n\n# Where a NEW note of a given entity type is written. Templates use the same `{id}` plus\n# `{date}` (YYYY-MM-DD) and `{slug}` (kebab-case title). A skill that writes an entity resolves\n# its destination here instead of carrying the folder name.\n  # Seven marketing functions, independently mappable by every context pack.\n  company.marketing.strategy:\n    path: 20-COMPANY/50-MARKETING/01-STRATEGY/\n    summary: Marketing strategy \u2014 distinct logical destination; physical groups may\n      be combined by a context pack\n  company.marketing.planning:\n    path: 20-COMPANY/50-MARKETING/02-PLANNING/\n    summary: Marketing planning \u2014 distinct logical destination; physical groups may\n      be combined by a context pack\n  company.marketing.campaigns:\n    path: 20-COMPANY/50-MARKETING/04-CAMPAIGNS/\n    summary: Marketing campaigns \u2014 distinct logical destination; physical groups may\n      be combined by a context pack\n  company.marketing.production:\n    path: 20-COMPANY/50-MARKETING/05-PRODUCTION/\n    summary: Marketing production \u2014 distinct logical destination; physical groups may\n      be combined by a context pack\n  company.marketing.assets:\n    path: 20-COMPANY/50-MARKETING/06-ASSETS/\n    summary: Marketing assets \u2014 distinct logical destination; physical groups may be\n      combined by a context pack\n  company.marketing.insights:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/\n    summary: Marketing insights \u2014 distinct logical destination; physical groups may\n      be combined by a context pack\n  company.marketing.channel-work:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/\n    summary: Marketing channel work \u2014 distinct logical destination; physical groups\n      may be combined by a context pack\n  company.marketing.content-pipeline:\n    path: 20-COMPANY/50-MARKETING/02-PLANNING/content-pipeline/\n    scaffold: false\n    summary: Marketing content pipeline working files\n  company.marketing.experiments:\n    path: 20-COMPANY/50-MARKETING/02-PLANNING/experiments/\n    scaffold: false\n    summary: Marketing experiments working files\n  company.marketing.pricing:\n    path: 20-COMPANY/50-MARKETING/02-PLANNING/pricing/\n    scaffold: false\n    summary: Marketing pricing working files\n  company.marketing.accounts:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/accounts/\n    scaffold: false\n    summary: Marketing channels working files\n  company.marketing.skool:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/skool/\n    scaffold: false\n    summary: Marketing skool working files\n  company.marketing.website:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/website/\n    scaffold: false\n    summary: Marketing website working files\n  company.marketing.competitor-pages:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/website/competitor-pages/\n    scaffold: false\n    summary: Marketing competitor pages working files\n  company.marketing.content-config:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/website/content-config/\n    scaffold: false\n    summary: Marketing content working files\n  company.marketing.youtube-research:\n    path: 20-COMPANY/50-MARKETING/03-CHANNELS/youtube-research/\n    scaffold: false\n    summary: Marketing youtube working files\n  company.marketing.influencer-outreach:\n    path: 20-COMPANY/50-MARKETING/04-CAMPAIGNS/influencer-outreach/\n    scaffold: false\n    summary: Marketing influencer outreach working files\n  company.marketing.launches:\n    path: 20-COMPANY/50-MARKETING/04-CAMPAIGNS/launches/\n    scaffold: false\n    summary: Marketing launches working files\n  company.marketing.local-outreach:\n    path: 20-COMPANY/50-MARKETING/04-CAMPAIGNS/local-outreach/\n    scaffold: false\n    summary: Marketing local outreach working files\n  company.marketing.webinars:\n    path: 20-COMPANY/50-MARKETING/04-CAMPAIGNS/webinars/\n    scaffold: false\n    summary: Marketing webinars working files\n  company.marketing.brochures:\n    path: 20-COMPANY/50-MARKETING/05-PRODUCTION/brochures/\n    scaffold: false\n    summary: Marketing brochures working files\n  company.marketing.collateral:\n    path: 20-COMPANY/50-MARKETING/05-PRODUCTION/collateral/\n    scaffold: false\n    summary: Marketing collateral working files\n  company.marketing.demo-recordings:\n    path: 20-COMPANY/50-MARKETING/05-PRODUCTION/demo-recordings/\n    scaffold: false\n    summary: Marketing demo recordings working files\n  company.marketing.demo-teaser:\n    path: 20-COMPANY/50-MARKETING/05-PRODUCTION/demo-teaser/\n    scaffold: false\n    summary: Marketing demo teaser working files\n  company.marketing.tools:\n    path: 20-COMPANY/50-MARKETING/05-PRODUCTION/tools/\n    scaffold: false\n    summary: Marketing tools working files\n  company.marketing.video:\n    path: 20-COMPANY/50-MARKETING/05-PRODUCTION/video/\n    scaffold: false\n    summary: Marketing video working files\n  company.marketing.shared-assets:\n    path: 20-COMPANY/50-MARKETING/06-ASSETS/shared/\n    scaffold: false\n    summary: Marketing assets working files\n  company.marketing.diagrams:\n    path: 20-COMPANY/50-MARKETING/06-ASSETS/diagrams/\n    scaffold: false\n    summary: Marketing diagrams working files\n  company.marketing.audits:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/audits/\n    scaffold: false\n    summary: Marketing audits working files\n  company.marketing.geo:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/GEO/\n    scaffold: false\n    summary: Marketing geo working files\n  company.marketing.reports:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/reports/\n    scaffold: false\n    summary: Marketing reports working files\n  company.marketing.seo-audits:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/seo-audits/\n    scaffold: false\n    summary: Marketing seo audits working files\n  company.marketing.social-audits:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/social-audits/\n    scaffold: false\n    summary: Marketing social audits working files\n  company.marketing.social-listening:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/social-listening/\n    scaffold: false\n    summary: Marketing social listening working files\n  company.marketing.analytics:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/analytics/\n    scaffold: false\n    summary: Marketing analytics working files\n  company.marketing.cro:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/cro/\n    scaffold: false\n    summary: Marketing cro working files\n  company.marketing.free-tools:\n    path: 20-COMPANY/50-MARKETING/05-PRODUCTION/tools/\n    scaffold: false\n    summary: Marketing free tools working files\n  company.marketing.psychology:\n    path: 20-COMPANY/50-MARKETING/01-STRATEGY/psychology/\n    scaffold: false\n    summary: Marketing psychology working files\n  company.marketing.referral:\n    path: 20-COMPANY/50-MARKETING/04-CAMPAIGNS/referral/\n    scaffold: false\n    summary: Marketing referral working files\n  company.marketing.research:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/research/\n    scaffold: false\n    summary: Marketing research working files\n  client.marketing.strategy:\n    path: 30-CLIENTS/{id}/50-MARKETING/01-STRATEGY/\n    summary: Marketing strategy \u2014 distinct logical destination; physical groups may\n      be combined by a context pack\n  client.marketing.planning:\n    path: 30-CLIENTS/{id}/50-MARKETING/02-PLANNING/\n    summary: Marketing planning \u2014 distinct logical destination; physical groups may\n      be combined by a context pack\n  client.marketing.campaigns:\n    path: 30-CLIENTS/{id}/50-MARKETING/04-CAMPAIGNS/\n    summary: Marketing campaigns \u2014 distinct logical destination; physical groups may\n      be combined by a context pack\n  client.marketing.production:\n    path: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/\n    summary: Marketing production \u2014 distinct logical destination; physical groups may\n      be combined by a context pack\n  client.marketing.assets:\n    path: 30-CLIENTS/{id}/50-MARKETING/06-ASSETS/\n    summary: Marketing assets \u2014 distinct logical destination; physical groups may be\n      combined by a context pack\n  client.marketing.insights:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/\n    summary: Marketing insights \u2014 distinct logical destination; physical groups may\n      be combined by a context pack\n  client.marketing.channel-work:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/\n    summary: Marketing channel work \u2014 distinct logical destination; physical groups\n      may be combined by a context pack\n  client.marketing.content-engine:\n    path: 30-CLIENTS/{id}/50-MARKETING/02-PLANNING/CONTENT-ENGINE/\n    scaffold: false\n    summary: Marketing content engine working files\n  client.marketing.content-pipeline:\n    path: 30-CLIENTS/{id}/50-MARKETING/02-PLANNING/content-pipeline/\n    scaffold: false\n    summary: Marketing content pipeline working files\n  client.marketing.experiments:\n    path: 30-CLIENTS/{id}/50-MARKETING/02-PLANNING/experiments/\n    scaffold: false\n    summary: Marketing experiments working files\n  client.marketing.pricing:\n    path: 30-CLIENTS/{id}/50-MARKETING/02-PLANNING/pricing/\n    scaffold: false\n    summary: Marketing pricing working files\n  client.marketing.accounts:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/accounts/\n    scaffold: false\n    summary: Marketing channels working files\n  client.marketing.linkedin:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/linkedin/\n    scaffold: false\n    summary: Marketing linkedin working files\n  client.marketing.skool:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/skool/\n    scaffold: false\n    summary: Marketing skool working files\n  client.marketing.substack:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/substack/\n    scaffold: false\n    summary: Marketing substack working files\n  client.marketing.twitter:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/twitter/\n    scaffold: false\n    summary: Marketing twitter working files\n  client.marketing.website:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/website/\n    scaffold: false\n    summary: Marketing website working files\n  client.marketing.competitor-pages:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/website/competitor-pages/\n    scaffold: false\n    summary: Marketing competitor pages working files\n  client.marketing.content-config:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/website/content-config/\n    scaffold: false\n    summary: Marketing content working files\n  client.marketing.youtube-research:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/youtube-research/\n    scaffold: false\n    summary: Marketing youtube working files\n  client.marketing.influencer-outreach:\n    path: 30-CLIENTS/{id}/50-MARKETING/04-CAMPAIGNS/influencer-outreach/\n    scaffold: false\n    summary: Marketing influencer outreach working files\n  client.marketing.launches:\n    path: 30-CLIENTS/{id}/50-MARKETING/04-CAMPAIGNS/launches/\n    scaffold: false\n    summary: Marketing launches working files\n  client.marketing.local-outreach:\n    path: 30-CLIENTS/{id}/50-MARKETING/04-CAMPAIGNS/local-outreach/\n    scaffold: false\n    summary: Marketing local outreach working files\n  client.marketing.webinars:\n    path: 30-CLIENTS/{id}/50-MARKETING/04-CAMPAIGNS/webinars/\n    scaffold: false\n    summary: Marketing webinars working files\n  client.marketing.brochures:\n    path: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/brochures/\n    scaffold: false\n    summary: Marketing brochures working files\n  client.marketing.collateral:\n    path: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/collateral/\n    scaffold: false\n    summary: Marketing collateral working files\n  client.marketing.demo-recordings:\n    path: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/demo-recordings/\n    scaffold: false\n    summary: Marketing demo recordings working files\n  client.marketing.demo-teaser:\n    path: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/demo-teaser/\n    scaffold: false\n    summary: Marketing demo teaser working files\n  client.marketing.tools:\n    path: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/tools/\n    scaffold: false\n    summary: Marketing tools working files\n  client.marketing.video:\n    path: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/video/\n    scaffold: false\n    summary: Marketing video working files\n  client.marketing.shared-assets:\n    path: 30-CLIENTS/{id}/50-MARKETING/06-ASSETS/shared/\n    scaffold: false\n    summary: Marketing assets working files\n  client.marketing.diagrams:\n    path: 30-CLIENTS/{id}/50-MARKETING/06-ASSETS/diagrams/\n    scaffold: false\n    summary: Marketing diagrams working files\n  client.marketing.images:\n    path: 30-CLIENTS/{id}/50-MARKETING/06-ASSETS/images/\n    scaffold: false\n    summary: Marketing images working files\n  client.marketing.audits:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/audits/\n    scaffold: false\n    summary: Marketing audits working files\n  client.marketing.geo:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/GEO/\n    scaffold: false\n    summary: Marketing geo working files\n  client.marketing.reports:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/reports/\n    scaffold: false\n    summary: Marketing reports working files\n  client.marketing.seo-audits:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/seo-audits/\n    scaffold: false\n    summary: Marketing seo audits working files\n  client.marketing.social-audits:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/social-audits/\n    scaffold: false\n    summary: Marketing social audits working files\n  client.marketing.social-listening:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/social-listening/\n    scaffold: false\n    summary: Marketing social listening working files\n  client.marketing.analytics:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/analytics/\n    scaffold: false\n    summary: Marketing analytics working files\n  client.marketing.cro:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/cro/\n    scaffold: false\n    summary: Marketing cro working files\n  client.marketing.free-tools:\n    path: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/tools/\n    scaffold: false\n    summary: Marketing free tools working files\n  client.marketing.psychology:\n    path: 30-CLIENTS/{id}/50-MARKETING/01-STRATEGY/psychology/\n    scaffold: false\n    summary: Marketing psychology working files\n  client.marketing.referral:\n    path: 30-CLIENTS/{id}/50-MARKETING/04-CAMPAIGNS/referral/\n    scaffold: false\n    summary: Marketing referral working files\n  client.marketing.research:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/research/\n    scaffold: false\n    summary: Marketing research working files\n\n  client.marketing.channels:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/accounts/\n    summary: The company's own social channels \u2014 handle, audience and posting cadence\n      per channel\n    scaffold: false\n  client.marketing.geo-runs:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/GEO/prompt-panel/runs/\n    scaffold: false\n    summary: Generative-engine visibility probe runs \u2014 one folder per run, one per platform\n      inside it\n  client.marketing.skool-courseware:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/skool/courseware/\n    summary: Skool course material \u2014 one folder per course, holding its modules and\n      lessons\n    scaffold: false\n  client.marketing.skool-tracker:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/skool/tracker/\n    summary: Weekly Skool community metrics \u2014 one note per week\n    scaffold: false\n  client.marketing.substack-drafts:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/substack/drafts/\n    summary: Substack issues still being written; nothing here has been scheduled\n    scaffold: false\n  client.marketing.substack-notes:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/substack/notes/\n    summary: Short Substack Notes, separate from full issues\n    scaffold: false\n  client.marketing.substack-posts:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/substack/posts/\n    summary: Substack issues that have been published\n    scaffold: false\n  client.marketing.skool-lead-magnets:\n    path: 30-CLIENTS/{id}/50-MARKETING/03-CHANNELS/skool/lead-magnets/\n    scaffold: false\n    summary: Lead magnets published to the Skool community \u2014 guides and pipeline explainers,\n      one folder per magnet\n\n  company.marketing.content-production:\n    path: 20-COMPANY/50-MARKETING/05-PRODUCTION/content/\n    summary: Authored content packages and copy, separate from website configuration\n    scaffold: false\n  company.marketing.content-audits:\n    path: 20-COMPANY/50-MARKETING/07-INSIGHTS/content-audits/\n    summary: Content quality reviews and suggestions sidecars\n    scaffold: false\n  company.marketing.ads:\n    path: 20-COMPANY/50-MARKETING/04-CAMPAIGNS/ads/\n    summary: Paid advertising campaign assets\n    scaffold: false\n  client.marketing.content-production:\n    path: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/content/\n    summary: Authored content packages and copy, separate from website configuration\n    scaffold: false\n  client.marketing.content-audits:\n    path: 30-CLIENTS/{id}/50-MARKETING/07-INSIGHTS/content-audits/\n    summary: Content quality reviews and suggestions sidecars\n    scaffold: false\n  client.marketing.ads:\n    path: 30-CLIENTS/{id}/50-MARKETING/04-CAMPAIGNS/ads/\n    summary: Paid advertising campaign assets\n    scaffold: false\n\nrouting:\n  meeting: 30-CLIENTS/{id}/20-MEETINGS/{date}_{slug}.md\n  internal-meeting: 20-COMPANY/20-MEETINGS/{date}_{slug}.md\n  deal: 30-CLIENTS/{id}/01-DEALS/{slug}.md\n  deliverable: 30-CLIENTS/{id}/30-DELIVERABLES/{slug}.md\n  invoice: 30-CLIENTS/{id}/02-INVOICES/{date}_{slug}.md\n  person.client: 30-CLIENTS/{id}/10-PEOPLE/{slug}.md\n  person.other: 10-ME/10-PEOPLE/{slug}.md\n  lead: 20-COMPANY/55-LEADS/{id}/profile.md\n  decision-log: 20-COMPANY/02-DECISIONS/{date}_{slug}.md\n  marketing-content: 20-COMPANY/50-MARKETING/{slug}.md\n  quote: 20-COMPANY/60-SALES/PROPOSALS/{date}_{slug}.md\n  quote.client: 30-CLIENTS/{id}/60-SALES/{date}_{slug}.md\n  price-list: 20-COMPANY/60-SALES/PRICE-LISTS/{slug}.md\n  price-list.client: 30-CLIENTS/{id}/60-SALES/{slug}.md\n  contract: 20-COMPANY/04-LEGAL/CONTRACTS/{slug}.md\n  # Insurance is a `contract` with `contract_class: insurance`, not an entity of its own; the\n  # alias exists so \"file this policy\" resolves without anyone having to know that first.\n  insurance: 20-COMPANY/04-LEGAL/CONTRACTS/{slug}.md\n  employee: 20-COMPANY/05-HR/EMPLOYEES/{slug}.md\n  employee.client: 30-CLIENTS/{id}/05-HR/EMPLOYEES/{slug}.md\n  payroll-run: 20-COMPANY/05-HR/PAYROLL/{date}_{slug}.md\n  timesheet: 20-COMPANY/05-HR/TIMESHEETS/{date}_{slug}.md\n  expense-claim: 20-COMPANY/06-FINANCE/AP/EXPENSES/{date}_{slug}.md\n  subscription: 20-COMPANY/30-SUPPLIERS/{id}/SUBSCRIPTIONS/{slug}.md\n  risk: 20-COMPANY/80-MANAGEMENT/RISKS/{slug}.md\n  run-evidence.company: 20-COMPANY/03-PROCESSES/runs/{date}_{slug}.md\n  run-evidence.client: 30-CLIENTS/{id}/{date}_{slug}.md\n  scratch: 99-TMP/OUTPUT/{slug}.md\n\n  # \u2500\u2500 added 2026-09-21, once the sub-folder keys above existed to name the destinations \u2500\u2500\n  # An entry earns its place when a skill in the catalogue writes notes of that type and would\n  # otherwise rebuild the folder itself. Types nothing writes are deliberately absent; so are\n  # the ones whose destination this grammar cannot express \u2014 it carries one `{id}`, a `{date}`\n  # and a `{slug}`, and `geo-prompt-probe` needs a run id AND a platform. Batch-regenerated QMS\n  # artefacts (skill-doc, skill-scorecard, skill-proposal, spec-review, model-card,\n  # three-lens-review), machine-written logs and mirrors (cron-log, process-run, drive-asset)\n  # and the Obsidian-owned periodic notes have no per-note routing decision to declare, so a\n  # route for them would be a second answer competing with the one already in force.\n\n  # Tasks and run tracking \u2014 the highest-volume type in the vault.\n  task: 00-CORE/TaskNotes/Tasks/{slug}.md\n  session-wrapup: 00-CORE/Agents/Sessions/{date}_{slug}.md\n\n  # Reporting and management. `report` has four legitimate parents, as run-evidence already does.\n  report.company: 20-COMPANY/80-MANAGEMENT/REPORTS/{date}_{slug}.md\n  report.client: 30-CLIENTS/{id}/{date}_{slug}.md\n  report.project: 50-PROJECTS/{id}/{date}_{slug}.md\n  report.qa: 20-COMPANY/01-QMS/qa-reports/{date}_{slug}.md\n  kpi: 20-COMPANY/80-MANAGEMENT/REPORTS/kpi/{slug}.md\n  strategy: 20-COMPANY/80-MANAGEMENT/STRATEGY/{slug}.md\n  pm-artifact.company: 20-COMPANY/80-MANAGEMENT/projects/{slug}.md\n  pm-artifact.project: 50-PROJECTS/{id}/{slug}.md\n  idea: 10-ME/30-IDEAS/{slug}.md\n\n  # Research, analysis and knowledge \u2014 the same shape at client and project scope.\n  research.client: 30-CLIENTS/{id}/10-RESEARCH/{slug}.md\n  research.project: 50-PROJECTS/{id}/10-RESEARCH/{slug}.md\n  analysis.client: 30-CLIENTS/{id}/20-ANALYSIS/{slug}.md\n  analysis.project: 50-PROJECTS/{id}/20-ANALYSIS/{slug}.md\n  knowledge-base.company: 20-COMPANY/07-KNOWLEDGE-BASE/{slug}.md\n  knowledge-base.client: 30-CLIENTS/{id}/07-KNOWLEDGE-BASE/{slug}.md\n  research-kb: 40-RESOURCES/research/kb/{id}/{slug}.md\n  regional-context: 40-RESOURCES/research/regions/{id}/{slug}.md\n  paper-note: 50-PROJECTS/{id}/10-papers/notes/{slug}.md\n\n  # Relationship records. `{id}` is the client, lead, partner or supplier the note belongs to.\n  meeting.lead: 20-COMPANY/55-LEADS/{id}/20-MEETINGS/{date}_{slug}.md\n  meeting.partner: 20-COMPANY/35-PARTNERS/{id}/20-MEETINGS/{date}_{slug}.md\n  comms-thread.client: 30-CLIENTS/{id}/03-COMMS/{date}_{slug}.md\n  comms-thread.lead: 20-COMPANY/55-LEADS/{id}/03-COMMS/{date}_{slug}.md\n  comms-thread.me: 10-ME/03-COMMS/{date}_{slug}.md\n  feedback.client: 30-CLIENTS/{id}/40-FEEDBACK/{date}_{slug}.md\n  feedback.supplier: 20-COMPANY/30-SUPPLIERS/{id}/30-FEEDBACK/{date}_{slug}.md\n  testimonial: 30-CLIENTS/{id}/50-TESTIMONIALS/{slug}.md\n  credit-check: 30-CLIENTS/{id}/01-DEALS/credit-checks/{date}_{slug}.md\n  persona: 20-COMPANY/00-PROFILE/personas/{slug}.md\n  persona.client: 30-CLIENTS/{id}/00-PROFILE/personas/{slug}.md\n\n  # Books. One skill per record type writes each of these, and each used to rebuild the folder.\n  supplier-invoice: 20-COMPANY/06-FINANCE/AP/INVOICES/{date}_{slug}.md\n  purchase-order: 20-COMPANY/06-FINANCE/AP/ORDERS/{date}_{slug}.md\n  purchase-requisition: 20-COMPANY/06-FINANCE/AP/REQUISITIONS/{date}_{slug}.md\n  journal-entry: 20-COMPANY/06-FINANCE/JOURNALS/{date}_{slug}.md\n  journal-entry.client: 30-CLIENTS/{id}/06-FINANCE/JOURNALS/{date}_{slug}.md\n  accounting-period: 20-COMPANY/06-FINANCE/PERIODS/{slug}.md\n  accounting-period.client: 30-CLIENTS/{id}/06-FINANCE/PERIODS/{slug}.md\n  period-close: 20-COMPANY/06-FINANCE/CLOSE/{slug}.md\n  fixed-asset: 20-COMPANY/06-FINANCE/ASSETS/FIXED/{slug}.md\n  lease: 20-COMPANY/06-FINANCE/ASSETS/LEASES/{slug}.md\n  bank-reconciliation: 20-COMPANY/06-FINANCE/BANK/{date}_{slug}.md\n  financial-statement: 20-COMPANY/06-FINANCE/REPORTS/{slug}.md\n  trial-balance: 20-COMPANY/06-FINANCE/REPORTS/{slug}.md\n  vat-return: 20-COMPANY/06-FINANCE/TAX/VAT/{slug}.md\n  corporate-tax-return: 20-COMPANY/06-FINANCE/TAX/CT/{slug}.md\n  ai-session-log: 20-COMPANY/06-FINANCE/AI-LEDGER/{date}-{slug}.md\n\n  # Operations, process and product.\n  process: 20-COMPANY/03-PROCESSES/{slug}.md\n  process.client: 30-CLIENTS/{id}/03-business-baseline/processes/{slug}.md\n  playbook: 00-CORE/Playbooks/{slug}.md\n  ai-initiative: 20-COMPANY/03-PROCESSES/audits/{slug}.md\n  issue: 20-COMPANY/01-QMS/audits/{slug}.md\n  survey: 20-COMPANY/70-OPERATIONS/SURVEYS/{slug}.md\n  candidate: 20-COMPANY/05-HR/recruiting/{slug}.md\n  product: 20-COMPANY/40-PRODUCTS/{id}/product.md\n  vault-release: 20-COMPANY/40-PRODUCTS/{id}/release-notes/{slug}.md\n  installation: 20-COMPANY/40-PRODUCTS/installations/{slug}.md\n\n  # Marketing and sales surfaces that now have keys of their own.\n  campaign: 20-COMPANY/60-SALES/CAMPAIGNS/{slug}.md\n  sequence: 20-COMPANY/60-SALES/SEQUENCES/{slug}.md\n  youtube-video: 20-COMPANY/50-MARKETING/05-PRODUCTION/video/youtube/{slug}.md\n  youtube-video.client: 30-CLIENTS/{id}/50-MARKETING/05-PRODUCTION/video/youtube/{slug}.md\n  social-channel: 20-COMPANY/50-MARKETING/03-CHANNELS/accounts/{slug}.md\n  skool-week: 20-COMPANY/50-MARKETING/03-CHANNELS/skool/tracker/{slug}.md\n  courseware: 20-COMPANY/50-MARKETING/03-CHANNELS/skool/courseware/{id}/{slug}.md\n\n# Workspace-specific conventions \u2014 the \"where\" half of the bootstrap contract. Behavioural rules\n# (publishing gates, evidence, blast radius) stay in the root AGENTS.md and are never copied here.\nconventions:\n  - The client_id is the folder name under the clients root, lowercase and hyphenated, and matches the `client_id` frontmatter field.\n  - The test for company vs client scope is who the work is for, not who did it.\n  - Client-level folders persist across engagements; project folders are one engagement and move to the client archive when done.\n  - A lead has no client folder; the deal appears under the client only once the lead converts.\n  - Read the company profile before any finance, legal or jurisdiction-sensitive routing.\n"
+};
+
+// src/context-pack.ts
+var obsidian = __toESM(require("obsidian"));
+var trimSlash = (value) => value.replace(/\/+$/, "");
+function contextPackFromManifest(manifest, base = null) {
+  const m = manifest && typeof manifest === "object" ? manifest : {};
+  const ownRoots = {};
+  if (m.roots && typeof m.roots === "object") {
+    Object.entries(m.roots).forEach(([name, folder]) => {
+      if (typeof folder === "string" && folder.trim()) ownRoots[name] = trimSlash(folder.trim());
+    });
+  }
+  const ownKeys = {};
+  if (m.keys && typeof m.keys === "object") {
+    Object.entries(m.keys).forEach(([key, spec]) => {
+      const path = spec && typeof spec === "object" ? spec.path : spec;
+      if (typeof path === "string" && path.trim()) ownKeys[key] = path.trim();
+    });
+  }
+  if (!base || m.extends !== "default") return { roots: ownRoots, keys: ownKeys };
+  const moves = Object.entries(ownRoots).filter(([name, folder]) => base.roots[name] && trimSlash(base.roots[name]) !== folder && trimSlash(base.roots[name]) !== ".").map(([name, folder]) => [trimSlash(base.roots[name]), folder]);
+  const rebase = (path) => {
+    for (const [from, to] of moves) {
+      if (path === from || path === `${from}/`) return path.replace(from, to);
+      if (path.startsWith(`${from}/`)) return to + path.slice(from.length);
+    }
+    return path;
+  };
+  const keys = {};
+  Object.entries(base.keys).forEach(([key, path]) => {
+    keys[key] = rebase(path);
+  });
+  Object.assign(keys, ownKeys);
+  return { roots: { ...base.roots, ...ownRoots }, keys };
+}
+function resolveContextKeys(pattern, pack) {
+  let unresolved = false;
+  const out = String(pattern || "").replace(/\{~?([a-z0-9-]+(?:\.[a-z0-9-]+)+)\}/gi, (_whole, key) => {
+    const path = pack?.keys[key];
+    if (typeof path !== "string") {
+      unresolved = true;
+      return "";
+    }
+    return trimSlash(path);
+  });
+  return unresolved ? null : out;
+}
+function foldersFromLocationPattern(locationPattern, pack) {
+  const folders = String(locationPattern || "").split(/\s+or\s+/i).map((alternative) => {
+    const literal = String(alternative || "").trim().replace(/^['"]|['"]$/g, "");
+    const resolved = resolveContextKeys(literal, pack);
+    if (resolved == null) return "";
+    let base = resolved.split("{")[0].replace(/\/$/, "").trim();
+    if (/\.[a-z0-9]+$/i.test(base.split("/").pop() || "")) base = base.split("/").slice(0, -1).join("/");
+    if (!base || base.includes("*") || base.includes(",")) return "";
+    return base;
+  }).filter(Boolean);
+  return [...new Set(folders)];
+}
+function locationPatternForCreate(locationPattern, pack) {
+  return String(locationPattern || "").split(/\s+or\s+/i).map((alternative) => {
+    let unresolved = false;
+    const literal = String(alternative || "").trim().replace(/^['"]|['"]$/g, "");
+    const out = literal.replace(/\{~?([a-z0-9-]+(?:\.[a-z0-9-]+)+)\}/gi, (_whole, key) => {
+      const path = pack?.keys[key];
+      if (typeof path !== "string") {
+        unresolved = true;
+        return "";
+      }
+      const scope = key.split(".")[0];
+      return trimSlash(path).replace(/\{id\}/g, `{${scope}-id}`);
+    });
+    return unresolved ? "" : out;
+  }).filter(Boolean).join(" or ");
+}
+var _defaultPack = null;
+function defaultContextPack() {
+  if (!_defaultPack) {
+    try {
+      _defaultPack = contextPackFromManifest(obsidian.parseYaml(String(context_default_default.yaml || "")));
+    } catch (_) {
+      _defaultPack = { roots: {}, keys: {} };
+    }
+  }
+  return _defaultPack;
+}
+async function loadContextPack(app) {
+  const base = defaultContextPack();
+  try {
+    if (!await app.vault.adapter.exists("context.yaml")) return base;
+    const manifest = obsidian.parseYaml(await app.vault.adapter.read("context.yaml"));
+    return contextPackFromManifest(manifest, base);
+  } catch (e) {
+    new obsidian.Notice(`BOB Workspace: cannot read context.yaml (${e instanceof Error ? e.message : String(e)}); using the default layout.`);
+    return base;
+  }
+}
+
 // templates/workspace-bob.json
 var workspace_bob_default = {
   _template: {
@@ -15896,16 +15999,198 @@ views:
       "Period-Closes.base": 'filters: note.type == "period-close"\nformulas:\n  open: link(file.path, "\u{1F4C4}")\nproperties:\n  file.name:\n    displayName: Period Close\n  note.close_id:\n    displayName: Close\n  note.period_id:\n    displayName: Period\n  note.close_type:\n    displayName: Type\n  note.status:\n    displayName: Status\nviews:\n  - type: table\n    name: Open\n    filters: note.status != "closed" && note.status != "done" && note.status != "archived"\n    order:\n      - formula.open\n      - file.name\n      - close_id\n      - period_id\n      - close_type\n    columnSize:\n      formula.open: 52\n  - type: table\n    name: All\n    order:\n      - formula.open\n      - file.name\n      - close_id\n      - period_id\n      - close_type\n      - status\n    columnSize:\n      formula.open: 52\n'
     },
     schemas: {
-      "accounting-period": "entity: accounting-period\nlabel: Accounting Period\nlocation_pattern: 20-COMPANY/06-FINANCE/PERIODS/\ndescription: Accounting Period entity from DATAMODEL.md\nkey_fields:\n- period_id\n- period_type\n- start_date\n- end_date\n- status\n- currency\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  type: string\n  required: true\n  description: e.g. 2025-12, 2025-Q4, 2025\n- name: period_type\n  type: string\n  required: true\n  enum:\n  - monthly\n  - quarterly\n  - annual\n- name: start_date\n  type: string\n  format: date\n  required: true\n  description: First day of period\n- name: end_date\n  type: string\n  format: date\n  required: true\n  description: Last day of period\n- name: status\n  type: string\n  required: true\n  enum:\n  - open\n  - soft-closed\n  - hard-closed\n- name: currency\n  type: string\n  required: true\n  description: Functional currency (AED for UAE entities; EUR for BE)\n- name: client_id\n  required: false\n  type: string\n  description: kebab-case client identifier. Populated for client periods under 30-CLIENTS/.\n    Omitted for own-company periods\n- name: purpose\n  required: false\n  type: string\n  enum:\n  - live-books\n  - audit-reference\n- name: approved_by\n  required: false\n  type: string\n  description: 'Required when status: hard-closed'\n- name: approved_date\n  required: false\n  type: string\n  format: date\n  description: 'Required when status: hard-closed'\n- name: tags\n  required: true\n  type: array\n  description: Must include accounting-period\nstatus_lifecycle:\n- open\n- soft-closed\n- hard-closed\n",
-      activity: 'entity: activity\nlabel: Activity\nlocation_pattern: 30-CLIENTS/{client-id}/03-COMMS/\ndescription: Activity entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  required: false\n  type: string\n  description: Short subject/title for the activity\n- name: channel\n  required: false\n  type: string\n  enum:\n  - telegram\n  - whatsapp\n  - email\n  - call\n  - meeting\n  - note\n- name: direction\n  required: false\n  type: string\n  enum:\n  - inbound\n  - outbound\n  - internal\n- name: client_id\n  required: false\n  type: string\n  description: Client identifier when client-scoped\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier\\\n    \\ or own company this record attaches to. Pair with company_type. For client records,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: lead_id\n  required: false\n  type: string\n  description: Lead identifier when lead-scoped\n- name: contact_ref\n  required: false\n  type: string\n  description: Person/contact involved in the activity\n- name: date\n  required: false\n  type: string\n  format: date\n  description: Activity date\n- name: related\n  required: false\n  type: string\n  description: Related note, deal, project, thread, or artifact\n- name: outcome\n  required: false\n  type: string\n  description: Result or short summary of the activity\n- name: next_action\n  required: false\n  type: string\n  description: Follow-up action from this activity\n- name: next_action_date\n  required: false\n  type: string\n  format: date\n  description: Follow-up date\n- name: tags\n  required: false\n  type: array\n',
-      "ai-initiative": 'entity: ai-initiative\nlabel: AI Initiative\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: AI Initiative entity from DATAMODEL.md\nkey_fields:\n- initiative_id\n- solution_type\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: initiative_id\n  type: string\n  required: true\n  description: Short mnemonic id, e.g. CH-012\n- name: solution_type\n  type: string\n  required: true\n  enum:\n  - cowork-plugin\n  - automation\n  - custom-build\n  - data-migration\n- name: status\n  type: string\n  required: true\n  enum:\n  - proposed\n  - planned\n  - in-progress\n  - shipped\n  - measured\n  - dropped\n- name: title\n  required: true\n  type: string\n- name: tool\n  required: false\n  type: string\n  description: Named tool/product delivering the initiative (e.g. n8n, Claude Cowork)\n- name: annual_value\n  required: false\n  type: number\n  description: Estimated/measured annual $ value\n- name: effort_weeks\n  required: false\n  type: number\n  description: Estimated implementation effort\n- name: phase\n  required: false\n  type: integer\n  description: 1=quick wins, 2=core platform, 3=AI on clean data\n- name: impact\n  required: false\n  type: string\n  enum:\n  - high\n  - medium\n  - low\n- name: solves\n  required: false\n  type: array\n  description: Wikilinks to audit-waste/audit-finding ids this initiative resolves\n- name: kpi_experiment\n  required: false\n  type: string\n  description: "Wikilink to a KPI experiment TaskNote \\u2014 company-scope only, never\\\n    \\ present on a client-delivery copy"\n- name: quote\n  required: false\n  type: string\n  description: Supporting stakeholder quote\n- name: quote_by\n  required: false\n  type: string\n  description: Speaker attribution for the quote\n- name: client_id\n  required: false\n  type: string\n  description: Present only on a client-delivery copy; absent = company scope\n- name: audit\n  required: false\n  type: string\n  description: Audit engagement id this initiative belongs to\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include audit and initiative status\n',
-      analysis: "entity: analysis\nlabel: Analysis\nlocation_pattern: 30-CLIENTS/{client-id}/ or 20-COMPANY/{division}/analysis/ or 20-COMPANY/35-PARTNERS/{partner-id}/analysis/\n  or 20-COMPANY/60-SALES/ or 30-CLIENTS/{client-id}/60-SALES/ or 50-BRNCX-PROJECTS/{project}/\ndescription: Analysis entity from DATAMODEL.md\nkey_fields:\n- analysis_type\n- based_on\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: analysis_type\n  type: string\n  required: true\n  enum:\n  - swot\n  - growth-opportunities\n  - risk-assessment\n  - competitive\n  - market-sizing\n  - prospect-audit\n  - lead-qualification\n  - decision-maker-map\n  - objection-playbook\n  - pipeline-report\n  - skill-audit\n  - partner-opportunity\n  - architecture-gap-analysis\n  - integration-spec\n  - use-case-inventory\n  - lead-list-curation\n  - demo-script\n  - pitch-script\n  - roi-calculator\n  - lead-gen-control\n  - lead-gen-inventory\n  - outbound-sequence\n  - sales-flow\n  - vault-evolution\n  - credit-check\n  - usp\n  - weights-derivation\n  - roadmap-gap-analysis\n  - consultative-selling\n  - gap-analysis\n  - icp-discovery\n  - skills-mapping\n  - finance-scenario-lineage\n  description: 'genuinely open: 300+ skills each produce their own analysis output. Adding\n    a value here requires editing this row + regenerating, same as any enum; there is no separate\n    registration step (see Decide the open-vocabulary enums (analysis_type, report_type, research_type)\n    for why a heavier gate wasn''t built)'\n- name: based_on\n  type: array\n  required: true\n  description: Wikilinks to source Research artifacts\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: feeds_into\n  required: false\n  type: array\n  description: Wikilinks to Deliverables this supports\n- name: client_id\n  required: false\n  type: string\n  description: Client this analysis is scoped to (when client-specific)\n- name: framework\n  required: false\n  type: string\n  description: Methodology used\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`; note\n    that batch edits routinely leave it stale.\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes. The vault-wide cross-reference idiom.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: analysis_date\n  required: false\n  type: string\n  description: Date the analysis was performed.\n  format: date\n- name: analyst\n  required: false\n  type: string\n  description: Who performed the analysis.\n- name: methodology\n  required: false\n  type: string\n  description: Method or framework the analysis applied.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n- name: entity\n  required: false\n  type: string\n  description: Named entity the analysis is about.\n- name: entity_id\n  required: false\n  type: string\n  description: Identifier for `entity`.\nnotes: '**Unrenamed template copies under `30-CLIENTS/` (2026-08-23).** `analyst` and `analysis_date`\n  are properly typed. Getting there meant clearing the literal `{analyst-name}` / `{YYYY-MM-DD}`\n  placeholders from 11 live client analysis notes copied from `00-CORE/Templates/client/project-template/20-ANALYSIS/`\n  and never filled. A further 28 files still carry them, but every one has a filename ending\n  `_template` and 24 of those sit under `30-CLIENTS/` \u2014 template scaffolding copied into client\n  folders and never renamed. `validate_frontmatter.py` skips `_template` stems, so they neither\n  fail nor get checked. That is a client-deliverable hygiene backlog item, not a schema one.'\n",
-      "audit-finding": "entity: audit-finding\nlabel: Audit Finding\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: Audit Finding entity from DATAMODEL.md\nkey_fields:\n- finding_id\n- kind\n- severity\n- stage\nfields:\n- name: type\n  type: string\n  required: true\n- name: finding_id\n  type: string\n  required: true\n  description: Short mnemonic id, e.g. PP-001, OPT-001\n- name: kind\n  type: string\n  required: true\n  enum:\n  - pain-point\n  - optimisation\n- name: severity\n  type: string\n  required: true\n  enum:\n  - high\n  - medium\n  - low\n- name: stage\n  type: string\n  required: true\n  description: Process/business stage this finding relates to\n- name: title\n  required: true\n  type: string\n  description: One-line description of the finding\n- name: process_ref\n  required: false\n  type: string\n  description: Wikilink to the audit-process this came from\n- name: source_session\n  required: false\n  type: string\n  description: Interview/discovery session identifier\n- name: citation_speaker\n  required: false\n  type: string\n  description: Person quoted or attributed\n- name: citation_quote\n  required: false\n  type: string\n  description: Supporting verbatim quote\n- name: annual_cost\n  required: false\n  type: number\n  description: Optional $ estimate directly on the finding\n- name: status\n  required: true\n  type: string\n  enum:\n  - open\n  - planned\n  - resolved\n  - dismissed\n- name: client_id\n  required: false\n  type: string\n  description: Present only on a client-delivery copy; absent = company scope\n- name: audit\n  required: false\n  type: string\n  description: Audit engagement id this finding belongs to\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include audit and finding kind\n",
-      "audit-process": 'entity: audit-process\nlabel: Audit Process\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: Audit Process entity from DATAMODEL.md\nkey_fields:\n- process_id\nfields:\n- name: type\n  type: string\n  required: true\n- name: process_id\n  type: string\n  required: true\n  description: "kebab-case id \\u2014 drives the generated .bpmn filename and BPMN\\\n    \\ element ids"\n- name: stage\n  required: false\n  type: string\n  description: Business stage this process belongs to\n- name: title\n  required: true\n  type: string\n  description: Process display name\n- name: owner\n  required: false\n  type: string\n  description: Process owner (Person)\n- name: confidence\n  required: false\n  type: string\n  enum:\n  - high\n  - medium\n  - low\n- name: lanes\n  required: false\n  type: array\n  description: Tool swimlanes, top-to-bottom authored order\n- name: steps\n  required: true\n  type: array\n  description: "[{id, title, type, lane, kind, owner}] \\u2014 the BPMN nodes. type\\\n    \\ one of start\\\\|end\\\\|task\\\\|exclusive_gateway\\\\|parallel_gateway; kind optional\\\n    \\ normal\\\\|pain\\\\|opt colours the node"\n- name: flows\n  required: false\n  type: array\n  description: "from, to, label? \\u2014 directed edges between step ids"\n- name: status\n  required: true\n  type: string\n  enum:\n  - draft\n  - review\n  - final\n- name: client_id\n  required: false\n  type: string\n  description: Present only on a client-delivery copy; absent = company scope\n- name: audit\n  required: false\n  type: string\n  description: Audit engagement id this process belongs to\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include audit and process stage\n',
-      "audit-waste": 'entity: audit-waste\nlabel: Audit Waste\nlocation_pattern: 20-COMPANY/03-PROCESSES/audits/\ndescription: Audit Waste entity from DATAMODEL.md\nkey_fields:\n- waste_id\n- category\n- annual_cost\nfields:\n- name: type\n  type: string\n  required: true\n- name: waste_id\n  type: string\n  required: true\n  description: Short mnemonic id, e.g. W-001\n- name: category\n  type: string\n  required: true\n  enum:\n  - missing-automation\n  - communication-gap\n  - no-follow-up\n  - manual-data-entry\n  - duplicate-work\n- name: annual_cost\n  type: number\n  required: true\n  description: "hours_per_week \\xD7 people \\xD7 hourly_rate \\xD7 weeks"\n- name: severity\n  required: true\n  type: string\n  enum:\n  - high\n  - medium\n  - low\n- name: title\n  required: true\n  type: string\n  description: One-line description of the hidden cost\n- name: quote\n  required: false\n  type: string\n  description: Supporting stakeholder quote\n- name: citation_session\n  required: false\n  type: string\n  description: Interview/discovery session identifier\n- name: hours_per_week\n  required: false\n  type: number\n  description: Hours lost per week to this waste\n- name: people\n  required: false\n  type: number\n  description: Number of people affected\n- name: hourly_rate\n  required: false\n  type: number\n  description: Loaded hourly rate used in the calc\n- name: weeks\n  required: false\n  type: integer\n  description: Working weeks per year used in the calc (typically 52)\n- name: rate_estimated\n  required: false\n  type: boolean\n  description: True when hourly_rate is an estimate, not a confirmed figure\n- name: solves_refs\n  required: false\n  type: array\n  description: Finding ids this waste maps to\n- name: status\n  required: true\n  type: string\n  enum:\n  - open\n  - planned\n  - resolved\n  - dismissed\n- name: client_id\n  required: false\n  type: string\n  description: Present only on a client-delivery copy; absent = company scope\n- name: audit\n  required: false\n  type: string\n  description: Audit engagement id this waste belongs to\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include audit and waste category\n',
+      "accounting-period": `entity: accounting-period
+label: Accounting Period
+location_pattern: "{company.finance.periods}/ or {client.finance.periods}/"
+description: Accounting Period entity from DATAMODEL.md
+key_fields:
+- period_id
+- period_type
+- start_date
+- end_date
+- status
+- currency
+fields:
+- name: type
+  type: string
+  required: true
+- name: period_id
+  type: string
+  required: true
+  description: e.g. 2025-12, 2025-Q4, 2025
+- name: period_type
+  type: string
+  required: true
+  enum:
+  - monthly
+  - quarterly
+  - annual
+- name: start_date
+  type: string
+  format: date
+  required: true
+  description: First day of period
+- name: end_date
+  type: string
+  format: date
+  required: true
+  description: Last day of period
+- name: status
+  type: string
+  required: true
+  enum:
+  - open
+  - soft-closed
+  - hard-closed
+- name: currency
+  type: string
+  required: true
+  description: Functional currency (AED for UAE entities; EUR for BE)
+- name: client_id
+  required: false
+  type: string
+  description: kebab-case client identifier. Populated for client periods under {company.clients}/.
+    Omitted for own-company periods
+- name: purpose
+  required: false
+  type: string
+  enum:
+  - live-books
+  - audit-reference
+- name: approved_by
+  required: false
+  type: string
+  description: 'Required when status: hard-closed'
+- name: approved_date
+  required: false
+  type: string
+  format: date
+  description: 'Required when status: hard-closed'
+- name: tags
+  required: true
+  type: array
+  description: Must include accounting-period
+status_lifecycle:
+- open
+- soft-closed
+- hard-closed
+`,
+      activity: 'entity: activity\nlabel: Activity\nlocation_pattern: "{client.comms}/"\ndescription: Activity entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  required: false\n  type: string\n  description: Short subject/title for the activity\n- name: channel\n  required: false\n  type: string\n  enum:\n  - telegram\n  - whatsapp\n  - email\n  - call\n  - meeting\n  - note\n- name: direction\n  required: false\n  type: string\n  enum:\n  - inbound\n  - outbound\n  - internal\n- name: client_id\n  required: false\n  type: string\n  description: Client identifier when client-scoped\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier\\\n    \\ or own company this record attaches to. Pair with company_type. For client records,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: lead_id\n  required: false\n  type: string\n  description: Lead identifier when lead-scoped\n- name: contact_ref\n  required: false\n  type: string\n  description: Person/contact involved in the activity\n- name: date\n  required: false\n  type: string\n  format: date\n  description: Activity date\n- name: related\n  required: false\n  type: string\n  description: Related note, deal, project, thread, or artifact\n- name: outcome\n  required: false\n  type: string\n  description: Result or short summary of the activity\n- name: next_action\n  required: false\n  type: string\n  description: Follow-up action from this activity\n- name: next_action_date\n  required: false\n  type: string\n  format: date\n  description: Follow-up date\n- name: tags\n  required: false\n  type: array\n',
+      "ai-initiative": 'entity: ai-initiative\nlabel: AI Initiative\nlocation_pattern: "{company.process-audits}/"\ndescription: AI Initiative entity from DATAMODEL.md\nkey_fields:\n- initiative_id\n- solution_type\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: initiative_id\n  type: string\n  required: true\n  description: Short mnemonic id, e.g. CH-012\n- name: solution_type\n  type: string\n  required: true\n  enum:\n  - cowork-plugin\n  - automation\n  - custom-build\n  - data-migration\n- name: status\n  type: string\n  required: true\n  enum:\n  - proposed\n  - planned\n  - in-progress\n  - shipped\n  - measured\n  - dropped\n- name: title\n  required: true\n  type: string\n- name: tool\n  required: false\n  type: string\n  description: Named tool/product delivering the initiative (e.g. n8n, Claude Cowork)\n- name: annual_value\n  required: false\n  type: number\n  description: Estimated/measured annual $ value\n- name: effort_weeks\n  required: false\n  type: number\n  description: Estimated implementation effort\n- name: phase\n  required: false\n  type: integer\n  description: 1=quick wins, 2=core platform, 3=AI on clean data\n- name: impact\n  required: false\n  type: string\n  enum:\n  - high\n  - medium\n  - low\n- name: solves\n  required: false\n  type: array\n  description: Wikilinks to audit-waste/audit-finding ids this initiative resolves\n- name: kpi_experiment\n  required: false\n  type: string\n  description: "Wikilink to a KPI experiment TaskNote \\u2014 company-scope only, never\\\n    \\ present on a client-delivery copy"\n- name: success_metric\n  required: false\n  type: string\n  description: "Project success criterion: how to tell this initiative works before it is\\\n    \\ linked to a company KPI, e.g. the owner uses the weekly report every Monday. Not a\\\n    \\ KPI; the company KPI link is kpi_experiment. Allowed on client-delivery copies"\n- name: success_target\n  required: false\n  type: string\n  description: "Threshold at which success_metric counts as met, e.g. 4 of 4 weeks in the\\\n    \\ pilot month. Stated by the owner or auditor, never inferred"\n- name: success_status\n  required: false\n  type: string\n  description: Result of the success check; set to met or not-met before the initiative\n    moves to shipped\n  enum:\n  - pending\n  - met\n  - not-met\n- name: quote\n  required: false\n  type: string\n  description: Supporting stakeholder quote\n- name: quote_by\n  required: false\n  type: string\n  description: Speaker attribution for the quote\n- name: client_id\n  required: false\n  type: string\n  description: Present only on a client-delivery copy; absent = company scope\n- name: audit\n  required: false\n  type: string\n  description: Audit engagement id this initiative belongs to\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include audit and initiative status\nco_required:\n- - success_metric\n  - success_target\n  - success_status\n',
+      analysis: "entity: analysis\nlabel: Analysis\nlocation_pattern: \"{client.root}/ or {division.root}/ or {project.root}/ or {resource.root}/\"\ndescription: \"Analysis entity from DATAMODEL.md. Default home is the division's analysis/ folder or the client it analyses; the pattern allows the whole division and {resource.root}/ because an analysis is filed beside its subject.\"\nkey_fields:\n- analysis_type\n- based_on\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: analysis_type\n  type: string\n  required: true\n  vocabulary: analysis_type\n  description: 'Derived vocabulary, generated into {vault.schemas}/vocabularies/open-vocabulary.yaml from what the corpus declares; never edited by hand. Genuinely open: 300+ skills each produce their own analysis output and mint their own kind. A new kind becomes valid by being declared in the skill, template or view that produces it and re-running the harvester, not by editing a list. The floor a candidate must clear is a kebab-case slug, so a malformed value is still rejected. See harvest_open_vocabulary.py.'\n- name: based_on\n  type: array\n  required: true\n  description: Wikilinks to source Research artifacts\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: feeds_into\n  required: false\n  type: array\n  description: Wikilinks to Deliverables this supports\n- name: client_id\n  required: false\n  type: string\n  description: Client this analysis is scoped to (when client-specific)\n- name: framework\n  required: false\n  type: string\n  description: Methodology used\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`; note\n    that batch edits routinely leave it stale.\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes. The vault-wide cross-reference idiom.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: analysis_date\n  required: false\n  type: string\n  description: Date the analysis was performed.\n  format: date\n- name: analyst\n  required: false\n  type: string\n  description: Who performed the analysis.\n- name: methodology\n  required: false\n  type: string\n  description: Method or framework the analysis applied.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n- name: entity\n  required: false\n  type: string\n  description: Named entity the analysis is about.\n- name: entity_id\n  required: false\n  type: string\n  description: Identifier for `entity`.\nnotes: '**Unrenamed template copies under `{company.clients}/` (2026-08-23).** `analyst` and `analysis_date`\n  are properly typed. Getting there meant clearing the literal `{analyst-name}` / `{YYYY-MM-DD}`\n  placeholders from 11 live client analysis notes copied from `{vault.templates}/client/project-template/{~client.analysis}/`\n  and never filled. A further 28 files still carry them, but every one has a filename ending\n  `_template` and 24 of those sit under `{company.clients}/` \u2014 template scaffolding copied into client\n  folders and never renamed. `validate_frontmatter.py` skips `_template` stems, so they neither\n  fail nor get checked. That is a client-deliverable hygiene backlog item, not a schema one.'\n",
+      "audit-finding": 'entity: audit-finding\nlabel: Audit Finding\nlocation_pattern: "{company.process-audits}/"\ndescription: Audit Finding entity from DATAMODEL.md\nkey_fields:\n- finding_id\n- kind\n- severity\n- stage\nfields:\n- name: type\n  type: string\n  required: true\n- name: finding_id\n  type: string\n  required: true\n  description: Short mnemonic id, e.g. PP-001, OPT-001\n- name: kind\n  type: string\n  required: true\n  enum:\n  - pain-point\n  - optimisation\n- name: severity\n  type: string\n  required: true\n  enum:\n  - high\n  - medium\n  - low\n- name: stage\n  type: string\n  required: true\n  description: Process/business stage this finding relates to\n- name: title\n  required: true\n  type: string\n  description: One-line description of the finding\n- name: process_ref\n  required: false\n  type: string\n  description: Wikilink to the audit-process this came from\n- name: source_session\n  required: false\n  type: string\n  description: Interview/discovery session identifier\n- name: citation_speaker\n  required: false\n  type: string\n  description: Person quoted or attributed\n- name: citation_quote\n  required: false\n  type: string\n  description: Supporting verbatim quote\n- name: annual_cost\n  required: false\n  type: number\n  description: Optional $ estimate directly on the finding\n- name: status\n  required: true\n  type: string\n  enum:\n  - open\n  - planned\n  - resolved\n  - dismissed\n- name: client_id\n  required: false\n  type: string\n  description: Present only on a client-delivery copy; absent = company scope\n- name: audit\n  required: false\n  type: string\n  description: Audit engagement id this finding belongs to\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include audit and finding kind\n',
+      "audit-process": 'entity: audit-process\nlabel: Audit Process\nlocation_pattern: "{company.process-audits}/"\ndescription: Audit Process entity from DATAMODEL.md\nkey_fields:\n- process_id\nfields:\n- name: type\n  type: string\n  required: true\n- name: process_id\n  type: string\n  required: true\n  description: "kebab-case id \\u2014 drives the generated .bpmn filename and BPMN\\\n    \\ element ids"\n- name: stage\n  required: false\n  type: string\n  description: Business stage this process belongs to\n- name: title\n  required: true\n  type: string\n  description: Process display name\n- name: owner\n  required: false\n  type: string\n  description: Process owner (Person)\n- name: confidence\n  required: false\n  type: string\n  enum:\n  - high\n  - medium\n  - low\n- name: lanes\n  required: false\n  type: array\n  description: Tool swimlanes, top-to-bottom authored order\n- name: steps\n  required: true\n  type: array\n  description: "[{id, title, type, lane, kind, owner}] \\u2014 the BPMN nodes. type\\\n    \\ one of start\\\\|end\\\\|task\\\\|exclusive_gateway\\\\|parallel_gateway; kind optional\\\n    \\ normal\\\\|pain\\\\|opt colours the node"\n- name: flows\n  required: false\n  type: array\n  description: "from, to, label? \\u2014 directed edges between step ids"\n- name: status\n  required: true\n  type: string\n  enum:\n  - draft\n  - review\n  - final\n- name: client_id\n  required: false\n  type: string\n  description: Present only on a client-delivery copy; absent = company scope\n- name: audit\n  required: false\n  type: string\n  description: Audit engagement id this process belongs to\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include audit and process stage\n',
+      "audit-waste": `entity: audit-waste
+label: Audit Waste
+location_pattern: "{company.process-audits}/ or {client.business-baseline.waste}/"
+description: Audit Waste entity from DATAMODEL.md
+key_fields:
+- waste_id
+- category
+- annual_cost
+fields:
+- name: type
+  type: string
+  required: true
+- name: waste_id
+  type: string
+  required: true
+  description: Short mnemonic id, e.g. W-001
+- name: category
+  type: string
+  required: true
+  enum:
+  - missing-automation
+  - communication-gap
+  - no-follow-up
+  - manual-data-entry
+  - duplicate-work
+  - defects
+  - overproduction
+  - waiting
+  - non-utilized-talent
+  - transportation
+  - inventory
+  - motion
+  - extra-processing
+  description: 'Hidden-cost categories (missing-automation .. duplicate-work) from
+    the business baseline audit, or one of the eight Lean (DOWNTIME) wastes written
+    by process-kaizen (defects .. extra-processing)'
+- name: annual_cost
+  type: number
+  required: true
+  description: "hours_per_week \\xD7 people \\xD7 hourly_rate \\xD7 weeks"
+- name: severity
+  required: true
+  type: string
+  enum:
+  - high
+  - medium
+  - low
+- name: title
+  required: true
+  type: string
+  description: One-line description of the hidden cost
+- name: quote
+  required: false
+  type: string
+  description: Supporting stakeholder quote
+- name: citation_session
+  required: false
+  type: string
+  description: Interview/discovery session identifier
+- name: hours_per_week
+  required: false
+  type: number
+  description: Hours lost per week to this waste
+- name: people
+  required: false
+  type: number
+  description: Number of people affected
+- name: hourly_rate
+  required: false
+  type: number
+  description: Loaded hourly rate used in the calc
+- name: weeks
+  required: false
+  type: integer
+  description: Working weeks per year used in the calc (typically 52)
+- name: rate_estimated
+  required: false
+  type: boolean
+  description: True when hourly_rate is an estimate, not a confirmed figure
+- name: solves_refs
+  required: false
+  type: array
+  description: Finding ids this waste maps to
+- name: status
+  required: true
+  type: string
+  enum:
+  - open
+  - planned
+  - resolved
+  - dismissed
+- name: client_id
+  required: false
+  type: string
+  description: Present only on a client-delivery copy; absent = company scope
+- name: audit
+  required: false
+  type: string
+  description: Audit engagement id this waste belongs to
+- name: created
+  required: true
+  type: string
+  format: date
+- name: tags
+  required: true
+  type: array
+  description: Must include audit and waste category
+`,
       "bank-account": `entity: bank-account
 label: Bank Account
-location_pattern: 20-COMPANY/06-FINANCE/BANK/
+location_pattern: "{company.finance.bank}/"
 description: Bank Account entity from DATAMODEL.md
 key_fields:
 - account_id
@@ -15955,7 +16240,7 @@ fields:
 `,
       "bank-reconciliation": `entity: bank-reconciliation
 label: Bank Reconciliation
-location_pattern: 20-COMPANY/06-FINANCE/BANK/
+location_pattern: "{company.finance.bank}/"
 description: Bank Reconciliation entity from DATAMODEL.md
 key_fields:
 - recon_id
@@ -16051,10 +16336,10 @@ status_lifecycle:
 - reconciled
 - approved
 `,
-      campaign: 'entity: campaign\nlabel: Campaign\nlocation_pattern: 20-COMPANY/60-SALES/CAMPAIGNS/\ndescription: Campaign entity from DATAMODEL.md\nkey_fields:\n- campaign_name\n- campaign_type\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: campaign_name\n  type: string\n  required: true\n  description: Display name\n- name: campaign_type\n  type: string\n  required: true\n  enum:\n  - outbound\n  - inbound\n  - mixed\n  - nurture\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - paused\n  - completed\n  - archived\n- name: launch_date\n  required: false\n  type: string\n  format: date\n  description: When the campaign goes live\n- name: target_persona\n  required: false\n  type: string\n  description: e.g. "Head of Ops, 50-200 emp SaaS"\n- name: target_account_list\n  required: false\n  type: string\n  description: ICP segment or list reference\n- name: channels\n  required: false\n  type: array\n  description: email, linkedin, phone, ads, content\n- name: goal\n  required: false\n  type: string\n  description: MQLs, meetings, pipeline, brand\n- name: target_metric_value\n  required: false\n  type: number\n  description: Numeric goal\n- name: budget\n  required: false\n  type: number\n  description: Spend budget\n- name: owner\n  required: false\n  type: string\n  description: Person responsible\n- name: expected_end_date\n  required: false\n  type: string\n  format: date\n  description: Planned end\n- name: actual_end_date\n  required: false\n  type: string\n  format: date\n  description: Set on close\n- name: playbook_ref\n  required: false\n  type: string\n  description: Playbook template this instantiates\n- name: created\n  required: true\n  type: string\n  format: date\n',
+      campaign: 'entity: campaign\nlabel: Campaign\nlocation_pattern: "{company.sales.campaigns}/"\ndescription: Campaign entity from DATAMODEL.md\nkey_fields:\n- campaign_name\n- campaign_type\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: campaign_name\n  type: string\n  required: true\n  description: Display name\n- name: campaign_type\n  type: string\n  required: true\n  enum:\n  - outbound\n  - inbound\n  - mixed\n  - nurture\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - paused\n  - completed\n  - archived\n- name: launch_date\n  required: false\n  type: string\n  format: date\n  description: When the campaign goes live\n- name: target_persona\n  required: false\n  type: string\n  description: e.g. "Head of Ops, 50-200 emp SaaS"\n- name: target_account_list\n  required: false\n  type: string\n  description: ICP segment or list reference\n- name: channels\n  required: false\n  type: array\n  description: email, linkedin, phone, ads, content\n- name: goal\n  required: false\n  type: string\n  description: MQLs, meetings, pipeline, brand\n- name: target_metric_value\n  required: false\n  type: number\n  description: Numeric goal\n- name: budget\n  required: false\n  type: number\n  description: Spend budget\n- name: owner\n  required: false\n  type: string\n  description: Person responsible\n- name: expected_end_date\n  required: false\n  type: string\n  format: date\n  description: Planned end\n- name: actual_end_date\n  required: false\n  type: string\n  format: date\n  description: Set on close\n- name: playbook_ref\n  required: false\n  type: string\n  description: Playbook template this instantiates\n- name: created\n  required: true\n  type: string\n  format: date\n',
       candidate: `entity: candidate
 label: Candidate
-location_pattern: 30-CLIENTS/{client-id}/05-HR/recruiting/ or 20-COMPANY/05-HR/recruiting/
+location_pattern: "{client.hr.recruiting}/ or {company.hr.recruiting}/"
 description: Candidate entity from DATAMODEL.md
 key_fields:
 - candidate_name
@@ -16086,13 +16371,18 @@ fields:
 - name: client_id
   required: false
   type: string
-  description: "Scoping FK \\u2014 required-by-convention for candidates under 30-CLIENTS/{id}/;\\
-    \\ omit for company-internal (20-COMPANY) hires"
+  description: "Scoping FK \\u2014 required-by-convention for candidates under {client.root}/;\\
+    \\ omit for company-internal ({company.root}) hires"
 - name: channel_ref
   required: false
   type: string
   description: Wikilink to the Recruiting Channel that sourced this candidate (the
     "Source" column)
+- name: vacancy_ref
+  required: false
+  type: string
+  description: Wikilink to the employer-side Vacancy note (side employer) this candidate applied
+    for. The role field stays as the display title; this is the typed link.
 - name: hiring_plan_ref
   required: false
   type: string
@@ -16174,10 +16464,10 @@ status_lifecycle:
 - rejected
 - withdrawn
 `,
-      certification: "entity: certification\nlabel: Certification\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/CERTIFICATIONS/\ndescription: Certification entity from DATAMODEL.md\nkey_fields:\n- name\n- partner_ref\n- issued_date\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: name\n  type: string\n  required: true\n  description: Certification name\n- name: partner_ref\n  type: string\n  required: true\n- name: issued_date\n  type: string\n  format: date\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - active\n  - expiring-soon\n  - expired\n  - renewed\n  - revoked\n- name: level\n  required: false\n  type: string\n  description: e.g. Gold, Silver, Associate, Expert\n- name: expires_date\n  required: false\n  type: string\n  format: date\n- name: holder_ref\n  required: false\n  type: string\n  description: Person at the partner who holds it\n- name: issuing_body\n  required: false\n  type: string\n- name: certification_id\n  required: false\n  type: string\n  description: External credential ID\n- name: renewal_due_date\n  required: false\n  type: string\n  format: date\n  description: When renewal action needs to be taken\n- name: training_url\n  required: false\n  type: string\n  description: Link to training material\n- name: created\n  required: true\n  type: string\n  format: date\n",
+      certification: 'entity: certification\nlabel: Certification\nlocation_pattern: "{partner.certifications}/"\ndescription: Certification entity from DATAMODEL.md\nkey_fields:\n- name\n- partner_ref\n- issued_date\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: name\n  type: string\n  required: true\n  description: Certification name\n- name: partner_ref\n  type: string\n  required: true\n- name: issued_date\n  type: string\n  format: date\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - active\n  - expiring-soon\n  - expired\n  - renewed\n  - revoked\n- name: level\n  required: false\n  type: string\n  description: e.g. Gold, Silver, Associate, Expert\n- name: expires_date\n  required: false\n  type: string\n  format: date\n- name: holder_ref\n  required: false\n  type: string\n  description: Person at the partner who holds it\n- name: issuing_body\n  required: false\n  type: string\n- name: certification_id\n  required: false\n  type: string\n  description: External credential ID\n- name: renewal_due_date\n  required: false\n  type: string\n  format: date\n  description: When renewal action needs to be taken\n- name: training_url\n  required: false\n  type: string\n  description: Link to training material\n- name: created\n  required: true\n  type: string\n  format: date\n',
       "chart-of-accounts": `entity: chart-of-accounts
 label: Chart of Accounts
-location_pattern: 20-COMPANY/06-FINANCE/COA/{jurisdiction}/
+location_pattern: "{company.finance.coa}/{jurisdiction}/ or {client.finance.coa}/{jurisdiction}/"
 description: Chart of Accounts entity from DATAMODEL.md
 key_fields: []
 fields:
@@ -16191,8 +16481,13 @@ fields:
 - name: account_code
   required: true
   type: string
-  description: "Account number per jurisdiction scheme (BE PCMN 4-digit minimum; UAE\\
-    \\ company-defined). String, not number \\u2014 preserves leading zeros"
+  description: "Account number per jurisdiction scheme. BE PCMN: the one-digit class\\
+    \\ and any 1\\u20133 digit code the statutory table splits further (40 \\u2192 400, 110\\
+    \\ \\u2192 1100) are headers and never receive postings; posting accounts are the most\\
+    \\ detailed statutory code on each branch (2\\u20134 digits, mostly 3, e.g. 400, 440,\\
+    \\ 550); analytical sub-accounts add digits under a posting account (4000 under 400).\\
+    \\ UAE: company-defined, typically 4 digits. String, not number \\u2014 preserves\\
+    \\ leading zeros"
 - name: account_name
   required: true
   type: string
@@ -16232,7 +16527,7 @@ fields:
 - name: client_id
   required: false
   type: string
-  description: kebab-case client identifier. Populated for client COAs under 30-CLIENTS/.
+  description: kebab-case client identifier. Populated for client COAs under {company.clients}/.
     Omitted for own-company COA
 - name: purpose
   required: false
@@ -16280,14 +16575,14 @@ fields:
   type: string
   description: Legal entity the chart of accounts belongs to.
 `,
-      client: 'entity: client\nlabel: Client\nlocation_pattern: 30-CLIENTS/{client-id}/00-PROFILE/\ndescription: Client entity from DATAMODEL.md\nkey_fields:\n- client_id\n- client_name\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: client_id\n  type: string\n  required: true\n  description: "kebab-case mnemonic identifier, e.g. acme-corp, solvay. Internal handle\\\n    \\ \\u2014 independent of any external registry number"\n- name: client_name\n  type: string\n  required: true\n  description: Display name (legal name as registered)\n- name: status\n  type: string\n  required: true\n  enum:\n  - prospect\n  - active\n  - inactive\n  - on-hold\n  - completed\n  - archived\n- name: health\n  required: false\n  type: string\n  enum:\n  - green\n  - amber\n  - red\n  description: "Relationship RAG status, owner-assessed. Feeds the client_health_red_count\\\n    \\ KPI. Separate from `status`, which is commercial lifecycle: an active client\\\n    \\ can be red (at risk of churn) and an on-hold one green. Absent means never assessed\\\n    \\ and is excluded from the count rather than assumed green \\u2014 a client nobody\\\n    \\ has reviewed is not evidence of a healthy relationship."\n- name: regions\n  required: false\n  type: array\n  description: Operating regions for client work\n- name: jurisdiction\n  required: false\n  type: string\n  description: ISO-3166-1 alpha-2 code of country of incorporation (BE, UAE, UK, FR,\n    ...)\n- name: legal_form\n  required: false\n  type: string\n  description: Legal form abbreviation in source language (SA/NV, SRL/BV, ASBL/VZW\n    for BE; Ltd, PLC for UK; LLC for UAE; SARL for FR)\n- name: company_registration_number\n  required: false\n  type: string\n  description: Jurisdiction-agnostic company registration number (Belgian KBO/BCE\n    0403.091.220; UK Companies House 12345678; French SIRET; UAE Commercial Licence).\n    Always pair with company_registration_registry\n- name: company_registration_registry\n  required: false\n  type: string\n  description: \'Source registry tag: BE-KBO\'\n- name: vat_id\n  required: false\n  type: string\n  description: VAT identification number with country prefix (BE0403091220, GB123456789,\n    AE100000000000003). Distinct from company_registration_number\n- name: profile_type\n  required: true\n  type: string\n  enum:\n  - company-overview\n  - contact-details\n  - brand-voice\n  - brand-system\n  - icp\n  - client-overview\n- name: location\n  required: false\n  type: string\n  description: Primary location\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include client-id value\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n- name: archetype\n  required: false\n  type: array\n  description: >-\n    Business archetype slug(s) from business-baseline\'s KPI packs, ordered primary first.\n    Multi-valued because a real business can run more than one motion and scoring it as either\n    one alone hides half the business. Every value must be one of the 15 pack slugs \u2014 a\n    descriptive label like "Partner-Distributed Business Operating Brain" names a distribution\n    model, not an archetype, and no skill taking a `business-type` input can read it.\n  items:\n    type: string\n    enum:\n    - agency\n    - coach\n    - course-creator\n    - creator\n    - ecommerce\n    - enterprise-b2b\n    - franchise\n    - local\n    - manufacturing\n    - multi-channel-retail\n    - nonprofit\n    - real-estate\n    - saas\n    - service-provider\n    - technical-services\nstatus_lifecycle:\n- prospect\n- active\n- inactive\n- on-hold\n- completed\n- archived\n',
-      commission: "entity: commission\nlabel: Commission\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/COMMISSIONS/\ndescription: Commission entity from DATAMODEL.md\nkey_fields:\n- reference\n- partner_ref\n- amount\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: reference\n  type: string\n  required: true\n  description: Commission ID/reference\n- name: partner_ref\n  type: string\n  required: true\n  description: Partner earning the commission\n- name: amount\n  type: number\n  bob_type: currency\n  required: true\n  description: Calculated amount\n- name: status\n  type: string\n  required: true\n  enum:\n  - pending\n  - earned\n  - paid\n  - disputed\n  - written-off\n- name: period\n  required: false\n  type: string\n  description: Accounting period (e.g. 2026-Q3)\n- name: earned_date\n  required: false\n  type: string\n  format: date\n  description: When deal closed won\n- name: deal_ref\n  required: false\n  type: string\n  description: Deal that triggered the commission\n- name: rate_pct\n  required: false\n  type: number\n  description: Commission rate percentage applied\n- name: currency\n  required: false\n  type: string\n- name: paid_date\n  required: false\n  type: string\n  format: date\n  description: When commission was disbursed\n- name: payment_reference\n  required: false\n  type: string\n  description: Bank transfer or invoice reference\n- name: notes\n  required: false\n  type: string\n- name: created\n  required: true\n  type: string\n  format: date\n",
-      "comms-thread": 'entity: comms-thread\nlabel: Comms Thread\nlocation_pattern: 30-CLIENTS/{client-id}/03-COMMS/ or 20-COMPANY/55-LEADS/{lead-id}/03-COMMS/\n  or 10-ME/03-COMMS/ or 20-COMPANY/60-SALES/leads/03-COMMS/\ndescription: Comms Thread entity from DATAMODEL.md\nkey_fields:\n- thread_id\n- channel\n- status\n- awaiting_reply\n- last_message_at\nfields:\n- name: type\n  type: string\n  required: true\n- name: thread_id\n  type: string\n  required: true\n  description: Stable cross-session identifier (Gmail thread ID, WhatsApp chat ID,\n    Telegram chat+message ID)\n- name: channel\n  type: string\n  required: true\n  enum:\n  - email\n  - whatsapp\n  - telegram\n- name: status\n  type: string\n  required: true\n  enum:\n  - open\n  - awaiting-us\n  - awaiting-them\n  - closed\n- name: awaiting_reply\n  type: boolean\n  required: true\n  description: "true when we owe a reply \\u2014 the toast trigger condition"\n- name: last_message_at\n  type: string\n  required: true\n  description: "ISO timestamp of most recent inbound or outbound message \\u2014 used\\\n    \\ to detect new messages on already-known threads"\n- name: client_id\n  required: false\n  type: string\n  description: "Required only under 30-CLIENTS/ \\u2014 conditional, same group as\\\n    \\ deliverable/pm-artifact/project. A personal thread under 10-ME/03-COMMS/ has\\\n    \\ neither client nor lead"\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier\\\n    \\ or own company this record attaches to. Pair with company_type. For client records,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: end_client_id\n  required: false\n  type: string\n- name: project_id\n  required: false\n  type: string\n- name: project\n  required: false\n  type: string\n- name: account\n  required: false\n  type: string\n  description: Account/handle the thread was received on (e.g., gws account name,\n    WhatsApp number, Telegram bot/user)\n- name: subject\n  required: false\n  type: string\n  description: Email subject line, or first-line snippet for chat channels\n- name: urgency\n  required: false\n  type: string\n  enum:\n  - urgent\n  - high\n  - normal\n  - low\n- name: captured_in\n  required: false\n  type: array\n  description: Wikilinks to meeting/decision/deliverable notes promoted from this\n    thread\n- name: lead_id\n  required: false\n  type: string\n  description: Must match a 20-COMPANY/55-LEADS/ folder. Set for lead-scoped threads\n    during outreach campaigns. Exactly one of client_id/lead_id should be set.\n- name: created\n  required: true\n  type: string\n  format: date\n',
-      company: 'entity: company\nlabel: Company\nlocation_pattern: 20-COMPANY/00-PROFILE/\ndescription: Company entity from DATAMODEL.md\nkey_fields:\n- entity_id\n- title\n- status\n- regions\nfields:\n- name: type\n  type: string\n  required: true\n- name: entity_id\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - active\n  - inactive\n  - on-hold\n  - archived\n- name: regions\n  type: array\n  required: true\n- name: archetype\n  required: false\n  type: array\n  description: >-\n    Business archetype slug(s) from business-baseline\'s KPI packs, ordered primary first.\n    Multi-valued because a real business can run more than one motion and scoring it as either\n    one alone hides half the business. Every value must be one of the 15 pack slugs \u2014 a\n    descriptive label like "Partner-Distributed Business Operating Brain" names a distribution\n    model, not an archetype, and no skill taking a `business-type` input can read it.\n  items:\n    type: string\n    enum:\n    - agency\n    - coach\n    - course-creator\n    - creator\n    - ecommerce\n    - enterprise-b2b\n    - franchise\n    - local\n    - manufacturing\n    - multi-channel-retail\n    - nonprofit\n    - real-estate\n    - saas\n    - service-provider\n    - technical-services\n',
-      person: "entity: person\nlabel: Person\nlocation_pattern: 10-ME/10-PEOPLE/ or 30-CLIENTS/{client-id}/10-PEOPLE/ or 20-COMPANY/35-PARTNERS/{partner-id}/10-PEOPLE/\ndescription: Person entity from DATAMODEL.md\nkey_fields:\n- name\nfields:\n- name: type\n  type: string\n  required: true\n- name: name\n  type: string\n  required: true\n  description: Full name\n- name: company\n  required: false\n  type: string\n  description: Organization they belong to\n- name: role\n  required: false\n  type: string\n  description: Job title or function\n- name: person_category\n  required: false\n  type: string\n  enum:\n  - employee\n  - freelancer\n  - contractor\n  - business-contact\n  - personal-contact\n  - prospect\n  - other\n- name: relationship\n  required: false\n  type: string\n  enum:\n  - client-contact\n  - partner\n  - supplier\n  - colleague\n  - prospect\n  - other\n- name: client_id\n  required: false\n  type: string\n  description: Required for client-scoped people under 30-CLIENTS/{id}/10-PEOPLE/\n    (enforced by the vault-validator location rule, which matches the folder); optional\n    for personal, partner, and community contacts under 10-ME/10-PEOPLE/ or 20-COMPANY/35-PARTNERS/\n    who have no client link\n- name: phone\n  required: false\n  type: string\n  description: Primary phone\n- name: linkedin_url\n  required: false\n  type: string\n  description: LinkedIn profile URL\n- name: linkedin_headline\n  required: false\n  type: string\n  description: Current LinkedIn headline\n- name: linkedin_current_role\n  required: false\n  type: string\n  description: Current role + company as shown on LinkedIn\n- name: linkedin_skills\n  required: false\n  type: array\n  description: Skills extracted from the LinkedIn profile\n- name: linkedin_fetched_date\n  required: false\n  type: string\n  format: date\n  description: When the LinkedIn data was last captured\n- name: last_contact\n  required: false\n  type: string\n  format: date\n  description: Last meaningful interaction\n- name: created\n  required: true\n  type: string\n  format: date\n  description: Record creation date\n- name: tags\n  required: false\n  type: array\n",
+      client: 'entity: client\nlabel: Client\nlocation_pattern: "{client.profile-root}/"\ndescription: Client entity from DATAMODEL.md\nkey_fields:\n- client_id\n- client_name\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: client_id\n  type: string\n  required: true\n  description: "kebab-case mnemonic identifier, e.g. acme-corp, solvay. Internal handle\\\n    \\ \\u2014 independent of any external registry number"\n- name: client_name\n  type: string\n  required: true\n  description: Display name (legal name as registered)\n- name: status\n  type: string\n  required: true\n  enum:\n  - prospect\n  - active\n  - inactive\n  - on-hold\n  - completed\n  - archived\n- name: health\n  required: false\n  type: string\n  enum:\n  - green\n  - amber\n  - red\n  description: "Relationship RAG status, owner-assessed. Feeds the client_health_red_count\\\n    \\ KPI. Separate from `status`, which is commercial lifecycle: an active client\\\n    \\ can be red (at risk of churn) and an on-hold one green. Absent means never assessed\\\n    \\ and is excluded from the count rather than assumed green \\u2014 a client nobody\\\n    \\ has reviewed is not evidence of a healthy relationship."\n- name: regions\n  required: false\n  type: array\n  description: Operating regions for client work\n- name: jurisdiction\n  required: false\n  type: string\n  description: ISO-3166-1 alpha-2 code of country of incorporation (BE, UAE, UK, FR,\n    ...)\n- name: legal_form\n  required: false\n  type: string\n  description: Legal form abbreviation in source language (SA/NV, SRL/BV, ASBL/VZW\n    for BE; Ltd, PLC for UK; LLC for UAE; SARL for FR)\n- name: company_registration_number\n  required: false\n  type: string\n  description: Jurisdiction-agnostic company registration number (Belgian KBO/BCE\n    0403.091.220; UK Companies House 12345678; French SIRET; UAE Commercial Licence).\n    Always pair with company_registration_registry\n- name: company_registration_registry\n  required: false\n  type: string\n  description: \'Source registry tag: BE-KBO\'\n- name: vat_id\n  required: false\n  type: string\n  description: VAT identification number with country prefix (BE0403091220, GB123456789,\n    AE100000000000003). Distinct from company_registration_number. Copied onto an invoice as\n    customer_vat_id\n- name: po_required\n  required: false\n  type: boolean\n  description: True when the client rejects invoices without a purchase-order number; the\n    invoice then carries po_ref. Empty means not known, not false\n- name: payment_terms\n  required: false\n  type: string\n  description: Payment terms the client is invoiced on, as a slug (net-14, due-on-receipt). The\n    accepted terms and the fallback when empty are defined in the ar-followup reference\n    payment_terms.md\n- name: currency\n  required: false\n  type: string\n  description: ISO 4217 code the client is invoiced in. Empty means ask; never assumed\n# profile_type is defined in both client.yaml and profile.yaml. Add or rename a subtype in\n# both files in the same change, then run regenerate.py --write. Reason: the two enums are\n# separate lists, and nothing in the generator keeps them in step.\n- name: profile_type\n  required: true\n  type: string\n  enum:\n  - company-overview\n  - contact-details\n  - brand-voice\n  - brand-system\n  - icp\n  - client-overview\n- name: location\n  required: false\n  type: string\n  description: Primary location\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include client-id value\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n- name: archetype\n  required: false\n  type: array\n  description: >-\n    Business archetype slug(s) from business-baseline\'s KPI packs, ordered primary first.\n    Multi-valued because a real business can run more than one motion and scoring it as either\n    one alone hides half the business. Every value must be one of the 15 pack slugs \u2014 a\n    descriptive label like "Partner-Distributed Business Operating Brain" names a distribution\n    model, not an archetype, and no skill taking a `business-type` input can read it.\n  items:\n    type: string\n    enum:\n    - agency\n    - coach\n    - course-creator\n    - creator\n    - ecommerce\n    - enterprise-b2b\n    - franchise\n    - local\n    - manufacturing\n    - multi-channel-retail\n    - nonprofit\n    - real-estate\n    - saas\n    - service-provider\n    - technical-services\nstatus_lifecycle:\n- prospect\n- active\n- inactive\n- on-hold\n- completed\n- archived\n',
+      commission: 'entity: commission\nlabel: Commission\nlocation_pattern: "{partner.commissions}/"\ndescription: Commission entity from DATAMODEL.md\nkey_fields:\n- reference\n- partner_ref\n- amount\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: reference\n  type: string\n  required: true\n  description: Commission ID/reference\n- name: partner_ref\n  type: string\n  required: true\n  description: Partner earning the commission\n- name: amount\n  type: number\n  bob_type: currency\n  required: true\n  description: Calculated amount\n- name: status\n  type: string\n  required: true\n  enum:\n  - pending\n  - earned\n  - paid\n  - disputed\n  - written-off\n- name: period\n  required: false\n  type: string\n  description: Accounting period (e.g. 2026-Q3)\n- name: earned_date\n  required: false\n  type: string\n  format: date\n  description: When deal closed won\n- name: deal_ref\n  required: false\n  type: string\n  description: Deal that triggered the commission\n- name: rate_pct\n  required: false\n  type: number\n  description: Commission rate percentage applied\n- name: currency\n  required: false\n  type: string\n- name: paid_date\n  required: false\n  type: string\n  format: date\n  description: When commission was disbursed\n- name: payment_reference\n  required: false\n  type: string\n  description: Bank transfer or invoice reference\n- name: notes\n  required: false\n  type: string\n- name: created\n  required: true\n  type: string\n  format: date\n',
+      "comms-thread": 'entity: comms-thread\nlabel: Comms Thread\nlocation_pattern: "{client.comms}/ or {lead.comms}/ or {me.comms}/ or {company.sales.lead-comms}/"\ndescription: Comms Thread entity from DATAMODEL.md\nkey_fields:\n- thread_id\n- channel\n- status\n- awaiting_reply\n- last_message_at\nfields:\n- name: type\n  type: string\n  required: true\n- name: thread_id\n  type: string\n  required: true\n  description: Stable cross-session identifier (Gmail thread ID, WhatsApp chat ID,\n    Telegram chat+message ID)\n- name: channel\n  type: string\n  required: true\n  enum:\n  - email\n  - whatsapp\n  - telegram\n- name: status\n  type: string\n  required: true\n  enum:\n  - open\n  - awaiting-us\n  - awaiting-them\n  - closed\n- name: awaiting_reply\n  type: boolean\n  required: true\n  description: "true when we owe a reply \\u2014 the toast trigger condition"\n- name: last_message_at\n  type: string\n  required: true\n  description: "ISO timestamp of most recent inbound or outbound message \\u2014 used\\\n    \\ to detect new messages on already-known threads"\n- name: client_id\n  required: false\n  type: string\n  description: "Required only under {company.clients}/ \\u2014 conditional, same group as\\\n    \\ deliverable/pm-artifact/project. A personal thread under {me.comms}/ has\\\n    \\ neither client nor lead"\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier\\\n    \\ or own company this record attaches to. Pair with company_type. For client records,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: end_client_id\n  required: false\n  type: string\n- name: project_id\n  required: false\n  type: string\n- name: project\n  required: false\n  type: string\n- name: account\n  required: false\n  type: string\n  description: Account/handle the thread was received on (e.g., gws account name,\n    WhatsApp number, Telegram bot/user)\n- name: subject\n  required: false\n  type: string\n  description: Email subject line, or first-line snippet for chat channels\n- name: urgency\n  required: false\n  type: string\n  enum:\n  - urgent\n  - high\n  - normal\n  - low\n- name: captured_in\n  required: false\n  type: array\n  description: Wikilinks to meeting/decision/deliverable notes promoted from this\n    thread\n- name: lead_id\n  required: false\n  type: string\n  description: Must match a {company.leads}/ folder. Set for lead-scoped threads\n    during outreach campaigns. Exactly one of client_id/lead_id should be set.\n- name: created\n  required: true\n  type: string\n  format: date\n',
+      company: 'entity: company\nlabel: Company\nlocation_pattern: "{company.profile-root}/"\ndescription: Company entity from DATAMODEL.md\nkey_fields:\n- entity_id\n- title\n- status\n- regions\nfields:\n- name: type\n  type: string\n  required: true\n- name: entity_id\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - active\n  - inactive\n  - on-hold\n  - archived\n- name: regions\n  type: array\n  required: true\n- name: archetype\n  required: false\n  type: array\n  description: >-\n    Business archetype slug(s) from business-baseline\'s KPI packs, ordered primary first.\n    Multi-valued because a real business can run more than one motion and scoring it as either\n    one alone hides half the business. Every value must be one of the 15 pack slugs \u2014 a\n    descriptive label like "Partner-Distributed Business Operating Brain" names a distribution\n    model, not an archetype, and no skill taking a `business-type` input can read it.\n  items:\n    type: string\n    enum:\n    - agency\n    - coach\n    - course-creator\n    - creator\n    - ecommerce\n    - enterprise-b2b\n    - franchise\n    - local\n    - manufacturing\n    - multi-channel-retail\n    - nonprofit\n    - real-estate\n    - saas\n    - service-provider\n    - technical-services\n',
+      person: 'entity: person\nlabel: Person\nlocation_pattern: "{me.people}/ or {client.people}/ or {partner.people}/"\ndescription: Person entity from DATAMODEL.md\nkey_fields:\n- name\nfields:\n- name: type\n  type: string\n  required: true\n- name: name\n  type: string\n  required: true\n  description: Full name\n- name: company\n  required: false\n  type: string\n  description: Organization they belong to\n- name: role\n  required: false\n  type: string\n  description: Job title or function\n- name: person_category\n  required: false\n  type: string\n  enum:\n  - employee\n  - freelancer\n  - contractor\n  - business-contact\n  - personal-contact\n  - prospect\n  - other\n- name: relationship\n  required: false\n  type: string\n  enum:\n  - client-contact\n  - partner\n  - supplier\n  - colleague\n  - prospect\n  - other\n- name: client_id\n  required: false\n  type: string\n  description: Required for client-scoped people under {client.people}/\n    (enforced by the vault-validator location rule, which matches the folder); optional\n    for personal, partner, and community contacts under {me.people}/ or {company.partners}/\n    who have no client link\n- name: phone\n  required: false\n  type: string\n  description: Primary phone\n- name: email\n  required: false\n  type: string\n  description: Primary email address. Declared 2026-10-18; already read by email-triage\n    sender matching, booking-scheduler, People.base and written by the person template\n- name: linkedin_url\n  required: false\n  type: string\n  description: LinkedIn profile URL\n- name: linkedin_headline\n  required: false\n  type: string\n  description: Current LinkedIn headline\n- name: linkedin_current_role\n  required: false\n  type: string\n  description: Current role + company as shown on LinkedIn\n- name: linkedin_skills\n  required: false\n  type: array\n  description: Skills extracted from the LinkedIn profile\n- name: linkedin_fetched_date\n  required: false\n  type: string\n  format: date\n  description: When the LinkedIn data was last captured\n- name: last_contact\n  required: false\n  type: string\n  format: date\n  description: Last meaningful interaction. Capture sets it with the dated `## Interactions`\n    line and never moves it back to an earlier date\n- name: contact_cadence\n  required: false\n  type: string\n  enum:\n  - weekly\n  - monthly\n  - quarterly\n  - yearly\n  - as-needed\n  description: How often the owner wants to be in touch. People.base flags the person\n    as needing follow-up when `last_contact` is older than the interval (weekly 7, monthly\n    30, quarterly 91, yearly 365 days); `as-needed` is never flagged. An empty value\n    falls back on `person_category` (owner decision 2026-10-21) - prospect monthly (30),\n    business-contact quarterly (91), personal-contact never flagged, any other or no\n    category 30 days.\n    No closeness tier is stored beside it (owner decision 2026-10-18)\n- name: created\n  required: true\n  type: string\n  format: date\n  description: Record creation date\n- name: tags\n  required: false\n  type: array\n',
       "corporate-tax-return": `entity: corporate-tax-return
 label: Corporate Tax Return
-location_pattern: 20-COMPANY/06-FINANCE/TAX/CT/
+location_pattern: "{company.finance.tax-ct}/"
 description: Corporate Tax Return entity from DATAMODEL.md
 key_fields:
 - return_id
@@ -16409,12 +16704,12 @@ status_lifecycle:
 - under-review
 - amended
 `,
-      courseware: 'entity: courseware\nlabel: Courseware\nlocation_pattern: 20-COMPANY/50-MARKETING/skool/courseware/{course-id}/\ndescription: Courseware entity from DATAMODEL.md\nkey_fields:\n- title\n- platform\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Course title (the shop-window title)\n- name: platform\n  type: string\n  required: true\n  enum:\n  - skool\n  - other\n- name: status\n  type: string\n  required: true\n  enum:\n  - planned\n  - drafting\n  - review\n  - published\n  - needs-update\n- name: pack_tier\n  required: false\n  type: string\n  description: pricing-tier of the product this course documents (e.g. pack-qms-pro,\n    starter); empty for standalone training\n- name: documented_skill_count\n  required: false\n  type: integer\n  description: "Skills the course currently documents \\u2014 compared to the live\\\n    \\ tier for drift detection"\n- name: last_synced\n  required: false\n  type: string\n  format: date\n  description: Date the course was last reconciled to the live product contents\n- name: published_url\n  required: false\n  type: string\n  description: URL of the live course once published\n- name: course_type\n  required: false\n  type: string\n  enum:\n  - pack\n  - standalone\n  - bundle\n- name: product_ref\n  required: false\n  type: string\n  description: Wikilink to the product / pack note\n- name: live_skill_count\n  required: false\n  type: integer\n  description: Live skill count at last sync (stamped by the reconcile script)\n- name: price\n  required: false\n  type: string\n  description: "Display price (e.g. \\u20AC297)"\n- name: owner\n  required: false\n  type: string\n  description: Person responsible for the course\n- name: client_id\n  required: false\n  type: string\n  description: Set when the course is client-specific training\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include courseware\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: cover_image\n  required: false\n  type: string\n  description: Cover image path or wikilink.\n',
-      deal: 'entity: deal\nlabel: Deal\nlocation_pattern: 30-CLIENTS/{client-id}/01-DEALS/ or 20-COMPANY/35-PARTNERS/{partner-id}/01-DEALS/\ndescription: Deal entity from DATAMODEL.md\nkey_fields:\n- title\n- client_id\n- stage\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Deal display name\n- name: client_id\n  type: string\n  required: false\n  description: Must match parent Client folder when set; a partner or own-company\n    deal has none\n- name: stage\n  type: string\n  required: true\n  enum:\n  - lead\n  - qualified\n  - proposal\n  - negotiation\n  - won\n  - lost\n- name: partner_ref\n  required: false\n  type: string\n  description: Partner who sourced or co-sells this deal. Required in practice for\n    a partner-scoped deal under 20-COMPANY/35-PARTNERS/{partner-id}/01-DEALS/, which\n    has no client_id; it is also what the won-deal commission automation resolves\n    the commission rate from\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier\\\n    \\ or own company this record attaches to. Pair with company_type. For client records,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: end_client_id\n  required: false\n  type: string\n- name: project_id\n  required: false\n  type: string\n- name: project\n  required: false\n  type: string\n- name: owner\n  required: false\n  type: string\n  description: Person responsible for the opportunity\n- name: deal_value\n  required: false\n  type: number\n  bob_type: currency\n  description: Opportunity value as a plain number in currency; Process Harness treats it as\n    net of VAT\n- name: currency\n  required: false\n  type: string\n  description: ISO 4217 currency code; EUR is the Process Harness deployment default when omitted\n    at governed ingestion\n- name: deal_source\n  required: false\n  type: string\n  enum:\n  - referral\n  - inbound\n  - outbound\n  - event\n  - partner\n  - existing-client\n  - direct\n- name: probability\n  required: false\n  type: number\n  description: 0-100, auto-set per stage (overridable)\n- name: expected_close\n  required: false\n  type: string\n  format: date\n  description: Expected close date\n- name: next_action\n  required: false\n  type: string\n  format: date\n  description: Follow-up date\n- name: next_action_note\n  required: false\n  type: string\n  description: Next step description\n- name: last_contact\n  required: false\n  type: string\n  format: date\n  description: Last meaningful interaction\n- name: closed_date\n  required: false\n  type: string\n  format: date\n  description: "Date the deal reached won/lost \\u2014 win-rate, deal-cycle, and new-revenue\\\n    \\ queries key on this, not modified (any unrelated edit resets modified). REQUIRED\\\n    \\ when stage is won or lost (enforced 2026-08-30 via conditional_required):\\\n    \\ Salesforce makes Opportunity.CloseDate mandatory, which is exactly why it can\\\n    \\ compute cycle time and this vault could not \\u2014 4 of 5 closed deals carried\\\n    \\ no close date. Set it at the moment of close; never backfill a guess, an absent\\\n    \\ date is honest and a wrong one silently corrupts win-rate for every later report"\n- name: lost_reason\n  required: false\n  type: string\n  enum:\n  - price\n  - competitor\n  - no-budget\n  - no-decision\n  - timing\n  - not-a-fit\n  - lost-champion\n  - ceased-operations\n  - transferred\n  - unknown\n  description: "Why a deal reached stage: lost. Set it at the moment of loss \\u2014\\\n    \\ a reason recorded weeks later is a guess. Field name matches the pre-existing\\\n    \\ in-vault usage on existing deal notes rather than introducing a near-synonym.\\\n    \\ `unknown` is a real value and must stay honest: an absent or unknown reason\\\n    \\ means never debriefed, NOT not-a-fit, and recording it as the latter buries\\\n    \\ deals nobody ever asked about. `ceased-operations` and `transferred` are non-competitive\\\n    \\ exits and should be read out of win-rate rather than counted as defeats"\n- name: revisit_after\n  required: false\n  type: string\n  format: date\n  description: Date the stated lost_reason plausibly expires (a budget cycle, a contract\n    renewal). Blank means never revisit. Without it a resurrection sweep can only\n    sort by age, the least informative signal available\n- name: lost_to\n  required: false\n  type: string\n  description: Competitor the deal was lost to, where lost_reason is competitor\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include deal and client-id\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: canvas\n  required: false\n  type: array\n  description: "Plugin-owned (enhanced-canvas, enableFrontmatter: true). List of wikilinks\\\n    \\ to the canvases whose nodes reference this note; re-asserted by syncAllCanvasProperties()\\\n    \\ on startup. Removing it by hand does not stick \\u2014 delete or rebuild the\\\n    \\ canvas instead. The plugin also writes a second key named after the canvas basename,\\\n    \\ which is not a model field."\nconditional_required:\n- when:\n    stage: won\n  require:\n  - closed_date\n- when:\n    stage: lost\n  require:\n  - closed_date\nnotes: >-\n  `closed_date` is required once `stage` reaches `won` or `lost`, and `lost_reason` should be set\n  in the same edit that sets `lost` - both are guesses if recorded later. `title` is the deal\n  display name; the near-synonyms `name`, `client_name` and `last_activity` were retired\n  2026-08-30 in favour of `title`, `client_id` and `last_contact`.\n  The enhanced-canvas plugin also writes a per-note key named after the canvas basename\n  (`Context - profile`); it is plugin-owned, its name varies per note, and it is deliberately\n  not a model field.\n',
-      decision: "entity: decision\nlabel: Decision\nlocation_pattern: 20-COMPANY/02-DECISIONS/\ndescription: Decision entity from DATAMODEL.md\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - proposed\n  - decided\n  - superseded\n- name: client_id\n  required: false\n  type: string\n  description: Optional client identifier when the decision is client-scoped\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: decision_date\n  required: false\n  type: string\n  format: date\n  description: Date the decision was made\n- name: owner\n  required: false\n  type: string\n  description: Person or role responsible for the decision\n- name: rationale\n  required: false\n  type: string\n  description: Why this decision was made\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes, decisions, or deliverables\n- name: assumptions\n  required: false\n  type: array\n  description: What must be true for this decision to be right\n- name: review_date\n  required: false\n  type: string\n  format: date\n  description: Date or trigger for reviewing the decision outcome\n- name: outcome\n  required: false\n  type: string\n  enum:\n  - too-early\n  - validated\n  - partially-validated\n  - invalidated\n  - reversed\n  - adopted\n  description: 'adopted added 2026-08-10: the decision was put into practice but its\n    effect is not yet measured, which the validated/invalidated axis cannot express'\n- name: supersedes\n  required: false\n  type: string\n  description: Decision superseded by this decision\n- name: superseded_by\n  required: false\n  type: string\n  description: Later decision that supersedes this decision\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n",
+      courseware: 'entity: courseware\nlabel: Courseware\nlocation_pattern: "{company.marketing.skool-courseware}/{course-id}/"\ndescription: Courseware entity from DATAMODEL.md\nkey_fields:\n- title\n- platform\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Course title (the shop-window title)\n- name: platform\n  type: string\n  required: true\n  enum:\n  - skool\n  - other\n- name: status\n  type: string\n  required: true\n  enum:\n  - planned\n  - drafting\n  - review\n  - published\n  - needs-update\n- name: pack_tier\n  required: false\n  type: string\n  description: pricing-tier of the product this course documents (e.g. pack-qms-pro,\n    starter); empty for standalone training\n- name: documented_skill_count\n  required: false\n  type: integer\n  description: "Skills the course currently documents \\u2014 compared to the live\\\n    \\ tier for drift detection"\n- name: last_synced\n  required: false\n  type: string\n  format: date\n  description: Date the course was last reconciled to the live product contents\n- name: published_url\n  required: false\n  type: string\n  description: URL of the live course once published\n- name: course_type\n  required: false\n  type: string\n  enum:\n  - pack\n  - standalone\n  - bundle\n- name: product_ref\n  required: false\n  type: string\n  description: Wikilink to the product / pack note\n- name: live_skill_count\n  required: false\n  type: integer\n  description: Live skill count at last sync (stamped by the reconcile script)\n- name: price\n  required: false\n  type: string\n  description: "Display price (e.g. \\u20AC297)"\n- name: owner\n  required: false\n  type: string\n  description: Person responsible for the course\n- name: client_id\n  required: false\n  type: string\n  description: Set when the course is client-specific training\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include courseware\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: cover_image\n  required: false\n  type: string\n  description: Cover image path or wikilink.\n',
+      deal: 'entity: deal\nlabel: Deal\nlocation_pattern: "{client.deals}/ or {partner.deals}/ or {lead.deals}/"\ndescription: Deal entity from DATAMODEL.md\nkey_fields:\n- title\n- client_id\n- stage\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Deal display name\n- name: client_id\n  type: string\n  required: false\n  description: Must match parent Client folder when set; a partner or own-company\n    deal has none\n- name: stage\n  type: string\n  required: true\n  enum:\n  - lead\n  - qualified\n  - proposal\n  - negotiation\n  - won\n  - lost\n- name: partner_ref\n  required: false\n  type: string\n  description: Partner who sourced or co-sells this deal. Required in practice for\n    a partner-scoped deal under {partner.deals}/, which\n    has no client_id; it is also what the won-deal commission automation resolves\n    the commission rate from\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier\\\n    \\ or own company this record attaches to. Pair with company_type. For client records,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: end_client_id\n  required: false\n  type: string\n- name: project_id\n  required: false\n  type: string\n- name: project\n  required: false\n  type: string\n- name: owner\n  required: false\n  type: string\n  description: Person responsible for the opportunity\n- name: deal_value\n  required: false\n  type: number\n  bob_type: currency\n  description: Opportunity value as a plain number in currency; Process Harness treats it as\n    net of VAT\n- name: currency\n  required: false\n  type: string\n  description: ISO 4217 currency code; EUR is the Process Harness deployment default when omitted\n    at governed ingestion\n- name: deal_source\n  required: false\n  type: string\n  enum:\n  - referral\n  - inbound\n  - outbound\n  - event\n  - partner\n  - existing-client\n  - direct\n- name: probability\n  required: false\n  type: number\n  description: 0-100, auto-set per stage (overridable)\n- name: expected_close\n  required: false\n  type: string\n  format: date\n  description: Expected close date\n- name: next_action\n  required: false\n  type: string\n  format: date\n  description: Follow-up date\n- name: next_action_note\n  required: false\n  type: string\n  description: Next step description\n- name: nurture\n  required: false\n  type: boolean\n  description: True when the deal is deliberately parked in nurture. Stalled rule (owner decision\n    2026-10-21) - a deal marked nurture with a next_action dated today or later is not counted as\n    stalled; a nurture deal with no next_action date, or one that has passed, still counts as\n    stalled. Unset means false\n- name: nurture_reason\n  required: false\n  type: string\n  description: Why the deal is in nurture (budget cycle, timing, waiting on a trigger). Optional;\n    it does not change the stalled rule\n- name: last_contact\n  required: false\n  type: string\n  format: date\n  description: Last meaningful interaction\n- name: closed_date\n  required: false\n  type: string\n  format: date\n  description: "Date the deal reached won/lost \\u2014 win-rate, deal-cycle, and new-revenue\\\n    \\ queries key on this, not modified (any unrelated edit resets modified). REQUIRED\\\n    \\ when stage is won or lost (enforced 2026-08-30 via conditional_required):\\\n    \\ Salesforce makes Opportunity.CloseDate mandatory, which is exactly why it can\\\n    \\ compute cycle time and this vault could not \\u2014 4 of 5 closed deals carried\\\n    \\ no close date. Set it at the moment of close; never backfill a guess, an absent\\\n    \\ date is honest and a wrong one silently corrupts win-rate for every later report"\n- name: lost_reason\n  required: false\n  type: string\n  enum:\n  - price\n  - competitor\n  - no-budget\n  - no-decision\n  - timing\n  - not-a-fit\n  - lost-champion\n  - ceased-operations\n  - transferred\n  - unknown\n  description: "Why a deal reached stage: lost. Set it at the moment of loss \\u2014\\\n    \\ a reason recorded weeks later is a guess. Field name matches the pre-existing\\\n    \\ in-vault usage on existing deal notes rather than introducing a near-synonym.\\\n    \\ `unknown` is a real value and must stay honest: an absent or unknown reason\\\n    \\ means never debriefed, NOT not-a-fit, and recording it as the latter buries\\\n    \\ deals nobody ever asked about. `ceased-operations` and `transferred` are non-competitive\\\n    \\ exits and should be read out of win-rate rather than counted as defeats"\n- name: revisit_after\n  required: false\n  type: string\n  format: date\n  description: Date the stated lost_reason plausibly expires (a budget cycle, a contract\n    renewal). Blank means never revisit. Without it a resurrection sweep can only\n    sort by age, the least informative signal available\n- name: lost_to\n  required: false\n  type: string\n  description: Competitor the deal was lost to, where lost_reason is competitor\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include deal and client-id\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: canvas\n  required: false\n  type: array\n  description: "Plugin-owned (enhanced-canvas, enableFrontmatter: true). List of wikilinks\\\n    \\ to the canvases whose nodes reference this note; re-asserted by syncAllCanvasProperties()\\\n    \\ on startup. Removing it by hand does not stick \\u2014 delete or rebuild the\\\n    \\ canvas instead. The plugin also writes a second key named after the canvas basename,\\\n    \\ which is not a model field."\nconditional_required:\n- when:\n    stage: won\n  require:\n  - closed_date\n- when:\n    stage: lost\n  require:\n  - closed_date\nnotes: >-\n  `closed_date` is required once `stage` reaches `won` or `lost`, and `lost_reason` should be set\n  in the same edit that sets `lost` - both are guesses if recorded later. `title` is the deal\n  display name; the near-synonyms `name`, `client_name` and `last_activity` were retired\n  2026-08-30 in favour of `title`, `client_id` and `last_contact`.\n  The enhanced-canvas plugin also writes a per-note key named after the canvas basename\n  (`Context - profile`); it is plugin-owned, its name varies per note, and it is deliberately\n  not a model field.\n',
+      decision: "entity: decision\nlabel: Decision\nlocation_pattern: \"{company.decisions}/ or {client.decisions}/ or {client.deals}/ or {me.decisions}/\"\ndescription: Decision entity from DATAMODEL.md\nnotes: >-\n  Scope decides the folder. A decision for the company goes to {company.decisions}/, one for a\n  client to {client.decisions}/, and a personal decision with no company or client scope (added\n  2026-10-18) to {me.decisions}/. All three use this one record. Capture files a decision still\n  being weighed as status proposed, with the options, what tilts it and what information would\n  decide it.\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - proposed\n  - decided\n  - superseded\n- name: client_id\n  required: false\n  type: string\n  description: Optional client identifier when the decision is client-scoped\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: decision_date\n  required: false\n  type: string\n  format: date\n  description: Date the decision was made\n- name: owner\n  required: false\n  type: string\n  description: Person or role responsible for the decision\n- name: rationale\n  required: false\n  type: string\n  description: Why this decision was made\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes, decisions, or deliverables\n- name: assumptions\n  required: false\n  type: array\n  description: What must be true for this decision to be right\n- name: review_date\n  required: false\n  type: string\n  format: date\n  description: Date or trigger for reviewing the decision outcome\n- name: outcome\n  required: false\n  type: string\n  enum:\n  - too-early\n  - validated\n  - partially-validated\n  - invalidated\n  - reversed\n  - adopted\n  description: 'adopted added 2026-08-10: the decision was put into practice but its\n    effect is not yet measured, which the validated/invalidated axis cannot express'\n- name: supersedes\n  required: false\n  type: string\n  description: Decision superseded by this decision\n- name: superseded_by\n  required: false\n  type: string\n  description: Later decision that supersedes this decision\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n",
       "deferred-tax": `entity: deferred-tax
 label: Deferred Tax
-location_pattern: 20-COMPANY/06-FINANCE/TAX/DEFERRED/
+location_pattern: "{company.finance.tax-deferred}/"
 description: Deferred Tax entity from DATAMODEL.md
 key_fields:
 - period_id
@@ -16480,13 +16775,81 @@ fields:
   type: array
   description: Must include deferred-tax, tax, and {period_id}
 `,
-      deliverable: 'entity: deliverable\nlabel: Deliverable\nlocation_pattern: 30-CLIENTS/{client-id}/{project}/ or 30-CLIENTS/{client-id}/30-DELIVERABLES/\n  or 20-COMPANY/35-PARTNERS/{partner-id}/ or 20-COMPANY/40-PRODUCTS/{product-id}/\ndescription: Deliverable entity from DATAMODEL.md\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - approved\n  - delivered\n- name: client_id\n  required: false\n  type: string\n  description: "Required for deliverables under 30-CLIENTS/ \\u2014 conditional, like\\\n    \\ person and meeting. A partner deliverable carries partner_id instead, and a\\\n    \\ generic product asset (the partner kit) carries neither"\n- name: partner_id\n  required: false\n  type: string\n  description: "Required for deliverables under 20-COMPANY/35-PARTNERS/{partner-id}/\\\n    \\ \\u2014 work produced for a specific partner rather than a client"\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to source research/analysis\n- name: deliverable_type\n  required: false\n  type: string\n  description: Category of deliverable (e.g. report, presentation, analysis, template,\n    design, video)\n- name: delivered_date\n  required: false\n  type: string\n  format: date\n  description: Date the deliverable was sent to the client\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: buyer_stage\n  required: false\n  type: string\n  description: Funnel stage the deliverable targets.\n- name: word_count_target\n  required: false\n  type: string\n  description: "Target length. Free text, not a number \\u2014 values are ranges like\\\n    \\ \'1200-1500\'."\n- name: primary_keyword\n  required: false\n  type: string\n  description: Primary SEO keyword.\n- name: meta_title\n  required: false\n  type: string\n  description: SEO meta title.\n- name: meta_description\n  required: false\n  type: string\n  description: SEO meta description.\n- name: doc_id\n  required: false\n  type: string\n  description: Stable document identifier, for versioned deliverables.\n- name: doc_version\n  required: false\n  type: string\n  description: Document version string, paired with `doc_id`.\n- name: target_audience\n  required: false\n  type: string\n  description: Who the deliverable is written for.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\nstatus_lifecycle:\n- draft\n- review\n- approved\n- delivered\n',
-      "document-retention": "entity: document-retention\nlabel: Document Retention\nlocation_pattern: 20-COMPANY/04-LEGAL/RETENTION/\ndescription: Document Retention entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: document_type\n  required: false\n  type: string\n- name: retention_period_years\n  required: false\n  type: string\n- name: destroy_after_date\n  required: false\n  type: string\n  format: date\n- name: responsible_person\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n",
-      "drive-asset": 'entity: drive-asset\nlabel: Drive Asset\nlocation_pattern: 30-CLIENTS/{client-id}/ or 20-COMPANY/35-PARTNERS/{partner-id}/\ndescription: Drive Asset entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: drive_file_id\n  required: true\n  type: string\n- name: drive_filename\n  required: true\n  type: string\n- name: drive_path\n  required: true\n  type: string\n  description: "Folder path within the Drive root \\u2014 open set, any vault-mirroring\\\n    \\ folder"\n- name: drive_root\n  required: true\n  type: string\n  description: Google Drive folder ID of the shared-drive root\n- name: drive_root_name\n  required: true\n  type: string\n  description: Human-readable name of the Drive root (one per client/partner drive)\n- name: drive_url\n  required: true\n  type: string\n- name: format\n  required: true\n  type: string\n  enum:\n  - jpeg\n  - jpg\n  - mp4\n  - pdf\n  - png\n  - pptx\n  - svg\n  - docx\n- name: size_mb\n  required: true\n  type: number\n- name: tags\n  required: true\n  type: array\n- name: uploaded\n  required: true\n  type: string\n  format: date\n',
-      "ecl-assessment": "entity: ecl-assessment\nlabel: ECL Assessment\nlocation_pattern: 20-COMPANY/06-FINANCE/ECL/\ndescription: ECL Assessment entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: assessment_id\n  required: false\n  type: string\n- name: period_id\n  required: false\n  type: string\n- name: methodology\n  required: false\n  type: string\n- name: provision_matrix\n  required: false\n  type: string\n- name: total_ecl\n  required: false\n  type: number\n- name: closing_ecl\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - draft\n  - reviewed\n  - posted\nstatus_lifecycle:\n- draft\n- reviewed\n- posted\n",
+      deliverable: 'entity: deliverable\nlabel: Deliverable\nlocation_pattern: "{client.root}/{project}/ or {client.deliverables}/ or {partner.root}/ or {product.root}/"\ndescription: Deliverable entity from DATAMODEL.md\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - approved\n  - delivered\n- name: client_id\n  required: false\n  type: string\n  description: "Required for deliverables under {company.clients}/ \\u2014 conditional, like\\\n    \\ person and meeting. A partner deliverable carries partner_id instead, and a\\\n    \\ generic product asset (the partner kit) carries neither"\n- name: partner_id\n  required: false\n  type: string\n  description: "Required for deliverables under {partner.root}/\\\n    \\ \\u2014 work produced for a specific partner rather than a client"\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to source research/analysis\n- name: deliverable_type\n  required: false\n  type: string\n  description: Category of deliverable (e.g. report, presentation, analysis, template,\n    design, video)\n- name: delivered_date\n  required: false\n  type: string\n  format: date\n  description: Date the deliverable was sent to the client\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: buyer_stage\n  required: false\n  type: string\n  description: Funnel stage the deliverable targets.\n- name: word_count_target\n  required: false\n  type: string\n  description: "Target length. Free text, not a number \\u2014 values are ranges like\\\n    \\ \'1200-1500\'."\n- name: primary_keyword\n  required: false\n  type: string\n  description: Primary SEO keyword.\n- name: meta_title\n  required: false\n  type: string\n  description: SEO meta title.\n- name: meta_description\n  required: false\n  type: string\n  description: SEO meta description.\n- name: doc_id\n  required: false\n  type: string\n  description: Stable document identifier, for versioned deliverables.\n- name: doc_version\n  required: false\n  type: string\n  description: Document version string, paired with `doc_id`.\n- name: target_audience\n  required: false\n  type: string\n  description: Who the deliverable is written for.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\nstatus_lifecycle:\n- draft\n- review\n- approved\n- delivered\n',
+      "document-retention": 'entity: document-retention\nlabel: Document Retention\nlocation_pattern: "{company.legal.retention}/"\ndescription: Document Retention entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: document_type\n  required: false\n  type: string\n- name: retention_period_years\n  required: false\n  type: string\n- name: destroy_after_date\n  required: false\n  type: string\n  format: date\n- name: responsible_person\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n',
+      "drive-asset": `entity: drive-asset
+label: Drive Asset
+location_pattern: "{client.root}/ or {partner.root}/ or {company.root}/"
+description: Stub note that replaces a binary archived to Google Drive (a shared drive or the owner's own Drive)
+key_fields: []
+fields:
+- name: type
+  type: string
+  required: true
+- name: drive_file_id
+  required: true
+  type: string
+- name: drive_filename
+  required: true
+  type: string
+- name: drive_path
+  required: true
+  type: string
+  description: "Folder path within the Drive root \\u2014 open set, any vault-mirroring\\
+    \\ folder"
+- name: drive_root
+  required: true
+  type: string
+  description: Google Drive folder ID of the Drive root the file was archived under
+- name: drive_root_name
+  required: true
+  type: string
+  description: Human-readable name of the Drive root (a client or partner drive, or the owner's archive folder)
+- name: drive_url
+  required: true
+  type: string
+- name: format
+  required: true
+  type: string
+  description: File extension without the dot; the same set archive_to_drive.py ARCHIVE_EXTENSIONS accepts
+  enum:
+  - mp4
+  - mov
+  - avi
+  - mkv
+  - webm
+  - pptx
+  - ppt
+  - docx
+  - xlsx
+  - pdf
+  - png
+  - jpg
+  - jpeg
+  - gif
+  - svg
+  - zip
+  - tar
+  - gz
+  - 7z
+  - wav
+  - mp3
+  - flac
+- name: size_mb
+  required: true
+  type: number
+- name: tags
+  required: true
+  type: array
+- name: uploaded
+  required: true
+  type: string
+  format: date
+`,
+      "ecl-assessment": 'entity: ecl-assessment\nlabel: ECL Assessment\nlocation_pattern: "{company.finance.ecl}/"\ndescription: ECL Assessment entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: assessment_id\n  required: false\n  type: string\n- name: period_id\n  required: false\n  type: string\n- name: methodology\n  required: false\n  type: string\n- name: provision_matrix\n  required: false\n  type: string\n- name: total_ecl\n  required: false\n  type: number\n- name: closing_ecl\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - draft\n  - reviewed\n  - posted\nstatus_lifecycle:\n- draft\n- reviewed\n- posted\n',
       feedback: `entity: feedback
 label: Feedback
-location_pattern: 30-CLIENTS/{id}/40-FEEDBACK/ or 20-COMPANY/30-SUPPLIERS/{id}/30-FEEDBACK/
+location_pattern: "{client.feedback}/ or {supplier.feedback}/ or {lead.root}/"
 description: Feedback entity from DATAMODEL.md
 key_fields:
 - feedback_type
@@ -16511,6 +16874,9 @@ fields:
   - session-debrief
   - executive-readiness
   - hybrid-detection
+  - discovery-debrief
+  description: discovery-debrief = coaching-discovery's post-call fit assessment of a
+    prospect, filed in the lead folder ({lead.root}/) and keyed by lead_id, not client_id
 - name: respondent
   type: string
   required: true
@@ -16543,7 +16909,7 @@ fields:
 - name: client_id
   required: false
   type: string
-  description: "Required for client feedback; must match 30-CLIENTS/ folder. Conditional\\
+  description: "Required for client feedback; must match {company.clients}/ folder. Conditional\\
     \\ \\u2014 supplier feedback (supplier_id set instead) has no client"
 - name: company_id
   required: false
@@ -16575,7 +16941,7 @@ fields:
 - name: supplier_id
   required: false
   type: string
-  description: Required for supplier feedback; must match 20-COMPANY/30-SUPPLIERS/
+  description: Required for supplier feedback; must match {company.suppliers}/
     folder
 - name: segment
   required: false
@@ -16648,6 +17014,85 @@ fields:
   type: boolean
   description: True when crisis-level signals (clinical mental health, safety, dependency)
     triggered referral; advisory is suspended for the topic
+- name: lead_id
+  required: false
+  type: string
+  description: Lead folder id; required for discovery-debrief (a prospect has no client_id
+    yet)
+- name: fit_score
+  required: false
+  type: integer
+  description: 'discovery-debrief: sum of the 9-dimension 0-3 fit rubric (0-27)'
+- name: fit_band
+  required: false
+  type: string
+  enum:
+  - strong
+  - conditional
+  - nurture
+  - decline
+  description: 'discovery-debrief: band from fit_score (strong 24-27, conditional 18-23,
+    nurture 10-17, decline 0-9)'
+- name: confidence
+  required: false
+  type: string
+  enum:
+  - high
+  - medium
+  - low
+  - inferred
+  description: 'discovery-debrief: confidence in the fit assessment'
+- name: mode_primary
+  required: false
+  type: string
+  enum:
+  - coaching
+  - consulting
+  - mentoring
+  - emotional-support
+  - therapy-adjacent
+  - commercial-qualification
+  description: 'discovery-debrief: conversation mode the prospect spent most time in
+    (coaching-discovery 6-mode taxonomy)'
+- name: mode_secondary
+  required: false
+  type: string
+  enum:
+  - coaching
+  - consulting
+  - mentoring
+  - emotional-support
+  - therapy-adjacent
+  - commercial-qualification
+  description: 'discovery-debrief: second mode when more than one appeared'
+- name: recommended_engagement
+  required: false
+  type: string
+  enum:
+  - coaching
+  - advisory
+  - hybrid
+  - refer-out
+  - nurture
+  description: 'discovery-debrief: recommended next engagement'
+- name: follow_up_template
+  required: false
+  type: string
+  enum:
+  - strong-fit
+  - hybrid-fit
+  - not-ready
+  - refer-out
+  description: 'discovery-debrief: follow-up message template used; must match fit_band'
+- name: safety_boundary_invoked
+  required: false
+  type: boolean
+  description: 'discovery-debrief: true when the Safety Boundary Protocol stopped qualification'
+- name: bias_guardrails_applied
+  required: false
+  type: boolean
+  description: 'discovery-debrief: true once the bias guardrails were applied before
+    scoring'
 - name: feedback_date
   required: true
   type: string
@@ -16661,10 +17106,20 @@ fields:
   required: true
   type: array
   description: Must include feedback and entity scope tag (client-id or supplier-id)
+conditional_required:
+- when:
+    feedback_type: discovery-debrief
+  require:
+  - lead_id
+  - fit_score
+  - fit_band
+  - confidence
+  - mode_primary
+  - recommended_engagement
 `,
       "financial-statement": `entity: financial-statement
 label: Financial Statement
-location_pattern: 20-COMPANY/06-FINANCE/REPORTS/
+location_pattern: "{company.finance.reports}/"
 description: Financial Statement entity from DATAMODEL.md
 key_fields:
 - statement_type
@@ -16737,11 +17192,11 @@ status_lifecycle:
 - approved
 - published
 `,
-      "fixed-asset": "entity: fixed-asset\nlabel: Fixed Asset\nlocation_pattern: 20-COMPANY/06-FINANCE/ASSETS/FIXED/\ndescription: Fixed Asset entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: asset_id\n  required: false\n  type: number\n- name: category\n  required: false\n  type: string\n- name: cost\n  required: false\n  type: number\n- name: accumulated_depreciation\n  required: false\n  type: string\n- name: carrying_amount\n  required: false\n  type: number\n- name: useful_life_years\n  required: false\n  type: string\n- name: depreciation_method\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - active\n  - fully-depreciated\n  - impaired\n  - disposed\nstatus_lifecycle:\n- active\n- fully-depreciated\n- impaired\n- disposed\n",
-      "free-zone-status": "entity: free-zone-status\nlabel: Free Zone Status\nlocation_pattern: 20-COMPANY/04-LEGAL/FREEZONE/\ndescription: Free Zone Status entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  required: false\n  type: string\n- name: free_zone_authority\n  required: false\n  type: string\n- name: qualifying_income\n  required: false\n  type: number\n- name: non_qualifying_income\n  required: false\n  type: number\n- name: substance_test_passed\n  required: false\n  type: string\n- name: nexus_maintained\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n",
+      "fixed-asset": 'entity: fixed-asset\nlabel: Fixed Asset\nlocation_pattern: "{company.finance.assets-fixed}/"\ndescription: Fixed Asset entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: asset_id\n  required: false\n  type: number\n- name: category\n  required: false\n  type: string\n- name: cost\n  required: false\n  type: number\n- name: accumulated_depreciation\n  required: false\n  type: string\n- name: carrying_amount\n  required: false\n  type: number\n- name: useful_life_years\n  required: false\n  type: string\n- name: depreciation_method\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - active\n  - fully-depreciated\n  - impaired\n  - disposed\nstatus_lifecycle:\n- active\n- fully-depreciated\n- impaired\n- disposed\n',
+      "free-zone-status": 'entity: free-zone-status\nlabel: Free Zone Status\nlocation_pattern: "{company.legal.freezone}/"\ndescription: Free Zone Status entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  required: false\n  type: string\n- name: free_zone_authority\n  required: false\n  type: string\n- name: qualifying_income\n  required: false\n  type: number\n- name: non_qualifying_income\n  required: false\n  type: number\n- name: substance_test_passed\n  required: false\n  type: string\n- name: nexus_maintained\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n',
       "fs-notes": `entity: fs-notes
 label: FS Notes
-location_pattern: 20-COMPANY/06-FINANCE/REPORTS/
+location_pattern: "{company.finance.reports}/"
 description: FS Notes entity from DATAMODEL.md
 key_fields:
 - period_id
@@ -16789,12 +17244,12 @@ fields:
   type: array
   description: Must include fs-notes and {period_id}
 `,
-      "fx-rates-table": "entity: fx-rates-table\nlabel: FX Rates Table\nlocation_pattern: 20-COMPANY/06-FINANCE/FX/\ndescription: FX Rates Table entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  required: false\n  type: string\n- name: rates_date\n  required: false\n  type: string\n  format: date\n- name: source\n  required: false\n  type: string\n- name: rates\n  required: false\n  type: array\n",
-      "gratuity-provision": 'entity: gratuity-provision\nlabel: Gratuity Provision\nlocation_pattern: 20-COMPANY/06-FINANCE/PROVISIONS/GRATUITY/\ndescription: Gratuity Provision entity from DATAMODEL.md\nkey_fields:\n- employee\n- start_date\n- basic_salary\n- years_of_service\n- accrued_gratuity\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: employee\n  type: string\n  required: true\n  description: Person record\n- name: start_date\n  type: string\n  format: date\n  required: true\n  description: Employment start date\n- name: basic_salary\n  type: number\n  required: true\n  description: "Current basic salary (AED/month) \\u2014 gratuity based on basic only,\\\n    \\ not allowances"\n- name: years_of_service\n  type: number\n  required: true\n  description: Calculated from start_date to assessment date\n- name: accrued_gratuity\n  type: number\n  required: true\n  description: Entitlement per UAE formula (see below)\n- name: status\n  type: string\n  required: true\n  enum:\n  - active\n  - paid\n  - forfeited\n- name: period_id\n  required: false\n  type: string\n  description: Accounting period of last accrual\n- name: tags\n  required: true\n  type: array\n  description: Must include gratuity and {employee_id}\nstatus_lifecycle:\n- active\n- paid\n- forfeited\n',
-      idea: "entity: idea\nlabel: Idea\nlocation_pattern: 10-ME/30-IDEAS/\ndescription: Idea entity from DATAMODEL.md\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - captured\n  - exploring\n  - parked\n  - promoted\n- name: priority\n  required: false\n  type: string\n  enum:\n  - low\n  - normal\n  - high\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n",
+      "fx-rates-table": 'entity: fx-rates-table\nlabel: FX Rates Table\nlocation_pattern: "{company.finance.fx}/"\ndescription: FX Rates Table entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  required: false\n  type: string\n- name: rates_date\n  required: false\n  type: string\n  format: date\n- name: source\n  required: false\n  type: string\n- name: rates\n  required: false\n  type: array\n',
+      "gratuity-provision": 'entity: gratuity-provision\nlabel: Gratuity Provision\nlocation_pattern: "{company.finance.provisions-gratuity}/"\ndescription: Gratuity Provision entity from DATAMODEL.md\nkey_fields:\n- employee\n- start_date\n- basic_salary\n- years_of_service\n- accrued_gratuity\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: employee\n  type: string\n  required: true\n  description: Person record\n- name: start_date\n  type: string\n  format: date\n  required: true\n  description: Employment start date\n- name: basic_salary\n  type: number\n  required: true\n  description: "Current basic salary (AED/month) \\u2014 gratuity based on basic only,\\\n    \\ not allowances"\n- name: years_of_service\n  type: number\n  required: true\n  description: Calculated from start_date to assessment date\n- name: accrued_gratuity\n  type: number\n  required: true\n  description: Entitlement per UAE formula (see below)\n- name: status\n  type: string\n  required: true\n  enum:\n  - active\n  - paid\n  - forfeited\n- name: period_id\n  required: false\n  type: string\n  description: Accounting period of last accrual\n- name: tags\n  required: true\n  type: array\n  description: Must include gratuity and {employee_id}\nstatus_lifecycle:\n- active\n- paid\n- forfeited\n',
+      idea: 'entity: idea\nlabel: Idea\nlocation_pattern: "{me.ideas}/ or {project.root}/ or {company.process-baseline}/"\ndescription: Idea entity from DATAMODEL.md\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - captured\n  - exploring\n  - parked\n  - promoted\n- name: priority\n  required: false\n  type: string\n  enum:\n  - low\n  - normal\n  - high\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n',
       inventory: `entity: inventory
 label: Inventory
-location_pattern: 20-COMPANY/06-FINANCE/INVENTORY/
+location_pattern: "{company.finance.inventory}/"
 description: Inventory entity from DATAMODEL.md
 key_fields:
 - sku
@@ -16876,175 +17331,11 @@ fields:
   type: array
   description: Must include inventory and {category}
 `,
-      invoice: `entity: invoice
-label: Invoice
-location_pattern: 30-CLIENTS/{client-id}/02-INVOICES/
-description: Invoice entity from DATAMODEL.md
-key_fields:
-- client_id
-- invoice_id
-- invoice_date
-- due_date
-- amount
-- currency
-- payment_status
-fields:
-- name: type
-  type: string
-  required: true
-- name: client_id
-  type: string
-  required: false
-  description: Must match parent Client folder when set; a partner-billed invoice
-    has none
-- name: invoice_id
-  type: string
-  required: true
-  description: 'Unique across vault: INV-{YYYY}-{NNN}'
-- name: invoice_date
-  type: string
-  format: date
-  required: true
-  description: Date invoice was created
-- name: due_date
-  type: string
-  format: date
-  required: true
-  description: Payment due date (based on payment terms)
-- name: amount
-  type: number
-  required: true
-  description: Invoice total including VAT in currency
-- name: currency
-  type: string
-  required: true
-  description: ISO 4217 currency code; EUR is the Process Harness deployment default
-- name: payment_status
-  type: string
-  required: true
-  enum:
-  - draft
-  - sent
-  - overdue
-  - paid
-  - disputed
-  - written-off
-- name: deal_ref
-  required: false
-  type: string
-  description: Link to source Deal note
-- name: client_name
-  required: true
-  type: string
-  description: Client display name
-- name: amount_paid
-  required: false
-  type: number
-  description: Amount received (0 if unpaid, partial if partially paid)
-- name: sent_date
-  required: false
-  type: string
-  format: date
-  description: Required when payment_status is sent or later
-- name: paid_date
-  required: false
-  type: string
-  format: date
-  description: 'Required when payment_status: paid'
-- name: payment_method
-  required: false
-  type: string
-  description: bank-transfer, stripe, cash, other. Required when paid
-- name: billing_summary
-  required: false
-  type: string
-  description: Link to invoice-description output
-- name: last_reminder_date
-  required: false
-  type: string
-  format: date
-  description: Date of most recent payment reminder
-- name: reminder_count
-  required: false
-  type: number
-  description: Number of reminders sent (default 0)
-- name: next_reminder_date
-  required: false
-  type: string
-  format: date
-  description: Scheduled date for next reminder
-- name: created
-  required: true
-  type: string
-  format: date
-- name: tags
-  required: true
-  type: array
-  description: Must include invoice and client-id
-- name: vat_rate
-  required: false
-  type: number
-  description: VAT percentage applicable to this invoice (for example 21 in Belgium)
-- name: vat_amount
-  required: false
-  type: number
-  description: "Calculated: amount_excl_vat \\xD7 vat_rate / 100. Required when vat_rate\\
-    \\ > 0"
-- name: amount_excl_vat
-  required: false
-  type: number
-  description: Invoice total excluding VAT. Required when vat_rate > 0
-- name: vat_category
-  required: false
-  type: string
-  enum:
-  - standard
-  - zero-rated
-  - exempt
-  - out-of-scope
-  - vat_rate
-- name: je_ref
-  required: false
-  type: string
-  description: Journal entry posted by journal-entry-poster on payment receipt
-- name: ecl_stage
-  required: false
-  type: string
-  enum:
-  - '1'
-  - '2'
-  - '3'
-  - ecl-calculator
-- name: ecl_provision
-  required: false
-  type: number
-  description: Individual ECL provision (AED). Populated for Stage 3 invoices only
-- name: transaction_currency
-  required: false
-  type: string
-  description: Original transaction ISO 4217 currency when different from currency
-- name: transaction_amount
-  required: false
-  type: number
-  description: Original transaction amount when currency conversion was applied
-- name: exchange_rate
-  required: false
-  type: number
-  description: Governed rate from transaction_currency to currency
-- name: exchange_rate_date
-  required: false
-  type: string
-  format: date
-  description: Effective date of the governed exchange rate
-- name: exchange_rate_source
-  required: false
-  type: string
-  description: Approved source used for the exchange rate
-`,
-      issue: 'entity: issue\nlabel: Issue\nlocation_pattern: 20-COMPANY/01-QMS/audits/\ndescription: Issue entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: audit_id\n  required: true\n  type: string\n  description: "Identifier of the audit that raised the issue \\u2014 open set, one\\\n    \\ per audit run"\n- name: component\n  required: true\n  type: string\n- name: discovered_by\n  required: true\n  type: array\n- name: issue_id\n  required: true\n  type: string\n- name: location\n  required: true\n  type: string\n- name: reported_date\n  required: true\n  type: string\n  format: date\n- name: resolved_date\n  required: true\n  type: string\n  format: date\n- name: risk_class\n  required: true\n  type: string\n- name: severity\n  required: true\n  type: string\n  enum:\n  - Critical\n  - Major\n  - Minor\n- name: status\n  required: true\n  type: string\n  enum:\n  - Open\n  - Resolved\n- name: tags\n  required: true\n  type: array\n- name: audit_ref\n  required: false\n  type: string\n',
+      invoice: "entity: invoice\nlabel: Invoice\nlocation_pattern: \"{client.invoices}/\"\ndescription: Invoice entity from DATAMODEL.md\nkey_fields:\n- client_id\n- invoice_id\n- invoice_date\n- due_date\n- amount\n- currency\n- payment_status\nfields:\n- name: type\n  type: string\n  required: true\n- name: client_id\n  type: string\n  required: false\n  description: Must match parent Client folder when set; a partner-billed invoice\n    has none\n- name: invoice_id\n  type: string\n  required: true\n  description: 'Unique across vault: INV-{YYYY}-{NNN}'\n- name: invoice_date\n  type: string\n  format: date\n  required: true\n  description: Date invoice was created\n- name: due_date\n  type: string\n  format: date\n  required: true\n  description: Payment due date (based on payment terms)\n- name: amount\n  type: number\n  required: true\n  description: Invoice total including VAT in currency\n- name: currency\n  type: string\n  required: true\n  description: ISO 4217 currency code; EUR is the Process Harness deployment default\n- name: payment_status\n  type: string\n  required: true\n  enum:\n  - draft\n  - sent\n  - overdue\n  - paid\n  - disputed\n  - written-off\n  - credited\n  description: '`credited` = settled in full by a credit note that references this\n    invoice (a corrected invoice is credited and reissued, never deleted, renumbered\n    or cancelled); the replacement invoice carries the receivable. A partial credit\n    note leaves the status unchanged.'\n- name: deal_ref\n  required: false\n  type: string\n  description: Link to source Deal note\n- name: client_name\n  required: true\n  type: string\n  description: Client display name\n- name: amount_paid\n  required: false\n  type: number\n  description: Amount received (0 if unpaid, partial if partially paid)\n- name: sent_date\n  required: false\n  type: string\n  format: date\n  description: Required when payment_status is sent or later\n- name: paid_date\n  required: false\n  type: string\n  format: date\n  description: 'Required when payment_status: paid'\n- name: payment_method\n  required: false\n  type: string\n  description: bank-transfer, stripe, cash, other. Required when paid\n- name: billing_summary\n  required: false\n  type: string\n  description: Link to invoice-description output\n- name: last_reminder_date\n  required: false\n  type: string\n  format: date\n  description: Date of most recent payment reminder\n- name: reminder_count\n  required: false\n  type: number\n  description: Number of reminders sent (default 0)\n- name: next_reminder_date\n  required: false\n  type: string\n  format: date\n  description: Scheduled date for next reminder\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include invoice and client-id\n- name: vat_rate\n  required: false\n  type: number\n  description: VAT percentage applicable to this invoice (for example 21 in Belgium)\n- name: vat_amount\n  required: false\n  type: number\n  description: \"Calculated: amount_excl_vat \\xD7 vat_rate / 100. Required when vat_rate\\\n    \\ > 0\"\n- name: amount_excl_vat\n  required: false\n  type: number\n  description: Invoice total excluding VAT. Required when vat_rate > 0\n- name: vat_category\n  required: false\n  type: string\n  enum:\n  - standard\n  - zero-rated\n  - exempt\n  - out-of-scope\n  description: VAT treatment of the supply, set with vat_rate from the vat-return-preparer\n    category guide. A cross-border or reverse-charge treatment is asked of the owner, never\n    chosen by the agent\n- name: customer_vat_id\n  required: false\n  type: string\n  description: Customer's VAT number, copied from the client profile `vat_id`. Needed when the\n    client is a VAT-registered business, and always for a reverse-charge invoice\n- name: po_ref\n  required: false\n  type: string\n  description: Customer's purchase-order number, from the request or the deal. Needed when the\n    client profile has `po_required` set to true\n- name: discount_amount\n  required: false\n  type: number\n  description: Discount granted on the invoice, in currency. Reconciles with the Discount row\n    of the invoice table\n- name: discount_order\n  required: false\n  type: string\n  enum:\n  - before-vat\n  - after-vat\n  description: Whether discount_amount is taken off before or after VAT is computed. The\n    arithmetic, the default and when the other value is allowed are defined once, in the\n    ar-followup reference issue-invoice-document.md, section 2\n- name: je_ref\n  required: false\n  type: string\n  description: Journal entry posted by journal-entry-poster on payment receipt\n- name: ecl_stage\n  required: false\n  type: string\n  enum:\n  - '1'\n  - '2'\n  - '3'\n  description: IFRS 9 expected-credit-loss stage set by ecl-calculator\n- name: ecl_provision\n  required: false\n  type: number\n  description: Individual ECL provision (AED). Populated for Stage 3 invoices only\n- name: transaction_currency\n  required: false\n  type: string\n  description: Original transaction ISO 4217 currency when different from currency\n- name: transaction_amount\n  required: false\n  type: number\n  description: Original transaction amount when currency conversion was applied\n- name: exchange_rate\n  required: false\n  type: number\n  description: Governed rate from transaction_currency to currency\n- name: exchange_rate_date\n  required: false\n  type: string\n  format: date\n  description: Effective date of the governed exchange rate\n- name: exchange_rate_source\n  required: false\n  type: string\n  description: Approved source used for the exchange rate\n",
+      issue: 'entity: issue\nlabel: Issue\nlocation_pattern: "{company.qms.audits}/ or {client.issues}/"\ndescription: Issue entity from DATAMODEL.md\nkey_fields: []\nnotes: >-\n  Two kinds of issue share `type: issue`. A **QMS audit issue** is raised by an audit run and\n  filed under `{company.qms.audits}/`; it carries `audit_id`, which makes `component`,\n  `discovered_by`, `location`, `resolved_date` and `risk_class` required and limits `status` to\n  `Open`/`Resolved` and `severity` to `Critical`/`Major`/`Minor`. A **client issue** is a\n  customer-reported problem written by issue-triage to `{client.issues}/ISS-{YYYY-MM-DD}-{slug}.md`\n  and advanced by resolution-tracker; it has no `audit_id`, requires `client_id` and\n  `sla_target`, uses severity `Critical`/`Major`/`Minor`/`Low` (S1-S4) and the lowercase\n  lifecycle `open` -> `investigating` -> `resolved` -> `verified` -> `closed`. The split is\n  enforced by the `if`/`then`/`else` in `schema_overrides`, keyed on the presence of `audit_id`.\nfields:\n- name: type\n  type: string\n  required: true\n- name: audit_id\n  required: false\n  type: string\n  description: "QMS audit issues only: identifier of the audit that raised the issue\\\n    \\ \u2014 open set, one per audit run. Its presence marks the note as a QMS audit\\\n    \\ issue; a client issue has none"\n- name: client_id\n  required: false\n  type: string\n  description: "Client issues only (required there): must match the parent client folder;\\\n    \\ `Unknown` only when the client genuinely cannot be named, flagged for follow-up"\n- name: component\n  required: false\n  type: string\n  description: Required for QMS audit issues\n- name: discovered_by\n  required: false\n  type: array\n  description: Required for QMS audit issues\n- name: issue_id\n  required: true\n  type: string\n  description: Equals the filename; client issues use ISS-{YYYY-MM-DD}-{slug}\n- name: location\n  required: false\n  type: string\n  description: "QMS audit issues (required there): file and line range where the issue\\\n    \\ was found"\n- name: reported_date\n  required: true\n  type: string\n  format: date\n- name: resolved_date\n  required: false\n  type: string\n  format: date\n  description: Required for QMS audit issues; on a client issue, set by resolution-tracker\n    when the issue reaches resolved\n- name: risk_class\n  required: false\n  type: string\n  description: Required for QMS audit issues\n- name: severity\n  required: true\n  type: string\n  enum:\n  - Critical\n  - Major\n  - Minor\n  - Low\n  description: "QMS audit issues use Critical, Major, Minor; client issues add Low (S1\\\n    \\ Critical .. S4 Low, issue-triage severity matrix)"\n- name: status\n  required: true\n  type: string\n  enum:\n  - Open\n  - Resolved\n  - open\n  - investigating\n  - resolved\n  - verified\n  - closed\n  description: "QMS audit issues: Open, Resolved. Client issues: the resolution-tracker\\\n    \\ lifecycle open -> investigating -> resolved -> verified -> closed (issue-triage\\\n    \\ writes open)"\n- name: sla_target\n  required: false\n  type: string\n  description: "Client issues only (required there): absolute resolution deadline as\\\n    \\ a timestamp (YYYY-MM-DD HH:MM), computed from the reported time and the severity\'s\\\n    \\ SLA"\n- name: owner\n  required: false\n  type: string\n  description: "Client issues: person or team that owns the fix"\n- name: resolved_by\n  required: false\n  type: string\n  description: "Client issues: person who applied the fix, set on resolved"\n- name: closed_date\n  required: false\n  type: string\n  format: date\n  description: "Client issues: date the issue reached closed"\n- name: time_to_resolve\n  required: false\n  type: integer\n  description: "Client issues: calendar days from reported_date to resolved_date, set\\\n    \\ on closed"\n- name: tags\n  required: true\n  type: array\n- name: audit_ref\n  required: false\n  type: string\nschema_overrides:\n  if:\n    required:\n    - audit_id\n  then:\n    required:\n    - component\n    - discovered_by\n    - location\n    - resolved_date\n    - risk_class\n    properties:\n      status:\n        enum:\n        - Open\n        - Resolved\n      severity:\n        enum:\n        - Critical\n        - Major\n        - Minor\n  else:\n    required:\n    - client_id\n    - sla_target\n    properties:\n      status:\n        enum:\n        - open\n        - investigating\n        - resolved\n        - verified\n        - closed\n',
       "journal-entry": `entity: journal-entry
 label: Journal Entry
-location_pattern: 20-COMPANY/06-FINANCE/JOURNALS/
+location_pattern: "{company.finance.journals}/ or {client.finance.journals}/"
 description: Journal Entry entity from DATAMODEL.md
 key_fields:
 - je_id
@@ -17125,7 +17416,7 @@ fields:
 - name: client_id
   required: false
   type: string
-  description: kebab-case client identifier. Populated for client JEs under 30-CLIENTS/.
+  description: kebab-case client identifier. Populated for client JEs under {company.clients}/.
     Omitted for own-company JEs
 - name: purpose
   required: false
@@ -17146,24 +17437,376 @@ status_lifecycle:
 - posted
 - reversed
 `,
-      "knowledge-base": 'entity: knowledge-base\nlabel: Knowledge Base\nlocation_pattern: 40-RESOURCES/ or 10-ME/90-INBOX/ or 00-CORE/Wiki/ or 20-COMPANY/07-KNOWLEDGE-BASE/\n  or 30-CLIENTS/{client-id}/07-KNOWLEDGE-BASE/ or 20-COMPANY/03-PROCESSES/BASELINE/\ndescription: Knowledge Base entity from DATAMODEL.md. 90-INBOX is pre-triage; Wiki\n  holds product documentation\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: tags\n  required: true\n  type: array\n- name: status\n  required: true\n  type: string\n  enum:\n  - draft\n  - final\n  - superseded\n  description: "superseded added 2026-08-10: a KB note whose content has been overtaken\\\n    \\ is neither a draft nor current-final, and without the value authors invented\\\n    \\ free text for it. Record *what* is stale in the body, not in the enum. (Do not\\\n    \\ name rejected values in backticks here \\u2014 the generator harvests every backticked\\\n    \\ token in this cell as an enum member)"\n- name: title\n  required: true\n  type: string\n- name: created\n  required: true\n  type: string\n- name: source\n  required: false\n  type: string\n- name: author\n  required: false\n  type: string\n- name: platform\n  required: false\n  type: string\n  enum:\n  - linkedin\n  - tiktok\n  - youtube\n  - web\n  - chatgpt\n  - notebooklm\n  - github\n- name: domain_id\n  required: false\n  type: string\n- name: related\n  required: false\n  type: array\n- name: avg_score\n  required: false\n  type: number\n- name: cycle_date\n  required: false\n  type: string\n- name: entry_count\n  required: false\n  type: integer\n- name: provider\n  required: false\n  type: string\n- name: source_type\n  required: false\n  type: string\n- name: source_url\n  required: false\n  type: string\n- name: applicability\n  required: false\n  type: array\n- name: captured\n  required: false\n  type: string\n- name: channel\n  required: false\n  type: string\n- name: duration\n  required: false\n  type: string\n- name: entity\n  required: false\n  type: string\n- name: entity_id\n  required: false\n  type: string\n- name: industry\n  required: false\n  type: string\n- name: kb_category\n  required: false\n  type: string\n- name: last_reviewed\n  required: false\n  type: string\n- name: review_frequency\n  required: false\n  type: string\n- name: topic\n  required: false\n  type: string\n- name: url\n  required: false\n  type: string\n- name: version\n  required: false\n  type: number\n- name: aliases\n  required: false\n  type: array\n- name: applies_to_domains\n  required: false\n  type: array\n- name: applies_to_skills\n  required: false\n  type: array\n- name: as_of_date\n  required: false\n  type: string\n- name: author_role\n  required: false\n  type: string\n- name: authors\n  required: false\n  type: string\n- name: benchmark_results\n  required: false\n  type: string\n- name: case_study\n  required: false\n  type: string\n- name: content_type\n  required: false\n  type: string\n- name: creator\n  required: false\n  type: string\n- name: cssclasses\n  required: false\n  type: array\n- name: date_published\n  required: false\n  type: string\n- name: date_watched\n  required: false\n  type: string\n- name: description\n  required: false\n  type: string\n- name: field_guide\n  required: false\n  type: string\n- name: footerTemplate\n  required: false\n  type: string\n- name: headerTemplate\n  required: false\n  type: string\n- name: host\n  required: false\n  type: string\n- name: last_verified\n  required: false\n  type: string\n- name: printBackground\n  required: false\n  type: boolean\n- name: research_date\n  required: false\n  type: string\n- name: rule_jurisdiction\n  required: false\n  type: string\n- name: source_channel\n  required: false\n  type: string\n- name: speaker\n  required: false\n  type: string\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: published\n  required: false\n  type: string\n  description: Publication date of the source material. Mixed date and free-text values\n    in practice.\n- name: product\n  required: false\n  type: string\n  description: Product the note is about, when it is product-scoped.\n- name: staleness_signal\n  required: false\n  type: string\n  description: The condition that invalidates this note, in prose \u2014 the event to watch for,\n    not a date. Complements dateModified, which only records when the file was last written\n    and drifts whenever a batch edit rewrites a body without touching it. Example \u2014 "when the\n    Anthropic pricing page changes" or "when the plugin drops the legacy API". Absent means\n    the note has no known expiry condition.\n',
-      lead: "entity: lead\nlabel: Lead\nlocation_pattern: 20-COMPANY/55-LEADS/{lead-id}/ or 30-CLIENTS/{client-id}/55-LEADS/\ndescription: Lead entity from DATAMODEL.md\nkey_fields:\n- company_name\n- contact_name\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: company_name\n  type: string\n  required: true\n  description: Company display name\n- name: contact_name\n  type: string\n  required: true\n  description: Primary contact\n- name: title\n  required: false\n  type: string\n  description: >-\n    Opportunity headline, where the lead needs a display name that `company_name` cannot carry\n    (a named role, a scoped request, a multi-part opportunity). Not a synonym for `company_name`,\n    which stays the company identity and remains required.\n- name: status\n  type: string\n  required: true\n  enum:\n  - lead\n  - qualified\n  - nurture\n  - disqualified\n- name: client_id\n  required: false\n  type: string\n- name: end_client_id\n  required: false\n  type: string\n- name: project_id\n  required: false\n  type: string\n- name: project\n  required: false\n  type: string\n- name: url\n  required: false\n  type: string\n  description: Company website\n- name: owner\n  required: false\n  type: string\n  description: Person responsible for follow-up or qualification\n- name: industry\n  required: false\n  type: string\n  description: Industry vertical\n- name: company_size\n  required: false\n  type: string\n  description: Employee count or range\n- name: contact_title\n  required: false\n  type: string\n  description: Contact job title\n- name: contact_email\n  required: false\n  type: string\n  description: Contact email\n- name: contact_linkedin_url\n  required: false\n  type: string\n  description: LinkedIn profile URL of the primary contact\n- name: contact_linkedin_headline\n  required: false\n  type: string\n  description: Contact's current LinkedIn headline (captured by decision-maker-mapper)\n- name: company_linkedin_url\n  required: false\n  type: string\n  description: LinkedIn company page URL\n- name: source\n  required: true\n  type: string\n  enum:\n  - inbound\n  - outbound\n  - referral\n  - network\n  - event\n  - partner\n  description: >-\n    Sourcing method, not lead temperature or channel. At capture, use `partner` when a named\n    partner organisation deliberately routes, passes, or co-sells the opportunity to BRNCX; use\n    `referral` only when an individual who is not acting for a partner organisation makes the\n    introduction. A direct event, inbound message, outbound prospect, or existing-network contact\n    keeps its actual mechanism, even when the lead is warm. Set `partner_ref` for `partner`; set\n    `referred_by` for `referral` when the individual is known, and do not invent an unknown name.\n- name: source_platform\n  required: false\n  type: string\n  description: \"Where the sourcing happened \\u2014 linkedin, email, brn.cx, skool,\\\n    \\ substack, youtube, whatsapp, phone, in-person, upwork. Open text, not an enum:\\\n    \\ platforms appear faster than a closed vocabulary can be maintained\"\n- name: referred_by\n  required: false\n  type: string\n  description: >-\n    Person who made the introduction when `source: referral`. Use this only for an individual who\n    is not acting for a partner organisation. Record the person when known; if the note does not\n    identify them, leave this optional field blank rather than inventing a name. When a partner\n    organisation routed the opportunity, use `source: partner` and `partner_ref` instead.\n- name: initial_request\n  required: false\n  type: string\n  description: What they asked for\n- name: description\n  required: false\n  type: string\n  description: >-\n    One-line summary of the opportunity as a whole - role, scope, duration, end client. Distinct\n    from `initial_request`, which records only what the lead asked BRNCX for.\n- name: lead_date\n  required: true\n  type: string\n  format: date\n  description: Date lead was received\n- name: prospect_score\n  required: false\n  type: number\n  description: 0-100, set by prospect-audit\n- name: prospect_grade\n  required: false\n  type: string\n  enum:\n  - A+\n  - A\n  - B\n  - C\n  - D\n- name: bant_score\n  required: false\n  type: number\n  description: 0-100, set by lead-qualifier\n- name: meddic_score\n  required: false\n  type: number\n  description: 0-100, set by lead-qualifier\n- name: confidence\n  required: false\n  type: string\n  enum:\n  - High\n  - Medium\n  - Low\n  - Very Low\n- name: deal_value_estimate\n  required: false\n  type: number\n  description: Estimated opportunity value\n- name: next_action\n  required: false\n  type: string\n  description: Next step description\n- name: next_action_date\n  required: false\n  type: string\n  format: date\n  description: Follow-up date\n- name: last_contact\n  required: false\n  type: string\n  format: date\n  description: Last meaningful lead interaction\n- name: related\n  required: false\n  type: string\n  description: Related notes, activities, research, or source artifact\n- name: disqualify_reason\n  required: false\n  type: string\n  description: Why lead was disqualified\n- name: promoted_to_client\n  required: false\n  type: string\n  description: Client ID if promoted\n- name: converted_to_deal\n  required: false\n  type: string\n  description: >-\n    Wikilink `_ref` to the deal note this lead became. The vault copied Salesforce's lead/deal\n    split without its ConvertedOpportunityId, so a converted lead simply stopped being updated\n    and `source` could not be joined to `deal_source` to answer which sourcing produced revenue.\n    Set it at the moment the deal note is created; leave blank on a lead that never converted.\n- name: partner_ref\n  required: false\n  type: string\n  description: >-\n    Partner organisation that routed, passed, or co-sold this lead (required when `source: partner`);\n    a person's name alone does not establish partner sourcing.\n- name: campaign_ref\n  required: false\n  type: string\n  description: Campaign that generated/enrolled this lead\n- name: sequence_ref\n  required: false\n  type: string\n  description: Active outbound sequence\n- name: sequence_touch_count\n  required: false\n  type: number\n  description: Current step in the sequence\n- name: sequence_status\n  required: false\n  type: string\n  enum:\n  - pending\n  - active\n  - engaged\n  - completed\n- name: tags\n  required: false\n  type: array\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: canvas\n  required: false\n  type: array\n  description: \"Plugin-owned (enhanced-canvas, enableFrontmatter: true). List of wikilinks\\\n    \\ to the canvases whose nodes reference this note; re-asserted by syncAllCanvasProperties()\\\n    \\ on startup. Removing it by hand does not stick \\u2014 delete or rebuild the\\\n    \\ canvas instead. The plugin also writes a second key named after the canvas basename,\\\n    \\ which is not a model field.\"\n- name: signal\n  required: false\n  type: string\n  description: Buying signal that surfaced the lead.\nconditional_required:\n- when:\n    source: partner\n  require:\n  - partner_ref\nnotes: >-\n  Capture `source` using the first verified sourcing mechanism at the moment the lead is created.\n  Use `partner` when a named partner organisation deliberately routes, passes, or co-sells the\n  opportunity to BRNCX; set `partner_ref` to that organisation. Use `referral` only when an\n  individual who is not acting for a partner organisation makes the introduction; set `referred_by`\n  when the person is known, and do not invent an unknown name.\n  If neither test applies, use the actual mechanism (`inbound`, `outbound`, `event`, or `network`),\n  even when the lead is warm. Inspect the lead body or source artifact before deciding; never infer\n  `partner` or `referral` from warmth, tags, a person's name, or a partner's event alone.\n  The enhanced-canvas plugin also writes a per-note key named after the canvas basename\n  (`Context - profile`); it is plugin-owned, its name varies per note, and it is deliberately\n  not a model field.\nstatus_lifecycle:\n- lead\n- qualified\n- nurture\n- disqualified\n",
-      lease: "entity: lease\nlabel: Lease\nlocation_pattern: 20-COMPANY/06-FINANCE/ASSETS/LEASES/\ndescription: Lease entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: lease_id\n  required: false\n  type: string\n- name: lessor\n  required: false\n  type: string\n- name: lease_start\n  required: false\n  type: string\n  format: date\n- name: lease_end\n  required: false\n  type: string\n  format: date\n- name: incremental_borrowing_rate\n  required: false\n  type: number\n- name: commencement_rou_asset\n  required: false\n  type: number\n- name: commencement_lease_liability\n  required: false\n  type: number\n- name: amortisation_schedule\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - active\n  - modified\n  - terminated\n  - expired\nstatus_lifecycle:\n- active\n- modified\n- terminated\n- expired\n",
-      "legal-rule": "entity: legal-rule\nlabel: Legal Rule\nlocation_pattern: 40-RESOURCES/legal/{jurisdiction}/\ndescription: Legal Rule entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: rule_jurisdiction\n  required: false\n  type: string\n- name: rule_source_type\n  required: false\n  type: string\n- name: rule_authority\n  required: false\n  type: string\n- name: rule_identifier\n  required: false\n  type: string\n- name: rule_effective_from\n  required: false\n  type: string\n  format: date\n- name: rule_effective_to\n  required: false\n  type: string\n  format: date\n- name: as_of_date\n  required: false\n  type: string\n  format: date\n- name: last_verified\n  required: false\n  type: string\n- name: source_url\n  required: false\n  type: string\n- name: confidence\n  required: false\n  type: string\n- name: supersedes\n  required: false\n  type: string\n- name: superseded_by\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - draft\n  - verified\n  - superseded\n  - repealed\nstatus_lifecycle:\n- draft\n- verified\n- superseded\n- repealed\n",
-      "marketing-content": "entity: marketing-content\nlabel: Marketing Content\nlocation_pattern: 20-COMPANY/50-MARKETING/{channel}/ or 20-COMPANY/50-MARKETING/ or 30-CLIENTS/{client-id}/50-MARKETING/{channel}/\n  or 30-CLIENTS/{client-id}/50-MARKETING/ or 20-COMPANY/03-PROCESSES/BASELINE/\ndescription: Marketing Content entity from DATAMODEL.md\nkey_fields:\n- content_type\n- platform\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: content_type\n  type: string\n  required: true\n  enum:\n  - post\n  - article\n  - email\n  - thread\n  - landing-page\n  - video-script\n  - video\n  - video-series-format\n  - social-post\n  - linkedin-post\n  - carousel\n  - case-study\n  - content-plan\n  - report\n  - site-config\n  - reference\n  - tool\n  - reddit-post\n  - qa-note\n  - prompt\n  - note\n  - nlm-script\n  - faq\n  - explainer\n  - diagram\n  - copy-library\n  - community-copy\n  - cheatsheet\n  - channel-description\n  description: extended 2026-07-24 to match live usage; keep enum (Base filters need it)\n- name: platform\n  type: string\n  required: true\n  enum:\n  - linkedin\n  - substack\n  - twitter\n  - website\n  - skool\n  - youtube\n  - reddit\n  - notebooklm\n  - multi\n  - internal\n  description: lowercase kebab only; extended 2026-07-24\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - scheduled\n  - published\n- name: pillar\n  required: false\n  type: string\n  enum:\n  - product-showcase\n  - thought-leadership\n  - case-study\n  - thirdbrain\n  - own-your-ai-system\n  - bob-positioning\n  - lead-generation\n  - ai-billable-service-line\n  description: 'Content theme. Closed list, extended 2026-07-24 \u2014 no free-text pillars. Consolidated\n    2026-08-25: `positioning` and `product-positioning` were near-duplicates of `bob-positioning`;\n    both notes were migrated and the two values removed. `own-your-ai-system` (the argument\n    that you should own your AI system) and `thirdbrain` (product-branded content) were checked\n    and are genuinely distinct \u2014 do not merge. A client or product variant is not a pillar:\n    record it in `variant` and `client_id`, which is why `gbl-bob` was rejected.'\n- name: source_content\n  required: false\n  type: array\n  description: Wikilinks to original content this was derived from (array-typed 2026-07-24\n    \u2014 repurposing chains have multiple sources)\n- name: derived_content\n  required: false\n  type: array\n  description: Wikilinks to content repurposed from this piece (array-typed 2026-07-24)\n- name: published_date\n  required: false\n  type: string\n  format: date\n  description: Date published (filled when status = published)\n- name: title\n  required: true\n  type: string\n  description: Human-readable title\n- name: inspiration\n  required: false\n  type: string\n  description: Reference material that inspired this piece\n- name: campaign\n  required: false\n  type: string\n  description: Marketing campaign this belongs to\n- name: target_audience\n  required: false\n  type: string\n  description: Intended audience segment\n- name: tags\n  required: false\n  type: array\n  description: Topic tags\n- name: company_id\n  required: false\n  type: string\n  description: Generalized org reference \u2014 the id of the client, partner, supplier or own\n    company this record attaches to. Pair with company_type. For client records, client_id\n    is the shorthand and company_id may be omitted\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`; note\n    that batch edits routinely leave it stale.\n- name: video_slug\n  required: false\n  type: string\n  description: Slug identifying the video this content belongs to.\n- name: framework\n  required: false\n  type: string\n  description: Content framework the script follows.\n- name: target_length\n  required: false\n  type: string\n  description: Target runtime or length. Free text.\n- name: estimated_words\n  required: false\n  type: number\n  description: Estimated word count for the script.\n- name: speaking_pace\n  required: false\n  type: string\n  description: Intended delivery pace for voiceover timing.\n- name: final_angle_ref\n  required: false\n  type: string\n  description: Wikilink to the angle note the final script used.\n- name: final_angle_slug\n  required: false\n  type: string\n  description: Slug of the chosen angle.\n- name: final_video_title\n  required: false\n  type: string\n  description: Title the video actually shipped with.\n- name: angle_pivoted\n  required: false\n  type: boolean\n  description: True when the final angle differs from the originally selected one.\n- name: series_part\n  required: false\n  description: Position within a series. Deliberately untyped \u2014 24 notes hold an integer,\n    1 holds a string.\n- name: hero_image\n  required: false\n  type: string\n  description: Hero image path or wikilink.\n- name: source_angle\n  required: false\n  type: string\n  description: Angle note this content was generated from.\n- name: channel_id\n  required: false\n  type: string\n  description: Platform channel identifier.\n- name: youtube_id\n  required: false\n  type: string\n  description: YouTube video id.\n- name: youtube_url\n  required: false\n  type: string\n  description: Canonical YouTube watch URL.\n- name: episode\n  required: false\n  type: number\n  description: Episode number within a series.\n- name: made_for_kids\n  required: false\n  type: boolean\n  description: YouTube made-for-kids declaration.\n- name: seo_description\n  required: false\n  type: string\n  description: SEO description for the published page or video.\n- name: slug\n  required: false\n  type: string\n  description: URL slug.\n- name: scheduled\n  required: false\n  type: string\n  description: Scheduled publication date. Mixed date, datetime and string values in practice.\n- name: channel\n  required: false\n  type: string\n  description: Publishing channel.\n- name: variant\n  required: false\n  type: string\n  description: Variant label when several cuts of one piece exist.\n- name: privacy\n  required: false\n  type: string\n  description: Platform privacy setting at publication.\n- name: date\n  required: false\n  type: string\n  format: date\n  description: Content date.\n- name: url\n  required: false\n  type: string\n  description: External URL for the published item.\n- name: topic\n  required: false\n  type: string\n  description: Topic label.\n- name: source\n  required: false\n  type: string\n  description: Where the content originated.\n- name: format\n  required: false\n  type: string\n  description: Content format.\n- name: client_id\n  required: false\n  type: string\n  description: Client this content belongs to. Must match a 30-CLIENTS/ folder when set.\n- name: canvas\n  required: false\n  type: array\n  description: Plugin-owned (enhanced-canvas). Wikilinks to canvases referencing this note;\n    re-asserted on startup.\n- name: seo_title\n  required: false\n  type: string\n  description: SEO title for the published page.\n- name: subtitle\n  required: false\n  type: string\n  description: Subtitle or standfirst.\nstatus_lifecycle:\n- draft\n- review\n- scheduled\n- published\nnotes: '**`Process - Marketing Contents` is not a field.** It is an enhanced-canvas artifact:\n  with `enableFrontmatter: true` the plugin writes both `canvas:` and a second key named after\n  the canvas basename. The space in the name makes it unaddressable in Bases without bracket\n  syntax, and hand-removal does not stick \u2014 the plugin re-asserts it on startup. Same disposition\n  as the `Process - TaskNotes` key retired from `task` on 2026-08-19: delete or rebuild the\n  canvas.'\n",
-      meeting: 'entity: meeting\nlabel: Meeting\nlocation_pattern: 10-ME/20-MEETINGS/ or 20-COMPANY/20-MEETINGS/ or 20-COMPANY/{division}/20-MEETINGS/\n  or 20-COMPANY/35-PARTNERS/{partner-id}/20-MEETINGS/ or 20-COMPANY/55-LEADS/{lead-id}/20-MEETINGS/\n  or 30-CLIENTS/{client-id}/20-MEETINGS/\ndescription: Meeting entity from DATAMODEL.md\nkey_fields:\n- context\n- date\n- attendees\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: context\n  type: string\n  required: true\n  description: What the meeting is about\n- name: date\n  type: string\n  format: date\n  required: true\n  description: Meeting date\n- name: attendees\n  type: array\n  required: true\n  description: \'Wikilinks to Person records: ["person_name"]\'\n- name: status\n  type: string\n  required: true\n  enum:\n  - scheduled\n  - completed\n  - cancelled\n- name: client_id\n  required: false\n  type: string\n  description: "Client shorthand \\u2014 set for meetings with a client (equivalent\\\n    \\ to company_type: client). Required for meetings filed under 30-CLIENTS/{id}/\\\n    \\ (enforced by the vault-validator location rule)"\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier,\\\n    \\ or own company the meeting is with. Pair with company_type. For client meetings,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: meeting_type\n  required: false\n  type: string\n  description: Category of meeting (e.g. kickoff, review, planning, standup, retrospective,\n    demo, negotiation)\n- name: time\n  required: false\n  type: string\n  description: Start time\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: source_system\n  required: false\n  type: string\n  description: System the meeting record was imported from.\n- name: source_file\n  required: false\n  type: string\n  description: Path to the imported transcript or recording.\n- name: source_id\n  required: false\n  type: string\n  description: Identifier of the meeting in `source_system`.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\nstatus_lifecycle:\n- scheduled\n- completed\n- cancelled\n',
-      partner: "entity: partner\nlabel: Partner\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/\ndescription: Partner entity from DATAMODEL.md\nkey_fields:\n- partner_id\n- partner_name\n- status\n- relationship_type\n- my_role\n- agreement_type\nfields:\n- name: type\n  type: string\n  required: true\n- name: partner_id\n  type: string\n  required: true\n- name: partner_name\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - lead\n  - qualified\n  - active\n  - inactive\n  - archived\n- name: relationship_type\n  type: string\n  required: true\n  enum:\n  - co-sell\n  - co-build\n  - certification\n- name: my_role\n  type: string\n  required: true\n- name: agreement_type\n  type: string\n  required: true\n- name: commission_rate\n  required: false\n  type: number\n  description: Default commission percentage this partner earns on a sourced deal\n    (e.g. 15 for 15%). Read when a won deal auto-creates a commission record; when\n    absent the amount is left at 0 rather than guessed\n- name: tags\n  required: false\n  type: array\nstatus_lifecycle:\n- lead\n- qualified\n- active\n- inactive\n- archived\n",
-      "performance-obligation": "entity: performance-obligation\nlabel: Performance Obligation\nlocation_pattern: 30-CLIENTS/{client-id}/01-DEALS/\ndescription: Performance Obligation entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: po_id\n  required: false\n  type: string\n- name: deal_ref\n  required: false\n  type: string\n- name: satisfaction_type\n  required: false\n  type: string\n- name: allocated_transaction_price\n  required: false\n  type: number\n- name: revenue_recognised\n  required: false\n  type: string\n- name: revenue_remaining\n  required: false\n  type: string\n- name: progress_percentage\n  required: false\n  type: number\n- name: status\n  required: false\n  type: string\n  enum:\n  - not-started\n  - in-progress\n  - satisfied\nstatus_lifecycle:\n- not-started\n- in-progress\n- satisfied\n",
-      "period-close": "entity: period-close\nlabel: Period Close\nlocation_pattern: 20-COMPANY/06-FINANCE/CLOSE/\ndescription: Period Close entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: close_id\n  required: false\n  type: string\n- name: period_id\n  required: false\n  type: string\n- name: close_type\n  required: false\n  type: string\n- name: checklist\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - in-progress\n  - soft-closed\n  - hard-closed\nstatus_lifecycle:\n- in-progress\n- soft-closed\n- hard-closed\n",
-      playbook: 'entity: playbook\nlabel: Playbook\nlocation_pattern: 00-CORE/Playbooks/ or 20-COMPANY/03-PROCESSES/Playbooks/ or 10-ME/Playbooks/\n  or 30-CLIENTS/{client-id}/Playbooks/\ndescription: Playbook entity from DATAMODEL.md\nkey_fields:\n- trigger\n- outcome\n- total-steps\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: trigger\n  type: string\n  required: true\n  description: When/why this playbook is started\n- name: outcome\n  type: string\n  required: true\n  description: What "done" looks like\n- name: total-steps\n  type: number\n  required: true\n  description: Total steps in the playbook\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - retired\n- name: estimated-duration\n  required: false\n  type: string\n  description: e.g. "2-3 hours active, 1-2 sessions"\n- name: workflow_video\n  required: false\n  type: string\n  description: Filename of workflow video (e.g. "content-launch-workflow.mp4"), empty\n    if none\n- name: pricing-tier\n  required: true\n  type: string\n  description: Distribution visibility tier; private playbooks are excluded from shipping\n    indexes\n- name: value-chain\n  required: false\n  type: string\n  description: \'Primary value chain this playbook serves. Valid: lead-to-cash, deliver-to-satisfaction,\n    record-to-insight, procure-to-pay, hire-to-productivity, plan-to-perform, order-to-fulfill,\n    plan-to-produce, market-to-order, concept-to-launch, service-to-renew, create-to-publish,\n    operating-controls\'\n- name: chain-coverage\n  required: false\n  type: array\n  description: "Stages within the chain that this playbook covers (e.g. [propose,\\\n    \\ close]). Stage names are chain-specific \\u2014 see chain taxonomy reference."\n- name: maturity\n  required: false\n  type: array\n  description: Business maturity stage(s) this playbook targets, e.g. [foundation,\n    traction, scaling]. A playbook may apply to several stages.\n- name: tags\n  required: false\n  type: array\n  description: Topic/domain tags\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n',
-      product: "entity: product\nlabel: Product\nlocation_pattern: 20-COMPANY/40-PRODUCTS/{product-id}/product.md\ndescription: Product entity from DATAMODEL.md\nkey_fields:\n- product_id\n- brand\n- product_name\n- category\n- pricing_model\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: product_id\n  type: string\n  required: true\n  description: Kebab-case identifier, e.g. thirdbrain-bob, starter-vault\n- name: brand\n  type: string\n  required: true\n  description: Brand name, e.g. ThirdBrain\n- name: product_name\n  type: string\n  required: true\n  description: Full product name, e.g. ThirdBrain BOB\n- name: category\n  type: string\n  required: true\n  enum:\n  - platform\n  - add-on\n  - pack\n  - service\n  - community\n  - content-channel\n  - internal-demo\n- name: pricing_model\n  type: string\n  required: true\n  enum:\n  - one-time\n  - subscription\n  - free\n  - bundled\n  - ad-supported\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - discontinued\n  - research\n  description: pre-draft R&D stage, before the product concept is committed to a draft\n    spec\n- name: descriptor\n  required: false\n  type: string\n  description: Explanatory phrase, e.g. The Business Operating Brain\n- name: shorthand\n  required: false\n  type: string\n  description: Short form for use after first introduction, e.g. BOB\n- name: list_price\n  required: false\n  type: number\n  description: List price in primary currency\n- name: launch_price\n  required: false\n  type: number\n  description: Launch/promotional price\n- name: currency\n  required: true\n  type: string\n  description: EUR, USD, AUD, etc.\n- name: includes\n  required: false\n  type: array\n  description: What ships with the product (skill count, components, etc.)\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include product\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: version\n  required: false\n  type: string\n  description: Product version string.\n- name: description\n  required: false\n  type: string\n  description: Short product description.\n",
-      project: 'entity: project\nlabel: Project\nlocation_pattern: 30-CLIENTS/{client-id}/{project}/ or 20-COMPANY/{division}/{project}/\n  or 50-BRNCX-PROJECTS/{project}/\ndescription: Project entity from DATAMODEL.md\nkey_fields:\n- project_id\n- project\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: project_id\n  type: string\n  required: true\n  description: Canonical dated kebab-case project identifier, e.g. 2026-03-dune-auto-works-google-ads-pilot\n- name: project\n  type: string\n  required: true\n  description: Full human-readable project name\n- name: status\n  type: string\n  required: true\n  enum:\n  - planning\n  - active\n  - on-hold\n  - completed\n  - archived\n- name: client_id\n  required: false\n  type: string\n  description: "Required only under 30-CLIENTS/ \\u2014 conditional, like pm-artifact.\\\n    \\ An internal company project (product build, GTM, website work) has no client"\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: priority\n  required: false\n  type: string\n  enum:\n  - low\n  - normal\n  - high\n- name: delivery_cost_eur\n  required: false\n  type: number\n  description: "Cost to deliver this project (labour + subcontract + direct costs),\\\n    \\ EUR. The per-client cost source for margin_per_client_amber_count \\u2014 without\\\n    \\ it that KPI has no denominator and stays unavailable, because revenue minus\\\n    \\ nothing is not a margin. Optional: a client with no costed project is reported\\\n    \\ as uncosted and excluded from the count rather than being treated as 100% margin."\n- name: health\n  required: false\n  type: string\n  enum:\n  - green\n  - amber\n  - red\n  description: "Delivery RAG status, owner-assessed. Feeds the projects_at_risk_count\\\n    \\ KPI (amber or red = at risk). Deliberately separate from `status`: status is\\\n    \\ lifecycle position, health is whether it is in trouble \\u2014 an active project\\\n    \\ can be red and an on-hold one green. Absent means never assessed, which is NOT\\\n    \\ the same as green and is excluded from the KPI denominator."\n- name: deadline\n  required: false\n  type: string\n  format: date\n  description: Target completion date\n- name: project_type\n  required: false\n  type: string\n  description: Category of project (e.g. consulting, implementation, audit, content,\n    campaign)\n- name: start_date\n  required: false\n  type: string\n  format: date\n  description: Project start date\n- name: created\n  required: true\n  type: string\n  format: date\n- name: title\n  required: true\n  type: string\n- name: tags\n  required: false\n  type: array\nstatus_lifecycle:\n- planning\n- active\n- on-hold\n- completed\n- archived\n',
-      provision: "entity: provision\nlabel: Provision\nlocation_pattern: 20-COMPANY/06-FINANCE/PROVISIONS/\ndescription: Provision entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: provision_id\n  required: false\n  type: string\n- name: provision_type\n  required: false\n  type: string\n- name: estimated_amount\n  required: false\n  type: number\n- name: probability\n  required: false\n  type: number\n- name: current_amount\n  required: false\n  type: number\n- name: movements\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - recognised\n  - utilised\n  - reversed\n  - closed\nstatus_lifecycle:\n- recognised\n- utilised\n- reversed\n- closed\n",
-      "purchase-order": "entity: purchase-order\nlabel: Purchase Order\nlocation_pattern: 20-COMPANY/06-FINANCE/AP/ORDERS/\ndescription: Purchase Order entity from DATAMODEL.md\nkey_fields:\n- po_id\n- supplier_id\n- line_items\n- total_amount\n- payment_terms\n- approval_status\nfields:\n- name: type\n  type: string\n  required: true\n- name: po_id\n  type: string\n  required: true\n  description: 'Unique across vault: PO-{YYYY}-{NNN}'\n- name: supplier_id\n  type: string\n  required: true\n  description: Must match 20-COMPANY/30-SUPPLIERS/ folder\n- name: line_items\n  type: array\n  required: true\n  description: Services/items with description, qty, unit_price, total\n- name: total_amount\n  type: number\n  required: true\n  description: PO total value\n- name: payment_terms\n  type: string\n  required: true\n  description: e.g., Net 30, 50% upfront, 50% on delivery\n- name: approval_status\n  type: string\n  required: true\n  enum:\n  - draft\n  - approved\n  - issued\n  - partially-fulfilled\n  - fulfilled\n  - cancelled\n- name: pr_ref\n  required: false\n  type: string\n  description: Link to originating Purchase Requisition\n- name: delivery_status\n  required: false\n  type: string\n  enum:\n  - pending\n  - partial\n  - complete\n  - cancelled\n- name: supplier_name\n  required: true\n  type: string\n  description: Supplier display name\n- name: contract_ref\n  required: false\n  type: string\n  description: Wikilink to the governing Contract entity\n- name: currency\n  required: true\n  type: string\n- name: delivery_date\n  required: false\n  type: string\n  format: date\n  description: Expected delivery/completion date\n- name: milestones\n  required: false\n  type: array\n  description: 'For services: milestone description, date, amount'\n- name: approved_by\n  required: false\n  type: string\n  description: Required when approved or later\n- name: issued_date\n  required: false\n  type: string\n  format: date\n  description: Date PO was sent to supplier\n- name: invoice_refs\n  required: false\n  type: array\n  description: Wikilinks to supplier invoices matched to this PO\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include procurement, purchase-order, and {supplier-id}\n",
-      "purchase-requisition": "entity: purchase-requisition\nlabel: Purchase Requisition\nlocation_pattern: 20-COMPANY/06-FINANCE/AP/REQUISITIONS/\ndescription: Purchase Requisition entity from DATAMODEL.md\nkey_fields:\n- pr_id\n- requestor\n- category\n- estimated_amount\n- approval_status\nfields:\n- name: type\n  type: string\n  required: true\n- name: pr_id\n  type: string\n  required: true\n  description: 'Unique across vault: PR-{YYYY}-{NNN}'\n- name: requestor\n  type: string\n  required: true\n  description: Person who needs the purchase\n- name: category\n  type: string\n  required: true\n  description: 'Spend category: it-infrastructure, software-licensing, professional-services,\n    marketing, facilities, office-supplies, travel, other'\n- name: estimated_amount\n  type: number\n  required: true\n  description: Estimated total cost\n- name: approval_status\n  type: string\n  required: true\n  enum:\n  - draft\n  - submitted\n  - approved\n  - rejected\n  - cancelled\n- name: po_ref\n  required: false\n  type: string\n  description: Link to resulting Purchase Order\n- name: title\n  required: true\n  type: string\n  description: Brief description of the purchase need\n- name: supplier_id\n  required: false\n  type: string\n  description: Preferred supplier if known (must match 20-COMPANY/30-SUPPLIERS/ folder)\n- name: currency\n  required: true\n  type: string\n  description: USD, EUR, AED, etc.\n- name: budget_code\n  required: false\n  type: string\n  description: Internal budget line reference\n- name: justification\n  required: true\n  type: string\n  description: Business case for the purchase\n- name: urgency\n  required: false\n  type: string\n  enum:\n  - routine\n  - urgent\n  - emergency\n- name: needed_by\n  required: false\n  type: string\n  format: date\n  description: Date by which goods/services are needed\n- name: line_items\n  required: false\n  type: array\n  description: Items/services with description, qty, and unit cost\n- name: approved_by\n  required: false\n  type: string\n  description: 'Required when approval_status: approved'\n- name: approved_date\n  required: false\n  type: string\n  format: date\n  description: 'Required when approval_status: approved'\n- name: rejection_reason\n  required: false\n  type: string\n  description: 'Required when approval_status: rejected'\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include procurement and purchase-requisition\n",
+      "knowledge-base": 'entity: knowledge-base\nlabel: Knowledge Base\nlocation_pattern: "{division.root}/ or {client.root}/ or {project.root}/ or {me.root}/ or {resource.root}/ or {vault.wiki}/"\ndescription: "Knowledge Base entity from DATAMODEL.md. 90-INBOX is pre-triage; Wiki holds product documentation. Default home is the company knowledge base ({company.knowledge-base}/) or a client\'s 07-KNOWLEDGE-BASE/; the pattern is wider because these notes are deliberately kept beside the subject they document (QMS maturity knowledge in the QMS folder, product knowledge in the product folder)."\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: tags\n  required: true\n  type: array\n- name: status\n  required: true\n  type: string\n  enum:\n  - draft\n  - final\n  - superseded\n  description: "superseded added 2026-08-10: a KB note whose content has been overtaken\\\n    \\ is neither a draft nor current-final, and without the value authors invented\\\n    \\ free text for it. Record *what* is stale in the body, not in the enum. (Do not\\\n    \\ name rejected values in backticks here \\u2014 the generator harvests every backticked\\\n    \\ token in this cell as an enum member)"\n- name: title\n  required: true\n  type: string\n- name: created\n  required: true\n  type: string\n- name: source\n  required: false\n  type: string\n- name: author\n  required: false\n  type: string\n- name: platform\n  required: false\n  type: string\n  enum:\n  - linkedin\n  - tiktok\n  - youtube\n  - web\n  - chatgpt\n  - notebooklm\n  - github\n- name: domain_id\n  required: false\n  type: string\n- name: related\n  required: false\n  type: array\n- name: avg_score\n  required: false\n  type: number\n- name: cycle_date\n  required: false\n  type: string\n- name: entry_count\n  required: false\n  type: integer\n- name: provider\n  required: false\n  type: string\n- name: source_type\n  required: false\n  type: string\n- name: source_url\n  required: false\n  type: string\n- name: applicability\n  required: false\n  type: array\n- name: captured\n  required: false\n  type: string\n- name: channel\n  required: false\n  type: string\n- name: duration\n  required: false\n  type: string\n- name: entity\n  required: false\n  type: string\n- name: entity_id\n  required: false\n  type: string\n- name: industry\n  required: false\n  type: string\n- name: kb_category\n  required: false\n  type: string\n- name: last_reviewed\n  required: false\n  type: string\n- name: review_frequency\n  required: false\n  type: string\n- name: topic\n  required: false\n  type: string\n- name: url\n  required: false\n  type: string\n- name: version\n  required: false\n  type: number\n- name: aliases\n  required: false\n  type: array\n- name: applies_to_domains\n  required: false\n  type: array\n- name: applies_to_skills\n  required: false\n  type: array\n- name: as_of_date\n  required: false\n  type: string\n- name: author_role\n  required: false\n  type: string\n- name: authors\n  required: false\n  type: string\n- name: benchmark_results\n  required: false\n  type: string\n- name: case_study\n  required: false\n  type: string\n- name: content_type\n  required: false\n  type: string\n- name: creator\n  required: false\n  type: string\n- name: cssclasses\n  required: false\n  type: array\n- name: date_published\n  required: false\n  type: string\n- name: date_watched\n  required: false\n  type: string\n- name: description\n  required: false\n  type: string\n- name: field_guide\n  required: false\n  type: string\n- name: footerTemplate\n  required: false\n  type: string\n- name: headerTemplate\n  required: false\n  type: string\n- name: host\n  required: false\n  type: string\n- name: last_verified\n  required: false\n  type: string\n- name: printBackground\n  required: false\n  type: boolean\n- name: research_date\n  required: false\n  type: string\n- name: rule_jurisdiction\n  required: false\n  type: string\n- name: source_channel\n  required: false\n  type: string\n- name: speaker\n  required: false\n  type: string\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: published\n  required: false\n  type: string\n  description: Publication date of the source material. Mixed date and free-text values\n    in practice.\n- name: product\n  required: false\n  type: string\n  description: Product the note is about, when it is product-scoped.\n- name: staleness_signal\n  required: false\n  type: string\n  description: The condition that invalidates this note, in prose \u2014 the event to watch for,\n    not a date. Complements modified, which only records the last edit date\n    and drifts whenever a batch edit rewrites a body without touching it. Example \u2014 "when the\n    Anthropic pricing page changes" or "when the plugin drops the legacy API". Absent means\n    the note has no known expiry condition.\n',
+      lead: 'entity: lead\nlabel: Lead\nlocation_pattern: "{lead.root}/ or {client.leads}/ or {partner.root}/"\ndescription: Lead entity from DATAMODEL.md\nkey_fields:\n- company_name\n- contact_name\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: company_name\n  type: string\n  required: true\n  description: Company display name\n- name: contact_name\n  type: string\n  required: true\n  description: Primary contact\n- name: title\n  required: false\n  type: string\n  description: >-\n    Opportunity headline, where the lead needs a display name that `company_name` cannot carry\n    (a named role, a scoped request, a multi-part opportunity). Not a synonym for `company_name`,\n    which stays the company identity and remains required.\n- name: status\n  type: string\n  required: true\n  enum:\n  - lead\n  - qualified\n  - nurture\n  - disqualified\n- name: client_id\n  required: false\n  type: string\n- name: end_client_id\n  required: false\n  type: string\n- name: project_id\n  required: false\n  type: string\n- name: project\n  required: false\n  type: string\n- name: url\n  required: false\n  type: string\n  description: Company website\n- name: owner\n  required: false\n  type: string\n  description: Person responsible for follow-up or qualification\n- name: industry\n  required: false\n  type: string\n  description: Industry vertical\n- name: company_size\n  required: false\n  type: string\n  description: Employee count or range\n- name: contact_title\n  required: false\n  type: string\n  description: Contact job title\n- name: contact_email\n  required: false\n  type: string\n  description: Contact email\n- name: contact_linkedin_url\n  required: false\n  type: string\n  description: LinkedIn profile URL of the primary contact\n- name: contact_linkedin_headline\n  required: false\n  type: string\n  description: Contact\'s current LinkedIn headline (captured by decision-maker-mapper)\n- name: company_linkedin_url\n  required: false\n  type: string\n  description: LinkedIn company page URL\n- name: source\n  required: true\n  type: string\n  enum:\n  - inbound\n  - outbound\n  - referral\n  - network\n  - event\n  - partner\n  description: >-\n    Sourcing method, not lead temperature or channel. At capture, use `partner` when a named\n    partner organisation deliberately routes, passes, or co-sells the opportunity to BRNCX; use\n    `referral` only when an individual who is not acting for a partner organisation makes the\n    introduction. A direct event, inbound message, outbound prospect, or existing-network contact\n    keeps its actual mechanism, even when the lead is warm. Set `partner_ref` for `partner`; set\n    `referred_by` for `referral` when the individual is known, and do not invent an unknown name.\n- name: source_platform\n  required: false\n  type: string\n  description: "Where the sourcing happened \\u2014 linkedin, email, brn.cx, skool,\\\n    \\ substack, youtube, whatsapp, phone, in-person, upwork. Open text, not an enum:\\\n    \\ platforms appear faster than a closed vocabulary can be maintained"\n- name: referred_by\n  required: false\n  type: string\n  description: >-\n    Person who made the introduction when `source: referral`. Use this only for an individual who\n    is not acting for a partner organisation. Record the person when known; if the note does not\n    identify them, leave this optional field blank rather than inventing a name. When a partner\n    organisation routed the opportunity, use `source: partner` and `partner_ref` instead.\n- name: initial_request\n  required: false\n  type: string\n  description: What they asked for\n- name: description\n  required: false\n  type: string\n  description: >-\n    One-line summary of the opportunity as a whole - role, scope, duration, end client. Distinct\n    from `initial_request`, which records only what the lead asked BRNCX for.\n- name: lead_date\n  required: true\n  type: string\n  format: date\n  description: Date lead was received\n- name: prospect_score\n  required: false\n  type: number\n  description: 0-100, set by prospect-audit\n- name: prospect_grade\n  required: false\n  type: string\n  enum:\n  - A+\n  - A\n  - B\n  - C\n  - D\n- name: bant_score\n  required: false\n  type: number\n  description: 0-100, set by lead-qualifier\n- name: meddic_score\n  required: false\n  type: number\n  description: 0-100, set by lead-qualifier\n- name: confidence\n  required: false\n  type: string\n  enum:\n  - High\n  - Medium\n  - Low\n  - Very Low\n- name: deal_value_estimate\n  required: false\n  type: number\n  description: Estimated opportunity value\n- name: next_action\n  required: false\n  type: string\n  description: Next step description\n- name: next_action_date\n  required: false\n  type: string\n  format: date\n  description: Follow-up date\n- name: last_contact\n  required: false\n  type: string\n  format: date\n  description: Last meaningful lead interaction\n- name: related\n  required: false\n  type: string\n  description: Related notes, activities, research, or source artifact\n- name: disqualify_reason\n  required: false\n  type: string\n  description: Why lead was disqualified\n- name: promoted_to_client\n  required: false\n  type: string\n  description: Client ID if promoted\n- name: converted_to_deal\n  required: false\n  type: string\n  description: >-\n    Wikilink `_ref` to the deal note this lead became. The vault copied Salesforce\'s lead/deal\n    split without its ConvertedOpportunityId, so a converted lead simply stopped being updated\n    and `source` could not be joined to `deal_source` to answer which sourcing produced revenue.\n    Set it at the moment the deal note is created; leave blank on a lead that never converted.\n- name: partner_ref\n  required: false\n  type: string\n  description: >-\n    Partner organisation that routed, passed, or co-sold this lead (required when `source: partner`);\n    a person\'s name alone does not establish partner sourcing.\n- name: campaign_ref\n  required: false\n  type: string\n  description: Campaign that generated/enrolled this lead\n- name: sequence_ref\n  required: false\n  type: string\n  description: Active outbound sequence\n- name: sequence_touch_count\n  required: false\n  type: number\n  description: Current step in the sequence\n- name: sequence_status\n  required: false\n  type: string\n  enum:\n  - pending\n  - active\n  - engaged\n  - completed\n- name: tags\n  required: false\n  type: array\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: canvas\n  required: false\n  type: array\n  description: "Plugin-owned (enhanced-canvas, enableFrontmatter: true). List of wikilinks\\\n    \\ to the canvases whose nodes reference this note; re-asserted by syncAllCanvasProperties()\\\n    \\ on startup. Removing it by hand does not stick \\u2014 delete or rebuild the\\\n    \\ canvas instead. The plugin also writes a second key named after the canvas basename,\\\n    \\ which is not a model field."\n- name: signal\n  required: false\n  type: string\n  description: Buying signal that surfaced the lead.\nconditional_required:\n- when:\n    source: partner\n  require:\n  - partner_ref\nnotes: >-\n  Capture `source` using the first verified sourcing mechanism at the moment the lead is created.\n  Use `partner` when a named partner organisation deliberately routes, passes, or co-sells the\n  opportunity to BRNCX; set `partner_ref` to that organisation. Use `referral` only when an\n  individual who is not acting for a partner organisation makes the introduction; set `referred_by`\n  when the person is known, and do not invent an unknown name.\n  If neither test applies, use the actual mechanism (`inbound`, `outbound`, `event`, or `network`),\n  even when the lead is warm. Inspect the lead body or source artifact before deciding; never infer\n  `partner` or `referral` from warmth, tags, a person\'s name, or a partner\'s event alone.\n  The enhanced-canvas plugin also writes a per-note key named after the canvas basename\n  (`Context - profile`); it is plugin-owned, its name varies per note, and it is deliberately\n  not a model field.\nstatus_lifecycle:\n- lead\n- qualified\n- nurture\n- disqualified\n',
+      lease: 'entity: lease\nlabel: Lease\nlocation_pattern: "{company.finance.assets-leases}/"\ndescription: Lease entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: lease_id\n  required: false\n  type: string\n- name: lessor\n  required: false\n  type: string\n- name: lease_start\n  required: false\n  type: string\n  format: date\n- name: lease_end\n  required: false\n  type: string\n  format: date\n- name: incremental_borrowing_rate\n  required: false\n  type: number\n- name: commencement_rou_asset\n  required: false\n  type: number\n- name: commencement_lease_liability\n  required: false\n  type: number\n- name: amortisation_schedule\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - active\n  - modified\n  - terminated\n  - expired\nstatus_lifecycle:\n- active\n- modified\n- terminated\n- expired\n',
+      "legal-rule": 'entity: legal-rule\nlabel: Legal Rule\nlocation_pattern: "{resource.legal}/{jurisdiction}/"\ndescription: Legal Rule entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: rule_jurisdiction\n  required: false\n  type: string\n- name: rule_source_type\n  required: false\n  type: string\n- name: rule_authority\n  required: false\n  type: string\n- name: rule_identifier\n  required: false\n  type: string\n- name: rule_effective_from\n  required: false\n  type: string\n  format: date\n- name: rule_effective_to\n  required: false\n  type: string\n  format: date\n- name: as_of_date\n  required: false\n  type: string\n  format: date\n- name: last_verified\n  required: false\n  type: string\n- name: source_url\n  required: false\n  type: string\n- name: confidence\n  required: false\n  type: string\n- name: supersedes\n  required: false\n  type: string\n- name: superseded_by\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - draft\n  - verified\n  - superseded\n  - repealed\nstatus_lifecycle:\n- draft\n- verified\n- superseded\n- repealed\n',
+      "marketing-content": "entity: marketing-content\nlabel: Marketing Content\nlocation_pattern: \"{company.marketing}/ or {client.marketing}/ or {product.root}/ or {company.sales}/ or {company.strategy}/ or {company.playbooks-upgrade}/ or {company.process-baseline}/\"\ndescription: \"Marketing Content entity from DATAMODEL.md. Default home is {company.marketing}/ or a client's 50-MARKETING/; the pattern also names the product, sales, strategy and playbook-upgrade folders, where product and offer collateral is kept with the thing it sells.\"\nkey_fields:\n- content_type\n- platform\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: content_type\n  type: string\n  required: true\n  enum:\n  - post\n  - article\n  - email\n  - thread\n  - landing-page\n  - video-script\n  - video\n  - video-series-format\n  - social-post\n  - linkedin-post\n  - carousel\n  - case-study\n  - content-plan\n  - report\n  - site-config\n  - reference\n  - tool\n  - reddit-post\n  - qa-note\n  - prompt\n  - note\n  - nlm-script\n  - faq\n  - explainer\n  - diagram\n  - copy-library\n  - community-copy\n  - cheatsheet\n  - channel-description\n  - comment\n  description: extended 2026-07-24 to match live usage; keep enum (Base filters need it). `comment` added 2026-10-30 for a published comment on someone else's post (record note plus evidence screenshot).\n- name: platform\n  type: string\n  required: true\n  enum:\n  - linkedin\n  - substack\n  - twitter\n  - website\n  - skool\n  - youtube\n  - reddit\n  - notebooklm\n  - multi\n  - internal\n  description: lowercase kebab only; extended 2026-07-24\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - scheduled\n  - published\n  - archived\n  description: 'Editorial stage. `archived` (added 2026-10-15, owner decision) is the terminal\n    state for a piece that will not be published or is no longer live: a draft merged into\n    another piece, a dropped draft, or a post withdrawn from its platform. It can follow any\n    other value. Keep the note and its `source_content`/`derived_content` links instead of\n    deleting it, so the provenance survives. Active views (the content Kanban, the pipeline\n    table, the Drafts and Scheduled views) exclude it; `Marketing-Content.base` lists it in\n    its own Archived view.'\n- name: pillar\n  required: false\n  type: string\n  enum:\n  - product-showcase\n  - thought-leadership\n  - case-study\n  - thirdbrain\n  - own-your-ai-system\n  - bob-positioning\n  - lead-generation\n  - ai-billable-service-line\n  description: 'Content theme. Closed list, extended 2026-07-24 \u2014 no free-text pillars. Consolidated\n    2026-08-25: `positioning` and `product-positioning` were near-duplicates of `bob-positioning`;\n    both notes were migrated and the two values removed. `own-your-ai-system` (the argument\n    that you should own your AI system) and `thirdbrain` (product-branded content) were checked\n    and are genuinely distinct \u2014 do not merge. A client or product variant is not a pillar:\n    record it in `variant` and `client_id`, which is why `gbl-bob` was rejected.'\n- name: source_content\n  required: false\n  type: array\n  description: Wikilinks to original content this was derived from (array-typed 2026-07-24\n    \u2014 repurposing chains have multiple sources)\n- name: derived_content\n  required: false\n  type: array\n  description: Wikilinks to content repurposed from this piece (array-typed 2026-07-24)\n- name: published_date\n  required: false\n  type: string\n  format: date\n  description: Date published (filled when status = published)\n- name: title\n  required: true\n  type: string\n  description: Human-readable title\n- name: inspiration\n  required: false\n  type: string\n  description: Reference material that inspired this piece\n- name: campaign\n  required: false\n  type: string\n  description: Marketing campaign this belongs to\n- name: target_audience\n  required: false\n  type: string\n  description: Intended audience segment\n- name: tags\n  required: false\n  type: array\n  description: Topic tags\n- name: company_id\n  required: false\n  type: string\n  description: Generalized org reference \u2014 the id of the client, partner, supplier or own\n    company this record attaches to. Pair with company_type. For client records, client_id\n    is the shorthand and company_id may be omitted\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n  description: Org type of company_id. Only needed to express a NON-client counterparty\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`; note\n    that batch edits routinely leave it stale.\n- name: video_slug\n  required: false\n  type: string\n  description: Slug identifying the video this content belongs to.\n- name: framework\n  required: false\n  type: string\n  description: Content framework the script follows.\n- name: target_length\n  required: false\n  type: string\n  description: Target runtime or length. Free text.\n- name: estimated_words\n  required: false\n  type: number\n  description: Estimated word count for the script.\n- name: speaking_pace\n  required: false\n  type: string\n  description: Intended delivery pace for voiceover timing.\n- name: final_angle_ref\n  required: false\n  type: string\n  description: Wikilink to the angle note the final script used.\n- name: final_angle_slug\n  required: false\n  type: string\n  description: Slug of the chosen angle.\n- name: final_video_title\n  required: false\n  type: string\n  description: Title the video actually shipped with.\n- name: angle_pivoted\n  required: false\n  type: boolean\n  description: True when the final angle differs from the originally selected one.\n- name: series_part\n  required: false\n  description: Position within a series. Deliberately untyped \u2014 24 notes hold an integer,\n    1 holds a string.\n- name: hero_image\n  required: false\n  type: string\n  description: Hero image path or wikilink.\n- name: source_angle\n  required: false\n  type: string\n  description: Angle note this content was generated from.\n- name: channel_id\n  required: false\n  type: string\n  description: Platform channel identifier.\n- name: youtube_id\n  required: false\n  type: string\n  description: YouTube video id.\n- name: youtube_url\n  required: false\n  type: string\n  description: Canonical YouTube watch URL.\n- name: episode\n  required: false\n  type: number\n  description: Episode number within a series.\n- name: made_for_kids\n  required: false\n  type: boolean\n  description: YouTube made-for-kids declaration.\n- name: seo_description\n  required: false\n  type: string\n  description: SEO description for the published page or video.\n- name: slug\n  required: false\n  type: string\n  pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$\n  description: 'Stable identifier and URL slug, kebab-case `[a-z0-9-]`. Set once when the note\n    is created, derived from the working title (`{skills.root}/social-content/scripts/content_slug.py\n    derive`), and never re-derived when the title changes: a published URL and every link to\n    the file depend on it. Where the platform takes a URL slug (Substack post settings, the\n    website) the same value is entered there; a note already published under a different\n    platform slug records the platform''s, since that one can no longer change. New notes are\n    named `{created}_{slug}.md` (rule from 2026-10-15; older notes keep their names).'\n- name: scheduled\n  required: false\n  type: string\n  description: Scheduled publication date. Mixed date, datetime and string values in practice.\n- name: channel\n  required: false\n  type: string\n  description: Publishing channel.\n- name: variant\n  required: false\n  type: string\n  description: Variant label when several cuts of one piece exist.\n- name: privacy\n  required: false\n  type: string\n  description: Platform privacy setting at publication.\n- name: date\n  required: false\n  type: string\n  format: date\n  description: Content date.\n- name: url\n  required: false\n  type: string\n  description: 'External URL of the published item. For LinkedIn, the post URL as copied\n    (`/posts/...-share-{id}` or `/feed/update/urn:li:share:{id}`); it carries the 19-digit\n    post id that joins the note to `performance-log.md` rows, so fill it from the live post,\n    never from a date match. `published_url`, found on a few older notes, is a legacy synonym\n    that `voice_sample_weights.py` also reads; write `url` on new notes.'\n- name: engagement\n  required: false\n  type: object\n  allOf:\n  - required:\n    - measured_on\n  properties:\n    measured_on:\n      type: string\n      format: date\n    source:\n      type: string\n    engagements:\n      type: number\n    impressions:\n      type: number\n    views:\n      type: number\n    reactions:\n      type: number\n    comments:\n      type: number\n    reposts:\n      type: number\n    opens:\n      type: number\n    clicks:\n      type: number\n  description: 'Engagement numbers for a published piece, as one mapping measured at one moment:\n    `measured_on` (date, required inside the mapping), `source` (where the numbers came from),\n    and any of `engagements`, `impressions`, `views`, `reactions`, `comments`, `reposts`,\n    `opens`, `clicks` (numbers). The key names are the ones `brand-voice-generator/scripts/voice_sample_weights.py`\n    reads (it also accepts `likes` for `reactions` and `shares` for `reposts`). Re-measuring\n    overwrites the mapping and its date. Sources: LinkedIn \u2014 `performance-log.md` (Content\n    analytics export), joined by the post id in `url`, so LinkedIn notes need not repeat the\n    numbers here; Substack \u2014 the public post API `https://{publication}.substack.com/api/v1/posts/{slug}`\n    gives `reaction_count`, `comment_count` and `restacks` (recorded as `reactions`, `comments`,\n    `reposts`, `source: substack-post-api`), and opens, clicks and views come only from the\n    owner''s Substack dashboard (Stats, per-post export; `source: substack-dashboard`).'\n- name: topic\n  required: false\n  type: string\n  description: Topic label.\n- name: source\n  required: false\n  type: string\n  description: Where the content originated.\n- name: format\n  required: false\n  type: string\n  description: Content format.\n- name: client_id\n  required: false\n  type: string\n  description: Client this content belongs to. Must match a {company.clients}/ folder when set.\n- name: canvas\n  required: false\n  type: array\n  description: Plugin-owned (enhanced-canvas). Wikilinks to canvases referencing this note;\n    re-asserted on startup.\n- name: seo_title\n  required: false\n  type: string\n  description: SEO title for the published page.\n- name: subtitle\n  required: false\n  type: string\n  description: Subtitle or standfirst.\nstatus_lifecycle:\n- draft\n- review\n- scheduled\n- published\n- archived\nnotes: '**`Process - Marketing Contents` is not a field.** It is an enhanced-canvas artifact:\n  with `enableFrontmatter: true` the plugin writes both `canvas:` and a second key named after\n  the canvas basename. The space in the name makes it unaddressable in Bases without bracket\n  syntax, and hand-removal does not stick \u2014 the plugin re-asserts it on startup. Same disposition\n  as the `Process - TaskNotes` key retired from `task` on 2026-08-19: delete or rebuild the\n  canvas.\n\n\n  **No `stage` field: `status` is the stage** (decided 2026-10-15, TechWolf review E5). The\n  toolkit this was taken from keeps a coarse `stage` (ideas, drafts, published) beside a finer\n  `status`, and both describe one lifecycle. Here `status` (draft, review, scheduled, published, and the `archived` exit)\n  is that editorial pipeline already, so a second field would have to be kept in step with it\n  by hand and would drift. Ideas live in the `idea` entity until a draft exists. The content\n  Kanban (`Content-Pipeline.base`) groups by `status`, the same way `Candidates.base` does\n  for candidates.\n\n\n  **`archived` is a status, not a tag or a title prefix** (owner decision 2026-10-15). Before\n  it existed, a draft merged into another piece could only be marked by a \"RETIRED (merged\n  into ...)\" title prefix and a `retired` tag, because no status fitted: the note stayed\n  `draft`, so it sat in the Drafts view and on the Kanban as work still to do, and every\n  filter had to know about the tag. A status value is what the Bases already filter on, so one\n  `!= \"archived\"` keeps it out of the active views. The Kanban and pipeline views in\n  `Content-Pipeline.base` exclude it (an archived piece has no next step, so a Kanban column\n  for it would only grow); the inventory views in `Marketing-Content.base` keep it, with\n  its own Archived view. Scripts that select `status: published` already leave it out.'\n",
+      meeting: 'entity: meeting\nlabel: Meeting\nlocation_pattern: "{me.meetings}/ or {company.meetings}/ or {division.meetings}/ or {partner.meetings}/ or {lead.meetings}/ or {client.meetings}/ or {company.people}/{name}/"\ndescription: Meeting entity from DATAMODEL.md\nkey_fields:\n- context\n- date\n- attendees\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: context\n  type: string\n  required: true\n  description: What the meeting is about\n- name: date\n  type: string\n  format: date\n  required: true\n  description: Meeting date\n- name: attendees\n  type: array\n  required: true\n  description: \'Wikilinks to Person records: ["person_name"]\'\n- name: status\n  type: string\n  required: true\n  enum:\n  - scheduled\n  - completed\n  - cancelled\n- name: client_id\n  required: false\n  type: string\n  description: "Client shorthand \\u2014 set for meetings with a client (equivalent\\\n    \\ to company_type: client). Required for meetings filed under {client.root}/\\\n    \\ (enforced by the vault-validator location rule)"\n- name: company_id\n  required: false\n  type: string\n  description: "Generalized org reference \\u2014 the id of the client, partner, supplier,\\\n    \\ or own company the meeting is with. Pair with company_type. For client meetings,\\\n    \\ client_id is the shorthand and company_id may be omitted"\n- name: company_type\n  required: false\n  type: string\n  enum:\n  - client\n  - partner\n  - supplier\n  - own-company\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: meeting_type\n  required: false\n  type: string\n  description: Category of meeting (e.g. kickoff, review, planning, standup, retrospective,\n    demo, negotiation)\n- name: time\n  required: false\n  type: string\n  description: Start time\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: source_system\n  required: false\n  type: string\n  description: System the meeting record was imported from.\n- name: source_file\n  required: false\n  type: string\n  description: Path to the imported transcript or recording.\n- name: source_id\n  required: false\n  type: string\n  description: Identifier of the meeting in `source_system`.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\nstatus_lifecycle:\n- scheduled\n- completed\n- cancelled\n',
+      partner: 'entity: partner\nlabel: Partner\nlocation_pattern: "{partner.root}/"\ndescription: Partner entity from DATAMODEL.md\nkey_fields:\n- partner_id\n- partner_name\n- status\n- relationship_type\n- my_role\n- agreement_type\nfields:\n- name: type\n  type: string\n  required: true\n- name: partner_id\n  type: string\n  required: true\n- name: partner_name\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - lead\n  - qualified\n  - active\n  - inactive\n  - archived\n- name: relationship_type\n  type: string\n  required: true\n  enum:\n  - co-sell\n  - co-build\n  - certification\n- name: my_role\n  type: string\n  required: true\n- name: agreement_type\n  type: string\n  required: true\n- name: commission_rate\n  required: false\n  type: number\n  description: Default commission percentage this partner earns on a sourced deal\n    (e.g. 15 for 15%). Read when a won deal auto-creates a commission record; when\n    absent the amount is left at 0 rather than guessed\n- name: tags\n  required: false\n  type: array\nstatus_lifecycle:\n- lead\n- qualified\n- active\n- inactive\n- archived\n',
+      "performance-obligation": 'entity: performance-obligation\nlabel: Performance Obligation\nlocation_pattern: "{client.deals}/"\ndescription: Performance Obligation entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: po_id\n  required: false\n  type: string\n- name: deal_ref\n  required: false\n  type: string\n- name: satisfaction_type\n  required: false\n  type: string\n- name: allocated_transaction_price\n  required: false\n  type: number\n- name: revenue_recognised\n  required: false\n  type: string\n- name: revenue_remaining\n  required: false\n  type: string\n- name: progress_percentage\n  required: false\n  type: number\n- name: status\n  required: false\n  type: string\n  enum:\n  - not-started\n  - in-progress\n  - satisfied\nstatus_lifecycle:\n- not-started\n- in-progress\n- satisfied\n',
+      "period-close": 'entity: period-close\nlabel: Period Close\nlocation_pattern: "{company.finance.close}/"\ndescription: Period Close entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: close_id\n  required: false\n  type: string\n- name: period_id\n  required: false\n  type: string\n- name: close_type\n  required: false\n  type: string\n- name: checklist\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - in-progress\n  - soft-closed\n  - hard-closed\nstatus_lifecycle:\n- in-progress\n- soft-closed\n- hard-closed\n',
+      playbook: 'entity: playbook\nlabel: Playbook\nlocation_pattern: "{company.playbooks}/ or {company.processes.playbooks}/ or {me.playbooks}/ or {client.playbooks}/"\ndescription: Playbook entity from DATAMODEL.md\nkey_fields:\n- trigger\n- outcome\n- total-steps\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: trigger\n  type: string\n  required: true\n  description: When/why this playbook is started\n- name: outcome\n  type: string\n  required: true\n  description: What "done" looks like\n- name: total-steps\n  type: number\n  required: true\n  description: Total steps in the playbook\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - retired\n- name: estimated-duration\n  required: false\n  type: string\n  description: e.g. "2-3 hours active, 1-2 sessions"\n- name: workflow_video\n  required: false\n  type: string\n  description: Filename of workflow video (e.g. "content-launch-workflow.mp4"), empty\n    if none\n- name: pricing-tier\n  required: true\n  type: string\n  description: Distribution visibility tier; private playbooks are excluded from shipping\n    indexes\n- name: value-chain\n  required: false\n  type: string\n  description: \'Primary value chain this playbook serves. Valid: lead-to-cash, deliver-to-satisfaction,\n    record-to-insight, procure-to-pay, hire-to-productivity, plan-to-perform, order-to-fulfill,\n    plan-to-produce, market-to-order, concept-to-launch, service-to-renew, create-to-publish,\n    operating-controls\'\n- name: chain-coverage\n  required: false\n  type: array\n  description: "Stages within the chain that this playbook covers (e.g. [propose,\\\n    \\ close]). Stage names are chain-specific \\u2014 see chain taxonomy reference."\n- name: maturity\n  required: false\n  type: array\n  description: Business maturity stage(s) this playbook targets, e.g. [foundation,\n    traction, scaling]. A playbook may apply to several stages.\n- name: tags\n  required: false\n  type: array\n  description: Topic/domain tags\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n',
+      product: `entity: product
+label: Product
+location_pattern: "{product.profile} or {client.catalogue.products}/"
+description: Product entity from DATAMODEL.md
+key_fields:
+- product_id
+- brand
+- product_name
+- category
+- pricing_model
+- status
+fields:
+- name: type
+  type: string
+  required: true
+- name: product_id
+  type: string
+  required: true
+  description: Kebab-case identifier, e.g. thirdbrain-bob, starter-vault
+- name: brand
+  type: string
+  required: true
+  description: Brand name, e.g. ThirdBrain
+- name: product_name
+  type: string
+  required: true
+  description: Full product name, e.g. ThirdBrain BOB
+- name: category
+  type: string
+  required: true
+  enum:
+  - platform
+  - add-on
+  - pack
+  - service
+  - community
+  - content-channel
+  - internal-demo
+  - catalogue-item
+  description: Kind of offering. platform .. internal-demo classify the company's own
+    offerings; catalogue-item marks a supplier or client catalogue SKU imported by
+    catalog-csv-ingest into {client.catalogue.products}, whose own category goes in
+    catalogue_category
+- name: pricing_model
+  type: string
+  required: true
+  enum:
+  - one-time
+  - subscription
+  - free
+  - bundled
+  - ad-supported
+- name: status
+  type: string
+  required: true
+  enum:
+  - draft
+  - active
+  - discontinued
+  - research
+  description: pre-draft R&D stage, before the product concept is committed to a draft
+    spec
+- name: descriptor
+  required: false
+  type: string
+  description: Explanatory phrase, e.g. The Business Operating Brain
+- name: shorthand
+  required: false
+  type: string
+  description: Short form for use after first introduction, e.g. BOB
+- name: list_price
+  required: false
+  type: number
+  description: List price in primary currency
+- name: launch_price
+  required: false
+  type: number
+  description: Launch/promotional price
+- name: currency
+  required: true
+  type: string
+  description: EUR, USD, AUD, etc.
+- name: includes
+  required: false
+  type: array
+  description: What ships with the product (skill count, components, etc.)
+- name: created
+  required: true
+  type: string
+  format: date
+- name: tags
+  required: true
+  type: array
+  description: Must include product
+- name: modified
+  required: false
+  type: string
+  format: date
+  description: Last substantive edit date. Vault-wide convention, paired with \`created\`;
+    note that batch edits routinely leave it stale.
+- name: version
+  required: false
+  type: string
+  description: Product version string.
+- name: description
+  required: false
+  type: string
+  description: Short product description.
+- name: catalogue_category
+  required: false
+  type: string
+  description: 'catalogue-item only: the category the source catalogue gives the item,
+    kept verbatim (free text; supplier taxonomies differ)'
+- name: sku
+  required: false
+  type: string
+  description: 'catalogue-item only: stock-keeping unit from the source catalogue; unique
+    per source catalogue and client'
+- name: unit_price
+  required: false
+  type: number
+  description: 'catalogue-item only: price per unit_of_measure in price_currency'
+- name: price_currency
+  required: false
+  type: string
+  description: 'catalogue-item only: ISO 4217 currency of unit_price'
+- name: source_catalog
+  required: false
+  type: string
+  description: 'catalogue-item only: human-readable name of the imported catalogue'
+- name: supplier_id
+  required: false
+  type: string
+  description: 'catalogue-item only: supplier the item comes from, when the catalogue
+    names one'
+- name: unit_of_measure
+  required: false
+  type: string
+  description: 'catalogue-item only: unit the price applies to (each, kg, box)'
+- name: current_stock
+  required: false
+  type: number
+  description: "catalogue-item only: the supplier's stock figure at import; not an\\
+    \\ inventory movement"
+- name: variants
+  required: false
+  type: array
+  description: 'catalogue-item only: variant labels from the source row'
+- name: defaulted_fields
+  required: false
+  type: array
+  description: 'catalogue-item only: required fields the import filled with a placeholder
+    because the source had no value; report them as unknown, not as catalogue data'
+`,
+      project: 'entity: project\nlabel: Project\nlocation_pattern: "{client.root}/{project}/ or {division.root}/{project}/ or {project.root}/"\ndescription: Project entity from DATAMODEL.md\nkey_fields:\n- project_id\n- project\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: project_id\n  type: string\n  required: true\n  description: Canonical dated kebab-case project identifier, e.g. 2026-03-dune-auto-works-google-ads-pilot\n- name: project\n  type: string\n  required: true\n  description: Full human-readable project name\n- name: status\n  type: string\n  required: true\n  enum:\n  - planning\n  - active\n  - on-hold\n  - completed\n  - archived\n- name: client_id\n  required: false\n  type: string\n  description: "Required only under {company.clients}/ \\u2014 conditional, like pm-artifact.\\\n    \\ An internal company project (product build, GTM, website work) has no client"\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: priority\n  required: false\n  type: string\n  enum:\n  - low\n  - normal\n  - high\n- name: delivery_cost_eur\n  required: false\n  type: number\n  description: "Cost to deliver this project (labour + subcontract + direct costs),\\\n    \\ EUR. The per-client cost source for margin_per_client_amber_count \\u2014 without\\\n    \\ it that KPI has no denominator and stays unavailable, because revenue minus\\\n    \\ nothing is not a margin. Optional: a client with no costed project is reported\\\n    \\ as uncosted and excluded from the count rather than being treated as 100% margin."\n- name: health\n  required: false\n  type: string\n  enum:\n  - green\n  - amber\n  - red\n  description: "Delivery RAG status, owner-assessed. Feeds the projects_at_risk_count\\\n    \\ KPI (amber or red = at risk). Deliberately separate from `status`: status is\\\n    \\ lifecycle position, health is whether it is in trouble \\u2014 an active project\\\n    \\ can be red and an on-hold one green. Absent means never assessed, which is NOT\\\n    \\ the same as green and is excluded from the KPI denominator."\n- name: deadline\n  required: false\n  type: string\n  format: date\n  description: Target completion date\n- name: project_type\n  required: false\n  type: string\n  description: Category of project (e.g. consulting, implementation, audit, content,\n    campaign)\n- name: start_date\n  required: false\n  type: string\n  format: date\n  description: Project start date\n- name: created\n  required: true\n  type: string\n  format: date\n- name: title\n  required: true\n  type: string\n- name: tags\n  required: false\n  type: array\nstatus_lifecycle:\n- planning\n- active\n- on-hold\n- completed\n- archived\n',
+      provision: 'entity: provision\nlabel: Provision\nlocation_pattern: "{company.finance.provisions}/"\ndescription: Provision entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: provision_id\n  required: false\n  type: string\n- name: provision_type\n  required: false\n  type: string\n- name: estimated_amount\n  required: false\n  type: number\n- name: probability\n  required: false\n  type: number\n- name: current_amount\n  required: false\n  type: number\n- name: movements\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - recognised\n  - utilised\n  - reversed\n  - closed\nstatus_lifecycle:\n- recognised\n- utilised\n- reversed\n- closed\n',
+      "purchase-order": `entity: purchase-order
+label: Purchase Order
+location_pattern: "{company.finance.ap-orders}/"
+description: Purchase Order entity from DATAMODEL.md
+key_fields:
+- po_id
+- supplier_id
+- line_items
+- total_amount
+- payment_terms
+- approval_status
+fields:
+- name: type
+  type: string
+  required: true
+- name: po_id
+  type: string
+  required: true
+  description: 'Unique across vault: PO-{YYYY}-{NNN}'
+- name: supplier_id
+  type: string
+  required: true
+  description: Must match {company.suppliers}/ folder
+- name: line_items
+  type: array
+  required: true
+  description: Services/items with description, qty, unit_price, total
+- name: total_amount
+  type: number
+  required: true
+  description: PO total value
+- name: payment_terms
+  type: string
+  required: true
+  description: e.g., Net 30, 50% upfront, 50% on delivery
+- name: approval_status
+  type: string
+  required: true
+  enum:
+  - draft
+  - approved
+  - issued
+  - partially-fulfilled
+  - fulfilled
+  - cancelled
+- name: pr_ref
+  required: false
+  type: string
+  description: Link to originating Purchase Requisition
+- name: delivery_status
+  required: false
+  type: string
+  enum:
+  - pending
+  - partial
+  - complete
+  - cancelled
+- name: supplier_name
+  required: true
+  type: string
+  description: Supplier display name
+- name: contract_ref
+  required: false
+  type: string
+  description: Wikilink to the governing Contract entity
+- name: currency
+  required: true
+  type: string
+- name: delivery_date
+  required: false
+  type: string
+  format: date
+  description: Expected delivery/completion date
+- name: milestones
+  required: false
+  type: array
+  description: 'For services: milestone description, date, amount'
+- name: approved_by
+  required: false
+  type: string
+  description: Required when approved or later
+- name: issued_date
+  required: false
+  type: string
+  format: date
+  description: Date PO was sent to supplier
+- name: invoice_refs
+  required: false
+  type: array
+  description: Wikilinks to supplier invoices matched to this PO
+- name: created
+  required: true
+  type: string
+  format: date
+- name: tags
+  required: true
+  type: array
+  description: Must include procurement, purchase-order, and {supplier-id}
+`,
+      "purchase-requisition": `entity: purchase-requisition
+label: Purchase Requisition
+location_pattern: "{company.finance.ap-requisitions}/"
+description: Purchase Requisition entity from DATAMODEL.md
+key_fields:
+- pr_id
+- requestor
+- category
+- estimated_amount
+- approval_status
+fields:
+- name: type
+  type: string
+  required: true
+- name: pr_id
+  type: string
+  required: true
+  description: 'Unique across vault: PR-{YYYY}-{NNN}'
+- name: requestor
+  type: string
+  required: true
+  description: Person who needs the purchase
+- name: category
+  type: string
+  required: true
+  description: 'Spend category: it-infrastructure, software-licensing, professional-services,
+    marketing, facilities, office-supplies, travel, other'
+- name: estimated_amount
+  type: number
+  required: true
+  description: Estimated total cost
+- name: approval_status
+  type: string
+  required: true
+  enum:
+  - draft
+  - submitted
+  - approved
+  - rejected
+  - cancelled
+- name: po_ref
+  required: false
+  type: string
+  description: Link to resulting Purchase Order
+- name: title
+  required: true
+  type: string
+  description: Brief description of the purchase need
+- name: supplier_id
+  required: false
+  type: string
+  description: Preferred supplier if known (must match {company.suppliers}/ folder)
+- name: currency
+  required: true
+  type: string
+  description: USD, EUR, AED, etc.
+- name: budget_code
+  required: false
+  type: string
+  description: Internal budget line reference
+- name: justification
+  required: true
+  type: string
+  description: Business case for the purchase
+- name: urgency
+  required: false
+  type: string
+  enum:
+  - routine
+  - urgent
+  - emergency
+- name: needed_by
+  required: false
+  type: string
+  format: date
+  description: Date by which goods/services are needed
+- name: line_items
+  required: false
+  type: array
+  description: Items/services with description, qty, and unit cost
+- name: approved_by
+  required: false
+  type: string
+  description: 'Required when approval_status: approved'
+- name: approved_date
+  required: false
+  type: string
+  format: date
+  description: 'Required when approval_status: approved'
+- name: rejection_reason
+  required: false
+  type: string
+  description: 'Required when approval_status: rejected'
+- name: created
+  required: true
+  type: string
+  format: date
+- name: tags
+  required: true
+  type: array
+  description: Must include procurement and purchase-requisition
+`,
       "recruiting-channel": `entity: recruiting-channel
 label: Recruiting Channel
-location_pattern: 30-CLIENTS/{client-id}/05-HR/recruiting/ or 20-COMPANY/05-HR/recruiting/
+location_pattern: "{client.hr.recruiting}/ or {company.hr.recruiting}/"
 description: Recruiting Channel entity from DATAMODEL.md
 key_fields:
 - channel_name
@@ -17187,7 +17830,7 @@ fields:
 - name: client_id
   required: false
   type: string
-  description: "Scoping FK \\u2014 required-by-convention for channels under 30-CLIENTS/{id}/;\\
+  description: "Scoping FK \\u2014 required-by-convention for channels under {client.root}/;\\
     \\ omit for company-internal channels"
 - name: channel_type
   required: false
@@ -17247,17 +17890,122 @@ status_lifecycle:
 - paused
 - closed
 `,
-      reference: "entity: reference\nlabel: Reference\nlocation_pattern: unenforceable\ndescription: 'Reference entity from DATAMODEL.md. Location is deliberately unenforceable:\n  a reference note attaches to whatever it documents (a client folder, a partner kit, a marketing\n  run, a skill), so no path set describes it. Route by the parent artifact, not by a reference\n  folder.'\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - draft\n  - review\n  - active\n  - final\n  - superseded\n  - archived\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`; note\n    that batch edits routinely leave it stale.\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes. The vault-wide cross-reference idiom.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: template_category\n  required: false\n  type: string\n  description: Category of a document template reference.\n- name: rule_jurisdiction\n  required: false\n  type: string\n  description: Jurisdiction a legal or tax rule applies to.\n- name: retrieved\n  required: false\n  type: string\n  format: date\n  description: Date the source material was retrieved.\n- name: source_from\n  required: false\n  type: string\n  description: Sender, for references captured from email.\n- name: source_subject\n  required: false\n  type: string\n  description: Subject line, for references captured from email.\n- name: source_date\n  required: false\n  type: string\n  format: date\n  description: Date of the source message or document.\n- name: source_message_id\n  required: false\n  type: string\n  description: Message id of the source email.\n- name: original_filename\n  required: false\n  type: string\n  description: Filename of the ingested source document.\n- name: source\n  required: false\n  type: string\n  description: Where the reference came from.\n- name: source_url\n  required: false\n  type: string\n  description: URL of the source material.\n- name: source_file\n  required: false\n  type: string\n  description: Path to the ingested source file.\n- name: client_id\n  required: false\n  type: string\n  description: Client this reference belongs to. Must match a 30-CLIENTS/ folder when set.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n- name: entity\n  required: false\n  type: string\n  description: Named entity the reference is about.\n- name: entity_id\n  required: false\n  type: string\n  description: Identifier for `entity`.\n- name: description\n  required: false\n  type: string\n  description: Short description of the reference.\n- name: topic\n  required: false\n  type: string\n  description: Topic label.\n- name: date\n  required: false\n  type: string\n  description: Reference date. Mixed date and string values in practice.\n- name: error\n  required: false\n  type: string\n  description: Error recorded when the reference could not be captured cleanly.\n- name: prompt_id\n  required: false\n  type: string\n  description: Prompt-panel run. Identifier of the probe prompt (e.g. P001).\n- name: tier\n  required: false\n  type: number\n  description: Prompt-panel run. Prompt tier.\n- name: category\n  required: false\n  type: string\n  description: Prompt-panel run. Prompt category.\n- name: persona\n  required: false\n  type: string\n  description: Prompt-panel run. Buyer persona the prompt was asked as.\n- name: platform\n  required: false\n  type: string\n  description: Prompt-panel run. Answer engine probed \u2014 chatgpt, gemini, claude, google-ai-overviews.\n- name: run_index\n  required: false\n  type: number\n  description: Prompt-panel run. Repeat index for the same prompt/platform pair.\n- name: model\n  required: false\n  type: string\n  description: Prompt-panel run. Model that produced the answer.\n- name: method\n  required: false\n  type: string\n  description: Prompt-panel run. How the answer was captured.\n- name: result\n  required: false\n  type: string\n  description: Prompt-panel run. Outcome of the probe.\n- name: timestamp\n  required: false\n  type: string\n  description: Prompt-panel run. When the probe was executed.\n- name: cited_urls\n  required: false\n  type: array\n  description: Prompt-panel run. URLs the answer engine cited.\n- name: conditions\n  required: false\n  type: object\n  description: Prompt-panel run. Run conditions (locale, device, session state) as a nested\n    map.\n- name: staleness_signal\n  required: false\n  type: string\n  description: The condition that invalidates this note, in prose \u2014 the event to watch for,\n    not a date. Complements dateModified, which only records when the file was last written\n    and drifts whenever a batch edit rewrites a body without touching it. Example \u2014 \"when the\n    Anthropic pricing page changes\" or \"when the plugin drops the legacy API\". Absent means\n    the note has no known expiry condition.\nnotes: '**Prompt-panel runs are a declared `reference` sub-flavour (owner decision, 2026-08-23).**\n  265 notes under `20-COMPANY/50-MARKETING/GEO/prompt-panel/runs/` are one AI-answer probe\n  each, carrying the 12 `Prompt-panel run.` fields above. Promotion to their own entity type\n  was considered and rejected: no Base, Dataview block or skill script reads these fields\n  \u2014 verified 2026-08-23, the only files matching `prompt_id`/`cited_urls`/`run_index` are\n  the run files themselves \u2014 so a separate type would buy nothing a field description cannot.\n  They are declared rather than left undeclared so the drift detector stops re-raising them,\n  and they apply only to prompt-panel runs. Still open separately: the same run files misuse\n  `status` for outcome vocabulary.'\n",
-      "regional-context": 'entity: regional-context\nlabel: Regional Context\nlocation_pattern: 40-RESOURCES/research/regions/{region}/ or 10-ME/90-INBOX/\ndescription: "Regional Context entity from DATAMODEL.md. Kept separate from `research`\\\n  \\ \\u2014 not folded in as a `research_type` subtype \\u2014 because its routing is\\\n  \\ narrower than research\'s and `location_pattern` is declared per entity, not per\\\n  \\ subtype. Owner decision 2026-08-19."\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: research_type\n  required: true\n  type: string\n  enum:\n  - analysis\n  - article\n  - brand-architecture\n  - briefing\n  - company-intelligence\n  - competitor-analysis\n  - competitor-briefing\n  - comprehensive-audit\n  - content-strategy-audit\n  - cro-audit\n  - customer-discovery\n  - cycle-briefing\n  - daily-briefing\n  - digital-audit\n  - digital-footprint\n  - domain-knowledge\n  - executive-discovery\n  - external-conversation\n  - external-conversation-reply-draft\n  - implementation-pathways\n  - industry-analysis\n  - knowledge-base\n  - market-research\n  - methodology\n  - news-briefing\n  - persona-lens\n  - platform-integration\n  - platform-strategy\n  - procurement-ai\n  - prospect-qualification\n  - regional-context\n  - schema-audit\n  - seo-audit\n  - source-audit\n  - source-brief\n  - technical-research\n  - tone-analysis\n  - tool-evaluation\n  - tracking-audit\n  - trend-briefing\n  - video-angles\n  - video-note\n  - video-summary\n  - website-audit\n  - workflow-comparison\n  - yt-snapshot\n- name: client_id\n  required: false\n  type: string\n  description: Required when client-specific\n- name: research_date\n  required: true\n  type: string\n  format: date\n  description: When research was conducted\n- name: competitor\n  required: false\n  type: string\n  description: "Subject of the analysis, when research_type is competitor-analysis\\\n    \\ \\u2014 the key that makes \\"every analysis of competitor X\\" answerable"\n- name: threat-level\n  required: false\n  type: string\n  enum:\n  - low\n  - low-medium\n  - medium\n  - medium-high\n  - high\n  description: optional assessment on competitor analyses\n- name: researcher\n  required: false\n  type: string\n  description: Who conducted the research\n- name: provider\n  required: false\n  type: string\n  description: Data vendor or tool used as the primary source (e.g. Perplexity, Semrush,\n    Clearbit)\n- name: confidentiality\n  required: false\n  type: string\n  enum:\n  - public\n  - internal\n  - restricted\n  - confidential\n  - executive-discovery\n- name: created\n  required: true\n  type: string\n  format: date\n- name: region\n  required: false\n  type: string\n- name: last_reviewed\n  required: false\n  type: string\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: source_query_hash\n  required: false\n  type: string\n  description: Hash of the research query that produced this snapshot; changes when\n    the query is edited.\n- name: last_verified\n  required: false\n  type: string\n  format: date\n  description: Date the regional facts were last verified against sources.\n',
-      registration: "entity: registration\nlabel: Registration\nlocation_pattern: 20-COMPANY/35-PARTNERS/{partner-id}/REGISTRATIONS/\ndescription: Registration entity from DATAMODEL.md\nkey_fields:\n- title\n- partner_ref\n- status\n- submitted_date\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Display name\n- name: partner_ref\n  type: string\n  required: true\n  description: Partner who submitted\n- name: status\n  type: string\n  required: true\n  enum:\n  - submitted\n  - approved\n  - rejected\n  - expired\n- name: submitted_date\n  type: string\n  format: date\n  required: true\n- name: value\n  required: false\n  type: number\n  description: Estimated deal value\n- name: expires_date\n  required: false\n  type: string\n  format: date\n  description: Registration validity window end\n- name: account_or_lead\n  required: false\n  type: string\n  description: Lead or client locked by this registration\n- name: deal_ref\n  required: false\n  type: string\n  description: Resulting deal (set on approval)\n- name: rejection_reason\n  required: false\n  type: string\n  description: Required when status=rejected\n- name: created\n  required: true\n  type: string\n  format: date\n",
-      research: 'entity: research\nlabel: Research\nlocation_pattern: 30-CLIENTS/{client-id}/ or 40-RESOURCES/ or 10-ME/90-INBOX/ or 50-BRNCX-PROJECTS/{project}/\n  or 20-COMPANY/03-PROCESSES/BASELINE/\ndescription: Research entity from DATAMODEL.md. Research produced by a scheduled run\n  lands in the inbox for triage\nkey_fields:\n- research_type\n- client_id\n- research_date\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: research_type\n  type: string\n  required: true\n  enum:\n  - analysis\n  - article\n  - brand-architecture\n  - briefing\n  - company-intelligence\n  - competitor-analysis\n  - competitor-briefing\n  - comprehensive-audit\n  - content-strategy-audit\n  - cro-audit\n  - customer-discovery\n  - cycle-briefing\n  - daily-briefing\n  - digital-audit\n  - digital-footprint\n  - domain-knowledge\n  - executive-discovery\n  - external-conversation\n  - external-conversation-reply-draft\n  - implementation-pathways\n  - industry-analysis\n  - knowledge-base\n  - market-research\n  - methodology\n  - news-briefing\n  - persona-lens\n  - platform-integration\n  - platform-strategy\n  - procurement-ai\n  - prospect-qualification\n  - regional-context\n  - schema-audit\n  - seo-audit\n  - source-audit\n  - source-brief\n  - technical-research\n  - tone-analysis\n  - tool-evaluation\n  - tracking-audit\n  - trend-briefing\n  - video-angles\n  - video-note\n  - video-summary\n  - website-audit\n  - workflow-comparison\n  - yt-snapshot\n- name: client_id\n  type: string\n  required: false\n  description: Set when the research is for a client; own-company and market research\n    has none\n- name: research_date\n  type: string\n  format: date\n  required: true\n  description: When research was conducted\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: competitor\n  required: false\n  type: string\n  description: "Subject of the analysis, when research_type is competitor-analysis\\\n    \\ \\u2014 the key that makes \\"every analysis of competitor X\\" answerable"\n- name: threat-level\n  required: false\n  type: string\n  enum:\n  - low\n  - low-medium\n  - medium\n  - medium-high\n  - high\n  description: optional assessment on competitor analyses\n- name: region\n  required: false\n  type: string\n  description: "Geography a regional-context research note covers, e.g. uae, netherlands,\\\n    \\ belgium. Deliberately NOT an enum \\u2014 the value set is the world, and it\\\n    \\ is allowlisted in obsidian-bases/scripts/base-filter-open-properties.yaml"\n- name: researcher\n  required: false\n  type: string\n  description: Who conducted the research\n- name: provider\n  required: false\n  type: string\n  description: Data vendor or tool used as the primary source (e.g. Perplexity, Semrush,\n    Clearbit)\n- name: confidentiality\n  required: false\n  type: string\n  enum:\n  - public\n  - internal\n  - restricted\n  - confidential\n  - executive-discovery\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes. The vault-wide cross-reference idiom.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: domain_id\n  required: false\n  type: string\n  description: continuous-research domain this note belongs to.\n- name: cycle_date\n  required: false\n  type: string\n  description: Research cycle date. Mixed date and string values in practice.\n- name: source_kb\n  required: false\n  type: string\n  description: Knowledge-base note the research was distilled into.\n- name: source\n  required: false\n  type: string\n  description: Where the research material came from.\n- name: category\n  required: false\n  type: string\n  description: Category label within the domain.\n- name: entry_count\n  required: false\n  type: number\n  description: Number of entries in the cycle.\n- name: avg_score\n  required: false\n  type: number\n  description: Mean relevance score across the cycle\'s entries.\n- name: author\n  required: false\n  type: string\n  description: Author of the source material.\n- name: customer_id\n  required: false\n  type: string\n  description: Customer this research is scoped to.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n',
-      "research-domain": "entity: research-domain\nlabel: Research Domain\nlocation_pattern: 40-RESOURCES/research/domains/\ndescription: Research Domain entity from DATAMODEL.md\nkey_fields:\n- domain_id\n- name\n- provider\n- scope\n- exclusions\nfields:\n- name: type\n  type: string\n  required: true\n- name: domain_id\n  type: string\n  required: true\n  description: kebab-case identifier, unique across domains\n- name: name\n  type: string\n  required: true\n  description: Human-readable domain name\n- name: provider\n  type: string\n  required: true\n  enum:\n  - deepseek\n  - openai\n  - notebooklm\n  - perplexity\n  - tavily\n- name: scope\n  type: string\n  required: true\n  description: 2-3 sentences defining the research boundary\n- name: exclusions\n  type: array\n  required: true\n  description: Things to filter out of results\n- name: schedule\n  required: false\n  type: string\n  description: Cron expression (informational, used by CronCreate)\n- name: scoring_weights\n  required: false\n  type: object\n  description: \"Keys: feasibility, ease_of_implementation, business_impact, evidence_strength,\\\n    \\ skill_availability. Values: floats summing to 1.0. Required by continuous-research's\\\n    \\ scored-KB domains; regional-context domains never populate it \\u2014 a plain\\\n    \\ refresh has nothing to rank, so forcing it here would fabricate a scoring scheme\\\n    \\ with no consumer\"\n- name: product_context\n  required: false\n  type: string\n  description: If set, entries get a product_implication field\n- name: evidence_tiers\n  required: false\n  type: object\n  description: 'Keys: verified, inferred, speculative. Values: definitions. Same continuous-research-only\n    scope as scoring_weights'\n- name: output_sections\n  required: true\n  type: array\n  description: Sections to include in KB output\n- name: research_sources\n  required: false\n  type: array\n  description: 'For notebooklm provider: notebook IDs or URLs to add as sources'\n- name: status\n  required: true\n  type: string\n  enum:\n  - active\n  - paused\n  - retired\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include ai/research\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: region\n  required: false\n  type: string\n  description: Region the domain is scoped to.\n- name: refresh_frequency\n  required: false\n  type: string\n  description: How often the domain should be re-researched.\n- name: staleness_threshold_days\n  required: false\n  type: number\n  description: Days after which the domain's findings count as stale.\n- name: advisory_context\n  required: false\n  type: string\n  description: Standing context passed to every research cycle in this domain.\n",
-      "research-kb": "entity: research-kb\nlabel: Research KB\nlocation_pattern: 40-RESOURCES/research/kb/{domain-id}/\ndescription: Research KB entity from DATAMODEL.md\nkey_fields:\n- domain_id\n- cycle_date\n- provider\n- entry_count\n- avg_score\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: domain_id\n  type: string\n  required: true\n  description: Must match a Research Domain domain_id\n- name: cycle_date\n  type: string\n  format: date\n  required: true\n  description: Date this cycle was run\n- name: provider\n  type: string\n  required: true\n  description: 'Provider used: deepseek, openai, notebooklm, perplexity, tavily'\n- name: entry_count\n  type: integer\n  required: true\n  description: Number of scored entries in the body\n- name: avg_score\n  type: number\n  required: true\n  description: Average priority score across entries\n- name: status\n  type: string\n  required: true\n  description: \"Snapshot marker \\u2014 canonical current (latest; {domain-id}_kb_latest.md)\\\n    \\ or superseded (older cycle); draft while in progress. Free string (set per run),\\\n    \\ not enum-constrained\"\n- name: tags\n  required: true\n  type: array\n  description: Should include a research tag + {domain-id}\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Optional; cycle_date is the authoritative date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n",
-      sequence: "entity: sequence\nlabel: Sequence\nlocation_pattern: 20-COMPANY/60-SALES/SEQUENCES/\ndescription: Sequence entity from DATAMODEL.md\nkey_fields:\n- sequence_name\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: sequence_name\n  type: string\n  required: true\n  description: Display name\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - paused\n  - completed\n  - archived\n- name: campaign_ref\n  required: false\n  type: string\n  description: Parent campaign\n- name: total_touches\n  required: false\n  type: number\n  description: Number of touches in the cadence\n- name: duration_days\n  required: false\n  type: number\n  description: Sequence length\n- name: target_persona\n  required: false\n  type: string\n  description: Persona this sequence targets\n- name: channel_mix\n  required: false\n  type: array\n  description: email, linkedin, phone, sms\n- name: launch_date\n  required: false\n  type: string\n  format: date\n  description: When sequence starts running\n- name: expected_end_date\n  required: false\n  type: string\n  format: date\n- name: enrolled_count\n  required: false\n  type: number\n  description: Leads enrolled\n- name: reply_count\n  required: false\n  type: number\n  description: Leads that replied\n- name: meeting_count\n  required: false\n  type: number\n  description: Meetings booked from sequence\n- name: owner\n  required: false\n  type: string\n- name: created\n  required: true\n  type: string\n  format: date\n",
-      skill: 'entity: skill\nlabel: Skill\nlocation_pattern: 00-CORE/Agents/skills/{name}/SKILL.md\ndescription: Skill entity from DATAMODEL.md\nkey_fields:\n- category\n- version\n- disable-model-invocation\nfields:\n- name: type\n  type: string\n  required: true\n- name: category\n  type: string\n  required: true\n  enum:\n  - business\n  - compliance\n  - content\n  - development\n  - diagramming\n  - documents\n  - engineering\n  - finance\n  - human-resources\n  - images\n  - integrations\n  - marketing-ads\n  - marketing-analytics\n  - marketing-content\n  - marketing-funnel\n  - marketing-seo\n  - marketing-strategy\n  - obsidian\n  - operations\n  - product-management\n  - productivity\n  - project-management\n  - qms\n  - research\n  - sales\n  - utilities\n  - video\n  description: "the live set, taken from all 391 SKILL.md files on 2026-08-19. The\\\n    \\ previous enum declared 10 values of which 5 were never used, while 22 used values\\\n    \\ were undeclared \\u2014 it had never enforced anything because SKILL.md files\\\n    \\ are not validated as skill notes. development and engineering overlap semantically\\\n    \\ but both are in live use, so both stay until someone merges them at the source"\n- name: version\n  type: string\n  required: true\n  description: Semver version (e.g. "1.0.0")\n- name: disable-model-invocation\n  type: boolean\n  required: true\n  description: false = skill is enabled (auto-activated by agents); true = skill is\n    disabled\n- name: user-invocable\n  required: false\n  type: boolean\n  description: Whether the skill can be triggered directly by the user via /skill-name\n- name: pricing-tier\n  required: false\n  type: string\n  description: "Which sellable unit ships this skill. Open vocabulary, not an enum: the\n    live values are `starter` (the default-enabled set), `pack-<domain>-free` /\n    `pack-<domain>-pro` (one value per pack in 20-COMPANY/40-PRODUCTS/), and `private`\n    (never distributed). The enum here used to be [free, starter, pro, enterprise]; when\n    SKILL.md files were first validated as skill notes on 2026-09-07 it rejected 206 of\n    397 skills, because 3 of its 4 values were dead and all 14 pack values were\n    undeclared. Packs are created faster than this list would be governed, so the\n    constraint lives where it can be checked against reality instead: generate_skill_packs.py\n    warns on any tier with no product note, which catches a typo the enum never could."\n- name: dev-status\n  required: false\n  type: string\n  enum:\n  - integrated\n  - beta\n  - dev\n  - draft\n  - experimental\n  - deprecated\n- name: value-chains\n  required: false\n  type: array\n  description: \'Value chains this skill serves. Valid: lead-to-cash, deliver-to-satisfaction,\n    record-to-insight, procure-to-pay, hire-to-productivity, plan-to-perform, order-to-fulfill,\n    plan-to-produce, market-to-order, concept-to-launch, service-to-renew, create-to-publish,\n    operating-controls, infrastructure\'\n- name: name\n  required: true\n  type: string\n  description: Skill identifier (matches directory name)\n- name: description\n  required: true\n  type: string\n  description: One-line summary of what the skill does\n- name: pricing-status\n  required: false\n  type: string\n- name: pricing-price\n  required: false\n  type: string\n- name: pricing-published-to\n  required: false\n  type: array\n  description: Distribution channels (e.g. [github, marketplace])\n- name: dev-issues\n  required: false\n  type: string\n  description: Known issues or limitations\n- name: origin\n  required: false\n  type: string\n  description: Who authored or customized the skill\n- name: origin-repo\n  required: false\n  type: string\n- name: origin-url\n  required: false\n  type: string\n- name: license\n  required: false\n  type: string\n- name: compatibility\n  required: false\n  type: string\n  description: Runtime or plugin requirements\n- name: chain-stage\n  required: false\n  type: string\n  description: Primary stage within the value chain (optional)\n- name: apqc_ids\n  required: false\n  type: array\n  description: "APQC PCF activity ids this skill implements (Process Harness binding, e.g. [\\"\\\n    9.2.2\\"]) \\u2014 parallel to value-chains"\n- name: requires\n  required: false\n  type: array\n  description: Skills or tools this skill depends on\n- name: outbound_targets\n  required: false\n  type: array\n  description: Tools used for outbound access\n- name: outbound_data\n  required: false\n  type: string\n  description: What data is sent outbound (e.g. "vault-context-included")\n- name: gate_required\n  required: false\n  type: string\n  description: Approval gate before skill activates (NONE = no gate)\n- name: outbound\n  required: false\n  type: boolean\n  description: Whether the skill sends anything outside the vault. Carried by all 397\n    SKILL.md files and undeclared here until 2026-09-07 \u2014 the outbound_targets /\n    outbound_data / gate_required trio below it were declared without the flag they hang off.\n- name: cost\n  required: false\n  type: integer\n  description: Relative run cost used by the skill catalogue and the pack builders.\n    Carried by 393 of 397 SKILL.md files, always an integer.\n',
+      reference: "entity: reference\nlabel: Reference\nlocation_pattern: unenforceable\ndescription: 'Reference entity from DATAMODEL.md. Location is deliberately unenforceable:\n  a reference note attaches to whatever it documents (a client folder, a partner kit, a marketing\n  run, a skill), so no path set describes it. Route by the parent artifact, not by a reference\n  folder.'\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  required: false\n  type: string\n- name: status\n  required: false\n  type: string\n  enum:\n  - draft\n  - review\n  - active\n  - final\n  - superseded\n  - archived\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Note creation date. Vault-wide convention, paired with `modified`.\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`; note\n    that batch edits routinely leave it stale.\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes. The vault-wide cross-reference idiom.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: template_category\n  required: false\n  type: string\n  description: Category of a document template reference.\n- name: rule_jurisdiction\n  required: false\n  type: string\n  description: Jurisdiction a legal or tax rule applies to.\n- name: retrieved\n  required: false\n  type: string\n  format: date\n  description: Date the source material was retrieved.\n- name: source_from\n  required: false\n  type: string\n  description: Sender, for references captured from email.\n- name: source_subject\n  required: false\n  type: string\n  description: Subject line, for references captured from email.\n- name: source_date\n  required: false\n  type: string\n  format: date\n  description: Date of the source message or document.\n- name: source_message_id\n  required: false\n  type: string\n  description: Message id of the source email.\n- name: original_filename\n  required: false\n  type: string\n  description: Filename of the ingested source document.\n- name: source\n  required: false\n  type: string\n  description: Where the reference came from.\n- name: source_url\n  required: false\n  type: string\n  description: URL of the source material.\n- name: source_file\n  required: false\n  type: string\n  description: Path to the ingested source file.\n- name: client_id\n  required: false\n  type: string\n  description: Client this reference belongs to. Must match a {company.clients}/ folder when set.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n- name: entity\n  required: false\n  type: string\n  description: Named entity the reference is about.\n- name: entity_id\n  required: false\n  type: string\n  description: Identifier for `entity`.\n- name: description\n  required: false\n  type: string\n  description: Short description of the reference.\n- name: topic\n  required: false\n  type: string\n  description: Topic label.\n- name: date\n  required: false\n  type: string\n  description: Reference date. Mixed date and string values in practice.\n- name: error\n  required: false\n  type: string\n  description: Error recorded when the reference could not be captured cleanly.\n- name: prompt_id\n  required: false\n  type: string\n  description: Prompt-panel run. Identifier of the probe prompt (e.g. P001).\n- name: tier\n  required: false\n  type: number\n  description: Prompt-panel run. Prompt tier.\n- name: category\n  required: false\n  type: string\n  description: Prompt-panel run. Prompt category.\n- name: persona\n  required: false\n  type: string\n  description: Prompt-panel run. Buyer persona the prompt was asked as.\n- name: platform\n  required: false\n  type: string\n  description: Prompt-panel run. Answer engine probed \u2014 chatgpt, gemini, claude, google-ai-overviews.\n- name: run_index\n  required: false\n  type: number\n  description: Prompt-panel run. Repeat index for the same prompt/platform pair.\n- name: model\n  required: false\n  type: string\n  description: Prompt-panel run. Model that produced the answer.\n- name: method\n  required: false\n  type: string\n  description: Prompt-panel run. How the answer was captured.\n- name: result\n  required: false\n  type: string\n  description: Prompt-panel run. Outcome of the probe.\n- name: timestamp\n  required: false\n  type: string\n  description: Prompt-panel run. When the probe was executed.\n- name: cited_urls\n  required: false\n  type: array\n  description: Prompt-panel run. URLs the answer engine cited.\n- name: conditions\n  required: false\n  type: object\n  description: Prompt-panel run. Run conditions (locale, device, session state) as a nested\n    map.\n- name: staleness_signal\n  required: false\n  type: string\n  description: The condition that invalidates this note, in prose \u2014 the event to watch for,\n    not a date. Complements dateModified, which only records when the file was last written\n    and drifts whenever a batch edit rewrites a body without touching it. Example \u2014 \"when the\n    Anthropic pricing page changes\" or \"when the plugin drops the legacy API\". Absent means\n    the note has no known expiry condition.\nnotes: '**Prompt-panel runs are a declared `reference` sub-flavour (owner decision, 2026-08-23).**\n  265 notes under `{company.marketing.geo}/prompt-panel/runs/` are one AI-answer probe\n  each, carrying the 12 `Prompt-panel run.` fields above. Promotion to their own entity type\n  was considered and rejected: no Base, Dataview block or skill script reads these fields\n  \u2014 verified 2026-08-23, the only files matching `prompt_id`/`cited_urls`/`run_index` are\n  the run files themselves \u2014 so a separate type would buy nothing a field description cannot.\n  They are declared rather than left undeclared so the drift detector stops re-raising them,\n  and they apply only to prompt-panel runs. Still open separately: the same run files misuse\n  `status` for outcome vocabulary.'\n",
+      "regional-context": 'entity: regional-context\nlabel: Regional Context\nlocation_pattern: "{resource.regions}/{region}/ or {me.inbox}/"\ndescription: "Regional Context entity from DATAMODEL.md. Kept separate from `research`\\\n  \\ \\u2014 not folded in as a `research_type` subtype \\u2014 because its routing is\\\n  \\ narrower than research\'s and `location_pattern` is declared per entity, not per\\\n  \\ subtype. Owner decision 2026-08-19."\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: research_type\n  required: true\n  type: string\n  vocabulary: research_type\n  description: \'Derived vocabulary, shared with research and generated into {vault.schemas}/vocabularies/open-vocabulary.yaml from what the corpus declares; never edited by hand. Kept as one vocabulary across both entities because two hand-maintained copies of the same 46 values can disagree, and did. See harvest_open_vocabulary.py.\'\n- name: client_id\n  required: false\n  type: string\n  description: Required when client-specific\n- name: research_date\n  required: true\n  type: string\n  format: date\n  description: When research was conducted\n- name: competitor\n  required: false\n  type: string\n  description: "Subject of the analysis, when research_type is competitor-analysis\\\n    \\ \\u2014 the key that makes \\"every analysis of competitor X\\" answerable"\n- name: threat-level\n  required: false\n  type: string\n  enum:\n  - low\n  - low-medium\n  - medium\n  - medium-high\n  - high\n  description: optional assessment on competitor analyses\n- name: researcher\n  required: false\n  type: string\n  description: Who conducted the research\n- name: provider\n  required: false\n  type: string\n  description: Data vendor or tool used as the primary source (e.g. Perplexity, Semrush,\n    Clearbit)\n- name: confidentiality\n  required: false\n  type: string\n  enum:\n  - public\n  - internal\n  - restricted\n  - confidential\n  - executive-discovery\n- name: created\n  required: true\n  type: string\n  format: date\n- name: region\n  required: false\n  type: string\n- name: last_reviewed\n  required: false\n  type: string\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: source_query_hash\n  required: false\n  type: string\n  description: Hash of the research query that produced this snapshot; changes when\n    the query is edited.\n- name: last_verified\n  required: false\n  type: string\n  format: date\n  description: Date the regional facts were last verified against sources.\n',
+      registration: 'entity: registration\nlabel: Registration\nlocation_pattern: "{partner.registrations}/"\ndescription: Registration entity from DATAMODEL.md\nkey_fields:\n- title\n- partner_ref\n- status\n- submitted_date\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Display name\n- name: partner_ref\n  type: string\n  required: true\n  description: Partner who submitted\n- name: status\n  type: string\n  required: true\n  enum:\n  - submitted\n  - approved\n  - rejected\n  - expired\n- name: submitted_date\n  type: string\n  format: date\n  required: true\n- name: value\n  required: false\n  type: number\n  description: Estimated deal value\n- name: expires_date\n  required: false\n  type: string\n  format: date\n  description: Registration validity window end\n- name: account_or_lead\n  required: false\n  type: string\n  description: Lead or client locked by this registration\n- name: deal_ref\n  required: false\n  type: string\n  description: Resulting deal (set on approval)\n- name: rejection_reason\n  required: false\n  type: string\n  description: Required when status=rejected\n- name: created\n  required: true\n  type: string\n  format: date\n',
+      research: 'entity: research\nlabel: Research\nlocation_pattern: "{client.root}/ or {division.root}/ or {project.root}/ or {resource.root}/ or {me.inbox}/"\ndescription: "Research entity from DATAMODEL.md. Research produced by a scheduled run lands in the inbox for triage. Default home is {resource.root}/ or the client the research is for; the pattern also allows any company division, because research is kept beside its subject (sales-tool research in {company.sales}/, partner research in the partner folder)."\nkey_fields:\n- research_type\n- client_id\n- research_date\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: research_type\n  type: string\n  required: true\n  vocabulary: research_type\n  description: \'Derived vocabulary, generated into {vault.schemas}/vocabularies/open-vocabulary.yaml from what the corpus declares; never edited by hand. This is the field whose hand-maintained enum drifted twice; the same vocabulary serves regional-context, which carried a second copy of it. The floor a candidate must clear is a kebab-case slug, so a malformed value is still rejected. See harvest_open_vocabulary.py.\'\n- name: client_id\n  type: string\n  required: false\n  description: Set when the research is for a client; own-company and market research\n    has none\n- name: research_date\n  type: string\n  format: date\n  required: true\n  description: When research was conducted\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - review\n  - final\n- name: competitor\n  required: false\n  type: string\n  description: "Subject of the analysis, when research_type is competitor-analysis\\\n    \\ \\u2014 the key that makes \\"every analysis of competitor X\\" answerable"\n- name: threat-level\n  required: false\n  type: string\n  enum:\n  - low\n  - low-medium\n  - medium\n  - medium-high\n  - high\n  description: optional assessment on competitor analyses\n- name: region\n  required: false\n  type: string\n  description: "Geography a regional-context research note covers, e.g. uae, netherlands,\\\n    \\ belgium. Deliberately NOT an enum \\u2014 the value set is the world, and it\\\n    \\ is allowlisted in obsidian-bases/scripts/base-filter-open-properties.yaml"\n- name: researcher\n  required: false\n  type: string\n  description: Who conducted the research\n- name: provider\n  required: false\n  type: string\n  description: Data vendor or tool used as the primary source (e.g. Perplexity, Semrush,\n    Clearbit)\n- name: confidentiality\n  required: false\n  type: string\n  enum:\n  - public\n  - internal\n  - restricted\n  - confidential\n  - executive-discovery\n- name: created\n  required: true\n  type: string\n  format: date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n- name: related\n  required: false\n  type: array\n  description: Wikilinks to related notes. The vault-wide cross-reference idiom.\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags.\n- name: title\n  required: false\n  type: string\n  description: Display title, where it differs from the filename.\n- name: domain_id\n  required: false\n  type: string\n  description: continuous-research domain this note belongs to.\n- name: cycle_date\n  required: false\n  type: string\n  description: Research cycle date. Mixed date and string values in practice.\n- name: source_kb\n  required: false\n  type: string\n  description: Knowledge-base note the research was distilled into.\n- name: source\n  required: false\n  type: string\n  description: Where the research material came from.\n- name: category\n  required: false\n  type: string\n  description: Category label within the domain.\n- name: entry_count\n  required: false\n  type: number\n  description: Number of entries in the cycle.\n- name: avg_score\n  required: false\n  type: number\n  description: Mean relevance score across the cycle\'s entries.\n- name: author\n  required: false\n  type: string\n  description: Author of the source material.\n- name: customer_id\n  required: false\n  type: string\n  description: Customer this research is scoped to.\n- name: client_name\n  required: false\n  type: string\n  description: Client display name. `client_id` remains the canonical key.\n',
+      "research-domain": `entity: research-domain
+label: Research Domain
+location_pattern: "{resource.research-domains}/"
+description: Research Domain entity from DATAMODEL.md
+key_fields:
+- domain_id
+- name
+- provider
+- scope
+- exclusions
+fields:
+- name: type
+  type: string
+  required: true
+- name: domain_id
+  type: string
+  required: true
+  description: kebab-case identifier, unique across domains
+- name: name
+  type: string
+  required: true
+  description: Human-readable domain name
+- name: provider
+  type: string
+  required: true
+  enum:
+  - deepseek
+  - openai
+  - notebooklm
+  - perplexity
+  - tavily
+- name: scope
+  type: string
+  required: true
+  description: 2-3 sentences defining the research boundary
+- name: exclusions
+  type: array
+  required: true
+  description: Things to filter out of results
+- name: schedule
+  required: false
+  type: string
+  description: Cron expression (informational, used by CronCreate)
+- name: scoring_weights
+  required: false
+  type: object
+  description: "Keys: feasibility, ease_of_implementation, business_impact, evidence_strength,\\
+    \\ skill_availability. Values: floats summing to 1.0. Required by continuous-research's\\
+    \\ scored-KB domains; regional-context domains never populate it \\u2014 a plain\\
+    \\ refresh has nothing to rank, so forcing it here would fabricate a scoring scheme\\
+    \\ with no consumer"
+- name: product_context
+  required: false
+  type: string
+  description: If set, entries get a product_implication field
+- name: evidence_tiers
+  required: false
+  type: object
+  description: 'Keys: verified, inferred, speculative. Values: definitions. Same continuous-research-only
+    scope as scoring_weights'
+- name: output_sections
+  required: true
+  type: array
+  description: Sections to include in KB output
+- name: research_sources
+  required: false
+  type: array
+  description: 'For notebooklm provider: notebook IDs or URLs to add as sources'
+- name: status
+  required: true
+  type: string
+  enum:
+  - active
+  - paused
+  - retired
+- name: created
+  required: true
+  type: string
+  format: date
+- name: tags
+  required: true
+  type: array
+  description: Must include ai/research
+- name: modified
+  required: false
+  type: string
+  format: date
+  description: Last substantive edit date. Vault-wide convention, paired with \`created\`;
+    note that batch edits routinely leave it stale.
+- name: region
+  required: false
+  type: string
+  description: Region the domain is scoped to.
+- name: refresh_frequency
+  required: false
+  type: string
+  description: How often the domain should be re-researched.
+- name: staleness_threshold_days
+  required: false
+  type: number
+  description: Days after which the domain's findings count as stale.
+- name: advisory_context
+  required: false
+  type: string
+  description: Standing context passed to every research cycle in this domain.
+`,
+      "research-kb": 'entity: research-kb\nlabel: Research KB\nlocation_pattern: "{resource.research-kb}/{domain-id}/"\ndescription: Research KB entity from DATAMODEL.md\nkey_fields:\n- domain_id\n- cycle_date\n- provider\n- entry_count\n- avg_score\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: domain_id\n  type: string\n  required: true\n  description: Must match a Research Domain domain_id\n- name: cycle_date\n  type: string\n  format: date\n  required: true\n  description: Date this cycle was run\n- name: provider\n  type: string\n  required: true\n  description: \'Provider used: deepseek, openai, notebooklm, perplexity, tavily\'\n- name: entry_count\n  type: integer\n  required: true\n  description: Number of scored entries in the body\n- name: avg_score\n  type: number\n  required: true\n  description: Average priority score across entries\n- name: status\n  type: string\n  required: true\n  description: "Snapshot marker \\u2014 canonical current (latest; {domain-id}_kb_latest.md)\\\n    \\ or superseded (older cycle); draft while in progress. Free string (set per run),\\\n    \\ not enum-constrained"\n- name: tags\n  required: true\n  type: array\n  description: Should include a research tag + {domain-id}\n- name: created\n  required: false\n  type: string\n  format: date\n  description: Optional; cycle_date is the authoritative date\n- name: modified\n  required: false\n  type: string\n  format: date\n  description: Last substantive edit date. Vault-wide convention, paired with `created`;\n    note that batch edits routinely leave it stale.\n',
+      sequence: 'entity: sequence\nlabel: Sequence\nlocation_pattern: "{company.sales.sequences}/ or {company.marketing.email}/"\ndescription: Sequence entity from DATAMODEL.md\nkey_fields:\n- sequence_name\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: sequence_name\n  type: string\n  required: true\n  description: Display name\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - paused\n  - completed\n  - archived\n- name: campaign_ref\n  required: false\n  type: string\n  description: Parent campaign\n- name: total_touches\n  required: false\n  type: number\n  description: Number of touches in the cadence\n- name: duration_days\n  required: false\n  type: number\n  description: Sequence length\n- name: target_persona\n  required: false\n  type: string\n  description: Persona this sequence targets\n- name: channel_mix\n  required: false\n  type: array\n  description: email, linkedin, phone, sms\n- name: launch_date\n  required: false\n  type: string\n  format: date\n  description: When sequence starts running\n- name: expected_end_date\n  required: false\n  type: string\n  format: date\n- name: enrolled_count\n  required: false\n  type: number\n  description: Leads enrolled\n- name: reply_count\n  required: false\n  type: number\n  description: Leads that replied\n- name: meeting_count\n  required: false\n  type: number\n  description: Meetings booked from sequence\n- name: owner\n  required: false\n  type: string\n- name: created\n  required: true\n  type: string\n  format: date\n',
+      skill: 'entity: skill\nlabel: Skill\nlocation_pattern: "{skills.root}/{name}/SKILL.md"\ndescription: Skill entity from DATAMODEL.md\nkey_fields:\n- category\n- version\n- disable-model-invocation\nfields:\n- name: type\n  type: string\n  required: true\n- name: category\n  type: string\n  required: true\n  enum:\n  - business\n  - compliance\n  - content\n  - development\n  - diagramming\n  - documents\n  - engineering\n  - finance\n  - human-resources\n  - images\n  - integrations\n  - marketing-ads\n  - marketing-analytics\n  - marketing-content\n  - marketing-funnel\n  - marketing-seo\n  - marketing-strategy\n  - obsidian\n  - operations\n  - product-management\n  - productivity\n  - project-management\n  - qms\n  - research\n  - sales\n  - utilities\n  - video\n  description: "the live set, taken from all 391 SKILL.md files on 2026-08-19. The\\\n    \\ previous enum declared 10 values of which 5 were never used, while 22 used values\\\n    \\ were undeclared \\u2014 it had never enforced anything because SKILL.md files\\\n    \\ are not validated as skill notes. development and engineering overlap semantically\\\n    \\ but both are in live use, so both stay until someone merges them at the source"\n- name: version\n  type: string\n  required: true\n  description: Semver version (e.g. "1.0.0")\n- name: disable-model-invocation\n  type: boolean\n  required: true\n  description: false = skill is enabled (auto-activated by agents); true = skill is\n    disabled\n- name: user-invocable\n  required: false\n  type: boolean\n  description: Whether the skill can be triggered directly by the user via /skill-name\n- name: pricing-tier\n  required: false\n  type: string\n  description: "Which sellable unit ships this skill. Open vocabulary, not an enum: the\n    live values are `starter` (the default-enabled set), `pack-<domain>-free` /\n    `pack-<domain>-pro` (one value per pack in {company.products}/), and `private`\n    (never distributed). The enum here used to be [free, starter, pro, enterprise]; when\n    SKILL.md files were first validated as skill notes on 2026-09-07 it rejected 206 of\n    397 skills, because 3 of its 4 values were dead and all 14 pack values were\n    undeclared. Packs are created faster than this list would be governed, so the\n    constraint lives where it can be checked against reality instead: generate_skill_packs.py\n    warns on any tier with no product note, which catches a typo the enum never could."\n- name: dev-status\n  required: false\n  type: string\n  enum:\n  - integrated\n  - beta\n  - dev\n  - draft\n  - experimental\n  - deprecated\n- name: value-chains\n  required: false\n  type: array\n  description: \'Value chains this skill serves. Valid: lead-to-cash, deliver-to-satisfaction,\n    record-to-insight, procure-to-pay, hire-to-productivity, plan-to-perform, order-to-fulfill,\n    plan-to-produce, market-to-order, concept-to-launch, service-to-renew, create-to-publish,\n    operating-controls, infrastructure\'\n- name: name\n  required: true\n  type: string\n  description: Skill identifier (matches directory name)\n- name: description\n  required: true\n  type: string\n  description: One-line summary of what the skill does\n- name: pricing-status\n  required: false\n  type: string\n- name: pricing-price\n  required: false\n  type: string\n- name: pricing-published-to\n  required: false\n  type: array\n  description: Distribution channels (e.g. [github, marketplace])\n- name: dev-issues\n  required: false\n  type: string\n  description: Known issues or limitations\n- name: origin\n  required: false\n  type: string\n  description: Who authored or customized the skill\n- name: origin-repo\n  required: false\n  type: string\n- name: origin-url\n  required: false\n  type: string\n- name: license\n  required: false\n  type: string\n- name: compatibility\n  required: false\n  type: string\n  description: Runtime or plugin requirements\n- name: chain-stage\n  required: false\n  type: string\n  description: Primary stage within the value chain (optional)\n- name: apqc_ids\n  required: false\n  type: array\n  description: "APQC PCF activity ids this skill implements (Process Harness binding, e.g. [\\"\\\n    9.2.2\\"]) \\u2014 parallel to value-chains"\n- name: requires\n  required: false\n  type: array\n  description: Skills or tools this skill depends on\n- name: outbound_targets\n  required: false\n  type: array\n  description: Tools used for outbound access\n- name: outbound_data\n  required: false\n  type: string\n  description: What data is sent outbound (e.g. "vault-context-included")\n- name: gate_required\n  required: false\n  type: string\n  description: Approval gate before skill activates (NONE = no gate)\n- name: outbound\n  required: false\n  type: boolean\n  description: Whether the skill sends anything outside the vault. Carried by all 397\n    SKILL.md files and undeclared here until 2026-09-07 \u2014 the outbound_targets /\n    outbound_data / gate_required trio below it were declared without the flag they hang off.\n- name: cost\n  required: false\n  type: integer\n  description: Relative run cost used by the skill catalogue and the pack builders.\n    Carried by 393 of 397 SKILL.md files, always an integer.\n',
       supplier: `entity: supplier
 label: Supplier
-location_pattern: 20-COMPANY/30-SUPPLIERS/
+location_pattern: "{company.suppliers}/"
 description: Supplier entity from DATAMODEL.md
 key_fields:
 - supplier_id
@@ -17341,7 +18089,7 @@ fields:
 `,
       "supplier-invoice": `entity: supplier-invoice
 label: Supplier Invoice
-location_pattern: 20-COMPANY/06-FINANCE/AP/INVOICES/
+location_pattern: "{company.finance.ap-invoices}/"
 description: Supplier Invoice entity from DATAMODEL.md
 key_fields:
 - invoice_id
@@ -17368,7 +18116,7 @@ fields:
 - name: supplier_id
   type: string
   required: true
-  description: Must match 20-COMPANY/30-SUPPLIERS/ folder
+  description: Must match {company.suppliers}/ folder
 - name: po_ref
   type: string
   required: true
@@ -17481,17 +18229,16 @@ fields:
   - zero-rated
   - exempt
   - out-of-scope
-  - vat_rate
 - name: je_ref
   required: false
   type: string
   description: Journal entry posted by journal-entry-poster on approval and on payment
 `,
-      survey: 'entity: survey\nlabel: Survey\nlocation_pattern: 20-COMPANY/70-OPERATIONS/SURVEYS/\ndescription: Survey entity from DATAMODEL.md\nkey_fields:\n- title\n- survey_type\n- target_audience\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Survey campaign name\n- name: survey_type\n  type: string\n  required: true\n  enum:\n  - nps\n  - csat\n  - pmf\n  - exit-survey\n  - supplier-review\n  - custom\n- name: target_audience\n  type: string\n  required: true\n  enum:\n  - clients\n  - prospects\n  - suppliers\n  - mixed\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - closed\n  - analyzed\n- name: client_id\n  required: false\n  type: string\n  description: Optional client identifier when the survey is specific to one client\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: tool\n  required: false\n  type: string\n  description: surveymonkey, typeform, google-forms, manual, other\n- name: external_url\n  required: false\n  type: string\n  description: URL to the live survey in the external tool\n- name: response_count\n  required: false\n  type: number\n  description: Number of responses received\n- name: response_rate\n  required: false\n  type: number\n  description: "Percentage (response_count / sent_count \\xD7 100)"\n- name: response_sheet_url\n  required: false\n  type: string\n  description: Google Sheet URL linked to a Google Form (for direct fetch via fetch-google-sheet)\n- name: external_id\n  required: false\n  type: string\n  description: Survey ID in the external tool (for API sync)\n- name: questions\n  required: false\n  type: array\n  description: Summary of questions included\n- name: sent_count\n  required: false\n  type: number\n  description: Number of invitations sent\n- name: avg_score\n  required: false\n  type: number\n  description: Average score across all responses (for scored surveys)\n- name: launch_date\n  required: false\n  type: string\n  format: date\n  description: When the survey was sent\n- name: close_date\n  required: false\n  type: string\n  format: date\n  description: When the survey was closed\n- name: synthesis_reference\n  required: false\n  type: string\n  description: Link to feedback synthesis document\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include survey\n',
-      task: 'entity: task\nlabel: Task\nlocation_pattern: 00-CORE/TaskNotes/Tasks/ or 00-CORE/TaskNotes/Archive/\ndescription: "Task entity from DATAMODEL.md. Open tasks live in Tasks/, completed\\\n  \\ ones in Archive/ \\u2014 896 of 1,165 are archived, so omitting Archive made 77%\\\n  \\ of tasks read as misfiled"\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - open\n  - next\n  - in-progress\n  - awaiting-input\n  - done\n  - cancelled\n- name: priority\n  required: false\n  type: string\n  enum:\n  - none\n  - low\n  - normal\n  - high\n- name: due\n  required: false\n  type: string\n  format: date\n  description: Due date\n- name: size\n  required: false\n  type: string\n  enum:\n  - XS\n  - S\n  - M\n  - L\n  - XL\n- name: projects\n  required: false\n  type: array\n  description: Associated project references\n- name: blockedBy\n  required: false\n  type: array\n  description: Task dependencies\n- name: playbook\n  required: false\n  type: string\n  description: Links to the Playbook recipe being executed\n- name: remaining-steps\n  required: false\n  type: number\n  description: Countdown from playbook total-steps to 0. Agent decrements after each\n    step.\n- name: awaiting\n  required: false\n  type: string\n  description: What the agent needs from the human. Cleared when human responds. Only\n    set when status is awaiting-input.\n- name: run_command\n  required: false\n  type: string\n  description: Slash command to execute on schedule (e.g. /content-ingestion-pipeline\n    full-pipeline). Used by the scheduled task runner (run_scheduled_tasks.sh). Tasks\n    must also be tagged scheduled-run to be picked up.\n- name: contexts\n  required: false\n  type: array\n  description: Context tags\n- name: timeEstimate\n  required: false\n  type: number\n  description: Estimated minutes\n- name: cluster\n  required: false\n  type: string\n  description: Thematic grouping for personal backlog management\n- name: review_lane\n  required: false\n  type: string\n  enum:\n  - batch\n  description: Marks a note as an auto-generated review artifact (batch-review notes,\n    owner decision sheets) rather than parked human work. Absent means the owner lane.\n    `batch`-lane notes still render in the queue view but are excluded from the owner-review\n    WIP cap, so the cap measures real parked work rather than the triage process\'s\n    own output. Governed 2026-08-23.\n- name: assignee\n  required: false\n  type: array\n  description: roles, never people; bound to `status` (see Readiness binding below);\n    record who an external task waits on in `awaiting:`\n  items:\n    type: string\n    enum:\n    - agent\n    - owner\n    - external\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags\n- name: session_id\n  required: false\n  type: string\n  description: Claude Code session this note summarises. Written by task-wrapup\'s\n    session_close_wrapup.py on session-wrapup notes only; the note filename carries\n    the first 6 characters of the same id.\n- name: wrapup_tool_calls\n  required: false\n  type: number\n  description: Tool-call count the stored wrapup body describes. Compared against\n    the live session to decide whether the note is stale enough to refresh.\n- name: wrapup_written_at\n  required: false\n  type: string\n  description: Timestamp of the last automatic wrapup write. Enforces the minimum\n    interval between refreshes so a long session does not regenerate on every turn.\n- name: wrapup_body_stamp\n  required: false\n  type: string\n  description: Truncated SHA-256 of the wrapup body this script wrote. If the body\n    no longer hashes to this value a human edited the note, and it is never overwritten\n    again. Absent on notes predating the mechanism, which are treated the same way.\n- name: consolidated_into\n  required: false\n  type: string\n  description: \'Wikilink to the consolidated wrapup note that supersedes this one.\n    Historical: written by `consolidate_wrapups.py`, which closed stale, unedited,\n    fully-harvested session-wrapup TaskNotes so the closure pointed somewhere rather\n    than just disappearing from the queue. The script was retired 2026-08-30 when\n    wrapups stopped being tasks and the queue it drained ceased to exist. Nothing\n    writes this field now; 299 archived notes still carry it\'\n- name: model\n  required: false\n  type: string\n  description: "Scheduled-run contract. Model alias for the headless dispatch \\u2014\\\n    \\ `haiku`, `sonnet`, `opus`. Must be an alias, never a dated id: a bare `haiku-4-5`\\\n    \\ is rejected at dispatch and the run dies silently. Read by run_scheduled_tasks.sh\\\n    \\ via read_task_fields.py."\n- name: max_turns\n  required: false\n  type: number\n  description: Scheduled-run contract. Upper bound on agent turns for one headless\n    dispatch.\n- name: verify_path\n  required: false\n  type: string\n  description: Scheduled-run contract. File or directory the run must touch for the\n    runner to record SUCCESS. Without it the runner can report a false-positive SUCCESS\n    on a no-op; preflight_headless.py WARNs when it is absent.\n- name: verify_exempt\n  required: false\n  type: boolean\n  description: Scheduled-run contract. Declares that no-output is a valid outcome,\n    suppressing the preflight WARN for a missing verify_path. Use only for pollers.\n- name: noop_ok\n  required: false\n  type: boolean\n  description: "Scheduled-run contract. Exempts the task from the runner\'s `<10s`\\\n    \\ too-fast and UNVERIFIED failure paths so a clean empty run counts as SUCCESS.\\\n    \\ Do not set on a task that must always produce output \\u2014 it would mask a\\\n    \\ genuine no-write bug."\n- name: attempt_count\n  required: false\n  type: number\n  description: Scheduled-run contract. Incremented on each PERMANENT failure; transient\n    errors do not bump it. At max_attempts the runner flips status to awaiting-input.\n- name: max_attempts\n  required: false\n  type: number\n  description: Scheduled-run contract. Permanent-failure budget before the runner\n    parks the task as awaiting-input. Default 3.\n- name: next_run_after\n  required: false\n  type: string\n  description: "Scheduled-run contract. Set on failure to gate the retry until the\\\n    \\ exponential backoff window (600\\xB72^(attempts-1) seconds) has passed."\n- name: lock_until\n  required: false\n  type: string\n  description: Scheduled-run contract. Set on pickup to prevent double-dispatch; the\n    task is not ready again until it passes.\n- name: lock_lease_min\n  required: false\n  type: number\n  description: Scheduled-run contract. Minutes the dispatch lock is held. Default\n    60; long-runners set 240 to avoid the lease expiring mid-run.\n- name: domain_id\n  required: false\n  type: string\n  description: Binds a scheduled run TaskNote to its continuous-research domain config.\n- name: kpi_id\n  required: false\n  type: string\n  description: KPI-experiment TaskNote (bob-ai-audit/scripts/link_kpi_experiment.py).\n    Identifier of the KPI this experiment moves.\n- name: kpi_initiative_ref\n  required: false\n  type: string\n  description: KPI-experiment TaskNote. Link to the initiative the KPI belongs to.\n- name: baseline_value\n  required: false\n  type: number\n  description: KPI-experiment TaskNote. KPI value before the experiment.\n- name: target_value\n  required: false\n  type: number\n  description: KPI-experiment TaskNote. KPI value the experiment aims for.\n- name: measured_value\n  required: false\n  type: number\n  description: "KPI-experiment TaskNote. KPI value observed at review. Omit the field\\\n    \\ entirely when the KPI could not be measured \\u2014 do not write `n/a`."\n- name: measured_date\n  required: false\n  type: string\n  format: date\n  description: KPI-experiment TaskNote. When measured_value was taken.\n- name: review_date\n  required: false\n  type: string\n  format: date\n  description: KPI-experiment TaskNote. When the experiment is due for review.\n- name: outcome\n  required: false\n  type: string\n  description: KPI-experiment TaskNote. Result of the experiment against target_value.\n- name: related\n  required: false\n  type: array\n  description: "Provenance and cross-reference wikilinks \\u2014 the audit, analysis\\\n    \\ or note this task came from. The vault-wide idiom, also declared on reference,\\\n    \\ decision-log, analysis and strategy. Absorbed the former task-only `source`\\\n    \\ field on 2026-08-19."\n- name: client_id\n  required: false\n  type: string\n  description: Client this task belongs to. Must match a 30-CLIENTS/ folder when set.\n- name: total-steps\n  required: false\n  type: number\n  description: Playbook step count that remaining-steps counts down from.\n- name: run_id\n  required: false\n  type: string\n  description: Playbook-run identity shared by the TaskNote and its trace.\n- name: kpi_readings\n  required: false\n  type: object\n  description: "Playbook-runner observation record keyed by `run_id`; contains the\\\n    \\ mapped KPI stages, explicit unmapped stages, and `start`/`close` readings. Observation\\\n    \\ only \\u2014 no attribution or causal claim. See [[playbook-runner]] \\u2192 `references/kpi-readings.md`."\n- name: title\n  required: false\n  type: string\n  description: Plugin-owned (TaskNotes). Task title; the plugin, not the vault, defines\n    the contract.\n- name: dateCreated\n  required: false\n  type: string\n  description: "Plugin-owned (TaskNotes). Creation timestamp. Distinct from the vault-wide\\\n    \\ `created` convention used by non-task entities \\u2014 the two are disjoint,\\\n    \\ not synonyms."\n- name: dateModified\n  required: false\n  type: string\n  description: Plugin-owned (TaskNotes). Last-modified timestamp. Personal-Backlog.base\n    keys staleness on it, with an mtime fallback.\n- name: scheduled\n  required: false\n  type: string\n  format: date\n  description: Plugin-owned (TaskNotes). Next scheduled date; the scheduled-run runner\n    treats it as the due gate.\n- name: completedDate\n  required: false\n  type: string\n  format: date\n  description: "Plugin-owned (TaskNotes). Completion date. The canonical spelling\\\n    \\ \\u2014 `dateCompleted` and `completed` are retired archive-only synonyms."\n- name: recurrence\n  required: false\n  type: string\n  description: Plugin-owned (TaskNotes). RRULE-style recurrence, e.g. DTSTART:20260407;daily.\n    The scheduled-run runner derives its interval from it.\n- name: complete_instances\n  required: false\n  type: array\n  description: Plugin-owned (TaskNotes). Dates on which a recurring task was completed.\n- name: skipped_instances\n  required: false\n  type: array\n  description: Plugin-owned (TaskNotes). Dates on which a recurring task was skipped.\n- name: canvas\n  required: false\n  type: array\n  description: "Plugin-owned (enhanced-canvas, enableFrontmatter: true). List of wikilinks\\\n    \\ to the canvases whose nodes reference this note; re-asserted by syncAllCanvasProperties()\\\n    \\ on startup. Removing it by hand does not stick \\u2014 delete or rebuild the\\\n    \\ canvas instead. The plugin also writes a second key named after the canvas basename,\\\n    \\ which is not a model field."\nstatus_lifecycle:\n- open\n- next\n- in-progress\n- awaiting-input\n- done\n- cancelled\nnotes: "**Readiness binding (DoR/DoD, governed 2026-08-29).** `status` and `assignee`\\\n  \\ are bound: `open` = Definition of Ready unmet, assignee `owner` (the task needs\\\n  \\ specification, not work); `next` = DoR met, assignee `agent`, ready for manual\\\n  \\ pickup or scheduled dispatch; `in-progress` = agent working; `awaiting-input`\\\n  \\ = parked on an owner decision, assignee `owner`, with `awaiting:` saying what.\\\n  \\ The gate is the `## Ready When` body section evaluated by `00-CORE/Agents/skills/tasknotes/scripts/readiness_check.py`\\\n  \\ \\u2014 the start-of-work twin of the `## Done When` completion gate \\u2014 and\\\n  \\ that script is the only writer of the `open \\u2192 next` flip. Kind-specific criteria\\\n  \\ templates live in the tasknotes skill\'s `references/readiness_profiles.md`. Scheduled-run\\\n  \\ tasks are not exempt: their static readiness is the scheduled-run profile, while\\\n  \\ `lock_until`/`next_run_after`/`scheduled` remain dynamic dispatch gates deciding\\\n  \\ *when*, never *whether*; their recurring steady state is `next` \\u2192 `in-progress`\\\n  \\ \\u2192 `next`. The backfill transition closed 2026-08-29: every gated task carries\\\n  \\ a `## Ready When` section, so `open` is no longer dispatchable \\u2014 `tasknote_gate.py\\\n  \\ check-ready` refuses it and `discover_scheduled_runs.py` dispatches only `next`/`in-progress`.\\\n  \\ `external` is never overwritten by the binding: it records that a task waits on\\\n  \\ someone outside the vault, which no status can re-derive.\\n\\n**Field ownership.**\\\n  \\ Three writers own `task` frontmatter and only one of them is the vault. Fields\\\n  \\ marked *Plugin-owned* are written by the TaskNotes plugin \\u2014 `.obsidian/plugins/tasknotes/data.json`\\\n  \\ \\u2192 `fieldMapping` is the authority for that set, not this file. Fields marked\\\n  \\ *Scheduled-run contract* are written by `00-CORE/Agents/skills/tasknotes/scripts/run_scheduled_tasks.sh`;\\\n  \\ see that skill\'s `references/scheduled_task_runner.md`. The rest are vault-owned.\\n\\\n  \\n**`parent` and `id` are not task fields.** The plugin has no subtask key: `getSubtasks()`\\\n  \\ reverse-looks-up `projects`, so a `parent:` value is invisible to the plugin\'s\\\n  \\ own Subtasks panel. Record hierarchy in `projects`. `id` is not in `fieldMapping`\\\n  \\ and nothing reads it.\\n\\n**Retired names, historical only (Archive/).** `created`\\\n  \\ (108) and `modified` (55) are the vault-wide convention leaking onto tasks, where\\\n  \\ the plugin\'s `dateCreated`/`dateModified` own the contract; `dateCompleted` (30)\\\n  \\ and `completed` (29) are superseded by `completedDate`. The live `Tasks/` tree\\\n  \\ was migrated on 2026-08-19 and the archived notes were deliberately left alone.\\\n  \\ Do not re-introduce these on a new task.\\n\\n**Retired 2026-08-19, do not re-declare.**\\\n  \\ `roi_score`, `roi_band`, `quick_win`, `stale_flag`, `untouched_days` were frontmatter\\\n  \\ copies of scores `00-CORE/Bases/Personal-Backlog.base` computes live; `value-chain`,\\\n  \\ `chain-stage`, `audit_ref`, `closure_pass`, `tasknotes-dependency-map`, `source`,\\\n  \\ `Process - TaskNotes` were closed-campaign or plugin scratch.\\n\\n**Not model fields.**\\\n  \\ Closed-campaign and session scratch surviving only in `Archive/`: `tasknotes-critical-only`,\\\n  \\ `tasknotes-blocked`, `tasknotes-ready`, `bob-audit-v2-critical-path`, `depends-on`\\\n  \\ (use `blockedBy`), `deliverable`, `generated`, `superseded_by`, `installation_ref`,\\\n  \\ `requested_by`, `closed_early`, `source_period`, `source_count`, `suggestion_count`,\\\n  \\ `assignee-note`, `channel`, `invoked_by`, `original_user_input`, `command_classified`,\\\n  \\ `started_at` and `recently_run_skills` are **playbook-runner run-state**, written\\\n  \\ by `write_tasknote()` in `playbook-runner/scripts/runtime_runner.py` alongside\\\n  \\ `run_id`, `kpi_readings` and a `## Step log` body. That function does a whole-file\\\n  \\ `write_text()`, so a note passed as `--tasknote` is replaced, not merged \\u2014\\\n  \\ never point it at a hand-authored note."\n',
+      survey: 'entity: survey\nlabel: Survey\nlocation_pattern: "{company.operations.surveys}/"\ndescription: Survey entity from DATAMODEL.md\nkey_fields:\n- title\n- survey_type\n- target_audience\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: title\n  type: string\n  required: true\n  description: Survey campaign name\n- name: survey_type\n  type: string\n  required: true\n  enum:\n  - nps\n  - csat\n  - pmf\n  - exit-survey\n  - supplier-review\n  - custom\n- name: target_audience\n  type: string\n  required: true\n  enum:\n  - clients\n  - prospects\n  - suppliers\n  - mixed\n- name: status\n  type: string\n  required: true\n  enum:\n  - draft\n  - active\n  - closed\n  - analyzed\n- name: client_id\n  required: false\n  type: string\n  description: Optional client identifier when the survey is specific to one client\n- name: end_client_id\n  required: false\n  type: string\n  description: Ultimate end-client/beneficiary when different from client_id\n- name: project_id\n  required: false\n  type: string\n  description: Canonical dated kebab-case project identifier\n- name: project\n  required: false\n  type: string\n  description: Full human-readable project name\n- name: tool\n  required: false\n  type: string\n  description: surveymonkey, typeform, google-forms, manual, other\n- name: external_url\n  required: false\n  type: string\n  description: URL to the live survey in the external tool\n- name: response_count\n  required: false\n  type: number\n  description: Number of responses received\n- name: response_rate\n  required: false\n  type: number\n  description: "Percentage (response_count / sent_count \\xD7 100)"\n- name: response_sheet_url\n  required: false\n  type: string\n  description: Google Sheet URL linked to a Google Form (for direct fetch via fetch-google-sheet)\n- name: external_id\n  required: false\n  type: string\n  description: Survey ID in the external tool (for API sync)\n- name: questions\n  required: false\n  type: array\n  description: Summary of questions included\n- name: sent_count\n  required: false\n  type: number\n  description: Number of invitations sent\n- name: avg_score\n  required: false\n  type: number\n  description: Average score across all responses (for scored surveys)\n- name: launch_date\n  required: false\n  type: string\n  format: date\n  description: When the survey was sent\n- name: close_date\n  required: false\n  type: string\n  format: date\n  description: When the survey was closed\n- name: synthesis_reference\n  required: false\n  type: string\n  description: Link to feedback synthesis document\n- name: created\n  required: true\n  type: string\n  format: date\n- name: tags\n  required: true\n  type: array\n  description: Must include survey\n',
+      task: 'entity: task\nlabel: Task\nlocation_pattern: "{output.tasks}/ or {vault.tasknotes-archive}/"\ndescription: "Task entity from DATAMODEL.md. Open tasks live in Tasks/, completed\\\n  \\ ones in Archive/ \\u2014 896 of 1,165 are archived, so omitting Archive made 77%\\\n  \\ of tasks read as misfiled"\nkey_fields:\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: status\n  type: string\n  required: true\n  enum:\n  - open\n  - next\n  - in-progress\n  - awaiting-input\n  - done\n  - cancelled\n- name: priority\n  required: false\n  type: string\n  enum:\n  - none\n  - low\n  - normal\n  - high\n- name: due\n  required: false\n  type: string\n  format: date\n  description: Due date\n- name: size\n  required: false\n  type: string\n  enum:\n  - XS\n  - S\n  - M\n  - L\n  - XL\n- name: projects\n  required: false\n  type: array\n  description: Associated project references\n- name: blockedBy\n  required: false\n  type: array\n  description: Task dependencies\n- name: playbook\n  required: false\n  type: string\n  description: Links to the Playbook recipe being executed\n- name: remaining-steps\n  required: false\n  type: number\n  description: Countdown from playbook total-steps to 0. Agent decrements after each\n    step.\n- name: awaiting\n  required: false\n  type: string\n  description: What the agent needs from the human. Cleared when human responds. Only\n    set when status is awaiting-input.\n- name: run_command\n  required: false\n  type: string\n  description: Slash command to execute on schedule (e.g. /content-ingestion-pipeline\n    full-pipeline). Used by the scheduled task runner (run_scheduled_tasks.sh). Tasks\n    must also be tagged scheduled-run to be picked up.\n- name: contexts\n  required: false\n  type: array\n  description: Context tags\n- name: timeEstimate\n  required: false\n  type: number\n  description: Estimated minutes\n- name: cluster\n  required: false\n  type: string\n  description: Thematic grouping for personal backlog management\n- name: review_lane\n  required: false\n  type: string\n  enum:\n  - batch\n  description: Marks a note as an auto-generated review artifact (batch-review notes,\n    owner decision sheets) rather than parked human work. Absent means the owner lane.\n    `batch`-lane notes still render in the queue view but are excluded from the owner-review\n    WIP cap, so the cap measures real parked work rather than the triage process\'s\n    own output. Governed 2026-08-23.\n- name: assignee\n  required: false\n  type: array\n  description: roles, never people; bound to `status` (see Readiness binding below);\n    record who an external task waits on in `awaiting:`\n  items:\n    type: string\n    enum:\n    - agent\n    - owner\n    - external\n- name: tags\n  required: false\n  type: array\n  description: Topic and context tags\n- name: session_id\n  required: false\n  type: string\n  description: Claude Code session this note summarises. Written by task-wrapup\'s\n    session_close_wrapup.py on session-wrapup notes only; the note filename carries\n    the first 6 characters of the same id.\n- name: wrapup_tool_calls\n  required: false\n  type: number\n  description: Tool-call count the stored wrapup body describes. Compared against\n    the live session to decide whether the note is stale enough to refresh.\n- name: wrapup_written_at\n  required: false\n  type: string\n  description: Timestamp of the last automatic wrapup write. Enforces the minimum\n    interval between refreshes so a long session does not regenerate on every turn.\n- name: wrapup_body_stamp\n  required: false\n  type: string\n  description: Truncated SHA-256 of the wrapup body this script wrote. If the body\n    no longer hashes to this value a human edited the note, and it is never overwritten\n    again. Absent on notes predating the mechanism, which are treated the same way.\n- name: consolidated_into\n  required: false\n  type: string\n  description: \'Wikilink to the consolidated wrapup note that supersedes this one.\n    Historical: written by `consolidate_wrapups.py`, which closed stale, unedited,\n    fully-harvested session-wrapup TaskNotes so the closure pointed somewhere rather\n    than just disappearing from the queue. The script was retired 2026-08-30 when\n    wrapups stopped being tasks and the queue it drained ceased to exist. Nothing\n    writes this field now; 299 archived notes still carry it\'\n- name: model\n  required: false\n  type: string\n  description: "Scheduled-run contract. Model alias for the headless dispatch \\u2014\\\n    \\ `haiku`, `sonnet`, `opus`. Must be an alias, never a dated id: a bare `haiku-4-5`\\\n    \\ is rejected at dispatch and the run dies silently. Read by run_scheduled_tasks.sh\\\n    \\ via read_task_fields.py."\n- name: max_turns\n  required: false\n  type: number\n  description: Scheduled-run contract. Upper bound on agent turns for one headless\n    dispatch.\n- name: verify_path\n  required: false\n  type: string\n  description: Scheduled-run contract. File or directory the run must touch for the\n    runner to record SUCCESS. Without it the runner can report a false-positive SUCCESS\n    on a no-op; preflight_headless.py WARNs when it is absent.\n- name: verify_exempt\n  required: false\n  type: boolean\n  description: Scheduled-run contract. Declares that no-output is a valid outcome,\n    suppressing the preflight WARN for a missing verify_path. Use only for pollers.\n- name: noop_ok\n  required: false\n  type: boolean\n  description: "Scheduled-run contract. Exempts the task from the runner\'s `<10s`\\\n    \\ too-fast and UNVERIFIED failure paths so a clean empty run counts as SUCCESS.\\\n    \\ Do not set on a task that must always produce output \\u2014 it would mask a\\\n    \\ genuine no-write bug."\n- name: attempt_count\n  required: false\n  type: number\n  description: Scheduled-run contract. Incremented on each PERMANENT failure; transient\n    errors do not bump it. At max_attempts the runner flips status to awaiting-input.\n- name: max_attempts\n  required: false\n  type: number\n  description: Scheduled-run contract. Permanent-failure budget before the runner\n    parks the task as awaiting-input. Default 3.\n- name: next_run_after\n  required: false\n  type: string\n  description: "Scheduled-run contract. Set on failure to gate the retry until the\\\n    \\ exponential backoff window (600\\xB72^(attempts-1) seconds) has passed."\n- name: lock_until\n  required: false\n  type: string\n  description: Scheduled-run contract. Set on pickup to prevent double-dispatch; the\n    task is not ready again until it passes.\n- name: lock_lease_min\n  required: false\n  type: number\n  description: Scheduled-run contract. Minutes the dispatch lock is held. Default\n    60; long-runners set 240 to avoid the lease expiring mid-run.\n- name: domain_id\n  required: false\n  type: string\n  description: Binds a scheduled run TaskNote to its continuous-research domain config.\n- name: kpi_id\n  required: false\n  type: string\n  description: KPI-experiment TaskNote (bob-ai-audit/scripts/link_kpi_experiment.py).\n    Identifier of the KPI this experiment moves.\n- name: kpi_initiative_ref\n  required: false\n  type: string\n  description: KPI-experiment TaskNote. Link to the initiative the KPI belongs to.\n- name: baseline_value\n  required: false\n  type: number\n  description: KPI-experiment TaskNote. KPI value before the experiment.\n- name: target_value\n  required: false\n  type: number\n  description: KPI-experiment TaskNote. KPI value the experiment aims for.\n- name: measured_value\n  required: false\n  type: number\n  description: "KPI-experiment TaskNote. KPI value observed at review. Omit the field\\\n    \\ entirely when the KPI could not be measured \\u2014 do not write `n/a`."\n- name: measured_date\n  required: false\n  type: string\n  format: date\n  description: KPI-experiment TaskNote. When measured_value was taken.\n- name: review_date\n  required: false\n  type: string\n  format: date\n  description: KPI-experiment TaskNote. When the experiment is due for review.\n- name: outcome\n  required: false\n  type: string\n  description: KPI-experiment TaskNote. Result of the experiment against target_value.\n- name: related\n  required: false\n  type: array\n  description: "Provenance and cross-reference wikilinks \\u2014 the audit, analysis\\\n    \\ or note this task came from. The vault-wide idiom, also declared on reference,\\\n    \\ decision-log, analysis and strategy. Absorbed the former task-only `source`\\\n    \\ field on 2026-08-19."\n- name: client_id\n  required: false\n  type: string\n  description: Client this task belongs to. Must match a {company.clients}/ folder when set.\n- name: total-steps\n  required: false\n  type: number\n  description: Playbook step count that remaining-steps counts down from.\n- name: run_id\n  required: false\n  type: string\n  description: Playbook-run identity shared by the TaskNote and its trace.\n- name: kpi_readings\n  required: false\n  type: object\n  description: "Playbook-runner observation record keyed by `run_id`; contains the\\\n    \\ mapped KPI stages, explicit unmapped stages, and `start`/`close` readings. Observation\\\n    \\ only \\u2014 no attribution or causal claim. See [[playbook-runner]] \\u2192 `references/kpi-readings.md`."\n- name: title\n  required: false\n  type: string\n  description: Plugin-owned (TaskNotes). Task title; the plugin, not the vault, defines\n    the contract.\n- name: dateCreated\n  required: false\n  type: string\n  description: "Plugin-owned (TaskNotes). Creation timestamp. Distinct from the vault-wide\\\n    \\ `created` convention used by non-task entities \\u2014 the two are disjoint,\\\n    \\ not synonyms."\n- name: dateModified\n  required: false\n  type: string\n  description: Plugin-owned (TaskNotes). Last-modified timestamp. Personal-Backlog.base\n    keys staleness on it, with an mtime fallback.\n- name: scheduled\n  required: false\n  type: string\n  format: date\n  description: Plugin-owned (TaskNotes). Next scheduled date; the scheduled-run runner\n    treats it as the due gate.\n- name: completedDate\n  required: false\n  type: string\n  format: date\n  description: "Plugin-owned (TaskNotes). Completion date. The canonical spelling\\\n    \\ \\u2014 `dateCompleted` and `completed` are retired archive-only synonyms."\n- name: recurrence\n  required: false\n  type: string\n  description: Plugin-owned (TaskNotes). RRULE-style recurrence, e.g. DTSTART:20260407;daily.\n    The scheduled-run runner derives its interval from it.\n- name: complete_instances\n  required: false\n  type: array\n  description: Plugin-owned (TaskNotes). Dates on which a recurring task was completed.\n- name: skipped_instances\n  required: false\n  type: array\n  description: Plugin-owned (TaskNotes). Dates on which a recurring task was skipped.\n- name: canvas\n  required: false\n  type: array\n  description: "Plugin-owned (enhanced-canvas, enableFrontmatter: true). List of wikilinks\\\n    \\ to the canvases whose nodes reference this note; re-asserted by syncAllCanvasProperties()\\\n    \\ on startup. Removing it by hand does not stick \\u2014 delete or rebuild the\\\n    \\ canvas instead. The plugin also writes a second key named after the canvas basename,\\\n    \\ which is not a model field."\nstatus_lifecycle:\n- open\n- next\n- in-progress\n- awaiting-input\n- done\n- cancelled\nnotes: "**Readiness binding (DoR/DoD, governed 2026-08-29).** `status` and `assignee`\\\n  \\ are bound: `open` = Definition of Ready unmet, assignee `owner` (the task needs\\\n  \\ specification, not work); `next` = DoR met, assignee `agent`, ready for manual\\\n  \\ pickup or scheduled dispatch; `in-progress` = agent working; `awaiting-input`\\\n  \\ = parked on an owner decision, assignee `owner`, with `awaiting:` saying what.\\\n  \\ The gate is the `## Ready When` body section evaluated by `{skills.root}/tasknotes/scripts/readiness_check.py`\\\n  \\ \\u2014 the start-of-work twin of the `## Done When` completion gate \\u2014 and\\\n  \\ that script is the only writer of the `open \\u2192 next` flip. Kind-specific criteria\\\n  \\ templates live in the tasknotes skill\'s `references/readiness_profiles.md`. Scheduled-run\\\n  \\ tasks are not exempt: their static readiness is the scheduled-run profile, while\\\n  \\ `lock_until`/`next_run_after`/`scheduled` remain dynamic dispatch gates deciding\\\n  \\ *when*, never *whether*; their recurring steady state is `next` \\u2192 `in-progress`\\\n  \\ \\u2192 `next`. The backfill transition closed 2026-08-29: every gated task carries\\\n  \\ a `## Ready When` section, so `open` is no longer dispatchable \\u2014 `tasknote_gate.py\\\n  \\ check-ready` refuses it and `discover_scheduled_runs.py` dispatches only `next`/`in-progress`.\\\n  \\ `external` is never overwritten by the binding: it records that a task waits on\\\n  \\ someone outside the vault, which no status can re-derive.\\n\\n**Field ownership.**\\\n  \\ Three writers own `task` frontmatter and only one of them is the vault. Fields\\\n  \\ marked *Plugin-owned* are written by the TaskNotes plugin \\u2014 `.obsidian/plugins/tasknotes/data.json`\\\n  \\ \\u2192 `fieldMapping` is the authority for that set, not this file. Fields marked\\\n  \\ *Scheduled-run contract* are written by `{skills.root}/tasknotes/scripts/run_scheduled_tasks.sh`;\\\n  \\ see that skill\'s `references/scheduled_task_runner.md`. The rest are vault-owned.\\n\\\n  \\n**`parent` and `id` are not task fields.** The plugin has no subtask key: `getSubtasks()`\\\n  \\ reverse-looks-up `projects`, so a `parent:` value is invisible to the plugin\'s\\\n  \\ own Subtasks panel. Record hierarchy in `projects`. `id` is not in `fieldMapping`\\\n  \\ and nothing reads it.\\n\\n**Retired names, historical only (Archive/).** `created`\\\n  \\ (108) and `modified` (55) are the vault-wide convention leaking onto tasks, where\\\n  \\ the plugin\'s `dateCreated`/`dateModified` own the contract; `dateCompleted` (30)\\\n  \\ and `completed` (29) are superseded by `completedDate`. The live `Tasks/` tree\\\n  \\ was migrated on 2026-08-19 and the archived notes were deliberately left alone.\\\n  \\ Do not re-introduce these on a new task.\\n\\n**Retired 2026-08-19, do not re-declare.**\\\n  \\ `roi_score`, `roi_band`, `quick_win`, `stale_flag`, `untouched_days` were frontmatter\\\n  \\ copies of scores `{vault.bases}/Personal-Backlog.base` computes live; `value-chain`,\\\n  \\ `chain-stage`, `audit_ref`, `closure_pass`, `tasknotes-dependency-map`, `source`,\\\n  \\ `Process - TaskNotes` were closed-campaign or plugin scratch.\\n\\n**Not model fields.**\\\n  \\ Closed-campaign and session scratch surviving only in `Archive/`: `tasknotes-critical-only`,\\\n  \\ `tasknotes-blocked`, `tasknotes-ready`, `bob-audit-v2-critical-path`, `depends-on`\\\n  \\ (use `blockedBy`), `deliverable`, `generated`, `superseded_by`, `installation_ref`,\\\n  \\ `requested_by`, `closed_early`, `source_period`, `source_count`, `suggestion_count`,\\\n  \\ `assignee-note`, `channel`, `invoked_by`, `original_user_input`, `command_classified`,\\\n  \\ `started_at` and `recently_run_skills` are **playbook-runner run-state**, written\\\n  \\ by `write_tasknote()` in `playbook-runner/scripts/runtime_runner.py` alongside\\\n  \\ `run_id`, `kpi_readings` and a `## Step log` body. That function does a whole-file\\\n  \\ `write_text()`, so a note passed as `--tasknote` is replaced, not merged \\u2014\\\n  \\ never point it at a hand-authored note."\n',
       testimonial: `entity: testimonial
 label: Testimonial
-location_pattern: 30-CLIENTS/{id}/50-TESTIMONIALS/
+location_pattern: "{client.testimonials}/"
 description: Testimonial entity from DATAMODEL.md
 key_fields:
 - client_id
@@ -17506,7 +18253,7 @@ fields:
 - name: client_id
   type: string
   required: false
-  description: Must match 30-CLIENTS/ folder when set; a partner or product testimonial
+  description: Must match {company.clients}/ folder when set; a partner or product testimonial
     has none
 - name: respondent
   type: string
@@ -17622,10 +18369,10 @@ fields:
   type: array
   description: Must include testimonial and client-id
 `,
-      "transfer-pricing": "entity: transfer-pricing\nlabel: Transfer Pricing\nlocation_pattern: 20-COMPANY/06-FINANCE/TAX/TP/\ndescription: Transfer Pricing entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  required: false\n  type: string\n- name: related_party\n  required: false\n  type: string\n- name: transaction_type\n  required: false\n  type: string\n- name: transaction_amount\n  required: false\n  type: number\n- name: arm_length_method\n  required: false\n  type: string\n- name: documented\n  required: false\n  type: boolean\n- name: status\n  required: false\n  type: string\n",
+      "transfer-pricing": 'entity: transfer-pricing\nlabel: Transfer Pricing\nlocation_pattern: "{company.finance.tax-tp}/"\ndescription: Transfer Pricing entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: period_id\n  required: false\n  type: string\n- name: related_party\n  required: false\n  type: string\n- name: transaction_type\n  required: false\n  type: string\n- name: transaction_amount\n  required: false\n  type: number\n- name: arm_length_method\n  required: false\n  type: string\n- name: documented\n  required: false\n  type: boolean\n- name: status\n  required: false\n  type: string\n',
       "trial-balance": `entity: trial-balance
 label: Trial Balance
-location_pattern: 20-COMPANY/06-FINANCE/REPORTS/
+location_pattern: "{company.finance.reports}/"
 description: Trial Balance entity from DATAMODEL.md
 key_fields:
 - period_id
@@ -17669,7 +18416,7 @@ fields:
 - name: client_id
   required: false
   type: string
-  description: kebab-case client identifier. Populated for client TBs under 30-CLIENTS/.
+  description: kebab-case client identifier. Populated for client TBs under {company.clients}/.
     Omitted for own-company TBs
 - name: purpose
   required: false
@@ -17692,7 +18439,7 @@ status_lifecycle:
 `,
       "vat-return": `entity: vat-return
 label: VAT Return
-location_pattern: 20-COMPANY/06-FINANCE/TAX/VAT/
+location_pattern: "{company.finance.tax-vat}/"
 description: VAT Return entity from DATAMODEL.md
 key_fields:
 - return_id
@@ -17794,9 +18541,9 @@ status_lifecycle:
 - under-review
 - amended
 `,
-      "wps-record": "entity: wps-record\nlabel: WPS Record\nlocation_pattern: 20-COMPANY/05-HR/WPS/\ndescription: WPS Record entity from DATAMODEL.md\nkey_fields:\n- wps_id\n- payroll_month\n- sif_file_path\n- total_payroll_aed\n- moi_confirmation\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: wps_id\n  type: string\n  required: true\n  description: WPS-{YYYY}-{MM}\n- name: payroll_month\n  type: string\n  required: true\n  format: date\n  description: First day of salary month\n- name: sif_file_path\n  type: string\n  required: true\n  description: Filesystem path to the generated SIF file\n- name: total_payroll_aed\n  type: number\n  required: true\n  description: Total net salaries (AED)\n- name: moi_confirmation\n  type: boolean\n  required: true\n  description: MOL portal confirmed receipt\n- name: status\n  type: string\n  required: true\n  enum:\n  - pending\n  - submitted\n  - confirmed\n  - failed\n- name: sif_file_ref\n  required: true\n  type: string\n  description: Salary Information File reference submitted to bank\n- name: total_employees\n  required: true\n  type: number\n- name: bank_transfer_date\n  required: true\n  type: string\n  format: date\n  description: Date salaries were transferred\n- name: bank_reference\n  required: false\n  type: string\n  description: Bank transaction reference\n- name: je_ref\n  required: false\n  type: string\n  description: Payroll journal entry\n- name: tags\n  required: true\n  type: array\n  description: Must include wps, payroll, and month\n",
-      "youtube-video": 'entity: youtube-video\nlabel: Youtube Video\nlocation_pattern: 20-COMPANY/50-MARKETING/video/youtube/ or 30-CLIENTS/{client-id}/50-MARKETING/video/youtube/\ndescription: Youtube Video entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: category\n  required: true\n  type: string\n  enum:\n  - demo\n  - workflow\n  - explainer\n- name: channel\n  required: true\n  type: string\n  description: "YouTube channel handle, e.g. @thirdbrain-bob \\u2014 a free identifier,\\\n    \\ never an enum"\n- name: playlist\n  required: true\n  type: string\n  description: Playlist ID the video belongs to; empty string if none\n- name: privacy\n  required: true\n  type: string\n  enum:\n  - public\n  - unlisted\n  - private\n- name: skill\n  required: true\n  type: string\n  description: Skill or playbook the video documents\n- name: tags\n  required: true\n  type: array\n- name: thumbnail\n  required: true\n  type: string\n- name: title\n  required: true\n  type: string\n- name: wave\n  required: true\n  type: integer\n- name: youtube-id\n  required: true\n  type: string\n  description: "YouTube video ID, or the literal pending before upload \\u2014 a unique\\\n    \\ per-video value, never an enum"\n- name: youtube-url\n  required: true\n  type: string\n  description: "Full youtu.be URL \\u2014 a unique per-video value, never an enum"\n- name: embed-allowed\n  required: false\n  type: boolean\n- name: published\n  required: false\n  type: string\n  format: date\n  description: Publication date. Null while unpublished.\n',
-      kpi: 'entity: kpi\nlabel: KPI\nlocation_pattern: 20-COMPANY/80-MANAGEMENT/REPORTS/kpi/\ndescription: KPI entity from DATAMODEL.md\nkey_fields:\n- kpi_category\n- title\n- last_updated\n- update_frequency\nfields:\n- name: type\n  type: string\n  required: true\n- name: kpi_category\n  type: string\n  required: true\n  enum:\n  - revenue\n  - pipeline\n  - cash\n  - clients\n  - capacity\n  - strategy\n  - marketing\n  - product\n  - operations\n  - delivery\n  - compliance\n  - margin\n  - data-quality\n  description: "KPI domain. Must stay in step with the domain tables in 20-COMPANY/80-MANAGEMENT/KPI-REGISTRY.md\\\n    \\ \\u2014 `delivery`, `compliance`, `margin` and `data-quality` were registry domains\\\n    \\ with no enum member, so any note using them failed validation and the domain\\\n    \\ could not be surfaced at all."\n- name: title\n  type: string\n  required: true\n  description: KPI display name\n- name: last_updated\n  type: string\n  required: true\n  format: date\n  description: Date values were last refreshed\n- name: update_frequency\n  type: string\n  required: true\n  enum:\n  - daily\n  - weekly\n  - monthly\n  - quarterly\n- name: domain_status\n  required: false\n  type: string\n  enum:\n  - red\n  - amber\n  - green\n  - unknown\n  description: "RAG rollup consumed by the statusRag and severity formulas in KPI.base.\\\n    \\ Do not backtick those formula names \\u2014 regenerate.py treats every backticked\\\n    \\ token in this cell as a legal enum value"\n- name: thresholds\n  required: false\n  type: object\n  description: "Nested map: metric_key \\u2192 {target, warning, red} numeric values\\\n    \\ per metric"\n- name: tags\n  required: false\n  type: array\n  description: Domain tags\n- name: headline\n  required: false\n  type: string\n  description: Headline phrasing of the KPI for dashboard display.\n- name: trend\n  required: false\n  type: string\n  description: Direction of travel since the last measurement.\nschema_overrides:\n  patternProperties:\n    # Producer-specific KPI fields are currently heterogeneous. The pattern\n    # constrains their names; declared properties above retain their own types.\n    "^[a-z][a-z0-9_]*$": {}\n  additionalProperties: false\n'
+      "wps-record": 'entity: wps-record\nlabel: WPS Record\nlocation_pattern: "{company.hr.wps}/"\ndescription: WPS Record entity from DATAMODEL.md\nkey_fields:\n- wps_id\n- payroll_month\n- sif_file_path\n- total_payroll_aed\n- moi_confirmation\n- status\nfields:\n- name: type\n  type: string\n  required: true\n- name: wps_id\n  type: string\n  required: true\n  description: WPS-{YYYY}-{MM}\n- name: payroll_month\n  type: string\n  required: true\n  format: date\n  description: First day of salary month\n- name: sif_file_path\n  type: string\n  required: true\n  description: Filesystem path to the generated SIF file\n- name: total_payroll_aed\n  type: number\n  required: true\n  description: Total net salaries (AED)\n- name: moi_confirmation\n  type: boolean\n  required: true\n  description: MOL portal confirmed receipt\n- name: status\n  type: string\n  required: true\n  enum:\n  - pending\n  - submitted\n  - confirmed\n  - failed\n- name: sif_file_ref\n  required: true\n  type: string\n  description: Salary Information File reference submitted to bank\n- name: total_employees\n  required: true\n  type: number\n- name: bank_transfer_date\n  required: true\n  type: string\n  format: date\n  description: Date salaries were transferred\n- name: bank_reference\n  required: false\n  type: string\n  description: Bank transaction reference\n- name: je_ref\n  required: false\n  type: string\n  description: Payroll journal entry\n- name: tags\n  required: true\n  type: array\n  description: Must include wps, payroll, and month\n',
+      "youtube-video": 'entity: youtube-video\nlabel: Youtube Video\nlocation_pattern: "{company.marketing.youtube}/ or {client.marketing.youtube}/"\ndescription: Youtube Video entity from DATAMODEL.md\nkey_fields: []\nfields:\n- name: type\n  type: string\n  required: true\n- name: category\n  required: true\n  type: string\n  enum:\n  - demo\n  - workflow\n  - explainer\n- name: channel\n  required: true\n  type: string\n  description: "YouTube channel handle, e.g. @thirdbrain-bob \\u2014 a free identifier,\\\n    \\ never an enum"\n- name: playlist\n  required: true\n  type: string\n  description: Playlist ID the video belongs to; empty string if none\n- name: privacy\n  required: true\n  type: string\n  enum:\n  - public\n  - unlisted\n  - private\n- name: skill\n  required: true\n  type: string\n  description: Skill or playbook the video documents\n- name: tags\n  required: true\n  type: array\n- name: thumbnail\n  required: true\n  type: string\n- name: title\n  required: true\n  type: string\n- name: wave\n  required: true\n  type: integer\n- name: youtube-id\n  required: true\n  type: string\n  description: "YouTube video ID, or the literal pending before upload \\u2014 a unique\\\n    \\ per-video value, never an enum"\n- name: youtube-url\n  required: true\n  type: string\n  description: "Full youtu.be URL \\u2014 a unique per-video value, never an enum"\n- name: embed-allowed\n  required: false\n  type: boolean\n- name: published\n  required: false\n  type: string\n  format: date\n  description: Publication date. Null while unpublished.\n',
+      kpi: 'entity: kpi\nlabel: KPI\nlocation_pattern: "{company.kpi-reports}/"\ndescription: KPI entity from DATAMODEL.md\nkey_fields:\n- kpi_category\n- title\n- last_updated\n- update_frequency\nfields:\n- name: type\n  type: string\n  required: true\n- name: kpi_category\n  type: string\n  required: true\n  enum:\n  - revenue\n  - pipeline\n  - cash\n  - clients\n  - capacity\n  - strategy\n  - marketing\n  - product\n  - operations\n  - delivery\n  - compliance\n  - margin\n  - data-quality\n  description: "KPI domain. Must stay in step with the domain tables in {company.management}/KPI-REGISTRY.md\\\n    \\ \\u2014 `delivery`, `compliance`, `margin` and `data-quality` were registry domains\\\n    \\ with no enum member, so any note using them failed validation and the domain\\\n    \\ could not be surfaced at all."\n- name: title\n  type: string\n  required: true\n  description: KPI display name\n- name: last_updated\n  type: string\n  required: true\n  format: date\n  description: Date values were last refreshed\n- name: update_frequency\n  type: string\n  required: true\n  enum:\n  - daily\n  - weekly\n  - monthly\n  - quarterly\n- name: domain_status\n  required: false\n  type: string\n  enum:\n  - red\n  - amber\n  - green\n  - unknown\n  description: "RAG rollup consumed by the statusRag and severity formulas in KPI.base.\\\n    \\ Do not backtick those formula names \\u2014 regenerate.py treats every backticked\\\n    \\ token in this cell as a legal enum value"\n- name: thresholds\n  required: false\n  type: object\n  description: "Nested map: metric_key \\u2192 {target, warning, red} numeric values\\\n    \\ per metric"\n- name: tags\n  required: false\n  type: array\n  description: Domain tags\n- name: headline\n  required: false\n  type: string\n  description: Headline phrasing of the KPI for dashboard display.\n- name: trend\n  required: false\n  type: string\n  description: Direction of travel since the last measurement.\nschema_overrides:\n  patternProperties:\n    # Producer-specific KPI fields are currently heterogeneous. The pattern\n    # constrains their names; declared properties above retain their own types.\n    "^[a-z][a-z0-9_]*$": {}\n  additionalProperties: false\n'
     }
   }
 };
@@ -22478,7 +23225,7 @@ async function toggleTaskNoteStatus(app, file, done) {
 }
 
 // src/settings.ts
-var obsidian = __toESM(require("obsidian"));
+var obsidian2 = __toESM(require("obsidian"));
 var DEFAULT_SETTINGS = {
   dailyNoteFolder: "daily",
   journalHeading: "## Journal",
@@ -22815,7 +23562,7 @@ function renderTemplateDocument(template, context = {}, fallback = null) {
   const fm = renderTemplateFrontmatter(frontmatter || {}, context);
   const fmLines = ["---"];
   Object.entries(fm).forEach(([key, value]) => {
-    fmLines.push(obsidian.stringifyYaml({ [key]: value }).trim() || `${key}:`);
+    fmLines.push(obsidian2.stringifyYaml({ [key]: value }).trim() || `${key}:`);
   });
   fmLines.push("---", "");
   const renderedBody = renderTemplateBody(body != null ? body : "", context);
@@ -22823,7 +23570,7 @@ function renderTemplateDocument(template, context = {}, fallback = null) {
 }
 
 // src/workspace-config.ts
-var obsidian2 = __toESM(require("obsidian"));
+var obsidian3 = __toESM(require("obsidian"));
 var PLUGIN_DIR = "";
 var WORKSPACE_CONFIG_PATH = "Cadence/workspace.json";
 var WORKSPACE_BACKUP_PATH = "Cadence/workspace.backup.json";
@@ -23372,7 +24119,7 @@ async function loadWorkspaceConfig(app) {
     WORKSPACE_HAS_NAVIGATION = Array.isArray(WORKSPACE_CONFIG.navigation?.groups);
     _lastWrittenWorkspaceJson = JSON.stringify(WORKSPACE_CONFIG, null, 2);
   } catch (e) {
-    new obsidian2.Notice(`BOB Workspace: workspace.json failed to load and is being left untouched - ${e.message}`, 0);
+    new obsidian3.Notice(`BOB Workspace: workspace.json failed to load and is being left untouched - ${e.message}`, 0);
     WORKSPACE_CONFIG = {};
     WORKSPACE_LOAD_FAILED = true;
   }
@@ -23483,7 +24230,7 @@ function normalizeDashboardConfigShape(value) {
 }
 
 // src/schemas.ts
-var obsidian3 = __toESM(require("obsidian"));
+var obsidian4 = __toESM(require("obsidian"));
 var SCHEMA_FOLDER_DEFAULT = "00-CORE/Schemas/source";
 var SCHEMA_TO_ENTITY_KEY = {
   person: "contact"
@@ -23567,13 +24314,14 @@ async function applySchemas(app, settings = {}) {
   if (!await app.vault.adapter.exists(folder)) return;
   const list = await app.vault.adapter.list(folder);
   const yamlFiles = (list.files || []).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"));
+  const contextPack = await loadContextPack(app);
   for (const filePath of yamlFiles) {
     let schema;
     try {
       const raw = await app.vault.adapter.read(filePath);
-      schema = obsidian3.parseYaml(raw);
+      schema = obsidian4.parseYaml(raw);
     } catch (e) {
-      new obsidian3.Notice(`Cannot load schema ${filePath}: ${e instanceof Error ? e.message : String(e)}`);
+      new obsidian4.Notice(`Cannot load schema ${filePath}: ${e instanceof Error ? e.message : String(e)}`);
       continue;
     }
     if (!schema || typeof schema !== "object" || !schema.entity) continue;
@@ -23596,13 +24344,9 @@ async function applySchemas(app, settings = {}) {
     if (schema.plural) ENTITIES[entityKey].plural = schema.plural;
     if (schema.icon) ENTITIES[entityKey].icon = schema.icon;
     if (schema.field_aliases) ENTITIES[entityKey].fieldAliases = JSON.parse(JSON.stringify(schema.field_aliases));
-    if (schema.location_pattern) ENTITIES[entityKey].locationPattern = schema.location_pattern;
+    if (schema.location_pattern) ENTITIES[entityKey].locationPattern = locationPatternForCreate(schema.location_pattern, contextPack) || schema.location_pattern;
     if (schema.location_pattern) {
-      const folders = schema.location_pattern.split(/\s+or\s+/i).map((p) => {
-        const base = String(p || "").trim().replace(/^['"]|['"]$/g, "").split("{")[0].replace(/\/$/, "").trim();
-        if (!base || base.includes("*")) return "";
-        return base;
-      }).filter((p) => p && !p.includes(","));
+      const folders = foldersFromLocationPattern(schema.location_pattern, contextPack);
       if (entityKey === "contact") {
         delete ENTITIES[entityKey].folders;
       } else if (folders.length) {
@@ -23639,7 +24383,7 @@ async function applySchemas(app, settings = {}) {
 }
 
 // src/bases-config.ts
-var obsidian4 = __toESM(require("obsidian"));
+var obsidian5 = __toESM(require("obsidian"));
 function resolveBasesFolder(settings = {}) {
   return String(settings.basesFolder || DEFAULT_SETTINGS.basesFolder || "00-CORE/Bases").replace(/\/+$/, "");
 }
@@ -23718,7 +24462,7 @@ async function generateMissingBases(app, settings = {}) {
       const dir = path.split("/").slice(0, -1).join("/");
       if (dir) await ensureFolderSync(app, dir);
       const base = baseFileFromEntityDefinition(entityKey, def);
-      await app.vault.adapter.write(path, obsidian4.stringifyYaml(base));
+      await app.vault.adapter.write(path, obsidian5.stringifyYaml(base));
       written.push(path);
     } catch (e) {
       failed.push(`${path}: ${e.message}`);
@@ -23855,12 +24599,12 @@ async function applyEntityDefinitions(app, settings = {}, config = {}) {
 }
 
 // src/bases-parse.ts
-var obsidian5 = __toESM(require("obsidian"));
+var obsidian6 = __toESM(require("obsidian"));
 var _baseYamlCache = /* @__PURE__ */ new Map();
 async function readBaseFileYaml(app, file) {
   const hit = _baseYamlCache.get(file.path);
   if (hit && hit.mtime === file.stat.mtime) return hit.yaml;
-  const parsed = obsidian5.parseYaml(await app.vault.cachedRead(file));
+  const parsed = obsidian6.parseYaml(await app.vault.cachedRead(file));
   const yaml = parsed && typeof parsed === "object" ? parsed : null;
   _baseYamlCache.set(file.path, { mtime: file.stat.mtime, yaml });
   return yaml;
@@ -23868,19 +24612,19 @@ async function readBaseFileYaml(app, file) {
 async function parseBaseFile(app, basePath, viewName) {
   let yaml;
   const baseFile = app.vault.getAbstractFileByPath(basePath);
-  if (baseFile instanceof obsidian5.TFile) {
+  if (baseFile instanceof obsidian6.TFile) {
     try {
       yaml = await readBaseFileYaml(app, baseFile);
     } catch (e) {
-      new obsidian5.Notice(`BOB Workspace: failed to parse ${basePath} \u2014 ${e.message}`);
+      new obsidian6.Notice(`BOB Workspace: failed to parse ${basePath} \u2014 ${e.message}`);
       return null;
     }
   } else {
     if (!await app.vault.adapter.exists(basePath)) return null;
     try {
-      yaml = obsidian5.parseYaml(await app.vault.adapter.read(basePath));
+      yaml = obsidian6.parseYaml(await app.vault.adapter.read(basePath));
     } catch (e) {
-      new obsidian5.Notice(`BOB Workspace: failed to parse ${basePath} \u2014 ${e.message}`);
+      new obsidian6.Notice(`BOB Workspace: failed to parse ${basePath} \u2014 ${e.message}`);
       return null;
     }
   }
@@ -24216,7 +24960,7 @@ async function applyConfiguredBaseOverrides(app, settings = {}) {
 }
 
 // src/entity-files.ts
-var obsidian6 = __toESM(require("obsidian"));
+var obsidian7 = __toESM(require("obsidian"));
 var _scanCache = null;
 var _scanVersion = 0;
 var _entityListMemo = /* @__PURE__ */ new Map();
@@ -24600,7 +25344,7 @@ function templateFieldValue(field, isPrimary, name) {
   return "";
 }
 function yamlTemplateLine(key, value) {
-  const serialized = obsidian6.stringifyYaml({ [key]: value }).trim();
+  const serialized = obsidian7.stringifyYaml({ [key]: value }).trim();
   return serialized || `${key}:`;
 }
 function entityIdentityDefaults(def, entityKey) {
@@ -25787,8 +26531,8 @@ function reminderTimeStr(when) {
 }
 
 // src/modals/common.ts
-var obsidian7 = __toESM(require("obsidian"));
-var BobPromptModal = class extends obsidian7.Modal {
+var obsidian8 = __toESM(require("obsidian"));
+var BobPromptModal = class extends obsidian8.Modal {
   constructor(app, opts) {
     super(app);
     this.title = opts.title || "Enter a name";
@@ -25849,7 +26593,7 @@ var BobPromptModal = class extends obsidian7.Modal {
     this.contentEl.empty();
   }
 };
-var BobConfirmModal = class extends obsidian7.Modal {
+var BobConfirmModal = class extends obsidian8.Modal {
   constructor(app, opts) {
     super(app);
     this.message = opts.message || "Are you sure?";
@@ -25886,12 +26630,12 @@ function confirmModal(app, message, opts = {}) {
     new BobConfirmModal(app, { message, ...opts, onResolve: resolve }).open();
   });
 }
-var BobIconPickerModal = class extends obsidian7.SuggestModal {
+var BobIconPickerModal = class extends obsidian8.SuggestModal {
   constructor(app, currentIcon, onChoose) {
     super(app);
     this.currentIcon = currentIcon || "";
     this.onChoose = onChoose;
-    this.iconIds = typeof obsidian7.getIconIds === "function" ? obsidian7.getIconIds().slice().sort() : [];
+    this.iconIds = typeof obsidian8.getIconIds === "function" ? obsidian8.getIconIds().slice().sort() : [];
     this.setPlaceholder("Search Obsidian icons by name...");
   }
   getSuggestions(query) {
@@ -25910,7 +26654,7 @@ var BobIconPickerModal = class extends obsidian7.SuggestModal {
     el.addClass("bob-icon-picker-result");
     const preview = el.createSpan({ cls: "bob-icon-picker-preview" });
     try {
-      obsidian7.setIcon(preview, item.clear ? "circle-x" : item.iconId);
+      obsidian8.setIcon(preview, item.clear ? "circle-x" : item.iconId);
     } catch (_) {
     }
     el.createSpan({ cls: "bob-icon-picker-name", text: item.clear ? "No icon" : item.iconId });
@@ -25924,7 +26668,7 @@ var BobIconPickerModal = class extends obsidian7.SuggestModal {
 };
 
 // src/modals/capture.ts
-var obsidian8 = __toESM(require("obsidian"));
+var obsidian9 = __toESM(require("obsidian"));
 function attachRequiredValidation(submitBtn, requiredInputs) {
   if (!submitBtn || !requiredInputs?.length) return;
   const check = () => {
@@ -25943,7 +26687,7 @@ function attachRequiredValidation(submitBtn, requiredInputs) {
   });
   check();
 }
-var BobCaptureModal = class extends obsidian8.Modal {
+var BobCaptureModal = class extends obsidian9.Modal {
   constructor(app, opts) {
     super(app);
     this.onSubmit = opts.onSubmit;
@@ -26084,7 +26828,7 @@ function fromLocalDatetimeValue(s) {
   if (!s) return null;
   return new Date(s);
 }
-var BobReminderEditModal = class extends obsidian8.Modal {
+var BobReminderEditModal = class extends obsidian9.Modal {
   constructor(app, plugin, reminder, opts) {
     super(app);
     this.plugin = plugin;
@@ -26140,7 +26884,7 @@ var BobReminderEditModal = class extends obsidian8.Modal {
         chip.addEventListener("click", (e) => {
           e.preventDefault();
           const file = this.app.vault.getAbstractFileByPath(this.reminder.project);
-          if (file && file instanceof obsidian8.TFile) {
+          if (file && file instanceof obsidian9.TFile) {
             this._submitted = true;
             this.close();
             const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP)[0];
@@ -26217,7 +26961,7 @@ var BobReminderEditModal = class extends obsidian8.Modal {
       }
       if (this.isNew) {
         await this.plugin.addReminder(fields);
-        new obsidian8.Notice(fields.when ? `Reminder set \xB7 ${reminderTimeStr(fields.when)}` : "Captured to Inbox");
+        new obsidian9.Notice(fields.when ? `Reminder set \xB7 ${reminderTimeStr(fields.when)}` : "Captured to Inbox");
       } else {
         await this.plugin.updateReminder(this.reminder.id, fields);
       }
@@ -26247,12 +26991,12 @@ var BobReminderEditModal = class extends obsidian8.Modal {
   _openReminderProjectPicker(rerender) {
     const projectFiles = listEntityFiles(this.app, "project");
     if (!projectFiles.length) {
-      new obsidian8.Notice("No projects yet. Create one in Planner \u2192 Projects first.");
+      new obsidian9.Notice("No projects yet. Create one in Planner \u2192 Projects first.");
       return;
     }
     const projects = projectFiles.map((f) => ({ file: f, name: projectNameFromPath(this.app, f.path) }));
     const reminder = this.reminder;
-    const picker = new class extends obsidian8.SuggestModal {
+    const picker = new class extends obsidian9.SuggestModal {
       constructor(app, projs) {
         super(app);
         this.projs = projs;
@@ -26483,7 +27227,7 @@ function loadBundledXLSX() {
 }
 
 // src/workbook.ts
-var obsidian9 = __toESM(require("obsidian"));
+var obsidian10 = __toESM(require("obsidian"));
 var XLSX_LIB = null;
 function getXLSX(app) {
   if (XLSX_LIB) return XLSX_LIB;
@@ -26700,10 +27444,10 @@ async function importEntityRows(app, entityKey, rows) {
       if (!primaryValue) throw new Error("Missing primary value");
       const explicitPath = String(rowValue(row, "file_path") || "").trim();
       let file = explicitPath ? app.vault.getAbstractFileByPath(explicitPath) : null;
-      if (explicitPath && (!(file instanceof obsidian9.TFile) || file.extension !== "md" || !listEntityFiles(app, entityKey, { ignoreViewFilter: true }).some((f) => f.path === file.path))) {
+      if (explicitPath && (!(file instanceof obsidian10.TFile) || file.extension !== "md" || !listEntityFiles(app, entityKey, { ignoreViewFilter: true }).some((f) => f.path === file.path))) {
         throw new Error(`Import target is not a ${def.label} note: ${explicitPath}`);
       }
-      const isUpdate = file instanceof obsidian9.TFile;
+      const isUpdate = file instanceof obsidian10.TFile;
       const values = {};
       def.fields.forEach((field) => {
         const raw = rowValueForField(row, field, def);
@@ -26757,10 +27501,10 @@ async function promptImportWorkbook(app, onDone = () => {
     return p.endsWith(".xlsx") || p.endsWith(".xlsm") || p.endsWith(".xlsb") || p.endsWith(".xls");
   });
   if (!workbookFiles.length) {
-    new obsidian9.Notice("No Excel workbooks found in vault.");
+    new obsidian10.Notice("No Excel workbooks found in vault.");
     return;
   }
-  const picker = new class extends obsidian9.SuggestModal {
+  const picker = new class extends obsidian10.SuggestModal {
     constructor(app2, files, onPick) {
       super(app2);
       this.files = files;
@@ -26780,19 +27524,19 @@ async function promptImportWorkbook(app, onDone = () => {
     try {
       const result = await importWorkbookEntities(app, file);
       await onDone(result);
-      if (result.errors.length) new obsidian9.Notice(result.errors.slice(0, 3).join("\n"), 1e4);
+      if (result.errors.length) new obsidian10.Notice(result.errors.slice(0, 3).join("\n"), 1e4);
       const skipped = result.skippedSheets.length ? ` \xB7 skipped sheets: ${result.skippedSheets.join(", ")}` : "";
-      new obsidian9.Notice(`BOB Workspace: imported ${result.created} created, ${result.updated || 0} updated from ${result.sheets} sheet${result.sheets === 1 ? "" : "s"}${result.failed ? ` \xB7 ${result.failed} skipped` : ""}${skipped}`, 8e3);
+      new obsidian10.Notice(`BOB Workspace: imported ${result.created} created, ${result.updated || 0} updated from ${result.sheets} sheet${result.sheets === 1 ? "" : "s"}${result.failed ? ` \xB7 ${result.failed} skipped` : ""}${skipped}`, 8e3);
     } catch (e) {
-      new obsidian9.Notice(`BOB Workspace: XLSX import failed \u2014 ${e.message}`, 8e3);
+      new obsidian10.Notice(`BOB Workspace: XLSX import failed \u2014 ${e.message}`, 8e3);
     }
   });
   picker.open();
 }
 
 // src/modals/import.ts
-var obsidian10 = __toESM(require("obsidian"));
-var BobImportModal = class extends obsidian10.Modal {
+var obsidian11 = __toESM(require("obsidian"));
+var BobImportModal = class extends obsidian11.Modal {
   constructor(app, opts) {
     super(app);
     this.entityKey = opts && opts.entityKey || "contact";
@@ -26870,7 +27614,7 @@ var BobImportModal = class extends obsidian10.Modal {
           this._parse();
           this._renderPreview();
         } catch (e) {
-          new obsidian10.Notice(`Failed to read file: ${e.message}`);
+          new obsidian11.Notice(`Failed to read file: ${e.message}`);
         }
       });
       inp.click();
@@ -26885,7 +27629,7 @@ var BobImportModal = class extends obsidian10.Modal {
         try {
           await this._loadXLSXFile(f, ta);
         } catch (e) {
-          new obsidian10.Notice(`Failed to read file: ${e.message}`);
+          new obsidian11.Notice(`Failed to read file: ${e.message}`);
         }
       });
       inp.click();
@@ -26934,9 +27678,9 @@ var BobImportModal = class extends obsidian10.Modal {
       await ensureFolderSync(this.app, DEFAULT_SETTINGS.workbookExportFolder);
       await ensureFolderSync(this.app, folder);
       await this.app.vault.adapter.write(path, csvTemplateForEntity(this.entityKey));
-      new obsidian10.Notice(`Exported CSV template to ${path}`);
+      new obsidian11.Notice(`Exported CSV template to ${path}`);
     } catch (e) {
-      new obsidian10.Notice(`BOB Workspace: failed to export CSV template \u2014 ${e.message}`);
+      new obsidian11.Notice(`BOB Workspace: failed to export CSV template \u2014 ${e.message}`);
     }
   }
   async _exportTemplateXLSX() {
@@ -26952,9 +27696,9 @@ var BobImportModal = class extends obsidian10.Modal {
       const safeKey = this.entityKey.replace(/[^a-z0-9_-]/gi, "-").toLowerCase();
       const path = `${folder}/${safeKey}-import-template.xlsx`;
       await writeWorkbookToVault(this.app, wb, path);
-      new obsidian10.Notice(`Exported XLSX template to ${path}`);
+      new obsidian11.Notice(`Exported XLSX template to ${path}`);
     } catch (e) {
-      new obsidian10.Notice(`BOB Workspace: failed to export XLSX template \u2014 ${e.message}`);
+      new obsidian11.Notice(`BOB Workspace: failed to export XLSX template \u2014 ${e.message}`);
     }
   }
   async _loadXLSXFile(file, textarea) {
@@ -26970,7 +27714,7 @@ var BobImportModal = class extends obsidian10.Modal {
     this._parse();
     this._renderPreview();
     if (!matchingSheet && wb.SheetNames.length > 1) {
-      new obsidian10.Notice(`Loaded sheet "${sheetName}".`);
+      new obsidian11.Notice(`Loaded sheet "${sheetName}".`);
     }
   }
   _parse() {
@@ -27253,7 +27997,7 @@ var BobImportModal = class extends obsidian10.Modal {
       }
     }
     const elapsed = ((Date.now() - start) / 1e3).toFixed(1);
-    new obsidian10.Notice(`Imported ${created} ${def.plural.toLowerCase()} in ${elapsed}s${failed ? ` \xB7 ${failed} skipped` : ""}`, 5e3);
+    new obsidian11.Notice(`Imported ${created} ${def.plural.toLowerCase()} in ${elapsed}s${failed ? ` \xB7 ${failed} skipped` : ""}`, 5e3);
     this.close();
     this.onSubmit({ created, failed, entityKey: this.entityKey });
   }
@@ -27263,7 +28007,7 @@ var BobImportModal = class extends obsidian10.Modal {
 };
 
 // src/schema-designer.ts
-var obsidian11 = __toESM(require("obsidian"));
+var obsidian12 = __toESM(require("obsidian"));
 function schemaFieldFromEntityField(field) {
   const type = String(field?.type || "string").toLowerCase();
   const result = {
@@ -27384,7 +28128,7 @@ async function bootstrapCanonicalSchemaSources(app, settings = {}, opts = {}) {
       skipped.push(schemaPath);
       continue;
     }
-    await app.vault.adapter.write(schemaPath, `${obsidian11.stringifyYaml(schema)}
+    await app.vault.adapter.write(schemaPath, `${obsidian12.stringifyYaml(schema)}
 `);
     written.push(schemaPath);
   }
@@ -27557,7 +28301,7 @@ async function loadCanonicalSchemaSources(app, settings = {}) {
   const errors = [];
   for (const path of (listed.files || []).filter((file) => /\.ya?ml$/i.test(file))) {
     try {
-      const schema = validateSourceSchemaDefinition(obsidian11.parseYaml(await app.vault.adapter.read(path)));
+      const schema = validateSourceSchemaDefinition(obsidian12.parseYaml(await app.vault.adapter.read(path)));
       schemas.push({ path, schema });
     } catch (e) {
       errors.push(`${path}: ${e.message}`);
@@ -27641,7 +28385,7 @@ function sourceSchemaToFileClass(schema) {
     ...schema.description ? { description: schema.description } : {}
   };
   return `---
-${obsidian11.stringifyYaml(yaml)}---
+${obsidian12.stringifyYaml(yaml)}---
 
 # ${schema.label}
 
@@ -27904,7 +28648,7 @@ function workspaceConfigTemplate(settings = {}) {
 }
 
 // src/workspace-templates.ts
-var obsidian12 = __toESM(require("obsidian"));
+var obsidian13 = __toESM(require("obsidian"));
 async function seedWorkspaceTemplates(app) {
   const adapter = app.vault.adapter;
   const dir = `${PLUGIN_DIR}/templates`;
@@ -27960,7 +28704,7 @@ async function writeTemplateAssets(app, assets, settings = {}) {
     for (const [entity, body] of Object.entries(assets.schemas)) {
       const path = `${folder}/${entity}.yaml`;
       if (await app.vault.adapter.exists(path)) continue;
-      await app.vault.adapter.write(path, typeof body === "string" ? body : `${obsidian12.stringifyYaml(body)}
+      await app.vault.adapter.write(path, typeof body === "string" ? body : `${obsidian13.stringifyYaml(body)}
 `);
       result.schemas++;
     }
@@ -27971,7 +28715,7 @@ async function writeTemplateAssets(app, assets, settings = {}) {
     for (const [fileName, body] of Object.entries(assets.bases)) {
       const path = `${folder}/${String(fileName).split("/").pop()}`;
       if (await app.vault.adapter.exists(path)) continue;
-      await app.vault.adapter.write(path, typeof body === "string" ? body : `${obsidian12.stringifyYaml(body)}
+      await app.vault.adapter.write(path, typeof body === "string" ? body : `${obsidian13.stringifyYaml(body)}
 `);
       result.bases++;
     }
@@ -28058,7 +28802,7 @@ async function applyWorkspaceTemplate(app, plugin, template) {
     archived = await archiveTemplateAssets(app, oldSchemaFolder, oldBasesFolder, prevKey, plugin.settings);
     const total = archived.schemas + archived.fileClasses + archived.jsonSchemas + archived.bases;
     if (total) {
-      new obsidian12.Notice(`BOB Workspace: archived ${archived.schemas} schema, ${archived.fileClasses} FileClass, ${archived.jsonSchemas} JSON Schema, and ${archived.bases} base file(s) from "${prevKey}" before applying "${newKey}".`);
+      new obsidian13.Notice(`BOB Workspace: archived ${archived.schemas} schema, ${archived.fileClasses} FileClass, ${archived.jsonSchemas} JSON Schema, and ${archived.bases} base file(s) from "${prevKey}" before applying "${newKey}".`);
     }
   }
   try {
@@ -28097,8 +28841,8 @@ async function applyWorkspaceTemplate(app, plugin, template) {
 }
 
 // src/modals/workspace-setup.ts
-var obsidian13 = __toESM(require("obsidian"));
-var BobWorkspaceSetupModal = class extends obsidian13.Modal {
+var obsidian14 = __toESM(require("obsidian"));
+var BobWorkspaceSetupModal = class extends obsidian14.Modal {
   constructor(app, plugin, templates) {
     super(app);
     this.plugin = plugin;
@@ -28134,10 +28878,10 @@ var BobWorkspaceSetupModal = class extends obsidian13.Modal {
         const meta = await applyWorkspaceTemplate(this.app, this.plugin, this.selected);
         this.close();
         await this.plugin.openApp("home");
-        new obsidian13.Notice(`BOB Workspace: "${meta.label}" template applied.`);
+        new obsidian14.Notice(`BOB Workspace: "${meta.label}" template applied.`);
       } catch (e) {
         applyBtn.disabled = false;
-        new obsidian13.Notice(`BOB Workspace: could not apply template - ${e?.message || e}`);
+        new obsidian14.Notice(`BOB Workspace: could not apply template - ${e?.message || e}`);
       }
     });
     const skipBtn = footer.createEl("button", { text: "Skip for now", cls: "bob-setup-skip" });
@@ -28153,7 +28897,7 @@ var BobWorkspaceSetupModal = class extends obsidian13.Modal {
 };
 
 // src/partner-automation.ts
-var obsidian14 = __toESM(require("obsidian"));
+var obsidian15 = __toESM(require("obsidian"));
 var CERT_WARN_DAYS = 60;
 var REG_WARN_DAYS = 30;
 var CERT_REMIND_LEAD_DAYS = 30;
@@ -28230,7 +28974,7 @@ async function maybeCreateCommissionForWonDeal(app, file, newStage) {
     ""
   ].join("\n");
   await app.vault.create(path, body);
-  new obsidian14.Notice(`Commission recorded for ${partnerName}`);
+  new obsidian15.Notice(`Commission recorded for ${partnerName}`);
   return true;
 }
 async function pushPartnerExpiryReminders(app, host, candidates) {
@@ -28985,8 +29729,8 @@ async function persistGeneratedCanvas(app, path, data, manifest) {
 }
 
 // src/modals/entity-create.ts
-var obsidian15 = __toESM(require("obsidian"));
-var BobEntityCreateModal = class extends obsidian15.Modal {
+var obsidian16 = __toESM(require("obsidian"));
+var BobEntityCreateModal = class extends obsidian16.Modal {
   constructor(app, entityKey, opts) {
     super(app);
     this.entityKey = entityKey;
@@ -29102,7 +29846,7 @@ var BobEntityCreateModal = class extends obsidian15.Modal {
           if (value != null) values[key] = value;
         });
       } catch (error) {
-        new obsidian15.Notice(error instanceof Error ? error.message : String(error));
+        new obsidian16.Notice(error instanceof Error ? error.message : String(error));
         return;
       }
       if (!primaryValue) {
@@ -29261,7 +30005,7 @@ async function readProjectMeta(app, file) {
 }
 
 // src/snapshots.ts
-var obsidian16 = __toESM(require("obsidian"));
+var obsidian17 = __toESM(require("obsidian"));
 var PER_DAY_WINDOW = 30;
 var _dailyStatsMemo = /* @__PURE__ */ new Map();
 async function dailyNoteStatsByDate(app, settings, dates) {
@@ -29275,7 +30019,7 @@ async function dailyNoteStatsByDate(app, settings, dates) {
     const path = dailyNotePath(settings, d);
     livePaths.add(path);
     const f = app.vault.getAbstractFileByPath(path);
-    if (!(f instanceof obsidian16.TFile)) return;
+    if (!(f instanceof obsidian17.TFile)) return;
     const memo = _dailyStatsMemo.get(path);
     if (memo && memo.mtime === f.stat.mtime && memo.headingsKey === headingsKey) {
       statsByDate.set(dateKey, memo.stats);
@@ -29516,7 +30260,7 @@ async function buildPlannerSnapshot(app, settings = {}) {
     action: { surface: "planner.inbox" }
   }));
   const dailyFile = app.vault.getAbstractFileByPath(dailyNotePath(settings));
-  const todayTasks = dailyFile instanceof obsidian16.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
+  const todayTasks = dailyFile instanceof obsidian17.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
   const todayRows = (todayTasks.tasks || []).slice(0, 12).map((line, taskIndex) => {
     const done = / \[(x|X)\] /.test(line);
     return {
@@ -29537,7 +30281,7 @@ async function buildPlannerSnapshot(app, settings = {}) {
     const file = app.vault.getAbstractFileByPath(path);
     let tasks = [];
     let journal = "";
-    if (file instanceof obsidian16.TFile) {
+    if (file instanceof obsidian17.TFile) {
       const parsed = parseSections(await app.vault.cachedRead(file), settings);
       tasks = parsed.tasks || [];
       journal = parsed.journal || "";
@@ -29546,10 +30290,10 @@ async function buildPlannerSnapshot(app, settings = {}) {
     const done = tasks.filter((l) => / \[(x|X)\] /.test(l)).length;
     return {
       title: date.toLocaleDateString(displayLocale(), { weekday: "short", month: "short", day: "numeric" }),
-      meta: file instanceof obsidian16.TFile ? `${open} open \xB7 ${done} done${journal ? ` \xB7 journal ${journal.length} chars` : ""}` : "no note",
+      meta: file instanceof obsidian17.TFile ? `${open} open \xB7 ${done} done${journal ? ` \xB7 journal ${journal.length} chars` : ""}` : "no note",
       value: done,
       values: { done, open, total: open + done, journal: journal.length },
-      file: file instanceof obsidian16.TFile ? file : null,
+      file: file instanceof obsidian17.TFile ? file : null,
       action: { surface: "planner.calendar" }
     };
   }));
@@ -29625,7 +30369,7 @@ async function buildHomeSnapshot(app, settings = {}) {
     action: { surface: "planner.inbox" }
   }));
   const dailyFile = app.vault.getAbstractFileByPath(dailyNotePath(settings));
-  const todayTasks = dailyFile instanceof obsidian16.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
+  const todayTasks = dailyFile instanceof obsidian17.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
   const homeTaskMode = settings.taskMode || "checkbox";
   const checkboxRows = homeTaskMode === "checkbox" || homeTaskMode === "hybrid" ? (todayTasks.tasks || []).map((line) => ({
     title: String(line).replace(/^\s*-\s\[(x|X| )\]\s/, ""),
@@ -29731,7 +30475,7 @@ async function buildHomeSnapshot(app, settings = {}) {
   const briefing = await (async () => {
     const items = [];
     try {
-      if (dailyFile instanceof obsidian16.TFile) {
+      if (dailyFile instanceof obsidian17.TFile) {
         const content = await app.vault.cachedRead(dailyFile);
         const parsed = parseSections(content, settings);
         const openTasks = parsed.tasks.filter((l) => / \[ \] /.test(l)).length;
@@ -29751,7 +30495,7 @@ async function buildHomeSnapshot(app, settings = {}) {
 }
 
 // src/widgets.ts
-var obsidian17 = __toESM(require("obsidian"));
+var obsidian18 = __toESM(require("obsidian"));
 var _builtInSnapshotCache = /* @__PURE__ */ new Map();
 function builtInSnapshot(app, name, settings) {
   const version = entityScanVersion();
@@ -29931,7 +30675,7 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
   let entities = listEntities(app, entityKey, { ignoreViewFilter: normalized.ignoreViewFilter });
   if (basePath) {
     const baseFile = app.vault.getAbstractFileByPath(basePath);
-    if (!(baseFile instanceof obsidian17.TFile)) {
+    if (!(baseFile instanceof obsidian18.TFile)) {
       warnings.push(`Base not found: ${basePath}`);
     } else {
       const baseConfig = await parseBaseFile(app, basePath, baseView);
@@ -29975,7 +30719,7 @@ async function resolveWidgetSource(app, source, fallbackEntityKey = null, settin
 }
 
 // src/views/app-view.ts
-var obsidian18 = __toESM(require("obsidian"));
+var obsidian19 = __toESM(require("obsidian"));
 var NUMERIC_COLLATOR = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
 var OVERVIEW_DASHBOARD_ROUTES = /* @__PURE__ */ new Set([
   "client-work.dashboard",
@@ -29986,7 +30730,7 @@ var OVERVIEW_DASHBOARD_ROUTES = /* @__PURE__ */ new Set([
   "prm.partners.overview",
   "crm.campaigns.overview"
 ]);
-var BobAppView = class extends obsidian18.ItemView {
+var BobAppView = class extends obsidian19.ItemView {
   /** Optional parsed-base cache cleared on metadata changes (set externally when present). */
   constructor(leaf, plugin) {
     super(leaf);
@@ -30049,7 +30793,7 @@ var BobAppView = class extends obsidian18.ItemView {
       const themeBtn = root.querySelector(".bob-app-topbar .bob-topbar-icon-btn");
       if (themeBtn) {
         try {
-          obsidian18.setIcon(themeBtn, dark ? "sun" : "moon");
+          obsidian19.setIcon(themeBtn, dark ? "sun" : "moon");
         } catch (_) {
         }
         themeBtn.title = dark ? "BOB Workspace: switch to light" : "BOB Workspace: switch to dark";
@@ -30122,7 +30866,7 @@ var BobAppView = class extends obsidian18.ItemView {
   _openTaskProjectPicker(dailyPath, text, currentLink) {
     const projectFiles = listEntityFiles(this.app, "project");
     if (!projectFiles.length) {
-      new obsidian18.Notice("No projects yet. Create one in Planner \u2192 Projects first.");
+      new obsidian19.Notice("No projects yet. Create one in Planner \u2192 Projects first.");
       return;
     }
     const view = this;
@@ -30130,7 +30874,7 @@ var BobAppView = class extends obsidian18.ItemView {
       file: f,
       name: projectNameFromPath(this.app, f.path)
     }));
-    const picker = new class extends obsidian18.SuggestModal {
+    const picker = new class extends obsidian19.SuggestModal {
       constructor(app, projs, hasLink) {
         super(app);
         this.projs = projs;
@@ -30197,7 +30941,7 @@ var BobAppView = class extends obsidian18.ItemView {
     this.containerEl.children[1].empty();
     await this.render();
     this._renderQueued = false;
-    this._scheduleRender = obsidian18.debounce(() => {
+    this._scheduleRender = obsidian19.debounce(() => {
       if (!this.containerEl.isShown()) {
         this._renderQueued = true;
         return;
@@ -30278,7 +31022,7 @@ var BobAppView = class extends obsidian18.ItemView {
     const topLeft = topbar.createDiv({ cls: "bob-app-topbar-left" });
     const burger = topLeft.createEl("button", { cls: "bob-mobile-burger" });
     try {
-      obsidian18.setIcon(burger, "menu");
+      obsidian19.setIcon(burger, "menu");
     } catch (_) {
     }
     burger.title = "Show nav";
@@ -30289,7 +31033,7 @@ var BobAppView = class extends obsidian18.ItemView {
     const dark = !!this.plugin.settings.bobAppDark;
     const themeBtn = topLeft.createEl("button", { cls: "bob-topbar-icon-btn" });
     try {
-      obsidian18.setIcon(themeBtn, dark ? "sun" : "moon");
+      obsidian19.setIcon(themeBtn, dark ? "sun" : "moon");
     } catch (_) {
     }
     themeBtn.title = dark ? "BOB Workspace: switch to light" : "BOB Workspace: switch to dark";
@@ -30315,7 +31059,7 @@ var BobAppView = class extends obsidian18.ItemView {
         pin.title = surface.label;
         const ic = pin.createSpan({ cls: "bob-nav-pinned-icon" });
         try {
-          obsidian18.setIcon(ic, surface.icon);
+          obsidian19.setIcon(ic, surface.icon);
         } catch (_) {
         }
         pin.addEventListener("click", () => {
@@ -30329,7 +31073,7 @@ var BobAppView = class extends obsidian18.ItemView {
         remove.title = `Unpin ${surface.label}`;
         remove.draggable = false;
         try {
-          obsidian18.setIcon(remove, "pin-off");
+          obsidian19.setIcon(remove, "pin-off");
         } catch (_) {
         }
         remove.addEventListener("click", async (ev) => {
@@ -30387,13 +31131,13 @@ var BobAppView = class extends obsidian18.ItemView {
         const head = groupEl.createDiv({ cls: "bob-nav-group-head" });
         const chev = head.createSpan({ cls: "bob-nav-group-chev" });
         try {
-          obsidian18.setIcon(chev, isCollapsed ? "chevron-right" : "chevron-down");
+          obsidian19.setIcon(chev, isCollapsed ? "chevron-right" : "chevron-down");
         } catch (_) {
         }
         if (group.icon) {
           const groupIcon = head.createSpan({ cls: "bob-nav-group-icon" });
           try {
-            obsidian18.setIcon(groupIcon, group.icon);
+            obsidian19.setIcon(groupIcon, group.icon);
           } catch (_) {
           }
         }
@@ -30411,7 +31155,7 @@ var BobAppView = class extends obsidian18.ItemView {
           if (isActive) item.setAttribute("aria-current", "page");
           const ic = item.createSpan({ cls: "bob-app-nav-icon" });
           try {
-            obsidian18.setIcon(ic, s.icon);
+            obsidian19.setIcon(ic, s.icon);
           } catch (_) {
           }
           item.createSpan({ cls: "bob-app-nav-label", text: s.label });
@@ -30425,7 +31169,7 @@ var BobAppView = class extends obsidian18.ItemView {
           });
           pinBtn.title = isPinned ? `Unpin ${s.label}` : `Pin ${s.label}`;
           try {
-            obsidian18.setIcon(pinBtn, isPinned ? "pin" : "pin-off");
+            obsidian19.setIcon(pinBtn, isPinned ? "pin" : "pin-off");
           } catch (_) {
           }
           pinBtn.addEventListener("click", async (ev) => {
@@ -30508,7 +31252,7 @@ var BobAppView = class extends obsidian18.ItemView {
     wrap.createDiv({ cls: "bob-soon-desc", text: surface.desc });
     const ic = wrap.createDiv({ cls: "bob-soon-icon" });
     try {
-      obsidian18.setIcon(ic, surface.icon);
+      obsidian19.setIcon(ic, surface.icon);
     } catch (_) {
     }
     const meta = wrap.createDiv({ cls: "bob-soon-meta" });
@@ -30558,12 +31302,12 @@ var BobAppView = class extends obsidian18.ItemView {
       }
       shown.forEach((f) => this._renderCanvasRow(list, f));
     };
-    search.addEventListener("input", obsidian18.debounce(() => draw(search.value), 150, true));
+    search.addEventListener("input", obsidian19.debounce(() => draw(search.value), 150, true));
     draw("");
   }
   // Phase 2 — generate a canvas from vault data, then open it inline.
   _openCanvasGenerateMenu(evt) {
-    const menu = new obsidian18.Menu();
+    const menu = new obsidian19.Menu();
     for (const gen of CANVAS_GENERATORS) {
       menu.addItem((item) => item.setTitle(gen.label).setIcon(gen.icon).onClick(() => void this._generateCanvas(gen.id)));
     }
@@ -30576,11 +31320,11 @@ var BobAppView = class extends obsidian18.ItemView {
     try {
       data = gen.build(this.app);
     } catch (err) {
-      new obsidian18.Notice(`Canvas generation failed: ${err?.message || String(err)}`);
+      new obsidian19.Notice(`Canvas generation failed: ${err?.message || String(err)}`);
       return;
     }
     if (!data || !data.nodes.length) {
-      new obsidian18.Notice("Nothing to generate \u2014 no matching records found.");
+      new obsidian19.Notice("Nothing to generate \u2014 no matching records found.");
       return;
     }
     await this._writeGeneratedCanvas(gen.label.split(" (")[0], data, this._boardManifest(gen.id, data));
@@ -30608,20 +31352,20 @@ var BobAppView = class extends obsidian18.ItemView {
     try {
       await saveGeneratedCanvas(this.app, canvasPath, data, manifest);
     } catch (error) {
-      new obsidian18.Notice(`Canvas save failed for ${canvasPath}: ${error instanceof Error ? error.message : String(error)}`, 1e4);
+      new obsidian19.Notice(`Canvas save failed for ${canvasPath}: ${error instanceof Error ? error.message : String(error)}`, 1e4);
       return;
     }
     const f = this.app.vault.getAbstractFileByPath(canvasPath);
-    if (f instanceof obsidian18.TFile) await this.openCanvas(f);
-    else new obsidian18.Notice(`Canvas written to ${canvasPath}`);
+    if (f instanceof obsidian19.TFile) await this.openCanvas(f);
+    else new obsidian19.Notice(`Canvas written to ${canvasPath}`);
   }
   // Entity Context Canvas — render the full operational context around a note
   // (evidence · people/systems · outputs · risks) and open it inline. Written to
   // a stable path; regeneration refreshes BOB's nodes while preserving any nodes
   // the user added by hand (see _writeGeneratedCanvas).
   async _generateContextCanvas(file) {
-    if (!(file instanceof obsidian18.TFile)) {
-      new obsidian18.Notice("No note to build context from.");
+    if (!(file instanceof obsidian19.TFile)) {
+      new obsidian19.Notice("No note to build context from.");
       return;
     }
     const isAgentRun = isAgentRunFile(this.app, file);
@@ -30629,11 +31373,11 @@ var BobAppView = class extends obsidian18.ItemView {
     try {
       result = isAgentRun ? buildAgentAuditCanvas(this.app, file) : buildEntityContextCanvas(this.app, file);
     } catch (err) {
-      new obsidian18.Notice(`Context canvas failed: ${err?.message || String(err)}`);
+      new obsidian19.Notice(`Context canvas failed: ${err?.message || String(err)}`);
       return;
     }
     if (!result || !result.data.nodes.length) {
-      new obsidian18.Notice("No context to render for this note.");
+      new obsidian19.Notice("No context to render for this note.");
       return;
     }
     const prefix = isAgentRun ? "Agent audit" : "Context";
@@ -30648,11 +31392,11 @@ var BobAppView = class extends obsidian18.ItemView {
     try {
       data = buildProcessCanvas(this.app, entityKey);
     } catch (err) {
-      new obsidian18.Notice(`Process canvas failed: ${err?.message || String(err)}`);
+      new obsidian19.Notice(`Process canvas failed: ${err?.message || String(err)}`);
       return;
     }
     if (!data || !data.nodes.length) {
-      new obsidian18.Notice("This type has no stage/status lifecycle to render.");
+      new obsidian19.Notice("This type has no stage/status lifecycle to render.");
       return;
     }
     await this._writeGeneratedCanvas(`Process - ${def.plural}`, data, this._boardManifest("process-runway", data));
@@ -30661,7 +31405,7 @@ var BobAppView = class extends obsidian18.ItemView {
     const row = list.createDiv({ cls: "bob-canvas-row" });
     const icon = row.createDiv({ cls: "bob-canvas-row-icon" });
     try {
-      obsidian18.setIcon(icon, "layout-dashboard");
+      obsidian19.setIcon(icon, "layout-dashboard");
     } catch (_) {
     }
     const main = row.createDiv({ cls: "bob-canvas-row-main" });
@@ -30717,7 +31461,7 @@ var BobAppView = class extends obsidian18.ItemView {
   async _mountLiveCanvas(body, file) {
     this._teardownCanvasLeaf();
     if (!this.plugin.settings.inlineNativeViews) throw new Error("inline native views disabled");
-    const WorkspaceLeafCtor = obsidian18.WorkspaceLeaf;
+    const WorkspaceLeafCtor = obsidian19.WorkspaceLeaf;
     if (typeof WorkspaceLeafCtor !== "function") throw new Error("WorkspaceLeaf constructor unavailable");
     let leaf = null;
     try {
@@ -30841,7 +31585,7 @@ var BobAppView = class extends obsidian18.ItemView {
     select.disabled = true;
     const currentView = entityBaseViewName(this.plugin.settings, entityKey);
     const baseFile = this.app.vault.getAbstractFileByPath(basePath);
-    if (!(baseFile instanceof obsidian18.TFile)) {
+    if (!(baseFile instanceof obsidian19.TFile)) {
       select.empty();
       select.createEl("option", { value: "", text: "Base not found" });
       return;
@@ -30875,8 +31619,8 @@ var BobAppView = class extends obsidian18.ItemView {
     if (!basePath) return;
     const viewName = entityBaseViewName(this.plugin.settings, entityKey) || ENTITIES[entityKey]?.baseView?.name || "";
     const baseFile = this.app.vault.getAbstractFileByPath(basePath);
-    if (!(baseFile instanceof obsidian18.TFile)) {
-      new obsidian18.Notice(`BOB Workspace: Base not found: ${basePath}`);
+    if (!(baseFile instanceof obsidian19.TFile)) {
+      new obsidian19.Notice(`BOB Workspace: Base not found: ${basePath}`);
       return;
     }
     const leaf = this.app.workspace.getLeaf("tab");
@@ -30890,7 +31634,7 @@ var BobAppView = class extends obsidian18.ItemView {
     const wrap = root.createDiv({ cls: "bob-external-base-view" });
     const body = wrap.createDiv({ cls: "bob-external-base-view-body" });
     const file = external.basePath ? this.app.vault.getAbstractFileByPath(external.basePath) : null;
-    if (file instanceof obsidian18.TFile) {
+    if (file instanceof obsidian19.TFile) {
       void this._mountLiveBaseView(body, file, external.basePath, external.name || "").catch(() => {
         body.empty();
         const fb = body.createDiv({ cls: "bob-empty-state" });
@@ -30956,7 +31700,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         try {
           await this.app.vault.trash(file, true);
         } catch (e) {
-          new obsidian18.Notice(`Delete failed for ${file.basename}: ${e.message}`);
+          new obsidian19.Notice(`Delete failed for ${file.basename}: ${e.message}`);
         }
       }
       await this.render();
@@ -31215,7 +31959,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
       try {
         await this.app.fileManager.processFrontMatter(entity.file, (fm) => writeScalarField(fm, field, raw));
       } catch (err) {
-        new obsidian18.Notice(`Save failed: ${err.message}`);
+        new obsidian19.Notice(`Save failed: ${err.message}`);
       }
       refreshCell();
     };
@@ -31681,7 +32425,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
           });
           exportBtn.title = "Save report to note";
           try {
-            obsidian18.setIcon(exportBtn, "save");
+            obsidian19.setIcon(exportBtn, "save");
           } catch (_) {
           }
           exportBtn.addEventListener("click", async () => {
@@ -31689,9 +32433,9 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
             exportBtn.addClass("is-busy");
             try {
               const path = await this._exportConfigDashboard(surfaceId, config, getWidgetEntities, dashboardContext);
-              new obsidian18.Notice(`BOB Workspace: saved note to ${path}`, 6e3);
+              new obsidian19.Notice(`BOB Workspace: saved note to ${path}`, 6e3);
             } catch (e) {
-              new obsidian18.Notice(`BOB Workspace: save failed \u2014 ${e.message}`, 8e3);
+              new obsidian19.Notice(`BOB Workspace: save failed \u2014 ${e.message}`, 8e3);
             } finally {
               exportBtn.disabled = false;
               exportBtn.removeClass("is-busy");
@@ -32323,10 +33067,10 @@ ${snippet}` : "- No markdown content");
       }
       if (!basePath) return;
       const file = this.app.vault.getAbstractFileByPath(basePath);
-      if (file instanceof obsidian18.TFile) {
+      if (file instanceof obsidian19.TFile) {
         await this.app.workspace.openLinkText(file.path, "", false);
       } else {
-        new obsidian18.Notice(`Base file not found: ${basePath}`);
+        new obsidian19.Notice(`Base file not found: ${basePath}`);
       }
     });
     if (viewName && basePath) {
@@ -32335,7 +33079,7 @@ ${snippet}` : "- No markdown content");
         const snippet = JSON.stringify({ base: { file: basePath, view: viewName } }, null, 2);
         try {
           await navigator.clipboard.writeText(snippet);
-          new obsidian18.Notice("Copied Base widget config.");
+          new obsidian19.Notice("Copied Base widget config.");
         } catch (_) {
         }
       });
@@ -32380,10 +33124,10 @@ ${snippet}` : "- No markdown content");
       }
       if (!basePath) return;
       const file = this.app.vault.getAbstractFileByPath(basePath);
-      if (file instanceof obsidian18.TFile) {
+      if (file instanceof obsidian19.TFile) {
         await this.app.workspace.openLinkText(file.path, "", false);
       } else {
-        new obsidian18.Notice(`Base file not found: ${basePath}`);
+        new obsidian19.Notice(`Base file not found: ${basePath}`);
       }
     });
     if (!preview.length) {
@@ -32421,7 +33165,7 @@ ${snippet}` : "- No markdown content");
       return;
     }
     const file = this.app.vault.getAbstractFileByPath(basePath);
-    if (!(file instanceof obsidian18.TFile)) {
+    if (!(file instanceof obsidian19.TFile)) {
       await this._renderBaseViewFallback(root, card, getWidgetEntities, `Base file not found: ${basePath}`);
       return;
     }
@@ -32557,7 +33301,7 @@ ${snippet}` : "- No markdown content");
     const sourcePath = typeof source === "string" ? source : String(source?.file || source?.path || source?.note || source?.source || "").trim();
     if (!sourcePath) return { text: "", sourcePath: "" };
     const file = this.app.vault.getAbstractFileByPath(sourcePath);
-    if (!(file instanceof obsidian18.TFile)) return { text: "", sourcePath };
+    if (!(file instanceof obsidian19.TFile)) return { text: "", sourcePath };
     let content;
     try {
       content = await this.app.vault.cachedRead(file);
@@ -32588,8 +33332,8 @@ ${snippet}` : "- No markdown content");
     }
     const target = body.createDiv({ cls: "bob-markdown-render" });
     try {
-      if (obsidian18.MarkdownRenderer?.renderMarkdown) {
-        await obsidian18.MarkdownRenderer.renderMarkdown(text, target, sourcePath || "", this);
+      if (obsidian19.MarkdownRenderer?.renderMarkdown) {
+        await obsidian19.MarkdownRenderer.renderMarkdown(text, target, sourcePath || "", this);
       } else {
         target.createEl("pre", { text });
       }
@@ -32631,7 +33375,7 @@ ${snippet}` : "- No markdown content");
         try {
           await this.app.commands.executeCommandById(spec.command);
         } catch (e) {
-          new obsidian18.Notice(`Failed to run command: ${e.message}`);
+          new obsidian19.Notice(`Failed to run command: ${e.message}`);
         }
       }
       return;
@@ -32643,10 +33387,10 @@ ${snippet}` : "- No markdown content");
     if (spec.type === "note" || spec.path) {
       if (!spec.path) return;
       const file = this.app.vault.getAbstractFileByPath(spec.path);
-      if (file instanceof obsidian18.TFile) {
+      if (file instanceof obsidian19.TFile) {
         await this.app.workspace.openLinkText(file.path, "", false);
       } else {
-        new obsidian18.Notice(`Note not found: ${spec.path}`);
+        new obsidian19.Notice(`Note not found: ${spec.path}`);
       }
       return;
     }
@@ -33179,7 +33923,7 @@ ${snippet}` : "- No markdown content");
       return sorted;
     };
     const board = root.createDiv({ cls: "bob-kanban-board" });
-    const isMobile = !!(obsidian18.Platform && obsidian18.Platform.isMobile);
+    const isMobile = !!(obsidian19.Platform && obsidian19.Platform.isMobile);
     let activeDragPath = null;
     groups.forEach((group) => {
       const items = entities.filter((e) => String(entityValue(e, groupBy, def) || "").trim() === group.value);
@@ -33237,7 +33981,7 @@ ${snippet}` : "- No markdown content");
         if (!filePath || !groupBy) return;
         try {
           const file = this.app.vault.getAbstractFileByPath(filePath);
-          if (!(file instanceof obsidian18.TFile)) return;
+          if (!(file instanceof obsidian19.TFile)) return;
           const currentStatus = String(this.app.metadataCache.getFileCache(file)?.frontmatter?.[groupBy] ?? "");
           if (currentStatus === group.value) return;
           const reasonStatuses = Array.isArray(card.reasonPromptStatuses) ? card.reasonPromptStatuses.map((status) => String(status)) : [];
@@ -33274,10 +34018,10 @@ ${snippet}` : "- No markdown content");
             const entry = `- ${ymd(/* @__PURE__ */ new Date())} \u2014 Moved to ${group.label}: ${closeReason}`;
             await this.app.vault.modify(file, replaceSection(content, "## Activity", [activityBody, entry].filter(Boolean).join("\n")));
           }
-          new obsidian18.Notice(`Moved to ${group.label}`);
+          new obsidian19.Notice(`Moved to ${group.label}`);
           await this._maybeCreateCommissionForWonDeal(file, groupBy, String(group.value));
         } catch (e) {
-          new obsidian18.Notice(`Failed to move: ${e.message}`);
+          new obsidian19.Notice(`Failed to move: ${e.message}`);
         }
       };
       const allowDrop = (event) => {
@@ -33860,7 +34604,7 @@ ${snippet}` : "- No markdown content");
     const toggle = block.createEl("button", { cls: "bob-help-toggle" + (open ? " is-open" : ""), attr: { type: "button" } });
     const icon = toggle.createSpan({ cls: "bob-help-toggle-icon" });
     try {
-      obsidian18.setIcon(icon, "help-circle");
+      obsidian19.setIcon(icon, "help-circle");
     } catch (_) {
       icon.setText("?");
     }
@@ -33926,7 +34670,7 @@ ${snippet}` : "- No markdown content");
     addSurfaceBtn.addEventListener("click", async () => {
       const id = String(newSurfaceInput.value || "").trim();
       if (!id) {
-        new obsidian18.Notice("Enter a surface id first.");
+        new obsidian19.Notice("Enter a surface id first.");
         return;
       }
       const targetStore = id.startsWith("planner.") ? "planner" : "dashboards";
@@ -33949,11 +34693,11 @@ ${snippet}` : "- No markdown content");
         await saveWorkspaceConfig(this.app, JSON.stringify(WORKSPACE_CONFIG, null, 2));
         this._dashEditorSurfaceId = id;
         this._dashEditorDraft = getConfig(id);
-        new obsidian18.Notice(`Created dashboard surface "${id}".`);
+        new obsidian19.Notice(`Created dashboard surface "${id}".`);
         renderEditorPane(id);
         renderPreview(id);
       } catch (e) {
-        new obsidian18.Notice(`Create failed: ${e.message}`);
+        new obsidian19.Notice(`Create failed: ${e.message}`);
       }
     });
     const modeToggle = toolbar.createDiv({ cls: "bob-de-mode-toggle" });
@@ -34075,9 +34819,9 @@ ${snippet}` : "- No markdown content");
             if (!WORKSPACE_CONFIG[targetStore]) WORKSPACE_CONFIG[targetStore] = {};
             WORKSPACE_CONFIG[targetStore][id] = this._dashEditorDraft;
             await saveWorkspaceConfig(this.app, JSON.stringify(WORKSPACE_CONFIG, null, 2));
-            new obsidian18.Notice("Dashboard saved.");
+            new obsidian19.Notice("Dashboard saved.");
           } catch (e) {
-            new obsidian18.Notice(`Save failed: ${e.message}`);
+            new obsidian19.Notice(`Save failed: ${e.message}`);
           }
         });
         if (builtinDashboardDefaults()[id] || id.startsWith("planner.")) {
@@ -34090,7 +34834,7 @@ ${snippet}` : "- No markdown content");
               if (Object.keys(WORKSPACE_CONFIG[targetStore]).length === 0) delete WORKSPACE_CONFIG[targetStore];
             });
             await saveWorkspaceConfig(this.app, JSON.stringify(WORKSPACE_CONFIG, null, 2));
-            new obsidian18.Notice("Reset to built-in.");
+            new obsidian19.Notice("Reset to built-in.");
             this._dashEditorDraft = getConfig(id);
             renderEditorPane(id);
             renderPreview(id);
@@ -34715,7 +35459,7 @@ ${snippet}` : "- No markdown content");
           o.selected = true;
         }
         const file = this.app.vault.getAbstractFileByPath(resolvedBaseFile);
-        if (file instanceof obsidian18.TFile) {
+        if (file instanceof obsidian19.TFile) {
           void readBaseSummary(this.app, file).then((summary) => {
             const metas = summary?.viewMeta?.length ? summary.viewMeta : (summary?.views || []).map((name) => ({ name, type: "table" }));
             sel.empty();
@@ -35008,7 +35752,7 @@ ${snippet}` : "- No markdown content");
       ).trim();
       if (!basePath) return;
       const baseFile2 = this.app.vault.getAbstractFileByPath(basePath);
-      if (!(baseFile2 instanceof obsidian18.TFile)) return;
+      if (!(baseFile2 instanceof obsidian19.TFile)) return;
       const baseViewName = String(
         baseMetadataSource.view || baseMetadataSource.baseView || baseMetadataSource.base_view || source.base?.view || source.base?.baseView || source.base?.base_view || ""
       ).trim();
@@ -35193,10 +35937,10 @@ ${snippet}` : "- No markdown content");
       if (!await confirmModal(this.app, `Delete this ${def.label.toLowerCase()}? This moves the file to trash.`, { title: "Delete", cta: "Delete" })) return;
       try {
         await this.app.vault.trash(file, true);
-        new obsidian18.Notice(`Deleted ${def.label}: ${file.basename}`);
+        new obsidian19.Notice(`Deleted ${def.label}: ${file.basename}`);
         this.closeEntityDetail();
       } catch (e) {
-        new obsidian18.Notice(`Delete failed: ${e.message}`);
+        new obsidian19.Notice(`Delete failed: ${e.message}`);
       }
     });
     const form = root.createDiv({ cls: "bob-detail-form" });
@@ -35232,7 +35976,7 @@ ${snippet}` : "- No markdown content");
         await this.app.fileManager.processFrontMatter(file, (frontmatter) => writeScalarField(frontmatter, fdef, raw));
         flashSaved();
       } catch (e) {
-        new obsidian18.Notice(`Save failed: ${e.message}`);
+        new obsidian19.Notice(`Save failed: ${e.message}`);
       }
     };
     const debouncedWrite = (key, val) => {
@@ -35483,10 +36227,10 @@ ${snippet}` : "- No markdown content");
       if (!await confirmModal(this.app, `Delete this project? This moves the file to trash.`, { title: "Delete project", cta: "Delete" })) return;
       try {
         await this.app.vault.trash(file, true);
-        new obsidian18.Notice(`Deleted project: ${file.basename}`);
+        new obsidian19.Notice(`Deleted project: ${file.basename}`);
         this.closeEntityDetail();
       } catch (e) {
-        new obsidian18.Notice(`Delete failed: ${e.message}`);
+        new obsidian19.Notice(`Delete failed: ${e.message}`);
       }
     });
     const hero = root.createDiv({ cls: "bob-pd-hero" });
@@ -35724,7 +36468,7 @@ ${snippet}` : "- No markdown content");
           await this._commitTasks(file, items, flashSaved, true);
           const taskText = titleInp.value.trim();
           if (!taskText) {
-            new obsidian18.Notice("Add a task title first.");
+            new obsidian19.Notice("Add a task title first.");
             titleInp.focus();
             return;
           }
@@ -35791,7 +36535,7 @@ ${snippet}` : "- No markdown content");
       });
       if (typeof flashSaved === "function") flashSaved();
     } catch (e) {
-      new obsidian18.Notice(`Save failed: ${e.message}`);
+      new obsidian19.Notice(`Save failed: ${e.message}`);
     }
   }
   /* ── Projects: rich card grid with milestone progress ─ */
@@ -36016,7 +36760,7 @@ ${snippet}` : "- No markdown content");
         ev.preventDefault();
         ev.stopPropagation();
         const file = this.app.vault.getAbstractFileByPath(r.project);
-        if (file && file instanceof obsidian18.TFile) this.openEntityDetailFromFile(file);
+        if (file && file instanceof obsidian19.TFile) this.openEntityDetailFromFile(file);
       });
     }
     if (r.notes) {
@@ -36079,9 +36823,9 @@ ${snippet}` : "- No markdown content");
       const newTasks = [...parsed.tasks, `- [ ] ${text}`];
       const next = replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join("\n"));
       await this.app.vault.modify(file, next);
-      new obsidian18.Notice("Added to today");
+      new obsidian19.Notice("Added to today");
     } catch (e) {
-      new obsidian18.Notice(`Couldn't add task: ${e.message}`);
+      new obsidian19.Notice(`Couldn't add task: ${e.message}`);
     }
   }
   /* ── Pipeline kanban (deals grouped by stage) ───── */
@@ -36137,7 +36881,7 @@ ${snippet}` : "- No markdown content");
       const rawRef = String(entityValue(reg, "partner_ref", regDef) || "").trim();
       const naked = rawRef.replace(/^\[\[|\]\]$/g, "").split("|")[0].trim();
       if (!naked) {
-        new obsidian18.Notice("This registration names no partner, so there is no partner folder to file a deal under.");
+        new obsidian19.Notice("This registration names no partner, so there is no partner folder to file a deal under.");
         return;
       }
       const partner = listEntities(this.app, "partner").find((pt) => {
@@ -36147,7 +36891,7 @@ ${snippet}` : "- No markdown content");
       });
       const partnerId = partner?.file.path.startsWith("20-COMPANY/35-PARTNERS/") ? partner.file.path.split("/")[2] : null;
       if (!partnerId) {
-        new obsidian18.Notice(`No partner folder found for "${naked}" under 20-COMPANY/35-PARTNERS/. Create the partner record first.`);
+        new obsidian19.Notice(`No partner folder found for "${naked}" under 20-COMPANY/35-PARTNERS/. Create the partner record first.`);
         return;
       }
       const title = String(entityValue(reg, "title", regDef) || reg.basename);
@@ -36155,11 +36899,11 @@ ${snippet}` : "- No markdown content");
       const folder = `20-COMPANY/35-PARTNERS/${partnerId}/01-DEALS`;
       const path = `${folder}/${slug}.md`;
       const existing = this.app.vault.getAbstractFileByPath(path);
-      if (existing instanceof obsidian18.TFile) {
+      if (existing instanceof obsidian19.TFile) {
         await this.app.fileManager.processFrontMatter(reg.file, (fm) => {
           fm.deal_ref = `[[${slug}]]`;
         });
-        new obsidian18.Notice(`Deal already exists \u2014 linked ${reg.basename} to it.`);
+        new obsidian19.Notice(`Deal already exists \u2014 linked ${reg.basename} to it.`);
         void this.app.workspace.getLeaf(false).openFile(existing);
         return;
       }
@@ -36198,11 +36942,11 @@ ${snippet}` : "- No markdown content");
       await this.app.fileManager.processFrontMatter(reg.file, (fm) => {
         fm.deal_ref = `[[${slug}]]`;
       });
-      new obsidian18.Notice(`Deal created under ${partnerId}`);
+      new obsidian19.Notice(`Deal created under ${partnerId}`);
       this.render();
       void this.app.workspace.getLeaf(false).openFile(file);
     } catch (e) {
-      new obsidian18.Notice(`Could not convert registration: ${e.message}`);
+      new obsidian19.Notice(`Could not convert registration: ${e.message}`);
     }
   }
   /** Prompt for a new expiry date and write it, with an optional status reset.
@@ -36228,7 +36972,7 @@ ${snippet}` : "- No markdown content");
         const next = String(value || "").trim();
         if (!next) return;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(next) || Number.isNaN(new Date(next).getTime())) {
-          new obsidian18.Notice(`Not a date: ${next}. Use YYYY-MM-DD.`);
+          new obsidian19.Notice(`Not a date: ${next}. Use YYYY-MM-DD.`);
           return;
         }
         try {
@@ -36236,10 +36980,10 @@ ${snippet}` : "- No markdown content");
             fm.expires_date = next;
             if (opts.status) fm.status = opts.status;
           });
-          new obsidian18.Notice(`${file.basename} now expires ${next}`);
+          new obsidian19.Notice(`${file.basename} now expires ${next}`);
           this.render();
         } catch (e) {
-          new obsidian18.Notice(`Could not update ${file.basename}: ${e.message}`);
+          new obsidian19.Notice(`Could not update ${file.basename}: ${e.message}`);
         }
       }
     }).open();
@@ -36548,7 +37292,7 @@ ${snippet}` : "- No markdown content");
       if (this.plugin.settings.autoCommissionOnWon === false) return;
       await maybeCreateCommissionForWonDeal(this.app, file, newValue);
     } catch (e) {
-      new obsidian18.Notice(`Deal moved, but commission was not created: ${e.message}`);
+      new obsidian19.Notice(`Deal moved, but commission was not created: ${e.message}`);
     }
   }
   /* ── Team (configurable People categories) ─ */
@@ -36570,7 +37314,7 @@ ${snippet}` : "- No markdown content");
     const wrap = root.createDiv({ cls: "bob-soon-wrap" });
     const ic = wrap.createDiv({ cls: "bob-soon-icon" });
     try {
-      obsidian18.setIcon(ic, "settings-2");
+      obsidian19.setIcon(ic, "settings-2");
     } catch (_) {
     }
     wrap.createDiv({ cls: "bob-eyebrow", text: "BOB WORKSPACE" });
@@ -36606,7 +37350,7 @@ ${snippet}` : "- No markdown content");
       if (projectsTouched.has(r.project)) continue;
       projectsTouched.add(r.project);
       const file = this.app.vault.getAbstractFileByPath(r.project);
-      if (!file || !(file instanceof obsidian18.TFile)) continue;
+      if (!file || !(file instanceof obsidian19.TFile)) continue;
       await this._tickProjectTaskByText(file, t, !!done);
     }
     const datesToCheck = /* @__PURE__ */ new Set([ymd(/* @__PURE__ */ new Date())]);
@@ -36625,7 +37369,7 @@ ${snippet}` : "- No markdown content");
     for (const dateStr of datesToCheck) {
       const path = settings.dailyNoteFolder ? `${settings.dailyNoteFolder.replace(/\/$/, "")}/${dateStr}.md` : `${dateStr}.md`;
       const file = this.app.vault.getAbstractFileByPath(path);
-      if (!file || !(file instanceof obsidian18.TFile)) continue;
+      if (!file || !(file instanceof obsidian19.TFile)) continue;
       if (source.kind === "daily" && source.file && source.file.path === file.path) continue;
       await this._tickDailyNoteTaskByText(file, t, !!done);
     }
@@ -36704,11 +37448,11 @@ ${snippet}` : "- No markdown content");
               });
             });
           }
-          new obsidian18.Notice(`Created ${def.label}: ${file.basename}
+          new obsidian19.Notice(`Created ${def.label}: ${file.basename}
 Saved to ${file.path}`, 4e3);
           await this.openEntityDetail(entityKey, file);
         } catch (e) {
-          new obsidian18.Notice(`BOB Workspace: failed to create ${def.label} \u2014 ${e.message}`);
+          new obsidian19.Notice(`BOB Workspace: failed to create ${def.label} \u2014 ${e.message}`);
         }
       }
     }).open();
@@ -36759,7 +37503,7 @@ Saved to ${file.path}`, 4e3);
               ev.preventDefault();
               ev.stopPropagation();
               const f = this.app.vault.getAbstractFileByPath(linkedProject);
-              if (f instanceof obsidian18.TFile) this.openEntityDetailFromFile(f);
+              if (f instanceof obsidian19.TFile) this.openEntityDetailFromFile(f);
             });
           }
           const linkBtn = row.createEl("button", { cls: "bob-task-link-btn" + (linkedProject ? " linked" : ""), text: linkedProject ? "\u270E" : "\u{1F4C1}" });
@@ -36773,7 +37517,7 @@ Saved to ${file.path}`, 4e3);
             promBtn.addEventListener("click", async (ev) => {
               ev.stopPropagation();
               await createTaskNote(this.app, this.plugin.settings, text);
-              new obsidian18.Notice(`TaskNote created: ${text}`);
+              new obsidian19.Notice(`TaskNote created: ${text}`);
             });
           }
         });
@@ -36824,7 +37568,7 @@ Saved to ${file.path}`, 4e3);
           this.appendTodayTask(v);
         } else {
           await createTaskNote(this.app, this.plugin.settings, v);
-          new obsidian18.Notice(`TaskNote created: ${v}`);
+          new obsidian19.Notice(`TaskNote created: ${v}`);
           this.render();
         }
       }
@@ -36918,7 +37662,7 @@ Saved to ${file.path}`, 4e3);
     const dayData = await Promise.all(days.map(async (d) => {
       const path = dailyNotePath(settings, d);
       const file = this.app.vault.getAbstractFileByPath(path);
-      if (!file || !(file instanceof obsidian18.TFile)) {
+      if (!file || !(file instanceof obsidian19.TFile)) {
         return { date: d, path, exists: false, tasks: [] };
       }
       const content = await this.app.vault.cachedRead(file);
@@ -37003,8 +37747,8 @@ Saved to ${file.path}`, 4e3);
 };
 
 // src/settings-tab.ts
-var obsidian19 = __toESM(require("obsidian"));
-var BobSettingTab = class extends obsidian19.PluginSettingTab {
+var obsidian20 = __toESM(require("obsidian"));
+var BobSettingTab = class extends obsidian20.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -37021,7 +37765,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
     const toggle = block.createEl("button", { cls: "bob-help-toggle" + (open ? " is-open" : ""), attr: { type: "button" } });
     const icon = toggle.createSpan({ cls: "bob-help-toggle-icon" });
     try {
-      obsidian19.setIcon(icon, "help-circle");
+      obsidian20.setIcon(icon, "help-circle");
     } catch (_) {
       icon.setText("?");
     }
@@ -37094,24 +37838,24 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    this._queueSave = obsidian19.debounce(() => {
+    this._queueSave = obsidian20.debounce(() => {
       void this.plugin.saveSettings();
     }, 600, true);
-    this._queueSaveRefresh = obsidian19.debounce(() => {
+    this._queueSaveRefresh = obsidian20.debounce(() => {
       void (async () => {
         await this.plugin.saveSettings();
         syncEntityFolders(this.plugin.settings);
         this.plugin.refreshOpenViews();
       })();
     }, 600, true);
-    this._queueSaveReload = obsidian19.debounce(() => {
+    this._queueSaveReload = obsidian20.debounce(() => {
       void (async () => {
         await this.plugin.saveSettings();
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
       })();
     }, 800, true);
-    this._queueEntityReload = obsidian19.debounce(() => {
+    this._queueEntityReload = obsidian20.debounce(() => {
       void (async () => {
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
@@ -37229,14 +37973,14 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         this._workspaceDraftDirty = false;
         this.plugin.refreshOpenViews();
         if (bootstrapFailed.length) {
-          new obsidian19.Notice(`BOB Workspace: workspace.json saved and applied. Skipped schema for: ${bootstrapFailed.join("; ")}`);
+          new obsidian20.Notice(`BOB Workspace: workspace.json saved and applied. Skipped schema for: ${bootstrapFailed.join("; ")}`);
         } else {
-          new obsidian19.Notice("BOB Workspace: workspace.json saved and applied.");
+          new obsidian20.Notice("BOB Workspace: workspace.json saved and applied.");
         }
         this.display();
       } catch (e) {
         setWorkspaceStatus(`Save failed: ${e.message}`, false);
-        new obsidian19.Notice(`BOB Workspace: workspace.json save failed - ${e.message}`);
+        new obsidian20.Notice(`BOB Workspace: workspace.json save failed - ${e.message}`);
       }
     });
     const workspaceRestoreBtn = workspaceBtns.createEl("button", { text: "Restore backup" });
@@ -37335,10 +38079,10 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         templateStatus.setText(`Loaded ${workspaceTemplates.length} template${workspaceTemplates.length === 1 ? "" : "s"} \xB7 active: ${workspaceTemplateKey(selected)}`);
         renderWorkspaceDesigners();
         void renderWorkspaceReview();
-        new obsidian19.Notice(`BOB Workspace: "${meta.label}" template applied.`);
+        new obsidian20.Notice(`BOB Workspace: "${meta.label}" template applied.`);
       } catch (e) {
         templateStatus.setText(`Template apply failed: ${e.message}`);
-        new obsidian19.Notice(`BOB Workspace: template apply failed - ${e.message}`);
+        new obsidian20.Notice(`BOB Workspace: template apply failed - ${e.message}`);
       }
     });
     setTimeout(() => refreshWorkspaceTemplateSelector(), 0);
@@ -37448,7 +38192,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
       const listed = await adapter2.list(folder);
       for (const filePath of (listed.files || []).filter((file) => /\.ya?ml$/i.test(file))) {
         try {
-          const schema = validateSourceSchemaDefinition(obsidian19.parseYaml(await adapter2.read(filePath)));
+          const schema = validateSourceSchemaDefinition(obsidian20.parseYaml(await adapter2.read(filePath)));
           result.schemas.push({ path: filePath, schema });
         } catch (e) {
           result.errors.push(`${filePath}: ${e.message}`);
@@ -37752,7 +38496,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         button.empty();
         const preview = button.createSpan({ cls: "bob-nav-designer-icon-preview" });
         try {
-          obsidian19.setIcon(preview, currentIcon || "shapes");
+          obsidian20.setIcon(preview, currentIcon || "shapes");
         } catch (_) {
         }
         button.createSpan({ cls: "bob-nav-designer-icon-name", text: currentIcon || emptyText });
@@ -38231,7 +38975,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         });
       });
     };
-    workspaceTa.addEventListener("input", obsidian19.debounce(() => {
+    workspaceTa.addEventListener("input", obsidian20.debounce(() => {
       try {
         const parsed = readWorkspaceDraft();
         setWorkspaceConfig(parsed);
@@ -38349,11 +39093,11 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         text: moduleLabels[moduleKey] || `${headingText} section defined in workspace.json.`
       });
       if (moduleKey === "prm") {
-        new obsidian19.Setting(panel).setName("Auto-create commission on deal won").setDesc("When a deal naming a partner reaches a won stage, record an `earned` commission under that partner. Never creates a second one for the same deal. Turning this off stops new commissions; it does not delete existing ones.").addToggle((tg) => tg.setValue(this.plugin.settings.autoCommissionOnWon !== false).onChange(async (v) => {
+        new obsidian20.Setting(panel).setName("Auto-create commission on deal won").setDesc("When a deal naming a partner reaches a won stage, record an `earned` commission under that partner. Never creates a second one for the same deal. Turning this off stops new commissions; it does not delete existing ones.").addToggle((tg) => tg.setValue(this.plugin.settings.autoCommissionOnWon !== false).onChange(async (v) => {
           this.plugin.settings.autoCommissionOnWon = v;
           await this.plugin.saveSettings();
         }));
-        new obsidian19.Setting(panel).setName("Partner expiry reminders").setDesc(`Raise a one-time inbox reminder when a certification enters its ${CERT_WARN_DAYS}-day renewal window or an approved registration enters its ${REG_WARN_DAYS}-day window. One reminder per expiry date, so renewing to a new date raises a fresh one.`).addToggle((tg) => tg.setValue(this.plugin.settings.partnerExpiryReminders !== false).onChange(async (v) => {
+        new obsidian20.Setting(panel).setName("Partner expiry reminders").setDesc(`Raise a one-time inbox reminder when a certification enters its ${CERT_WARN_DAYS}-day renewal window or an approved registration enters its ${REG_WARN_DAYS}-day window. One reminder per expiry date, so renewing to a new date raises a fresh one.`).addToggle((tg) => tg.setValue(this.plugin.settings.partnerExpiryReminders !== false).onChange(async (v) => {
           this.plugin.settings.partnerExpiryReminders = v;
           await this.plugin.saveSettings();
         }));
@@ -38379,7 +39123,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         const hasBuiltinDash = !!builtinDashboardDefaults()[surface.id];
         if (hasCustomDash) desc.push("\u270E custom dashboard");
         else if (hasBuiltinDash) desc.push("built-in dashboard");
-        const s = new obsidian19.Setting(panel).setName(level !== "primary" ? `${surface.label} (${levelLabel})` : surface.label).setDesc(desc.join(" \xB7 "));
+        const s = new obsidian20.Setting(panel).setName(level !== "primary" ? `${surface.label} (${levelLabel})` : surface.label).setDesc(desc.join(" \xB7 "));
         if (moduleDisabled) s.settingEl.classList.add("bob-setting-disabled");
         if (hasCustomDash || hasBuiltinDash) {
           s.addExtraButton((b) => b.setIcon("layout-panel-left").setTooltip(hasCustomDash ? "Edit custom dashboard in Surface Designer" : "Customize this dashboard in Surface Designer").onClick(() => {
@@ -38532,12 +39276,12 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
     pApp.createEl("h3", { text: "Navigation" });
     const navGroup = pApp.createDiv({ cls: "setting-group bob-settings-section" });
     const navPanel = navGroup.createDiv({ cls: "setting-items" });
-    new obsidian19.Setting(navPanel).setName("Show secondary nav items").setDesc("Show lower-frequency child surfaces (e.g. campaign sub-tabs, finance children) directly in the left rail. When off, they stay reachable via their parent surface's tabs.").addToggle((t) => t.setValue(!!this.plugin.settings.showSecondaryNav).onChange(async (v) => {
+    new obsidian20.Setting(navPanel).setName("Show secondary nav items").setDesc("Show lower-frequency child surfaces (e.g. campaign sub-tabs, finance children) directly in the left rail. When off, they stay reachable via their parent surface's tabs.").addToggle((t) => t.setValue(!!this.plugin.settings.showSecondaryNav).onChange(async (v) => {
       this.plugin.settings.showSecondaryNav = v;
       await this.plugin.saveSettings();
       this.plugin.refreshOpenViews();
     }));
-    new obsidian19.Setting(navPanel).setName("Show setup nav items").setDesc('Show setup-level surfaces (marked navLevel "setup") in the left rail. Off by default to keep the rail focused on day-to-day work.').addToggle((t) => t.setValue(!!this.plugin.settings.showSetupNav).onChange(async (v) => {
+    new obsidian20.Setting(navPanel).setName("Show setup nav items").setDesc('Show setup-level surfaces (marked navLevel "setup") in the left rail. Off by default to keep the rail focused on day-to-day work.').addToggle((t) => t.setValue(!!this.plugin.settings.showSetupNav).onChange(async (v) => {
       this.plugin.settings.showSetupNav = v;
       await this.plugin.saveSettings();
       this.plugin.refreshOpenViews();
@@ -38545,7 +39289,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
     pApp.createEl("h3", { text: "Rendering" });
     const renderGroup = pApp.createDiv({ cls: "setting-group bob-settings-section" });
     const renderPanel = renderGroup.createDiv({ cls: "setting-items" });
-    new obsidian19.Setting(renderPanel).setName("Inline canvases & Base views").setDesc('Render Obsidian canvases and non-table Base views inline inside the workspace. Uses Obsidian internal APIs, so it is off by default \u2014 canvases open in a tab and Base views show an "Open Base" button. Enable for the richer in-app experience (may be affected by Obsidian updates).').addToggle((t) => t.setValue(!!this.plugin.settings.inlineNativeViews).onChange(async (v) => {
+    new obsidian20.Setting(renderPanel).setName("Inline canvases & Base views").setDesc('Render Obsidian canvases and non-table Base views inline inside the workspace. Uses Obsidian internal APIs, so it is off by default \u2014 canvases open in a tab and Base views show an "Open Base" button. Enable for the richer in-app experience (may be affected by Obsidian updates).').addToggle((t) => t.setValue(!!this.plugin.settings.inlineNativeViews).onChange(async (v) => {
       this.plugin.settings.inlineNativeViews = v;
       await this.plugin.saveSettings();
       this.plugin.refreshOpenViews();
@@ -38553,7 +39297,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
     pApp.createEl("h3", { text: "Reminders" });
     const remindersGroup = pApp.createDiv({ cls: "setting-group bob-settings-section" });
     const remindersPanel = remindersGroup.createDiv({ cls: "setting-items" });
-    new obsidian19.Setting(remindersPanel).setName("Desktop notifications").setDesc("In addition to the in-app banner, fire a system notification when a reminder is due. Requires browser permission.").addToggle((t) => t.setValue(!!this.plugin.settings.desktopNotifications).onChange(async (v) => {
+    new obsidian20.Setting(remindersPanel).setName("Desktop notifications").setDesc("In addition to the in-app banner, fire a system notification when a reminder is due. Requires browser permission.").addToggle((t) => t.setValue(!!this.plugin.settings.desktopNotifications).onChange(async (v) => {
       this.plugin.settings.desktopNotifications = v;
       await this.plugin.saveSettings();
       if (v && typeof Notification !== "undefined" && Notification.permission === "default") {
@@ -38563,7 +39307,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         }
       }
     }));
-    new obsidian19.Setting(remindersPanel).setName("Notification permission").setDesc(typeof Notification === "undefined" ? "Notifications API not available in this environment." : `Current status: ${Notification.permission}`).addButton((b) => b.setButtonText("Request permission").onClick(async () => {
+    new obsidian20.Setting(remindersPanel).setName("Notification permission").setDesc(typeof Notification === "undefined" ? "Notifications API not available in this environment." : `Current status: ${Notification.permission}`).addButton((b) => b.setButtonText("Request permission").onClick(async () => {
       if (typeof Notification === "undefined") return;
       try {
         await Notification.requestPermission();
@@ -38571,7 +39315,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
       } catch (_) {
       }
     }));
-    new obsidian19.Setting(remindersPanel).setName("Clear completed reminders").setDesc(`${(this.plugin.settings.reminders || []).filter((r) => r.done).length} completed reminders stored.`).addButton((b) => b.setButtonText("Clear").onClick(async () => {
+    new obsidian20.Setting(remindersPanel).setName("Clear completed reminders").setDesc(`${(this.plugin.settings.reminders || []).filter((r) => r.done).length} completed reminders stored.`).addButton((b) => b.setButtonText("Clear").onClick(async () => {
       this.plugin.settings.reminders = (this.plugin.settings.reminders || []).filter((r) => !r.done);
       await this.plugin.saveSettings();
       this.plugin.refreshOpenViews();
@@ -38585,7 +39329,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
     const selectedTeamCategories = new Set(
       (Array.isArray(this.plugin.settings.teamPersonCategories) ? this.plugin.settings.teamPersonCategories : DEFAULT_SETTINGS.teamPersonCategories).map((v) => String(v || "").toLowerCase())
     );
-    const teamSetting = new obsidian19.Setting(appPanel).setName("Team person categories").setDesc("People categories included on the Team screen.");
+    const teamSetting = new obsidian20.Setting(appPanel).setName("Team person categories").setDesc("People categories included on the Team screen.");
     const teamControls = teamSetting.controlEl.createDiv({ cls: "bob-settings-checkboxes" });
     peopleCategories.forEach((category) => {
       const label = teamControls.createEl("label", { cls: "bob-settings-checkbox" });
@@ -38603,42 +39347,42 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         this.plugin.refreshOpenViews();
       });
     });
-    new obsidian19.Setting(appPanel).setName("Ignored folders").setDesc('Top-level vault folders to exclude from all entity scans (one per line, e.g. "99-TMP"). Speeds up large vaults by skipping folders that hold no records.').addTextArea((t) => {
+    new obsidian20.Setting(appPanel).setName("Ignored folders").setDesc('Top-level vault folders to exclude from all entity scans (one per line, e.g. "99-TMP"). Speeds up large vaults by skipping folders that hold no records.').addTextArea((t) => {
       t.inputEl.rows = 4;
       t.setPlaceholder("99-TMP\nArchive").setValue((this.plugin.settings.ignoredFolders || []).join("\n")).onChange((v) => {
         this.plugin.settings.ignoredFolders = String(v || "").split("\n").map((line) => line.trim().replace(/^\/+|\/+$/g, "")).filter(Boolean);
         this._queueSaveRefresh();
       });
     });
-    new obsidian19.Setting(plannerPanel).setName("Daily note folder").setDesc('Folder under which daily notes live, e.g. "daily" or "Journal/Daily".').addText((t) => t.setPlaceholder("daily").setValue(this.plugin.settings.dailyNoteFolder).onChange((v) => {
+    new obsidian20.Setting(plannerPanel).setName("Daily note folder").setDesc('Folder under which daily notes live, e.g. "daily" or "Journal/Daily".').addText((t) => t.setPlaceholder("daily").setValue(this.plugin.settings.dailyNoteFolder).onChange((v) => {
       this.plugin.settings.dailyNoteFolder = v;
       this._queueSave();
     }));
-    const taskModeEl = new obsidian19.Setting(plannerPanel).setName("Task mode").setDesc("How tasks are stored and displayed in the Planner.").addDropdown((d) => d.addOption("checkbox", "Checkbox only \u2014 inline checkboxes in daily notes").addOption("tasknotes", "TaskNotes only \u2014 full markdown note per task").addOption("hybrid", "Hybrid \u2014 checkboxes with Promote \u2191 to TaskNote").setValue(this.plugin.settings.taskMode || "checkbox").onChange(async (v) => {
+    const taskModeEl = new obsidian20.Setting(plannerPanel).setName("Task mode").setDesc("How tasks are stored and displayed in the Planner.").addDropdown((d) => d.addOption("checkbox", "Checkbox only \u2014 inline checkboxes in daily notes").addOption("tasknotes", "TaskNotes only \u2014 full markdown note per task").addOption("hybrid", "Hybrid \u2014 checkboxes with Promote \u2191 to TaskNote").setValue(this.plugin.settings.taskMode || "checkbox").onChange(async (v) => {
       this.plugin.settings.taskMode = v;
       await this.plugin.saveSettings();
       this.plugin.refreshOpenViews();
       this.display();
     }));
     if ((this.plugin.settings.taskMode || "checkbox") !== "checkbox") {
-      new obsidian19.Setting(plannerPanel).setName("TaskNotes folder").setDesc("Vault path where TaskNote files are stored.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Tasks").setValue(this.plugin.settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").onChange((v) => {
+      new obsidian20.Setting(plannerPanel).setName("TaskNotes folder").setDesc("Vault path where TaskNote files are stored.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Tasks").setValue(this.plugin.settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").onChange((v) => {
         this.plugin.settings.taskNotesFolder = v.trim() || "00-CORE/TaskNotes/Tasks";
         this._queueSave();
       }));
-      new obsidian19.Setting(plannerPanel).setName("TaskNotes archive folder").setDesc("Vault path where archived TaskNote files are stored and included in productivity history.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Archive").setValue(this.plugin.settings.taskNotesArchiveFolder || "00-CORE/TaskNotes/Archive").onChange((v) => {
+      new obsidian20.Setting(plannerPanel).setName("TaskNotes archive folder").setDesc("Vault path where archived TaskNote files are stored and included in productivity history.").addText((t) => t.setPlaceholder("00-CORE/TaskNotes/Archive").setValue(this.plugin.settings.taskNotesArchiveFolder || "00-CORE/TaskNotes/Archive").onChange((v) => {
         this.plugin.settings.taskNotesArchiveFolder = v.trim() || "00-CORE/TaskNotes/Archive";
         this._queueSave();
       }));
     }
-    new obsidian19.Setting(plannerPanel).setName("Tasks heading").setDesc('The H2 inside each daily note where tasks live. Default "## Today".').addText((t) => t.setValue(this.plugin.settings.tasksHeading).onChange((v) => {
+    new obsidian20.Setting(plannerPanel).setName("Tasks heading").setDesc('The H2 inside each daily note where tasks live. Default "## Today".').addText((t) => t.setValue(this.plugin.settings.tasksHeading).onChange((v) => {
       this.plugin.settings.tasksHeading = v;
       this._queueSave();
     }));
-    new obsidian19.Setting(plannerPanel).setName("Journal heading").setDesc(`The H2 where today's journal entry lives. Default "## Journal".`).addText((t) => t.setValue(this.plugin.settings.journalHeading).onChange((v) => {
+    new obsidian20.Setting(plannerPanel).setName("Journal heading").setDesc(`The H2 where today's journal entry lives. Default "## Journal".`).addText((t) => t.setValue(this.plugin.settings.journalHeading).onChange((v) => {
       this.plugin.settings.journalHeading = v;
       this._queueSave();
     }));
-    new obsidian19.Setting(appPanel).setName("Currency").setDesc("Used to format money values across Pipeline, Reports and Commissions.").addDropdown((d) => {
+    new obsidian20.Setting(appPanel).setName("Currency").setDesc("Used to format money values across Pipeline, Reports and Commissions.").addDropdown((d) => {
       CURRENCY_OPTIONS.forEach((c) => d.addOption(c.code, c.label));
       d.setValue(this.plugin.settings.currency || "USD");
       d.onChange(async (v) => {
@@ -38649,7 +39393,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         });
       });
     });
-    new obsidian19.Setting(appPanel).setName("Date and number format").setDesc("Language tag for dates and numbers, such as en-GB, en-US or nl-BE. Leave empty to follow the system. An unrecognised tag is ignored.").addText((t) => {
+    new obsidian20.Setting(appPanel).setName("Date and number format").setDesc("Language tag for dates and numbers, such as en-GB, en-US or nl-BE. Leave empty to follow the system. An unrecognised tag is ignored.").addText((t) => {
       t.setPlaceholder("System");
       t.setValue(this.plugin.settings.locale || "");
       t.onChange(async (v) => {
@@ -38661,15 +39405,15 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         });
       });
     });
-    new obsidian19.Setting(appPanel).setName("Week starts on").setDesc("First day of the week shown in the Planner tab.").addDropdown((d) => d.addOption("1", "Monday").addOption("0", "Sunday").setValue(String(this.plugin.settings.weekStartsOn)).onChange(async (v) => {
+    new obsidian20.Setting(appPanel).setName("Week starts on").setDesc("First day of the week shown in the Planner tab.").addDropdown((d) => d.addOption("1", "Monday").addOption("0", "Sunday").setValue(String(this.plugin.settings.weekStartsOn)).onChange(async (v) => {
       this.plugin.settings.weekStartsOn = Number(v) === 0 ? 0 : 1;
       await this.plugin.saveSettings();
     }));
-    new obsidian19.Setting(appPanel).setName("Open BOB Workspace on Obsidian startup").setDesc("Auto-open the BOB Workspace Home command centre when Obsidian launches.").addToggle((t) => t.setValue(!!this.plugin.settings.openOnStartup).onChange(async (v) => {
+    new obsidian20.Setting(appPanel).setName("Open BOB Workspace on Obsidian startup").setDesc("Auto-open the BOB Workspace Home command centre when Obsidian launches.").addToggle((t) => t.setValue(!!this.plugin.settings.openOnStartup).onChange(async (v) => {
       this.plugin.settings.openOnStartup = v;
       await this.plugin.saveSettings();
     }));
-    const defaultDrop = new obsidian19.Setting(appPanel).setName("Default tab").setDesc("Which surface opens first when you launch BOB Workspace.");
+    const defaultDrop = new obsidian20.Setting(appPanel).setName("Default tab").setDesc("Which surface opens first when you launch BOB Workspace.");
     defaultDrop.addDropdown((d) => {
       NAV_GROUPS.forEach((g) => {
         g.items.forEach((s) => {
@@ -38686,19 +39430,19 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
     pDm.createEl("h3", { text: "Data model" });
     const basesGroup = pDm.createDiv({ cls: "setting-group bob-settings-section" });
     const basesPanel = basesGroup.createDiv({ cls: "setting-items" });
-    new obsidian19.Setting(basesPanel).setName("Bases folder").setDesc("Vault folder where entity .base files live. Authoritative: changing it relocates where every base is resolved (the filename comes from the entity config, the folder from here).").addText((t) => t.setPlaceholder("00-CORE/Bases").setValue(this.plugin.settings.basesFolder || "00-CORE/Bases").onChange((v) => {
+    new obsidian20.Setting(basesPanel).setName("Bases folder").setDesc("Vault folder where entity .base files live. Authoritative: changing it relocates where every base is resolved (the filename comes from the entity config, the folder from here).").addText((t) => t.setPlaceholder("00-CORE/Bases").setValue(this.plugin.settings.basesFolder || "00-CORE/Bases").onChange((v) => {
       this.plugin.settings.basesFolder = v.trim() || "00-CORE/Bases";
       this._queueSaveReload();
     }));
-    new obsidian19.Setting(basesPanel).setName("Generate missing bases").setDesc("Create a .base file (filter + table view) for each entity that does not have one yet, in the Bases folder. Existing files are left untouched.").addButton((button) => button.setButtonText("Generate missing bases").onClick(async () => {
+    new obsidian20.Setting(basesPanel).setName("Generate missing bases").setDesc("Create a .base file (filter + table view) for each entity that does not have one yet, in the Bases folder. Existing files are left untouched.").addButton((button) => button.setButtonText("Generate missing bases").onClick(async () => {
       if (!await confirmModal(this.plugin.app, "Generate .base files for entities that don't have one yet? Existing files are left untouched.", { title: "Generate missing bases", cta: "Generate", danger: false })) return;
       try {
         const result = await generateMissingBases(this.plugin.app, this.plugin.settings);
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
-        new obsidian19.Notice(`BOB Workspace: created ${result.count} base${result.count === 1 ? "" : "s"} in ${result.folder}${result.skipped ? `; skipped ${result.skipped} existing` : ""}${result.failed.length ? `; ${result.failed.length} failed` : ""}.`);
+        new obsidian20.Notice(`BOB Workspace: created ${result.count} base${result.count === 1 ? "" : "s"} in ${result.folder}${result.skipped ? `; skipped ${result.skipped} existing` : ""}${result.failed.length ? `; ${result.failed.length} failed` : ""}.`);
       } catch (e) {
-        new obsidian19.Notice(`BOB Workspace: generate bases failed \u2014 ${e.message}`);
+        new obsidian20.Notice(`BOB Workspace: generate bases failed \u2014 ${e.message}`);
       }
     }));
     const schemasGroup = pDm.createDiv({ cls: "setting-group bob-settings-section" });
@@ -38710,7 +39454,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
       const banner = schemasPanel.createDiv({ cls: "bob-managed-banner" });
       const icon = banner.createSpan({ cls: "bob-managed-banner-icon" });
       try {
-        obsidian19.setIcon(icon, "lock");
+        obsidian20.setIcon(icon, "lock");
       } catch (_) {
       }
       banner.createSpan({ text: "Schema settings are controlled by " });
@@ -38723,7 +39467,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
       });
       banner.createSpan({ text: " to change them." });
     }
-    new obsidian19.Setting(schemasPanel).setName("Use schema YAML files").setDesc("Read entity definitions (folders, type filters, field types, enum options) from Metadata Menu schema YAML files.").addToggle((t) => {
+    new obsidian20.Setting(schemasPanel).setName("Use schema YAML files").setDesc("Read entity definitions (folders, type filters, field types, enum options) from Metadata Menu schema YAML files.").addToggle((t) => {
       t.setValue(!!schemaSettings.useSchemas);
       if (schemasManaged) t.setDisabled(true);
       return t.onChange(async (v) => {
@@ -38733,7 +39477,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         this.plugin.refreshOpenViews();
       });
     });
-    new obsidian19.Setting(schemasPanel).setName("Schemas folder").setDesc("Vault path where schema YAML files live (one per entity).").addText((t) => {
+    new obsidian20.Setting(schemasPanel).setName("Schemas folder").setDesc("Vault path where schema YAML files live (one per entity).").addText((t) => {
       t.setPlaceholder("00-CORE/Schemas/source").setValue(schemaSettings.schemasFolder);
       if (schemasManaged) t.setDisabled(true);
       return t.onChange((v) => {
@@ -38741,25 +39485,25 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         this._queueSave();
       });
     });
-    new obsidian19.Setting(schemasPanel).setName("Regenerate derived schema outputs").setDesc("Validate canonical YAML sources and regenerate Metadata Menu FileClasses and JSON Schemas.").addButton((button) => button.setButtonText("Regenerate outputs").onClick(async () => {
+    new obsidian20.Setting(schemasPanel).setName("Regenerate derived schema outputs").setDesc("Validate canonical YAML sources and regenerate Metadata Menu FileClasses and JSON Schemas.").addButton((button) => button.setButtonText("Regenerate outputs").onClick(async () => {
       try {
         const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
-        new obsidian19.Notice(`BOB Workspace: generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s)${result.datamodelUpdated ? `; updated ${result.datamodelUpdated} DATAMODEL section(s)` : ""}.`);
+        new obsidian20.Notice(`BOB Workspace: generated ${result.count} FileClass and JSON Schema output(s); removed ${result.removed} stale output(s)${result.datamodelUpdated ? `; updated ${result.datamodelUpdated} DATAMODEL section(s)` : ""}.`);
         if (result.datamodelFullLosses.length) {
-          new obsidian19.Notice(`BOB Workspace: DATAMODEL-FULL.md NOT regenerated - ${result.datamodelFullLosses.length} authored line(s) would be deleted, first: ${result.datamodelFullLosses[0].slice(0, 120)}`, 15e3);
+          new obsidian20.Notice(`BOB Workspace: DATAMODEL-FULL.md NOT regenerated - ${result.datamodelFullLosses.length} authored line(s) would be deleted, first: ${result.datamodelFullLosses[0].slice(0, 120)}`, 15e3);
           console.warn("BOB Workspace: DATAMODEL-FULL.md regeneration refused; authored lines not reproducible from source:", result.datamodelFullLosses);
         }
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
       } catch (e) {
-        new obsidian19.Notice(`BOB Workspace: output generation failed - ${e.message}`);
+        new obsidian20.Notice(`BOB Workspace: output generation failed - ${e.message}`);
       }
     }));
     const schemaBootstrapBanner = schemasPanel.createDiv({ cls: "bob-managed-banner bob-schema-bootstrap-banner" });
     schemaBootstrapBanner.style.display = "none";
     const bootstrapIcon = schemaBootstrapBanner.createSpan({ cls: "bob-managed-banner-icon" });
     try {
-      obsidian19.setIcon(bootstrapIcon, "database");
+      obsidian20.setIcon(bootstrapIcon, "database");
     } catch (_) {
     }
     const bootstrapText = schemaBootstrapBanner.createSpan({ text: "No schema sources found in the configured folder." });
@@ -38772,10 +39516,10 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         const regen = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
-        new obsidian19.Notice(`BOB Workspace: bootstrapped ${result.count} schema source file${result.count === 1 ? "" : "s"}${result.skipped ? `; skipped ${result.skipped} existing source file${result.skipped === 1 ? "" : "s"}` : ""}. Generated ${regen.count} FileClass and JSON Schema output(s).`);
+        new obsidian20.Notice(`BOB Workspace: bootstrapped ${result.count} schema source file${result.count === 1 ? "" : "s"}${result.skipped ? `; skipped ${result.skipped} existing source file${result.skipped === 1 ? "" : "s"}` : ""}. Generated ${regen.count} FileClass and JSON Schema output(s).`);
         this.display();
       } catch (e) {
-        new obsidian19.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
+        new obsidian20.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
       }
     });
     const schemaDesigner = schemasPanel.createDiv({ cls: "bob-schema-designer" });
@@ -38841,7 +39585,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
           await adapter.write(`${targetPath}.backup`, await adapter.read(targetPath));
           this._schemaBackupPaths.add(targetPath);
         }
-        await adapter.write(targetPath, obsidian19.stringifyYaml(sourceSchema));
+        await adapter.write(targetPath, obsidian20.stringifyYaml(sourceSchema));
         sourceSchemaPath = targetPath;
         schemaDirty = false;
         highlightSaveButtons(false);
@@ -38929,7 +39673,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         iconButton.empty();
         const preview = iconButton.createSpan({ cls: "bob-nav-designer-icon-preview" });
         try {
-          obsidian19.setIcon(preview, sourceSchema.icon || "file-text");
+          obsidian20.setIcon(preview, sourceSchema.icon || "file-text");
         } catch (_) {
         }
         iconButton.createSpan({ cls: "bob-nav-designer-icon-name", text: sourceSchema.icon || "Choose icon" });
@@ -39088,7 +39832,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         return;
       }
       try {
-        sourceSchema = validateSourceSchemaDefinition(obsidian19.parseYaml(await adapter.read(path)));
+        sourceSchema = validateSourceSchemaDefinition(obsidian20.parseYaml(await adapter.read(path)));
         sourceSchemaPath = path;
         this._schemaDesignerSelectedPath = path;
         schemaDirty = false;
@@ -39138,7 +39882,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
           if (!entity) return;
           const path = `${schemaFolder}/${entity}.yaml`;
           if (await adapter.exists(path)) {
-            new obsidian19.Notice(`BOB Workspace: schema already exists at ${path}.`);
+            new obsidian20.Notice(`BOB Workspace: schema already exists at ${path}.`);
             await loadSourceSchema(path);
             return;
           }
@@ -39179,7 +39923,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         if (await adapter.exists(sourceSchemaPath)) {
           await adapter.write(`${sourceSchemaPath}.backup`, await adapter.read(sourceSchemaPath));
         }
-        await adapter.write(sourceSchemaPath, obsidian19.stringifyYaml(sourceSchema));
+        await adapter.write(sourceSchemaPath, obsidian20.stringifyYaml(sourceSchema));
         let outputText = "";
         if (regenerate) {
           const result = await regenerateSchemaOutputs(this.plugin.app, this.plugin.settings);
@@ -39191,11 +39935,11 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         if (!schemaFiles.includes(sourceSchemaPath)) schemaFiles.push(sourceSchemaPath);
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
-        new obsidian19.Notice(`BOB Workspace: schema source saved and applied.${outputText}`);
+        new obsidian20.Notice(`BOB Workspace: schema source saved and applied.${outputText}`);
         this.display();
       } catch (e) {
         setSchemaStatus(`Save failed: ${e.message}`, false);
-        new obsidian19.Notice(`BOB Workspace: schema source save failed - ${e.message}`);
+        new obsidian20.Notice(`BOB Workspace: schema source save failed - ${e.message}`);
       }
     };
     schemaSave.addEventListener("click", async () => saveSchemaSource(false));
@@ -39212,7 +39956,7 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         this._schemaDesignerSelectedPath = "";
         await reloadEntityConfiguration(this.plugin.app, this.plugin.settings);
         this.plugin.refreshOpenViews();
-        new obsidian19.Notice(`BOB Workspace: schema archived at ${archivedPath}.`);
+        new obsidian20.Notice(`BOB Workspace: schema archived at ${archivedPath}.`);
         this.display();
       } catch (e) {
         setSchemaStatus(`Archive failed: ${e.message}`, false);
@@ -39222,15 +39966,15 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
     pData.createEl("h3", { text: "Data import/export" });
     const dataGroup = pData.createDiv({ cls: "setting-group bob-settings-section" });
     const dataPanel = dataGroup.createDiv({ cls: "setting-items" });
-    new obsidian19.Setting(dataPanel).setName("Workbook export folder").setDesc("Vault folder where XLSX workbook exports are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.workbookExportFolder).setValue(this.plugin.settings.workbookExportFolder || DEFAULT_SETTINGS.workbookExportFolder).onChange((v) => {
+    new obsidian20.Setting(dataPanel).setName("Workbook export folder").setDesc("Vault folder where XLSX workbook exports are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.workbookExportFolder).setValue(this.plugin.settings.workbookExportFolder || DEFAULT_SETTINGS.workbookExportFolder).onChange((v) => {
       this.plugin.settings.workbookExportFolder = v.trim().replace(/^\/+/, "").replace(/\/+$/, "") || DEFAULT_SETTINGS.workbookExportFolder;
       this._queueSave();
     }));
-    new obsidian19.Setting(dataPanel).setName("Canvas folder").setDesc("Vault folder where generated canvases (Context / Process / Pipeline / Agent Audit) are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.canvasFolder).setValue(this.plugin.settings.canvasFolder || DEFAULT_SETTINGS.canvasFolder).onChange((v) => {
+    new obsidian20.Setting(dataPanel).setName("Canvas folder").setDesc("Vault folder where generated canvases (Context / Process / Pipeline / Agent Audit) are written.").addText((t) => t.setPlaceholder(DEFAULT_SETTINGS.canvasFolder).setValue(this.plugin.settings.canvasFolder || DEFAULT_SETTINGS.canvasFolder).onChange((v) => {
       this.plugin.settings.canvasFolder = v.trim().replace(/^\/+/, "").replace(/\/+$/, "") || DEFAULT_SETTINGS.canvasFolder;
       this._queueSave();
     }));
-    new obsidian19.Setting(dataPanel).setName("Export & import data").setDesc("Group export (one sheet per entity), import templates, and CSV/XLSX import with column mapping live on the Export and Import screens.").addButton((b) => b.setButtonText("Open Export").onClick(() => this._gotoSurface("misc.export"))).addButton((b) => b.setButtonText("Open Import").onClick(() => this._gotoSurface("misc.import")));
+    new obsidian20.Setting(dataPanel).setName("Export & import data").setDesc("Group export (one sheet per entity), import templates, and CSV/XLSX import with column mapping live on the Export and Import screens.").addButton((b) => b.setButtonText("Open Export").onClick(() => this._gotoSurface("misc.export"))).addButton((b) => b.setButtonText("Open Import").onClick(() => this._gotoSurface("misc.import")));
   }
   // Close the settings dialog (best-effort, internal API) and open a BOB surface.
   _gotoSurface(mode) {
@@ -39243,10 +39987,10 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
 };
 
 // src/views/playbook-runner.ts
-var obsidian20 = __toESM(require("obsidian"));
+var obsidian21 = __toESM(require("obsidian"));
 var PLAYBOOK_RUNNER_VIEW_TYPE = "agent-client-playbook-runner";
 var PLAYBOOK_RUNNER_PINNED_KEY = "bob-pinned-playbooks";
-var BobPlaybookRunnerView = class _BobPlaybookRunnerView extends (obsidian20.BasesView || class {
+var BobPlaybookRunnerView = class _BobPlaybookRunnerView extends (obsidian21.BasesView || class {
 }) {
   constructor(controller, parentEl, app) {
     super(controller);
@@ -39320,15 +40064,15 @@ var BobPlaybookRunnerView = class _BobPlaybookRunnerView extends (obsidian20.Bas
     } catch {
       leaf.detach();
       await navigator.clipboard.writeText(cmd);
-      new obsidian20.Notice(`Agent chat unavailable. Copied to clipboard:
+      new obsidian21.Notice(`Agent chat unavailable. Copied to clipboard:
 ${cmd}`, 5e3);
     }
   }
 };
 
 // src/plugin.ts
-var obsidian21 = __toESM(require("obsidian"));
-var BobPlugin = class extends obsidian21.Plugin {
+var obsidian22 = __toESM(require("obsidian"));
+var BobPlugin = class extends obsidian22.Plugin {
   constructor() {
     super(...arguments);
     this.statusFolderRouteSnapshot = /* @__PURE__ */ new Map();
@@ -39360,7 +40104,7 @@ var BobPlugin = class extends obsidian21.Plugin {
       this.seedStatusFolderRouteSnapshot();
     });
     this.registerEvent(this.app.metadataCache.on("changed", (file) => {
-      if (file instanceof obsidian21.TFile) void this.routeFileForStatus(file);
+      if (file instanceof obsidian22.TFile) void this.routeFileForStatus(file);
     }));
     this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
       const priorStatus = this.statusFolderRouteSnapshot.get(oldPath);
@@ -39371,13 +40115,13 @@ var BobPlugin = class extends obsidian21.Plugin {
       void this.refreshPartnerExpiryStatuses();
     });
     this.registerEvent(this.app.metadataCache.on("changed", (file) => {
-      if (file instanceof obsidian21.TFile) void this.refreshPartnerExpiryStatuses(file);
+      if (file instanceof obsidian22.TFile) void this.refreshPartnerExpiryStatuses(file);
     }));
     this.app.workspace.onLayoutReady(() => {
       this.seedDealStages();
     });
     this.registerEvent(this.app.metadataCache.on("changed", (file) => {
-      if (file instanceof obsidian21.TFile) void this.onDealMetadataChanged(file);
+      if (file instanceof obsidian22.TFile) void this.onDealMetadataChanged(file);
     }));
     if (typeof this.registerBasesView === "function") {
       this.registerBasesView(PLAYBOOK_RUNNER_VIEW_TYPE, {
@@ -39432,7 +40176,7 @@ var BobPlugin = class extends obsidian21.Plugin {
       callback: async () => {
         const file = this.app.workspace.getActiveFile();
         if (!file) {
-          new obsidian21.Notice("Open a note first \u2014 the context canvas is built around the active note.");
+          new obsidian22.Notice("Open a note first \u2014 the context canvas is built around the active note.");
           return;
         }
         const view = await this.openApp();
@@ -39490,9 +40234,9 @@ var BobPlugin = class extends obsidian21.Plugin {
       callback: async () => {
         try {
           const path = await exportAllEntitiesXLSX(this.app, this.settings);
-          new obsidian21.Notice(`BOB Workspace: exported workbook to ${path}`, 6e3);
+          new obsidian22.Notice(`BOB Workspace: exported workbook to ${path}`, 6e3);
         } catch (e) {
-          new obsidian21.Notice(`BOB Workspace: XLSX export failed \u2014 ${e.message}`, 8e3);
+          new obsidian22.Notice(`BOB Workspace: XLSX export failed \u2014 ${e.message}`, 8e3);
         }
       }
     });
@@ -39508,13 +40252,13 @@ var BobPlugin = class extends obsidian21.Plugin {
       name: "Create workspace.json template",
       callback: async () => {
         if (await this.app.vault.adapter.exists(WORKSPACE_CONFIG_PATH)) {
-          new obsidian21.Notice(`workspace.json already exists at ${WORKSPACE_CONFIG_PATH}`);
+          new obsidian22.Notice(`workspace.json already exists at ${WORKSPACE_CONFIG_PATH}`);
           return;
         }
         await this.app.vault.adapter.write(WORKSPACE_CONFIG_PATH, workspaceConfigTemplate(this.settings));
         await reloadEntityConfiguration(this.app, this.settings);
         this.refreshOpenViews();
-        new obsidian21.Notice(`Created ${WORKSPACE_CONFIG_PATH} - edit it via Settings -> BOB Workspace -> Workspace definition.`);
+        new obsidian22.Notice(`Created ${WORKSPACE_CONFIG_PATH} - edit it via Settings -> BOB Workspace -> Workspace definition.`);
       }
     });
     this.addCommand({
@@ -39523,7 +40267,7 @@ var BobPlugin = class extends obsidian21.Plugin {
       callback: async () => {
         const templates = await loadWorkspaceTemplates(this.app);
         if (templates.length === 0) {
-          new obsidian21.Notice("BOB Workspace: no templates found in plugin templates/ folder.");
+          new obsidian22.Notice("BOB Workspace: no templates found in plugin templates/ folder.");
           return;
         }
         new BobWorkspaceSetupModal(this.app, this, templates).open();
@@ -39535,7 +40279,7 @@ var BobPlugin = class extends obsidian21.Plugin {
       callback: async () => {
         await this.reloadWorkspaceConfiguration();
         this.refreshOpenViews();
-        new obsidian21.Notice("BOB Workspace: workspace configuration reloaded.");
+        new obsidian22.Notice("BOB Workspace: workspace configuration reloaded.");
       }
     });
     this.addCommand({
@@ -39547,9 +40291,9 @@ var BobPlugin = class extends obsidian21.Plugin {
           const regen = await regenerateSchemaOutputs(this.app, this.settings);
           await reloadEntityConfiguration(this.app, this.settings);
           this.refreshOpenViews();
-          new obsidian21.Notice(`BOB Workspace: bootstrapped ${result.count} schema source file${result.count === 1 ? "" : "s"}${result.skipped ? `; skipped ${result.skipped} existing source file${result.skipped === 1 ? "" : "s"}` : ""}. Generated ${regen.count} FileClass and JSON Schema output(s).`);
+          new obsidian22.Notice(`BOB Workspace: bootstrapped ${result.count} schema source file${result.count === 1 ? "" : "s"}${result.skipped ? `; skipped ${result.skipped} existing source file${result.skipped === 1 ? "" : "s"}` : ""}. Generated ${regen.count} FileClass and JSON Schema output(s).`);
         } catch (e) {
-          new obsidian21.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
+          new obsidian22.Notice(`BOB Workspace: schema bootstrap failed - ${e.message}`);
         }
       }
     });
@@ -39561,9 +40305,9 @@ var BobPlugin = class extends obsidian21.Plugin {
           const result = await generateMissingBases(this.app, this.settings);
           await reloadEntityConfiguration(this.app, this.settings);
           this.refreshOpenViews();
-          new obsidian21.Notice(`BOB Workspace: created ${result.count} base${result.count === 1 ? "" : "s"} in ${result.folder}${result.skipped ? `; skipped ${result.skipped} existing` : ""}${result.failed.length ? `; ${result.failed.length} failed` : ""}.`);
+          new obsidian22.Notice(`BOB Workspace: created ${result.count} base${result.count === 1 ? "" : "s"} in ${result.folder}${result.skipped ? `; skipped ${result.skipped} existing` : ""}${result.failed.length ? `; ${result.failed.length} failed` : ""}.`);
         } catch (e) {
-          new obsidian21.Notice(`BOB Workspace: generate bases failed \u2014 ${e.message}`);
+          new obsidian22.Notice(`BOB Workspace: generate bases failed \u2014 ${e.message}`);
         }
       }
     });
@@ -39607,7 +40351,7 @@ var BobPlugin = class extends obsidian21.Plugin {
     if (!destination || file.parent?.path === destination) return;
     const targetPath = `${destination}/${file.name}`;
     if (this.app.vault.getAbstractFileByPath(targetPath)) {
-      new obsidian21.Notice(`BOB Workspace: cannot auto-file ${file.name}; a note already exists at ${targetPath}.`);
+      new obsidian22.Notice(`BOB Workspace: cannot auto-file ${file.name}; a note already exists at ${targetPath}.`);
       return;
     }
     try {
@@ -39621,7 +40365,7 @@ var BobPlugin = class extends obsidian21.Plugin {
       this.statusFolderRouteSnapshot.delete(file.path);
       this.statusFolderRouteSnapshot.set(targetPath, status);
     } catch (error) {
-      new obsidian21.Notice(`BOB Workspace: could not auto-file ${file.name} \u2014 ${String(error)}`);
+      new obsidian22.Notice(`BOB Workspace: could not auto-file ${file.name} \u2014 ${String(error)}`);
     }
   }
   /* ── Quick capture API ── */
@@ -39653,9 +40397,9 @@ var BobPlugin = class extends obsidian21.Plugin {
         }
         const noteLabel = sameDay(noteDate, /* @__PURE__ */ new Date()) ? "today's note" : `${ymd(noteDate)} note`;
         if (result.when) {
-          new obsidian21.Notice(`Reminder set \xB7 ${reminderTimeStr(result.when)}${dailyNoteAppended ? ` \xB7 added to ${noteLabel}` : ""}`);
+          new obsidian22.Notice(`Reminder set \xB7 ${reminderTimeStr(result.when)}${dailyNoteAppended ? ` \xB7 added to ${noteLabel}` : ""}`);
         } else {
-          new obsidian21.Notice(`Captured to Inbox${dailyNoteAppended ? ` \xB7 added to ${noteLabel}` : ""}`);
+          new obsidian22.Notice(`Captured to Inbox${dailyNoteAppended ? ` \xB7 added to ${noteLabel}` : ""}`);
         }
       }
     }).open();
@@ -39744,7 +40488,7 @@ var BobPlugin = class extends obsidian21.Plugin {
     }
   }
   _fireReminder(r) {
-    new obsidian21.Notice(`\u23F0  ${r.text}`, 8e3);
+    new obsidian22.Notice(`\u23F0  ${r.text}`, 8e3);
     if (this.settings.desktopNotifications && typeof Notification !== "undefined") {
       try {
         if (Notification.permission === "granted") {
@@ -39834,7 +40578,7 @@ var BobPlugin = class extends obsidian21.Plugin {
     try {
       await maybeCreateCommissionForWonDeal(this.app, file, stage);
     } catch (e) {
-      new obsidian21.Notice(`Deal saved, but commission was not created: ${e.message}`);
+      new obsidian22.Notice(`Deal saved, but commission was not created: ${e.message}`);
     }
   }
   async openApp(mode = null) {

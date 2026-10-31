@@ -98,7 +98,7 @@ Put one YAML per record type under the schema source folder (default
 entity: person               # maps to the plugin's contact entity key
 label: Contact
 type_value: person            # note-facing type for scans, creation and outputs
-location_pattern: 10-ME/10-PEOPLE/
+location_pattern: 10-ME/10-PEOPLE/   # or a context-pack key: "{me.people}/"
 key_fields: [name]
 fields:
   - { name: name, label: Name, type: string, required: true }

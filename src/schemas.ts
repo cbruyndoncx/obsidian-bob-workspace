@@ -1,5 +1,6 @@
 import type { SourceSchema, SourceSchemaField } from './schema-designer';
 import { applyEntityDefinitions } from './bases-config';
+import { foldersFromLocationPattern, loadContextPack, locationPatternForCreate } from './context-pack';
 import { ENTITIES, type BobEntityDef, type BobEntityField } from './entities';
 import { schemaBaseType } from './field-values';
 import { cloneConfig } from './nav';
@@ -97,6 +98,7 @@ export async function applySchemas(app: obsidian.App, settings: PartialSettings 
 
   const list = await app.vault.adapter.list(folder);
   const yamlFiles = (list.files || []).filter(f => f.endsWith('.yaml') || f.endsWith('.yml'));
+  const contextPack = await loadContextPack(app);
 
   for (const filePath of yamlFiles) {
     let schema: SchemaYaml | null;
@@ -128,26 +130,12 @@ export async function applySchemas(app: obsidian.App, settings: PartialSettings 
     if (schema.plural) ENTITIES[entityKey].plural = schema.plural;
     if (schema.icon) ENTITIES[entityKey].icon = schema.icon;
     if (schema.field_aliases) ENTITIES[entityKey].fieldAliases = JSON.parse(JSON.stringify(schema.field_aliases));
-    if (schema.location_pattern) ENTITIES[entityKey].locationPattern = schema.location_pattern;
+    if (schema.location_pattern) ENTITIES[entityKey].locationPattern = locationPatternForCreate(schema.location_pattern, contextPack) || schema.location_pattern;
 
-    // Derive folders from location_pattern. Handles single, ` or `-joined, and `{placeholder}` patterns.
-    //   "30-CLIENTS/{client-id}/00-PROFILE/"          -> ["30-CLIENTS"]
-    //   "10-ME/10-PEOPLE/ or 30-CLIENTS/{id}/10-PEOPLE/" -> ["10-ME/10-PEOPLE", "30-CLIENTS"]
+    // Derive folders from location_pattern: literal paths, ` or `-joined alternatives and
+    // context-pack keys ({client.profile-root}/), resolved through the vault's context pack.
     if (schema.location_pattern) {
-      const folders = schema.location_pattern
-        .split(/\s+or\s+/i)
-        .map((p) => {
-          const base = String(p || '')
-            .trim()
-            .replace(/^['"]|['"]$/g, '')
-            .split('{')[0]
-            .replace(/\/$/, '')
-            .trim();
-          // We can only express prefix folder matches; ignore wildcard/suffix patterns like "*/20-MEETINGS/".
-          if (!base || base.includes('*')) return '';
-          return base;
-        })
-        .filter((p) => p && !p.includes(','));
+      const folders = foldersFromLocationPattern(schema.location_pattern, contextPack);
       if (entityKey === 'contact') {
         delete ENTITIES[entityKey].folders;
       } else if (folders.length) {

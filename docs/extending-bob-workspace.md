@@ -337,6 +337,8 @@ Runtime identity uses canonical `type_value` (falling back to `entity`) and `dis
 
 When schemas are enabled, BOB Workspace uses these fields to enrich built-in entities. That means workbook export/import, create forms, and entity tables can use the vault's field names instead of the upstream defaults.
 
+`location_pattern` can name folders through context-pack keys instead of literal paths, as the canonical BOB schemas do: `location_pattern: "{company.decisions}/ or {client.decisions}/"`. BOB resolves each `{scope.key}` through the vault's root `context.yaml` (merged over the framework default pack when it declares `extends: default`, so a moved root such as `projects: 50-BRNCX-PROJECTS` carries its keys), and through the default pack when the vault has no `context.yaml`. Record placeholders without a dot (`{id}`, `{client-id}`) are left for creation time; an alternative naming a key the pack does not declare is skipped rather than guessed. The default pack is embedded in the plugin (`vendor/context-default.json`, refreshed with `npm run sync-context`).
+
 `location_pattern` also participates in creation-time folder resolution. When a new record has enough filled values to satisfy a placeholder path, BOB Workspace creates the note under that resolved folder; otherwise it falls back to the entity's configured default folder prefix.
 
 Entity note bodies can also be configured without code. Put a `template` object inside the schema's `bob` block to override the note frontmatter and body for that entity. Use `frontmatter` for default keys and `body` for the markdown body. Values support simple `{{name}}`, `{{title}}`, `{{today}}`, and similar placeholders.
