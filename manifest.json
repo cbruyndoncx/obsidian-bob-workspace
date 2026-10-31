@@ -1,7 +1,7 @@
 {
   "id": "bob-workspace",
   "name": "BOB Workspace",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "minAppVersion": "1.4.0",
   "description": "Transforms your vault into a fully configurable GUI workspace with custom dashboards, visual pipelines, interactive tables, entity schemas, and daily planning.",
   "author": "cbruyndoncx",

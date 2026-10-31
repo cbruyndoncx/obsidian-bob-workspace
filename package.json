@@ -1,6 +1,6 @@
 {
   "name": "bob-workspace",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "BOB Workspace — fully configurable GUI workspace layer for Obsidian: custom dashboards, visual pipelines, schemas, project management, and daily planning on plain markdown.",
   "main": "main.js",
   "private": true,
