@@ -8,7 +8,7 @@ const { loadMainFunctions } = require('./load-main-functions');
 
 const { mergedSchemaForKey, sourceSchemaToFileClass, sourceSchemaToJsonSchema, validateSourceSchemaDefinition } = loadMainFunctions(
   ['mergedSchemaForKey', 'sourceSchemaToFileClass', 'sourceSchemaToJsonSchema',
-   'metadataMenuFieldType', 'stableSchemaId', 'validateSourceSchemaDefinition'],
+   'metadataMenuFieldType', 'schemaBaseType', 'stableSchemaId', 'validateSourceSchemaDefinition'],
   { obsidian: { stringifyYaml: (o) => `${JSON.stringify(o)}\n` }, SCHEMA_TO_ENTITY_KEY: {}, ENTITIES: {} },
 );
 

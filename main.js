@@ -11769,27 +11769,34 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 
 // src/field-values.ts
+function schemaBaseType(type) {
+  const names = Array.isArray(type) ? type : [type];
+  const base = names.find((name) => typeof name === "string" && name.trim() !== "" && name.trim().toLowerCase() !== "null");
+  return typeof base === "string" ? base.trim().toLowerCase() : "";
+}
 function isStructuredValue(val) {
   if (val == null || val instanceof Date) return false;
   if (Array.isArray(val)) return val.some((item) => item != null && typeof item === "object" && !(item instanceof Date));
   return typeof val === "object";
 }
 function isReadOnlyField(field, current) {
-  return field.type === "structured" || field.schemaType === "object" || field.schemaType === "array" && (field.type !== "tags" || field.items?.type !== "string") || isStructuredValue(current) || Array.isArray(current) && field.type !== "tags";
+  const schemaType = schemaBaseType(field.schemaType);
+  return field.type === "structured" || schemaType === "object" || schemaType === "array" && (field.type !== "tags" || field.items?.type !== "string") || isStructuredValue(current) || Array.isArray(current) && field.type !== "tags";
 }
 function scalarFieldValue(raw, field, current) {
   if (isReadOnlyField(field, current)) throw new Error("Structured field \u2014 edit this in the note frontmatter");
   if (raw.trim() === "") return null;
-  if (field.type === "boolean" || field.schemaType === "boolean" || typeof current === "boolean") {
+  const schemaType = schemaBaseType(field.schemaType);
+  if (field.type === "boolean" || schemaType === "boolean" || typeof current === "boolean") {
     const normalized = raw.trim().toLowerCase();
     if (normalized === "true") return true;
     if (normalized === "false") return false;
     throw new Error(`${field.label || field.key} must be true or false`);
   }
-  if (field.type === "number" || field.type === "currency" || field.schemaType === "integer") {
+  if (field.type === "number" || field.type === "currency" || schemaType === "integer") {
     const value = Number(raw);
-    if (!Number.isFinite(value) || field.schemaType === "integer" && !Number.isInteger(value)) {
-      throw new Error(`${field.label || field.key} must be a valid ${field.schemaType === "integer" ? "integer" : "number"}`);
+    if (!Number.isFinite(value) || schemaType === "integer" && !Number.isInteger(value)) {
+      throw new Error(`${field.label || field.key} must be a valid ${schemaType === "integer" ? "integer" : "number"}`);
     }
     return value;
   }
@@ -15319,7 +15326,8 @@ var workspace_bob_default = {
       tax: true,
       planner: true,
       ai: true
-    }
+    },
+    taskMode: "hybrid"
   },
   bases: {
     task: {
@@ -22369,6 +22377,24 @@ function listTodayTaskNotes(app, settings) {
     return due === todayStr || sched === todayStr;
   });
 }
+function selectHomeTodayTaskNotes(entries, todayIso) {
+  const priorityRank = { urgent: 0, critical: 0, high: 1, normal: 2, medium: 2, low: 3, none: 4 };
+  const picked = entries.map(({ file, fm }) => {
+    const status = taskNoteStatus(fm);
+    if (status === "done" || taskNoteIgnored(status)) return null;
+    const due = fm.due ? String(fm.due).slice(0, 10) : "";
+    const sched = fm.scheduled ? String(fm.scheduled).slice(0, 10) : "";
+    const reason = due === todayIso ? "due today" : sched === todayIso ? "scheduled today" : status === "in-progress" ? "in progress" : "";
+    return reason ? { file, fm, reason } : null;
+  }).filter(Boolean);
+  const group = (r) => r === "in progress" ? 1 : 0;
+  return picked.sort((a, b) => group(a.reason) - group(b.reason) || (priorityRank[String(a.fm.priority || "none").toLowerCase()] ?? 4) - (priorityRank[String(b.fm.priority || "none").toLowerCase()] ?? 4) || String(a.fm.title || a.file.basename).localeCompare(String(b.fm.title || b.file.basename)));
+}
+function listHomeTodayTaskNotes(app, settings) {
+  const folder = (settings.taskNotesFolder || "00-CORE/TaskNotes/Tasks").replace(/\/$/, "");
+  const entries = scannableMarkdownFiles(app).filter((f) => f.path.startsWith(folder + "/")).map((f) => ({ file: f, fm: (app.metadataCache.getFileCache(f) || {}).frontmatter || {} }));
+  return selectHomeTodayTaskNotes(entries, ymd());
+}
 function taskNoteStatus(fm) {
   return String(fm?.status || "open").toLowerCase().replace(/[\s_]+/g, "-");
 }
@@ -23439,8 +23465,8 @@ var SCHEMA_TO_ENTITY_KEY = {
   person: "contact"
 };
 function _schemaTypeToFieldType(schemaType, schemaField = {}) {
-  if ((schemaField.format || "").toLowerCase() === "date") return "date";
-  switch ((schemaType || "").toLowerCase()) {
+  if (String(schemaField.format || "").toLowerCase() === "date") return "date";
+  switch (schemaBaseType(schemaType)) {
     case "integer":
     case "number":
       return "number";
@@ -23451,7 +23477,7 @@ function _schemaTypeToFieldType(schemaType, schemaField = {}) {
     case "object":
       return "structured";
     case "array":
-      return schemaField.items?.type === "string" ? "tags" : "structured";
+      return schemaBaseType(schemaField.items?.type) === "string" ? "tags" : "structured";
     default:
       return null;
   }
@@ -23839,7 +23865,7 @@ async function parseBaseFile(app, basePath, viewName) {
   const views = Array.isArray(yaml.views) ? yaml.views : [];
   const targetView = viewName ? views.find((v) => v.name === viewName) : null;
   const targetViewType = targetView?.type || "";
-  const externalBaseView = !!targetViewType && targetViewType !== "table";
+  const externalBaseView = !!targetViewType && !baseViewRendersInline(targetViewType);
   if (targetView) {
     result.baseView = {
       type: targetViewType || "table",
@@ -24067,7 +24093,7 @@ function normBaseName(value) {
 }
 function baseViewRendersInline(type) {
   const t = String(type || "").trim().toLowerCase();
-  return t === "" || t === "table";
+  return t === "" || t === "table" || t === "tasknotestasklist";
 }
 async function readBaseSummary(app, file) {
   try {
@@ -24512,6 +24538,21 @@ function fmtValue(val, type) {
   if (val instanceof Date) return dateFormatter().format(val);
   if (typeof val === "object") return formatStructuredValue(val);
   return String(val);
+}
+function formatStatValue(value, opts = {}) {
+  if (value == null || value === "") return "\u2014";
+  const n = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : NaN;
+  if (!Number.isFinite(n)) return String(value);
+  const format = String(opts.format || "").trim().toLowerCase();
+  const metric = String(opts.metric || "").trim();
+  const fieldType = String(opts.fieldType || "").trim().toLowerCase();
+  const asCurrency = format === "currency" || !format && (metric === "weightedForecast" || ["sum", "avg", "min", "max"].includes(metric) && fieldType === "currency");
+  if (asCurrency) return fmtValue(n, "currency");
+  if (format === "percent" || !format && ["winRate", "captureRate", "ratio"].includes(metric)) {
+    return `${Math.round(n * 10) / 10}%`;
+  }
+  const rounded = Math.round(n * 10) / 10;
+  return rounded.toLocaleString(void 0, { maximumFractionDigits: 1 });
 }
 function resolveEntityFieldDefault(field) {
   if (!Object.prototype.hasOwnProperty.call(field || {}, "defaultValue")) return void 0;
@@ -26452,7 +26493,7 @@ function matchesImportedType(value, type) {
   return typeof value === type;
 }
 function validateImportedShape(value, field, current) {
-  const type = field.schemaType;
+  const type = schemaBaseType(field.schemaType);
   const object = value != null && typeof value === "object" && !Array.isArray(value);
   if (type === "object" && !object) throw new Error(`${field.key} requires an object`);
   if (type === "array" && !Array.isArray(value)) throw new Error(`${field.key} requires an array`);
@@ -26583,10 +26624,11 @@ function normalizeImportValue(value, field) {
     const decoded = JSON.parse(value.slice(WORKBOOK_VALUE_PREFIX.length));
     validateImportedShape(decoded, field);
     if (decoded != null && typeof decoded === "object") {
-      if (field.schemaType && !["object", "array"].includes(field.schemaType)) throw new Error(`${field.key} is a scalar field`);
+      const schemaType = schemaBaseType(field.schemaType);
+      if (schemaType && !["object", "array"].includes(schemaType)) throw new Error(`${field.key} is a scalar field`);
       return decoded;
     }
-    if (typeof decoded === "string" && !isReadOnlyField(field) && (!field.schemaType || field.schemaType === "string")) return decoded;
+    if (typeof decoded === "string" && !isReadOnlyField(field) && ["", "string"].includes(schemaBaseType(field.schemaType))) return decoded;
     return decoded == null ? null : scalarFieldValue(String(decoded), field);
   }
   if (typeof value === "object" && !(value instanceof Date)) {
@@ -27354,8 +27396,10 @@ function validateSourceSchemaDefinition(schema) {
     if (!name) throw new Error(`Field ${index + 1} needs a name`);
     if (fieldNames.has(name)) throw new Error(`Duplicate field "${name}"`);
     fieldNames.add(name);
-    if (!["string", "number", "integer", "boolean", "array", "object"].includes(field.type)) {
-      throw new Error(`Field "${name}" has unsupported type "${field.type}"`);
+    const typeNames = Array.isArray(field.type) ? field.type : [field.type];
+    const baseTypes = typeNames.filter((t) => t !== "null");
+    if (!baseTypes.length || !baseTypes.every((t) => ["string", "number", "integer", "boolean", "array", "object"].includes(t))) {
+      throw new Error(`Field "${name}" has unsupported type "${typeNames.join(", ")}"`);
     }
     if (field.enum != null && !Array.isArray(field.enum)) {
       throw new Error(`Field "${name}" enum must be a list`);
@@ -27363,13 +27407,14 @@ function validateSourceSchemaDefinition(schema) {
     if (field.default != null && Array.isArray(field.enum) && !field.enum.includes(field.default)) {
       throw new Error(`Field "${name}" default must be one of its enum values`);
     }
-    if (field.default != null && field.type === "array" && !Array.isArray(field.default)) {
+    const baseType = baseTypes[0];
+    if (field.default != null && baseType === "array" && !Array.isArray(field.default)) {
       throw new Error(`Field "${name}" default must be a list`);
     }
-    if (field.default != null && (field.type === "number" || field.type === "integer") && typeof field.default !== "number") {
+    if (field.default != null && (baseType === "number" || baseType === "integer") && typeof field.default !== "number") {
       throw new Error(`Field "${name}" default must be a number`);
     }
-    if (field.default != null && field.type === "boolean" && typeof field.default !== "boolean") {
+    if (field.default != null && baseType === "boolean" && typeof field.default !== "boolean") {
       throw new Error(`Field "${name}" default must be true or false`);
     }
   });
@@ -27417,11 +27462,16 @@ function validateSourceSchemaDefinition(schema) {
 }
 function editableSchemaFieldType(field) {
   if (Array.isArray(field.enum)) return "enum";
-  if (field.type === "string" && field.format === "date") return "date";
-  if (field.type === "string" && field.format === "date-time") return "datetime";
-  return field.type || "string";
+  const type = schemaBaseType(field.type);
+  if (type === "string" && field.format === "date") return "date";
+  if (type === "string" && field.format === "date-time") return "datetime";
+  return type || "string";
+}
+function schemaTypeIsNullable(type) {
+  return Array.isArray(type) && type.includes("null");
 }
 function applyEditableSchemaFieldType(field, value) {
+  const nullable = schemaTypeIsNullable(field.type);
   delete field.format;
   if (value !== "enum") delete field.enum;
   if (value === "enum") {
@@ -27433,6 +27483,7 @@ function applyEditableSchemaFieldType(field, value) {
   } else {
     field.type = value;
   }
+  if (nullable) field.type = [field.type, "null"];
 }
 function editableSchemaFieldDefault(field) {
   if (!Object.prototype.hasOwnProperty.call(field || {}, "default")) return "";
@@ -27444,16 +27495,17 @@ function applyEditableSchemaFieldDefault(field, value) {
     delete field.default;
     return;
   }
-  if (field.type === "array") {
+  const type = schemaBaseType(field.type);
+  if (type === "array") {
     field.default = trimmed.split(",").map((item) => item.trim()).filter(Boolean);
     return;
   }
-  if (field.type === "number" || field.type === "integer") {
+  if (type === "number" || type === "integer") {
     const number = Number(trimmed);
     field.default = Number.isFinite(number) ? number : trimmed;
     return;
   }
-  if (field.type === "boolean") {
+  if (type === "boolean") {
     field.default = trimmed.toLowerCase() === "true" ? true : trimmed.toLowerCase() === "false" ? false : trimmed;
     return;
   }
@@ -27482,9 +27534,10 @@ function stableSchemaId(value) {
 }
 function metadataMenuFieldType(field) {
   if (Array.isArray(field.enum)) return "Select";
-  if (field.type === "array") return "Multi";
-  if (field.type === "boolean") return "Boolean";
-  if (field.type === "number" || field.type === "integer") return "Number";
+  const type = schemaBaseType(field.type);
+  if (type === "array") return "Multi";
+  if (type === "boolean") return "Boolean";
+  if (type === "number" || type === "integer") return "Number";
   if (field.format === "date") return "Date";
   return "Input";
 }
@@ -27498,7 +27551,7 @@ function sourceSchemaToJsonSchema(schema) {
     if (Array.isArray(field.enum) && field.enum.length) property.enum = field.enum;
     if (field.description) property.description = field.description;
     if (Object.prototype.hasOwnProperty.call(field, "default")) property.default = field.default;
-    if (field.type === "array" && field.items) property.items = field.items;
+    if (schemaBaseType(field.type) === "array" && field.items) property.items = field.items;
     properties[field.name] = property;
     if (field.required) required.push(field.name);
   });
@@ -27697,8 +27750,9 @@ function schemaFieldDocType(field) {
   if (Array.isArray(field.enum)) return "enum";
   if (field.format === "date" || field.bob_type === "date") return "date";
   if (field.bob_type === "currency") return "currency";
-  if (field.bob_type === "tags" || field.type === "array") return "array";
-  return field.type || "string";
+  const type = schemaBaseType(field.type);
+  if (field.bob_type === "tags" || type === "array") return "array";
+  return `${type || "string"}${schemaTypeIsNullable(field.type) ? " (nullable)" : ""}`;
 }
 function generateEntityTypesTable(schemas) {
   const header = "| Entity | `type:` value | Location | Key Fields |\n|--------|--------------|----------|------------|";
@@ -29534,11 +29588,18 @@ async function buildHomeSnapshot(app, settings = {}) {
   }));
   const dailyFile = app.vault.getAbstractFileByPath(dailyNotePath(settings));
   const todayTasks = dailyFile instanceof obsidian16.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] };
-  const todayRows = (todayTasks.tasks || []).slice(0, 8).map((line) => ({
+  const homeTaskMode = settings.taskMode || "checkbox";
+  const checkboxRows = homeTaskMode === "checkbox" || homeTaskMode === "hybrid" ? (todayTasks.tasks || []).map((line) => ({
     title: String(line).replace(/^\s*-\s\[(x|X| )\]\s/, ""),
     meta: / \[(x|X)\] /.test(line) ? "done" : "open",
     action: { surface: "planner.today" }
-  }));
+  })) : [];
+  const taskNoteRows = homeTaskMode === "tasknotes" || homeTaskMode === "hybrid" ? listHomeTodayTaskNotes(app, settings).map(({ file, fm, reason }) => ({
+    title: String(fm.title || file.basename),
+    meta: [reason, fm.priority && fm.priority !== "none" ? String(fm.priority) : ""].filter(Boolean).join(" \xB7 "),
+    file
+  })) : [];
+  const todayRows = [...taskNoteRows, ...checkboxRows].slice(0, 8);
   const week = await buildProductivitySnapshot(app, settings).catch(() => null);
   const weekRows = week ? [{
     title: "This week",
@@ -31663,7 +31724,10 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
           const subCount = sub.count === "open" || sub.count === "active" ? subEnts.filter((e) => this._isOpenEntity(e, subKey)).length : subEnts.length;
           sub = `${subCount} ${sub.suffix}`;
         }
-        return { label: s.label, value, sub, accent: s.accent, mode: s.mode };
+        const valueKey = field || (hasEntityModel ? dealValueField(def) : "");
+        const fieldType = def?.fields?.find((f) => f.key === valueKey)?.type;
+        const display = formatStatValue(value, { metric, format: s.format, fieldType });
+        return { label: s.label, value: display, sub, accent: s.accent, mode: s.mode };
       }));
       this._dashboardStats(root, statItems);
     }
@@ -31844,7 +31908,10 @@ ${config.subtitle}`);
         } else {
           value = entities.length;
         }
-        lines.push(`- ${stat.label}: ${value}${stat.sub ? ` (${typeof stat.sub === "string" ? stat.sub : stat.sub.suffix || ""})` : ""}`);
+        const statValueKey = valueField || field;
+        const statFieldType = def?.fields?.find((f) => f.key === statValueKey)?.type;
+        const statDisplay = formatStatValue(value, { metric, format: stat.format, fieldType: statFieldType });
+        lines.push(`- ${stat.label}: ${statDisplay}${stat.sub ? ` (${typeof stat.sub === "string" ? stat.sub : stat.sub.suffix || ""})` : ""}`);
       }
     }
     let sectionIndex = 0;
@@ -35021,7 +35088,8 @@ ${snippet}` : "- No markdown content");
     this._renderPageHeader(root, title, `${filtered.length} ${filtered.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${entityFolder(entityKey)}${unsupportedText}`, (right, ctx) => {
       if (opts.renderHeaderControls) opts.renderHeaderControls(right, entityKey);
       this._renderEntityViewSelect(right, entityKey);
-      if (def.externalBaseView) {
+      const nativeListOfOtherType = !!def.baseView && String(def.baseView.type || "table").toLowerCase() !== "table";
+      if (def.externalBaseView || nativeListOfOtherType) {
         const openBaseBtn = right.createEl("button", { cls: "bob-btn", text: "Open Base" });
         openBaseBtn.addEventListener("click", () => this._openEntityBase(entityKey));
       }

@@ -118,7 +118,7 @@ export async function parseBaseFile(app: obsidian.App, basePath: string, viewNam
     ? views.find(v => v.name === viewName)
     : null;
   const targetViewType = targetView?.type || '';
-  const externalBaseView = !!targetViewType && targetViewType !== 'table';
+  const externalBaseView = !!targetViewType && !baseViewRendersInline(targetViewType);
   if (targetView) {
     result.baseView = {
       type: targetViewType || 'table',
@@ -387,11 +387,19 @@ export interface BaseSummary {
   unsupportedBaseFeatures: string[];
 }
 
-// A Bases view renders inline in the plugin only when its type is `table`
-// (a missing type is treated as table). Everything else opens in Obsidian Bases.
+// A Bases view renders inline in the plugin when it is a row list: `table` (a
+// missing type is treated as table) or the TaskNotes plugin's `tasknotesTaskList`.
+// A TaskNotes task list is a filtered, sorted, grouped list of notes — exactly
+// what the native table renders — but its own UI exists only inside the TaskNotes
+// plugin. Treated as an opaque view it could be shown only through an inline Base
+// embed, which needs both the internal-API "Inline canvases & Base views" toggle
+// (off by default) and the TaskNotes plugin installed and enabled; without either
+// the TaskNotes nav item showed "couldn't be embedded here". Board, calendar,
+// cards and other TaskNotes view types (kanban, calendar, agenda) still open in
+// Obsidian Bases.
 export function baseViewRendersInline(type: string | undefined | null): boolean {
   const t = String(type || '').trim().toLowerCase();
-  return t === '' || t === 'table';
+  return t === '' || t === 'table' || t === 'tasknotestasklist';
 }
 
 export async function readBaseSummary(app: obsidian.App, file: obsidian.TFile): Promise<BaseSummary | null> {

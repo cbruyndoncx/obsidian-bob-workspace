@@ -442,6 +442,8 @@ Some workspace screens are derived views over existing entities rather than sepa
 - `Team` is a People view over `type: person`. By default it includes `person_category` values `employee`, `freelancer`, and `contractor`; the category set is configurable in plugin settings.
 - `Client Work > Workspace` combines meetings, communication threads, deliverables, feedback, surveys, testimonials, and decisions. Its client selector matches both `client_id` and `end_client_id`; its project selector matches `project_id`.
 - `Productivity` reads tasks according to the configured task mode. Checkbox tasks come from daily note task sections. TaskNotes come from both the active TaskNotes folder and the TaskNotes archive folder so historical completion remains visible.
+- Home's `TODAY` card (built-in `home` source, section `today`) also follows the task mode: checkbox lines from today's daily note (`checkbox`, `hybrid`) and TaskNotes from the active folder that are in progress or due/scheduled today (`tasknotes`, `hybrid`). The shipped BOB template sets `settings.taskMode: hybrid`.
+- Dashboard stat cards format their value: `weightedForecast` and sums/averages of a `currency` field as money, `winRate`/`captureRate`/`ratio` as percentages, counts as grouped numbers. Set `format: currency | percent | number` on a stat to override.
 
 This keeps the vault model DRY: derived views should compose existing entity schemas instead of introducing duplicate entity types.
 
@@ -608,6 +610,7 @@ These cost real debugging time when building a standalone product vault on BOB W
 - **Navigation can target dashboards and tab parents as well as entities.** A habit tracker can be a custom dashboard route with a Base-backed widget; it does not need its own entity definition.
 - **Workspace-owned settings live in `workspace.json.settings`.** Personal settings remain in `data.json`. Loading overlays workspace-owned keys from the workspace; saving removes those keys from plugin data. Unknown plugin-data keys are not automatically stripped on load.
 - **Inline native views are optional and off by default.** BOB mounts Base views through Obsidian's internal embed registry, selecting the view with `#View`. Enable **Settings → App → Rendering → Inline canvases & Base views** to use that path; otherwise use **Open Base**. Static Markdown rendering is not the plugin's live-mount mechanism.
+- **TaskNotes task-list views render as the native table.** A `tasknotesTaskList` view (the TaskNotes plugin's list type, used by `Tasks.base`) is a filtered, sorted, grouped list of notes, so BOB renders it with its own editable table, applying the view's filters, sort, grouping and column order. Its TaskNotes-specific UI cannot be shown inside BOB without the TaskNotes plugin: the TaskNotes view types exist only as Bases views that plugin registers, and the only way another plugin can display one is the inline Base embed — which needs the toggle above *and* TaskNotes installed and enabled. **Open Base** opens the real TaskNotes view in Obsidian Bases. Other TaskNotes view types (`tasknotesKanban`, calendar, agenda) stay external: embedded when the toggle is on and TaskNotes is enabled, otherwise an **Open Base** button.
 
 ## Structured fields and editing limits
 

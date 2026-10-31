@@ -1,6 +1,7 @@
 import type { SourceSchema, SourceSchemaField } from './schema-designer';
 import { applyEntityDefinitions } from './bases-config';
 import { ENTITIES, type BobEntityDef, type BobEntityField } from './entities';
+import { schemaBaseType } from './field-values';
 import { cloneConfig } from './nav';
 import { SCHEMA_ENTITY_KEYS, bumpWorkspaceConfigEpoch } from './workspace-config';
 import * as obsidian from 'obsidian';
@@ -14,15 +15,15 @@ export const SCHEMA_TO_ENTITY_KEY: Record<string, string> = {
   person: 'contact',
 };
 
-export function _schemaTypeToFieldType(schemaType: string | undefined, schemaField: Partial<SchemaYamlField> = {}): 'date' | 'number' | 'tags' | 'boolean' | 'structured' | null {
-  if ((schemaField.format || '').toLowerCase() === 'date') return 'date';
-  switch ((schemaType || '').toLowerCase()) {
+export function _schemaTypeToFieldType(schemaType: string | string[] | undefined, schemaField: Partial<SchemaYamlField> = {}): 'date' | 'number' | 'tags' | 'boolean' | 'structured' | null {
+  if (String(schemaField.format || '').toLowerCase() === 'date') return 'date';
+  switch (schemaBaseType(schemaType)) {
     case 'integer':
     case 'number':  return 'number';
     case 'date':    return 'date';
     case 'boolean': return 'boolean';
     case 'object': return 'structured';
-    case 'array': return schemaField.items?.type === 'string' ? 'tags' : 'structured';
+    case 'array': return schemaBaseType(schemaField.items?.type) === 'string' ? 'tags' : 'structured';
     default:        return null;   // string → text (default)
   }
 }

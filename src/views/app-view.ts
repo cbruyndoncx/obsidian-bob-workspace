@@ -7,7 +7,7 @@ import { CANVAS_GENERATORS, buildAgentAuditCanvas, buildEntityContextCanvas, bui
 import { builtinDashboardDefaults, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
 import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
-import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, formatStructuredValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
+import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, formatStatValue, formatStructuredValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
 import { BobReminderEditModal } from '../modals/capture';
 import { BobPromptModal, confirmModal } from '../modals/common';
 import { BobEntityCreateModal } from '../modals/entity-create';
@@ -2227,7 +2227,10 @@ export class BobAppView extends obsidian.ItemView {
             : subEnts.length;
           sub = `${subCount} ${sub.suffix}`;
         }
-        return { label: s.label, value, sub, accent: s.accent, mode: s.mode };
+        const valueKey = field || (hasEntityModel ? dealValueField(def) : '');
+        const fieldType = def?.fields?.find((f: EntityField) => f.key === valueKey)?.type;
+        const display = formatStatValue(value, { metric, format: s.format, fieldType });
+        return { label: s.label, value: display, sub, accent: s.accent, mode: s.mode };
       }));
       this._dashboardStats(root, statItems);
     }
@@ -2420,7 +2423,10 @@ export class BobAppView extends obsidian.ItemView {
         } else {
           value = entities.length;
         }
-        lines.push(`- ${stat.label}: ${value}${stat.sub ? ` (${typeof stat.sub === 'string' ? stat.sub : stat.sub.suffix || ''})` : ''}`);
+        const statValueKey = valueField || field;
+        const statFieldType = def?.fields?.find((f: EntityField) => f.key === statValueKey)?.type;
+        const statDisplay = formatStatValue(value, { metric, format: stat.format, fieldType: statFieldType });
+        lines.push(`- ${stat.label}: ${statDisplay}${stat.sub ? ` (${typeof stat.sub === 'string' ? stat.sub : stat.sub.suffix || ''})` : ''}`);
       }
     }
 
@@ -5752,7 +5758,11 @@ export class BobAppView extends obsidian.ItemView {
     this._renderPageHeader(root, title, `${filtered.length} ${filtered.length === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()} in ${entityFolder(entityKey)}${unsupportedText}`, (right, ctx) => {
       if (opts.renderHeaderControls) opts.renderHeaderControls(right, entityKey);
       this._renderEntityViewSelect(right, entityKey);
-      if (def.externalBaseView) {
+      // A TaskNotes task list renders natively below; "Open Base" still reaches the
+      // plugin's own view (in Obsidian Bases) for users who have TaskNotes installed.
+      const nativeListOfOtherType = !!def.baseView
+        && String((def.baseView as BaseViewRef).type || 'table').toLowerCase() !== 'table';
+      if (def.externalBaseView || nativeListOfOtherType) {
         const openBaseBtn = right.createEl('button', { cls: 'bob-btn', text: 'Open Base' });
         openBaseBtn.addEventListener('click', () => this._openEntityBase(entityKey));
       }

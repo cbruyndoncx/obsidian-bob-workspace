@@ -1,5 +1,6 @@
 import { ENTITIES } from './entities';
 import { listEntityFiles, resolveEntityFieldDefault } from './entity-files';
+import { schemaBaseType } from './field-values';
 import { cloneConfig } from './nav';
 import { SCHEMA_FOLDER_DEFAULT, SCHEMA_TO_ENTITY_KEY, pluralizeEntityLabel, schemaFieldLabel } from './schemas';
 import { entityFolder } from './settings';
@@ -14,7 +15,8 @@ import type { JsonValue, PartialSettings, WorkspaceConfig } from './types';
 export interface SourceSchemaField {
   name: string;
   primary?: boolean;
-  type?: string;
+  /** A JSON Schema type: one name, or a list such as `[number, 'null']` for a nullable field. */
+  type?: string | string[];
   format?: string;
   label?: string;
   description?: string;
@@ -263,8 +265,12 @@ export function validateSourceSchemaDefinition(schema: SourceSchema): SourceSche
     // `object` is legal in the canonical vault datamodel (kpi.thresholds,
     // model-card.certification_evidence, …) — rejecting it made regeneration
     // fail against a healthy vault. Metadata Menu edits it as raw Input.
-    if (!['string', 'number', 'integer', 'boolean', 'array', 'object'].includes(field.type)) {
-      throw new Error(`Field "${name}" has unsupported type "${field.type}"`);
+    // A type is one name or a JSON Schema list; a list may add 'null' to mark the
+    // field nullable (ai-session-log.estimated_cost_usd is `[number, 'null']`).
+    const typeNames = Array.isArray(field.type) ? field.type : [field.type];
+    const baseTypes = typeNames.filter((t) => t !== 'null');
+    if (!baseTypes.length || !baseTypes.every((t) => ['string', 'number', 'integer', 'boolean', 'array', 'object'].includes(t))) {
+      throw new Error(`Field "${name}" has unsupported type "${typeNames.join(', ')}"`);
     }
     if (field.enum != null && !Array.isArray(field.enum)) {
       throw new Error(`Field "${name}" enum must be a list`);
@@ -272,14 +278,15 @@ export function validateSourceSchemaDefinition(schema: SourceSchema): SourceSche
     if (field.default != null && Array.isArray(field.enum) && !field.enum.includes(field.default)) {
       throw new Error(`Field "${name}" default must be one of its enum values`);
     }
-    if (field.default != null && field.type === 'array' && !Array.isArray(field.default)) {
+    const baseType = baseTypes[0];
+    if (field.default != null && baseType === 'array' && !Array.isArray(field.default)) {
       throw new Error(`Field "${name}" default must be a list`);
     }
-    if (field.default != null && (field.type === 'number' || field.type === 'integer') &&
+    if (field.default != null && (baseType === 'number' || baseType === 'integer') &&
         typeof field.default !== 'number') {
       throw new Error(`Field "${name}" default must be a number`);
     }
-    if (field.default != null && field.type === 'boolean' && typeof field.default !== 'boolean') {
+    if (field.default != null && baseType === 'boolean' && typeof field.default !== 'boolean') {
       throw new Error(`Field "${name}" default must be true or false`);
     }
   });
@@ -329,12 +336,19 @@ export function validateSourceSchemaDefinition(schema: SourceSchema): SourceSche
 
 export function editableSchemaFieldType(field: SourceSchemaField): string {
   if (Array.isArray(field.enum)) return 'enum';
-  if (field.type === 'string' && field.format === 'date') return 'date';
-  if (field.type === 'string' && field.format === 'date-time') return 'datetime';
-  return field.type || 'string';
+  const type = schemaBaseType(field.type);
+  if (type === 'string' && field.format === 'date') return 'date';
+  if (type === 'string' && field.format === 'date-time') return 'datetime';
+  return type || 'string';
+}
+
+function schemaTypeIsNullable(type: SourceSchemaField['type']): boolean {
+  return Array.isArray(type) && type.includes('null');
 }
 
 export function applyEditableSchemaFieldType(field: SourceSchemaField, value: string): void {
+  // Changing the base type keeps a nullable field nullable.
+  const nullable = schemaTypeIsNullable(field.type);
   delete field.format;
   if (value !== 'enum') delete field.enum;
   if (value === 'enum') {
@@ -346,6 +360,7 @@ export function applyEditableSchemaFieldType(field: SourceSchemaField, value: st
   } else {
     field.type = value;
   }
+  if (nullable) field.type = [field.type, 'null'];
 }
 
 export function editableSchemaFieldDefault(field: SourceSchemaField): string {
@@ -359,16 +374,17 @@ export function applyEditableSchemaFieldDefault(field: SourceSchemaField, value:
     delete field.default;
     return;
   }
-  if (field.type === 'array') {
+  const type = schemaBaseType(field.type);
+  if (type === 'array') {
     field.default = trimmed.split(',').map((item) => item.trim()).filter(Boolean);
     return;
   }
-  if (field.type === 'number' || field.type === 'integer') {
+  if (type === 'number' || type === 'integer') {
     const number = Number(trimmed);
     field.default = Number.isFinite(number) ? number : trimmed;
     return;
   }
-  if (field.type === 'boolean') {
+  if (type === 'boolean') {
     field.default = trimmed.toLowerCase() === 'true' ? true
       : trimmed.toLowerCase() === 'false' ? false
       : trimmed;
@@ -402,9 +418,10 @@ export function stableSchemaId(value: unknown): string {
 
 export function metadataMenuFieldType(field: SourceSchemaField): string {
   if (Array.isArray(field.enum)) return 'Select';
-  if (field.type === 'array') return 'Multi';
-  if (field.type === 'boolean') return 'Boolean';
-  if (field.type === 'number' || field.type === 'integer') return 'Number';
+  const type = schemaBaseType(field.type);
+  if (type === 'array') return 'Multi';
+  if (type === 'boolean') return 'Boolean';
+  if (type === 'number' || type === 'integer') return 'Number';
   if (field.format === 'date') return 'Date';
   return 'Input';
 }
@@ -424,7 +441,7 @@ export function sourceSchemaToJsonSchema(schema: SourceSchema) {
     // blockedBy, authors and line_items all hold objects, so a regeneration
     // turned 33 healthy notes invalid at once. An array with no declared item
     // schema accepts any item shape — same as regenerate.py.
-    if (field.type === 'array' && field.items) property.items = field.items;
+    if (schemaBaseType(field.type) === 'array' && field.items) property.items = field.items;
     properties[field.name] = property;
     if (field.required) required.push(field.name);
   });
@@ -647,8 +664,9 @@ export function schemaFieldDocType(field: SourceSchemaField): string {
   if (Array.isArray(field.enum)) return 'enum';
   if (field.format === 'date' || field.bob_type === 'date') return 'date';
   if (field.bob_type === 'currency') return 'currency';
-  if (field.bob_type === 'tags' || field.type === 'array') return 'array';
-  return field.type || 'string';
+  const type = schemaBaseType(field.type);
+  if (field.bob_type === 'tags' || type === 'array') return 'array';
+  return `${type || 'string'}${schemaTypeIsNullable(field.type) ? ' (nullable)' : ''}`;
 }
 
 export function generateEntityTypesTable(schemas: LoadedSchemaSource[]): string {

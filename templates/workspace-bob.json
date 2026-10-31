@@ -3511,7 +3511,8 @@
       "tax": true,
       "planner": true,
       "ai": true
-    }
+    },
+    "taskMode": "hybrid"
   },
   "bases": {
     "task": {

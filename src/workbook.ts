@@ -1,4 +1,4 @@
-import { isReadOnlyField, isStructuredValue, scalarFieldValue } from './field-values';
+import { isReadOnlyField, isStructuredValue, scalarFieldValue, schemaBaseType } from './field-values';
 import { loadBundledXLSX } from './bundled/xlsx';
 import { ENTITIES, primaryField } from './entities';
 import { entityValue, listEntities, listEntityFiles } from './entity-files';
@@ -83,7 +83,7 @@ function matchesImportedType(value: JsonValue, type: JsonValue): boolean {
 }
 
 export function validateImportedShape(value: JsonValue, field: EntityField, current?: unknown): void {
-  const type = field.schemaType;
+  const type = schemaBaseType(field.schemaType);
   const object = value != null && typeof value === 'object' && !Array.isArray(value);
   if (type === 'object' && !object) throw new Error(`${field.key} requires an object`);
   if (type === 'array' && !Array.isArray(value)) throw new Error(`${field.key} requires an array`);
@@ -246,10 +246,11 @@ export function normalizeImportValue(value: unknown, field: EntityField): JsonVa
     const decoded: JsonValue = JSON.parse(value.slice(WORKBOOK_VALUE_PREFIX.length));
     validateImportedShape(decoded, field);
     if (decoded != null && typeof decoded === 'object') {
-      if (field.schemaType && !['object', 'array'].includes(field.schemaType)) throw new Error(`${field.key} is a scalar field`);
+      const schemaType = schemaBaseType(field.schemaType);
+      if (schemaType && !['object', 'array'].includes(schemaType)) throw new Error(`${field.key} is a scalar field`);
       return decoded;
     }
-    if (typeof decoded === 'string' && !isReadOnlyField(field) && (!field.schemaType || field.schemaType === 'string')) return decoded;
+    if (typeof decoded === 'string' && !isReadOnlyField(field) && ['', 'string'].includes(schemaBaseType(field.schemaType))) return decoded;
     return decoded == null ? null : scalarFieldValue(String(decoded), field);
   }
   if (typeof value === 'object' && !(value instanceof Date)) {

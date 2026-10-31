@@ -495,6 +495,32 @@ export function fmtValue(val: unknown, type?: string): string {
   return String(val);
 }
 
+/* Display text for a dashboard stat card (the top-row KPI tiles).
+   Stats used to render `String(value)`, so a weighted forecast showed the raw
+   float sum ("502450") while every other money figure in the workspace was
+   currency-formatted. Precedence: an explicit `format` on the stat
+   ('currency' | 'percent' | 'number'), then the metric (weightedForecast is
+   money, winRate/captureRate/ratio are percentages), then the type of the
+   field being summed (a `currency` field formats as money). Counts stay bare
+   integers with digit grouping; non-numbers pass through unchanged. */
+export function formatStatValue(value: unknown, opts: { metric?: string; format?: string; fieldType?: string } = {}): string {
+  if (value == null || value === '') return '—';
+  const n = typeof value === 'number' ? value : (typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN);
+  if (!Number.isFinite(n)) return String(value);
+  const format = String(opts.format || '').trim().toLowerCase();
+  const metric = String(opts.metric || '').trim();
+  const fieldType = String(opts.fieldType || '').trim().toLowerCase();
+  const asCurrency = format === 'currency'
+    || (!format && (metric === 'weightedForecast'
+      || (['sum', 'avg', 'min', 'max'].includes(metric) && fieldType === 'currency')));
+  if (asCurrency) return fmtValue(n, 'currency');
+  if (format === 'percent' || (!format && ['winRate', 'captureRate', 'ratio'].includes(metric))) {
+    return `${Math.round(n * 10) / 10}%`;
+  }
+  const rounded = Math.round(n * 10) / 10;
+  return rounded.toLocaleString(undefined, { maximumFractionDigits: 1 });
+}
+
 export function resolveEntityFieldDefault(field: BobEntityField): JsonValue | undefined {
   if (!Object.prototype.hasOwnProperty.call(field || {}, 'defaultValue')) return undefined;
   if (field.defaultValue === '{{today}}') return ymd();

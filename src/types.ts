@@ -27,8 +27,10 @@ export interface EntityField {
   label?: string;
   /** UI type; defaults to 'text'. Schema-derived fields may carry other strings. */
   type?: EntityFieldType | (string & {});
-  /** Canonical shape retained independently of presentation overrides. */
-  schemaType?: string;
+  /** Canonical shape retained independently of presentation overrides. Kept as
+   *  written in the schema, so a nullable `[number, 'null']` round-trips intact;
+   *  compare it through `schemaBaseType`. */
+  schemaType?: string | string[];
   items?: Record<string, JsonValue>;
   options?: string[];
   primary?: boolean;

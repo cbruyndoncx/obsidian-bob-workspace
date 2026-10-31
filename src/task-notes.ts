@@ -115,6 +115,38 @@ export function listTodayTaskNotes(app: App, settings: PartialSettings): { file:
     });
 }
 
+/**
+ * TaskNotes for the Home "Today" card: open tasks that are in progress, or due or
+ * scheduled today. The card used to read only checkbox lines in today's daily note,
+ * so a vault that tracks work as TaskNotes showed "No tasks yet" while tasks were
+ * in progress. Due/scheduled today sort first (by priority), then in-progress.
+ */
+export function selectHomeTodayTaskNotes(entries: { file: TFile; fm: Frontmatter }[], todayIso: string): { file: TFile; fm: Frontmatter; reason: string }[] {
+  const priorityRank: Record<string, number> = { urgent: 0, critical: 0, high: 1, normal: 2, medium: 2, low: 3, none: 4 };
+  const picked = entries
+    .map(({ file, fm }) => {
+      const status = taskNoteStatus(fm);
+      if (status === 'done' || taskNoteIgnored(status)) return null;
+      const due = fm.due ? String(fm.due).slice(0, 10) : '';
+      const sched = fm.scheduled ? String(fm.scheduled).slice(0, 10) : '';
+      const reason = due === todayIso ? 'due today' : sched === todayIso ? 'scheduled today' : status === 'in-progress' ? 'in progress' : '';
+      return reason ? { file, fm, reason } : null;
+    })
+    .filter(Boolean) as { file: TFile; fm: Frontmatter; reason: string }[];
+  const group = (r: string) => (r === 'in progress' ? 1 : 0);
+  return picked.sort((a, b) => group(a.reason) - group(b.reason)
+    || (priorityRank[String(a.fm.priority || 'none').toLowerCase()] ?? 4) - (priorityRank[String(b.fm.priority || 'none').toLowerCase()] ?? 4)
+    || String(a.fm.title || a.file.basename).localeCompare(String(b.fm.title || b.file.basename)));
+}
+
+export function listHomeTodayTaskNotes(app: App, settings: PartialSettings): { file: TFile; fm: Frontmatter; reason: string }[] {
+  const folder = (settings.taskNotesFolder || '00-CORE/TaskNotes/Tasks').replace(/\/$/, '');
+  const entries = scannableMarkdownFiles(app)
+    .filter((f) => f.path.startsWith(folder + '/'))
+    .map((f) => ({ file: f, fm: ((app.metadataCache.getFileCache(f) || {} as CachedMetadata).frontmatter || {}) as Frontmatter }));
+  return selectHomeTodayTaskNotes(entries, ymd());
+}
+
 export function taskNoteStatus(fm: Frontmatter): string {
   return String(fm?.status || 'open').toLowerCase().replace(/[\s_]+/g, '-');
 }

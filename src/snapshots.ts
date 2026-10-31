@@ -4,7 +4,7 @@ import { entityValue, fmtValue, listEntities, listEntityFiles } from './entity-f
 import { parseSections } from './notes';
 import { readProjectMeta } from './project-notes';
 import { projectNameFromPath, reminderTimeStr } from './reminders';
-import { listAllTaskNotes } from './task-notes';
+import { listAllTaskNotes, listHomeTodayTaskNotes } from './task-notes';
 import { addDays, dailyNotePath, startOfDay, startOfWeek, weekDates, ymd } from './utils';
 import { WORKSPACE_CONFIG, workspaceConfiguredEntityKeys } from './workspace-config';
 import * as obsidian from 'obsidian';
@@ -454,13 +454,26 @@ export async function buildHomeSnapshot(app: App, settings: PartialSettings = {}
   // note doesn't exist yet, the task list is simply empty.
   const dailyFile: TAbstractFile | null = app.vault.getAbstractFileByPath(dailyNotePath(settings));
   const todayTasks = dailyFile instanceof obsidian.TFile ? parseSections(await app.vault.cachedRead(dailyFile), settings) : { tasks: [] as string[] };
-  const todayRows = (todayTasks.tasks || [])
-    .slice(0, 8)
-    .map((line) => ({
+  // The Today card follows the task mode, like the Today surface: checkbox lines
+  // from today's daily note (checkbox | hybrid) and TaskNotes in progress or due /
+  // scheduled today (tasknotes | hybrid). It used to read the daily note only, so
+  // a TaskNotes vault showed "No tasks yet" while tasks were in progress.
+  const homeTaskMode = settings.taskMode || 'checkbox';
+  const checkboxRows = (homeTaskMode === 'checkbox' || homeTaskMode === 'hybrid')
+    ? (todayTasks.tasks || []).map((line) => ({
       title: String(line).replace(/^\s*-\s\[(x|X| )\]\s/, ''),
       meta: / \[(x|X)\] /.test(line) ? 'done' : 'open',
       action: { surface: 'planner.today' },
-    }));
+    }))
+    : [];
+  const taskNoteRows = (homeTaskMode === 'tasknotes' || homeTaskMode === 'hybrid')
+    ? listHomeTodayTaskNotes(app, settings).map(({ file, fm, reason }) => ({
+      title: String(fm.title || file.basename),
+      meta: [reason, fm.priority && fm.priority !== 'none' ? String(fm.priority) : ''].filter(Boolean).join(' · '),
+      file,
+    }))
+    : [];
+  const todayRows = [...taskNoteRows, ...checkboxRows].slice(0, 8);
   const week = await buildProductivitySnapshot(app, settings).catch((): Awaited<ReturnType<typeof buildProductivitySnapshot>> | null => null);
   const weekRows = week ? [{
     title: 'This week',
