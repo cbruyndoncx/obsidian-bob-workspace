@@ -22,6 +22,8 @@ has not previously been dismissed.
 The picker offers these. Pick by what you want to run — you can switch or
 customize later.
 
+![The starter template picker](screenshots/19-template-picker.png)
+
 | Template | Gives you | Pick if… |
 |----------|-----------|----------|
 | **Minimal** | Just Home + Settings; build your own nav | You want a blank slate and will design navigation yourself |

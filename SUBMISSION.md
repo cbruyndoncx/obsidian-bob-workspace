@@ -49,6 +49,10 @@ the ThirdBrain BOB theme, the workspace `locale` set to `en-US`, and the window 
 13. `13-canvases.png` — Canvases
 14. `14-playbooks.png` — AI Playbooks
 15. `15-tasknotes.png` — TaskNotes (Bases-backed view)
+16. `16-quick-capture.png` — Quick capture window
+17. `17-new-deal.png` — New Deal window
+18. `18-csv-import.png` — CSV import window
+19. `19-template-picker.png` — Starter template picker
 
 **To regenerate** (e.g. after a UI change): build the demo vault and drive the
 capture from WSL with the `bob-workspace-screenshots` skill —

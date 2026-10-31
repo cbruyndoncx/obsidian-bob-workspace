@@ -17,8 +17,9 @@ All notable changes to BOB Workspace are documented here. Format follows
 
 ### Documentation
 
-- README screenshots replaced: 15 current images from the demo vault, each beside its feature
-  section (was a 7-image gallery from 2026-07 with a stray backslash on Home).
+- README screenshots replaced: 19 current images from the demo vault, each beside its feature
+  section, including the Quick capture, New Deal, CSV import and template-picker windows (was a
+  7-image gallery from 2026-07 with a stray backslash on Home). The quickstart shows the picker.
 
 ### Added
 

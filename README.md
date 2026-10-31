@@ -84,6 +84,8 @@ Click a project, get a **real PM surface** — not a markdown editor. Hero with 
 ### Reminders
 Quick-capture with `Cmd+Shift+I` → modal with text, optional datetime, optional repeat (daily/weekly). The plugin ticks every 30 seconds and fires due reminders as in-app notices (and optionally desktop notifications). Snooze 15m / 1h / tomorrow on any reminder. The nav badge shows live overdue count.
 
+![Quick capture — one line, an optional reminder](docs/screenshots/16-quick-capture.png)
+
 ### Reports
 Pipeline · Sales · Partners · Activity · Productivity · KPI Scoreboard. These surfaces are config-driven dashboards with widget catalogs rather than separate hardcoded report screens. Productivity follows the configured task mode: daily note checkboxes, TaskNotes, or hybrid. TaskNotes history includes the active TaskNotes folder plus the configured archive folder.
 
@@ -105,8 +107,12 @@ The shipped **BOB Workspace** template also includes **Marketing** (content), **
 ### New entity capture
 A clean two-column modal for every entity type — type-aware widgets (date pickers, dropdowns for stage/status/priority/tier/type), smart defaults, smart placeholders, primary field marked required. Enter to submit, Esc to cancel.
 
+![New Deal — type-aware fields from the deal schema](docs/screenshots/17-new-deal.png)
+
 ### CSV import
 Bring an entire client list, pipeline, or partner roster in from a spreadsheet. Run **BOB Workspace: Import from CSV** (or hit "Import CSV" on any list view) → pick a `.csv` from your vault or paste raw text → BOB Workspace auto-maps columns to entity fields by name (with synonyms — `Email`, `email`, `Email Address` all map to `email`). Override any mapping, see a sample of the first two rows, then import. Each row becomes one markdown file with frontmatter populated.
+
+![CSV import — expected fields for the chosen entity, with pasted CSV data](docs/screenshots/18-csv-import.png)
 
 ### XLSX workbook export / import
 Export your entities to a multi-sheet `.xlsx` workbook (one sheet per entity type, grouped by area) with **BOB Workspace: Export to XLSX**, and import edits back in with **Import XLSX**. Arrays and objects use explicitly marked JSON cells to preserve their types on round-trip. Blank cells leave existing values unchanged; nested edits in the app use **Open as note**. The SheetJS library is bundled into the plugin, so export/import works offline with no extra files to install.
@@ -147,6 +153,8 @@ The shipped templates are:
 - **Cadence Classic** — legacy layout using Cadence/ folder conventions for users migrating from the upstream Cadence plugin.
 
 Use **BOB Workspace** for the full business model, **CRM Only** for a lighter sales-focused start, **EMAI Starter** for a PARA personal-productivity workspace, or **Minimal** to build everything by hand.
+
+![The starter template picker shown on first run](docs/screenshots/19-template-picker.png)
 
 **Templates bring their own entities.** A template can embed its entity definitions (schema YAML) and `.base` files. Applying it writes *exactly* those into the configured schema/Bases folders, so a template like EMAI Starter provisions only its own entities on a fresh vault — it never falls back to the full built-in business model. BOB Workspace also ships its full schema and Base assets; it does not rely on the lean built-in entity defaults for a fresh installation.
 
