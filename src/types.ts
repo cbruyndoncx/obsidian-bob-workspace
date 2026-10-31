@@ -77,6 +77,9 @@ export interface EntityDef {
   stageConfidence?: Record<string, number>;
   statusField?: string;
   terminalStatuses?: string[];
+  /** Statuses that stay open for this entity although the shared terminal list closes them
+   *  (a partner registration that is `submitted` is pending, a filed VAT return is done). */
+  openStatuses?: string[];
   dateField?: string;
   titleField?: string;
   detailMetaFields?: string[];

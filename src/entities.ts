@@ -114,6 +114,9 @@ export const ENTITIES: Record<string, BobEntityDef> = {
       { key: 'deal_ref', label: 'Deal' },
     ],
     columns: ['title', 'partner_ref', 'status', 'value', 'submitted_date', 'expires_date'],
+    // `submitted` closes a filing but is the pending state of a registration; without
+    // this the Partners overview counted every submitted registration as closed.
+    openStatuses: ['submitted'],
   },
   commission: {
     folder: '20-COMPANY/35-PARTNERS',
@@ -313,7 +316,7 @@ export const ENTITIES: Record<string, BobEntityDef> = {
   },
   decision: {
     folder: '20-COMPANY/02-DECISIONS',
-    typeFilter: 'decision-log',
+    typeFilter: 'decision',
     label: 'Decision', plural: 'Decisions',
     fields: [
       { key: 'status', label: 'Status', primary: true, type: 'enum', options: ['proposed', 'decided', 'superseded'] },
@@ -824,7 +827,7 @@ export function entityStatusField(def: EntityDef): string {
 const _terminalStatusesMemo = new WeakMap<object, { inputsKey: string; statuses: Set<string> }>();
 function terminalStatusInputsKey(def: EntityDef): string {
   const join = (v: unknown) => (Array.isArray(v) ? v.join('|') : '');
-  return `${join(def?.terminalStatuses)}~${join(def?.wonStages)}~${join(def?.lostStages)}`;
+  return `${join(def?.terminalStatuses)}~${join(def?.wonStages)}~${join(def?.lostStages)}~${join(def?.openStatuses)}`;
 }
 export function entityTerminalStatuses(def: EntityDef): Set<string> {
   const memoizable = !!def && typeof def === 'object';
@@ -850,6 +853,9 @@ function buildEntityTerminalStatuses(def: EntityDef): Set<string> {
   (Array.isArray(def?.lostStages) ? def.lostStages : []).forEach((status) => {
     const normalized = normalizeStatusValue(status);
     if (normalized) statuses.add(normalized);
+  });
+  (Array.isArray(def?.openStatuses) ? def.openStatuses : []).forEach((status) => {
+    statuses.delete(normalizeStatusValue(status));
   });
   return statuses;
 }

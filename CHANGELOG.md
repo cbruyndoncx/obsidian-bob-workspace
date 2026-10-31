@@ -34,6 +34,11 @@ All notable changes to BOB Workspace are documented here. Format follows
 - The Partners overview's Pending Registrations and Open Commissions cards titled rows by fields
   the schemas do not define (`deal_name`, `commission_id`), so rows showed file names. They now
   use the schema fields `title` and `reference` first.
+- Submitted partner registrations counted as closed (the shared terminal-status list closes
+  `submitted` for filings), so Pending Registrations was always empty. Entities can now list
+  `openStatuses`; registrations keep `submitted` open.
+- Decisions never appeared: the built-in definition filtered on `type: decision-log`, while the
+  canonical schema and vault decision notes use `type: decision`.
 
 ## [1.4.1] — 2026-10-31
 

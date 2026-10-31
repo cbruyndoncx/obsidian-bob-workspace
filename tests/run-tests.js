@@ -29,6 +29,7 @@ require('./schema-type-key.test');
 require('./schema-nullable-type.test');
 require('./display-titles.test');
 require('./display-locale.test');
+require('./entity-open-status.test');
 require('./demo-vault-fixes.test');
 require('./build-freshness.test');
 // Print success only once the event loop drains — i.e. after async IIFE tests

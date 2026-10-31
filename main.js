@@ -24854,7 +24854,10 @@ var ENTITIES = {
       { key: "expires_date", label: "Expires", type: "date" },
       { key: "deal_ref", label: "Deal" }
     ],
-    columns: ["title", "partner_ref", "status", "value", "submitted_date", "expires_date"]
+    columns: ["title", "partner_ref", "status", "value", "submitted_date", "expires_date"],
+    // `submitted` closes a filing but is the pending state of a registration; without
+    // this the Partners overview counted every submitted registration as closed.
+    openStatuses: ["submitted"]
   },
   commission: {
     folder: "20-COMPANY/35-PARTNERS",
@@ -25064,7 +25067,7 @@ var ENTITIES = {
   },
   decision: {
     folder: "20-COMPANY/02-DECISIONS",
-    typeFilter: "decision-log",
+    typeFilter: "decision",
     label: "Decision",
     plural: "Decisions",
     fields: [
@@ -25603,7 +25606,7 @@ function entityStatusField(def) {
 var _terminalStatusesMemo = /* @__PURE__ */ new WeakMap();
 function terminalStatusInputsKey(def) {
   const join = (v) => Array.isArray(v) ? v.join("|") : "";
-  return `${join(def?.terminalStatuses)}~${join(def?.wonStages)}~${join(def?.lostStages)}`;
+  return `${join(def?.terminalStatuses)}~${join(def?.wonStages)}~${join(def?.lostStages)}~${join(def?.openStatuses)}`;
 }
 function entityTerminalStatuses(def) {
   const memoizable = !!def && typeof def === "object";
@@ -25629,6 +25632,9 @@ function buildEntityTerminalStatuses(def) {
   (Array.isArray(def?.lostStages) ? def.lostStages : []).forEach((status) => {
     const normalized = normalizeStatusValue(status);
     if (normalized) statuses.add(normalized);
+  });
+  (Array.isArray(def?.openStatuses) ? def.openStatuses : []).forEach((status) => {
+    statuses.delete(normalizeStatusValue(status));
   });
   return statuses;
 }
