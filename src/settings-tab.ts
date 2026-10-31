@@ -12,7 +12,7 @@ import { reloadEntityConfiguration, workspaceConfigTemplate } from './runtime-co
 import { applyEditableSchemaFieldDefault, applyEditableSchemaFieldType, bootstrapCanonicalSchemaSources, bootstrapCanonicalSchemaSourcesIfMissing, editableSchemaFieldDefault, editableSchemaFieldType, loadCanonicalSchemaSources, regenerateSchemaOutputs, validateSourceSchemaDefinition, type SourceSchema, type SourceSchemaField } from './schema-designer';
 import { SCHEMA_FOLDER_DEFAULT, SCHEMA_TO_ENTITY_KEY, pluralizeEntityLabel } from './schemas';
 import { DEFAULT_SETTINGS, syncEntityFolders } from './settings';
-import { CURRENCY_OPTIONS, ensureFolderSync } from './utils';
+import { CURRENCY_OPTIONS, ensureFolderSync, setDisplayLocale } from './utils';
 import { BobAppView } from './views/app-view';
 import { workbookExportFolder } from './workbook';
 import { PLUGIN_DIR, WORKSPACE_BACKUP_PATH, WORKSPACE_CONFIG, WORKSPACE_CONFIG_PATH, configuredBaseDefinition, effectiveSchemaSettings, saveWorkspaceConfig, validateWorkspaceConfig, workspaceConfiguredEntityEntries } from './workspace-config';
@@ -2044,6 +2044,22 @@ export class BobSettingTab extends obsidian.PluginSettingTab {
           this.plugin.settings.currency = v;
           await this.plugin.saveSettings();
           // Re-render any open BOB Workspace tabs so values reformat immediately
+          this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP).forEach((leaf) => {
+            if (leaf.view && typeof (leaf.view as RenderableViewLike).render === 'function') (leaf.view as RenderableViewLike).render();
+          });
+        });
+      });
+
+    new obsidian.Setting(appPanel)
+      .setName('Date and number format')
+      .setDesc('Language tag for dates and numbers, such as en-GB, en-US or nl-BE. Leave empty to follow the system. An unrecognised tag is ignored.')
+      .addText((t) => {
+        t.setPlaceholder('System');
+        t.setValue(this.plugin.settings.locale || '');
+        t.onChange(async (v) => {
+          this.plugin.settings.locale = v.trim();
+          setDisplayLocale(this.plugin.settings.locale);
+          await this.plugin.saveSettings();
           this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP).forEach((leaf) => {
             if (leaf.view && typeof (leaf.view as RenderableViewLike).render === 'function') (leaf.view as RenderableViewLike).render();
           });

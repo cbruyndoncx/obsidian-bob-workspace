@@ -1,5 +1,5 @@
 import { humanizeProjectName } from './settings';
-import { startOfDay } from './utils';
+import { displayLocale, startOfDay } from './utils';
 import type { App, TFile } from 'obsidian';
 import type { PartialSettings, Reminder } from './types';
 export function reminderId(): string { return 'rem_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); }
@@ -55,13 +55,13 @@ export function reminderTimeStr(when: string | Date | null | undefined): string 
   if (isNaN(d.getTime())) return '';
   const today = startOfDay(new Date()).getTime();
   const dDay = startOfDay(d).getTime();
-  const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const time = d.toLocaleTimeString(displayLocale(), { hour: '2-digit', minute: '2-digit' });
   if (dDay === today) return time;
   if (dDay === today + 86400000) return `Tomorrow ${time}`;
   if (dDay - today < 7 * 86400000 && dDay > today) {
-    return d.toLocaleDateString(undefined, { weekday: 'short' }) + ' ' + time;
+    return d.toLocaleDateString(displayLocale(), { weekday: 'short' }) + ' ' + time;
   }
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + time;
+  return d.toLocaleDateString(displayLocale(), { month: 'short', day: 'numeric' }) + ' ' + time;
 }
 
 /* ─── Generic required-field validation helper ───────────────────────────

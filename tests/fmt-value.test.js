@@ -11,7 +11,9 @@ const { fmtValue, formatStructuredValue, isStructuredValue } = loadMainFunctions
   'isStructuredValue',
   'dateFormatter',
   'currencyFormatter',
-]);
+  'wikilinkDisplayText',
+  'displayLocale',
+], { DISPLAY_LOCALE: undefined });
 
 // --- the bug ---------------------------------------------------------------
 const completionCondition = { entity: 'invoice', field: 'payment_status', equals: 'paid' };

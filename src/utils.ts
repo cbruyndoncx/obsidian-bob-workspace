@@ -25,6 +25,23 @@ export function dailyNotePath(settings: PartialSettings, date: Date = new Date()
   const name = ymd(date);
   return folder ? `${folder}/${name}.md` : `${name}.md`;
 }
+/* Locale for every date and number BOB formats, from the workspace `locale`
+   setting. Unset means the system locale, which is what Intl uses with no locale
+   argument; in Obsidian that is the operating system's, so a Dutch Windows showed
+   "19 okt" and "US$ 967.000" whatever language the vault is written in. A tag the
+   runtime does not support is ignored, so a typo falls back instead of throwing. */
+let DISPLAY_LOCALE: string | undefined;
+export function setDisplayLocale(locale: unknown): void {
+  const tag = typeof locale === 'string' ? locale.trim() : '';
+  let resolved: string | undefined;
+  if (tag) {
+    try { resolved = Intl.DateTimeFormat.supportedLocalesOf([tag])[0]; } catch (_) { resolved = undefined; }
+  }
+  DISPLAY_LOCALE = resolved;
+}
+export function displayLocale(): string | undefined {
+  return DISPLAY_LOCALE;
+}
 export function greeting(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
@@ -33,9 +50,9 @@ export function greeting(): string {
 }
 export function dateInfo(d: Date = new Date()): { weekday: string; day: number; month: string; year: number } {
   return {
-    weekday: d.toLocaleDateString(undefined, { weekday: 'long' }),
+    weekday: d.toLocaleDateString(displayLocale(), { weekday: 'long' }),
     day: d.getDate(),
-    month: d.toLocaleDateString(undefined, { month: 'long' }),
+    month: d.toLocaleDateString(displayLocale(), { month: 'long' }),
     year: d.getFullYear(),
   };
 }

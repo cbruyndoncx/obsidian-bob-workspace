@@ -13394,9 +13394,9 @@ var workspace_bob_default = {
               entity: "meeting",
               source: "recent",
               titleFields: [
-                "context",
+                "title",
                 "name",
-                "title"
+                "context"
               ],
               metaFields: [
                 "date",
@@ -18803,9 +18803,9 @@ var workspace_cadence_default = {
               entity: "meeting",
               source: "recent",
               titleFields: [
-                "context",
+                "title",
                 "name",
-                "title"
+                "context"
               ],
               metaFields: [
                 "date",
@@ -22233,6 +22233,22 @@ function dailyNotePath(settings, date = /* @__PURE__ */ new Date()) {
   const name = ymd(date);
   return folder ? `${folder}/${name}.md` : `${name}.md`;
 }
+var DISPLAY_LOCALE;
+function setDisplayLocale(locale) {
+  const tag = typeof locale === "string" ? locale.trim() : "";
+  let resolved;
+  if (tag) {
+    try {
+      resolved = Intl.DateTimeFormat.supportedLocalesOf([tag])[0];
+    } catch (_) {
+      resolved = void 0;
+    }
+  }
+  DISPLAY_LOCALE = resolved;
+}
+function displayLocale() {
+  return DISPLAY_LOCALE;
+}
 function greeting() {
   const h = (/* @__PURE__ */ new Date()).getHours();
   if (h < 12) return "Good morning";
@@ -22241,9 +22257,9 @@ function greeting() {
 }
 function dateInfo(d = /* @__PURE__ */ new Date()) {
   return {
-    weekday: d.toLocaleDateString(void 0, { weekday: "long" }),
+    weekday: d.toLocaleDateString(displayLocale(), { weekday: "long" }),
     day: d.getDate(),
-    month: d.toLocaleDateString(void 0, { month: "long" }),
+    month: d.toLocaleDateString(displayLocale(), { month: "long" }),
     year: d.getFullYear()
   };
 }
@@ -22474,6 +22490,8 @@ var DEFAULT_SETTINGS = {
   dashboardState: {},
   // { [surfaceId]: { [controlKey]: value } }
   currency: "USD",
+  locale: "",
+  // BCP 47 tag for dates and numbers, e.g. 'en-GB'; '' = system locale
   bobAppDark: false,
   taskProjectLinks: {},
   // { "dailyPath::taskText": "Cadence/Projects/X.md" }
@@ -23235,6 +23253,7 @@ function validateDashboardCard(card, path) {
 }
 var WORKSPACE_OWNED_SETTING_KEYS = [
   "currency",
+  "locale",
   "modules",
   "disabledSurfaces",
   "teamPersonCategories",
@@ -24440,16 +24459,17 @@ function baseSortCollator() {
 }
 var _dateFormatter = null;
 function dateFormatter() {
-  if (!_dateFormatter) {
-    const locale = typeof navigator !== "undefined" ? navigator.language || void 0 : void 0;
-    _dateFormatter = new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" });
+  const locale = displayLocale() || (typeof navigator !== "undefined" ? navigator.language || void 0 : void 0);
+  if (!_dateFormatter || _dateFormatter.locale !== locale) {
+    _dateFormatter = { locale, fmt: new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" }) };
   }
-  return _dateFormatter;
+  return _dateFormatter.fmt;
 }
 var _currencyFormatter = null;
 function currencyFormatter(currency) {
-  if (!_currencyFormatter || _currencyFormatter.currency !== currency) {
-    _currencyFormatter = { currency, fmt: new Intl.NumberFormat(void 0, { style: "currency", currency, maximumFractionDigits: 0 }) };
+  const locale = displayLocale();
+  if (!_currencyFormatter || _currencyFormatter.currency !== currency || _currencyFormatter.locale !== locale) {
+    _currencyFormatter = { currency, locale, fmt: new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }) };
   }
   return _currencyFormatter.fmt;
 }
@@ -24511,6 +24531,13 @@ function formatStructuredValue(val, depth = 0, maxDepth = 2, maxItems = 6) {
   }
   return String(val);
 }
+function wikilinkDisplayText(value) {
+  const m = /^\s*!?\[\[([^[\]|#^]+)(?:[#^][^[\]|]*)?(?:\|([^[\]]+))?\]\]\s*$/.exec(value);
+  if (!m) return value;
+  const alias = (m[2] || "").trim();
+  if (alias) return alias;
+  return m[1].trim().split("/").pop().replace(/\.md$/i, "");
+}
 function fmtValue(val, type) {
   if (val == null || val === "") return "";
   if (isStructuredValue(val)) return formatStructuredValue(val);
@@ -24533,11 +24560,11 @@ function fmtValue(val, type) {
   }
   if (type === "number") return String(val);
   if (Array.isArray(val)) {
-    return isStructuredValue(val) ? formatStructuredValue(val) : val.join(", ");
+    return isStructuredValue(val) ? formatStructuredValue(val) : val.map((item) => wikilinkDisplayText(String(item))).join(", ");
   }
   if (val instanceof Date) return dateFormatter().format(val);
   if (typeof val === "object") return formatStructuredValue(val);
-  return String(val);
+  return wikilinkDisplayText(String(val));
 }
 function formatStatValue(value, opts = {}) {
   if (value == null || value === "") return "\u2014";
@@ -24552,7 +24579,7 @@ function formatStatValue(value, opts = {}) {
     return `${Math.round(n * 10) / 10}%`;
   }
   const rounded = Math.round(n * 10) / 10;
-  return rounded.toLocaleString(void 0, { maximumFractionDigits: 1 });
+  return rounded.toLocaleString(displayLocale(), { maximumFractionDigits: 1 });
 }
 function resolveEntityFieldDefault(field) {
   if (!Object.prototype.hasOwnProperty.call(field || {}, "defaultValue")) return void 0;
@@ -25739,13 +25766,13 @@ function reminderTimeStr(when) {
   if (isNaN(d.getTime())) return "";
   const today = startOfDay(/* @__PURE__ */ new Date()).getTime();
   const dDay = startOfDay(d).getTime();
-  const time = d.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
+  const time = d.toLocaleTimeString(displayLocale(), { hour: "2-digit", minute: "2-digit" });
   if (dDay === today) return time;
   if (dDay === today + 864e5) return `Tomorrow ${time}`;
   if (dDay - today < 7 * 864e5 && dDay > today) {
-    return d.toLocaleDateString(void 0, { weekday: "short" }) + " " + time;
+    return d.toLocaleDateString(displayLocale(), { weekday: "short" }) + " " + time;
   }
-  return d.toLocaleDateString(void 0, { month: "short", day: "numeric" }) + " " + time;
+  return d.toLocaleDateString(displayLocale(), { month: "short", day: "numeric" }) + " " + time;
 }
 
 // src/modals/common.ts
@@ -28987,7 +29014,7 @@ var BobEntityCreateModal = class extends obsidian15.Modal {
         (fieldType === "boolean" ? ["true", "false"] : f.options || []).forEach((opt) => input.createEl("option", { value: opt, text: opt }));
       } else if (fieldType === "date") {
         input = row.createEl("input", { type: "date", cls: "bob-create-input" });
-        input.lang = navigator.language || "";
+        input.lang = displayLocale() || navigator.language || "";
       } else if (fieldType === "number" || fieldType === "currency") {
         input = row.createEl("input", { type: "number", cls: "bob-create-input" });
         input.placeholder = "0";
@@ -29419,7 +29446,7 @@ async function buildProductivitySnapshot(app, settings = {}) {
       closed: wClosed,
       net: wCreated - wClosed,
       any: anyNote,
-      label: ws.toLocaleDateString(void 0, { month: "short", day: "numeric" })
+      label: ws.toLocaleDateString(displayLocale(), { month: "short", day: "numeric" })
     });
   }
   const wsOn = settings.weekStartsOn;
@@ -29507,7 +29534,7 @@ async function buildPlannerSnapshot(app, settings = {}) {
     const open = tasks.filter((l) => / \[ \] /.test(l)).length;
     const done = tasks.filter((l) => / \[(x|X)\] /.test(l)).length;
     return {
-      title: date.toLocaleDateString(void 0, { weekday: "short", month: "short", day: "numeric" }),
+      title: date.toLocaleDateString(displayLocale(), { weekday: "short", month: "short", day: "numeric" }),
       meta: file instanceof obsidian16.TFile ? `${open} open \xB7 ${done} done${journal ? ` \xB7 journal ${journal.length} chars` : ""}` : "no note",
       value: done,
       values: { done, open, total: open + done, journal: journal.length },
@@ -31230,7 +31257,7 @@ ${filesToDelete.length} ${filesToDelete.length === 1 ? def.label.toLowerCase() :
         sel.focus();
       } else if (fieldType === "date") {
         const inp = td.createEl("input", { type: "date", cls: "bob-cell-input" });
-        inp.lang = navigator.language || "";
+        inp.lang = displayLocale() || navigator.language || "";
         if (currentVal) {
           const d = new Date(String(currentVal).slice(0, 10));
           if (!isNaN(d.getTime())) inp.value = d.toISOString().slice(0, 10);
@@ -33685,7 +33712,7 @@ ${snippet}` : "- No markdown content");
     }
     return sorted.slice(0, Math.max(1, Number(limit) || 6)).map((entity) => {
       const titleField = titleFields.find((field) => entityValue(entity, field, def));
-      const title = (titleField ? entityValue(entity, titleField, def) : "") || entity.basename;
+      const title = wikilinkDisplayText(String((titleField ? entityValue(entity, titleField, def) : "") || "")) || entity.basename;
       const meta = (metaFields || ["status"]).map((field) => fmtValue(entityValue(entity, field, def), def?.fields?.find((f) => f.key === field)?.type)).filter(Boolean).join(" \xB7 ");
       return { title, meta: meta || "No status", file: entity.file };
     });
@@ -33697,7 +33724,7 @@ ${snippet}` : "- No markdown content");
     return entities.map((entity) => ({ entity, date: this._dateValue(entity, entityKey, dateFields) })).filter((item) => item.date && item.date.getTime() <= horizon.getTime()).sort((a, b) => a.date - b.date).slice(0, Math.max(1, Number(limit) || 6)).map(({ entity, date }) => {
       const titleField = titleFields.find((field) => entityValue(entity, field, def));
       return {
-        title: (titleField ? entityValue(entity, titleField, def) : "") || entity.basename,
+        title: wikilinkDisplayText(String((titleField ? entityValue(entity, titleField, def) : "") || "")) || entity.basename,
         meta: `${fmtValue(date, "date")} \xB7 ${entityValue(entity, "status", def) || "open"}`,
         file: entity.file
       };
@@ -35219,7 +35246,7 @@ ${snippet}` : "- No markdown content");
         sel.addEventListener("change", () => writeField(f.key, sel.value));
       } else if (fieldType === "date") {
         const inp = row.createEl("input", { type: "date", cls: "bob-form-input" });
-        inp.lang = navigator.language || "";
+        inp.lang = displayLocale() || navigator.language || "";
         if (current) {
           const d = new Date(current);
           if (!isNaN(d.getTime())) inp.value = d.toISOString().slice(0, 10);
@@ -35547,7 +35574,7 @@ ${snippet}` : "- No markdown content");
           await this._commitMilestones(file, items, flashSaved);
         });
         const dateInp = row.createEl("input", { type: "date", cls: "bob-pd-mile-date" });
-        dateInp.lang = navigator.language || "";
+        dateInp.lang = displayLocale() || navigator.language || "";
         if (m.date instanceof Date && !isNaN(m.date.getTime())) {
           dateInp.value = m.date.toISOString().slice(0, 10);
         }
@@ -35842,7 +35869,7 @@ ${snippet}` : "- No markdown content");
   async renderHome(root) {
     root.addClass("bob-home");
     const today = /* @__PURE__ */ new Date();
-    const dateStr = today.toLocaleDateString(void 0, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    const dateStr = today.toLocaleDateString(displayLocale(), { weekday: "long", month: "long", day: "numeric", year: "numeric" });
     this._renderPageHeader(root, `${greeting()}.`, dateStr);
     await this.renderConfigDashboard("home", root, { skipHeader: true });
   }
@@ -36854,8 +36881,8 @@ Saved to ${file.path}`, 4e3);
     const header = root.createDiv({ cls: "bob-pl-header" });
     const titleWrap = header.createDiv({ cls: "bob-pl-title-wrap" });
     titleWrap.createDiv({ cls: "bob-eyebrow", text: "WEEK OF" });
-    const startStr = days[0].toLocaleDateString(void 0, { month: "long", day: "numeric" });
-    const endStr = days[6].toLocaleDateString(void 0, { month: "long", day: "numeric", year: "numeric" });
+    const startStr = days[0].toLocaleDateString(displayLocale(), { month: "long", day: "numeric" });
+    const endStr = days[6].toLocaleDateString(displayLocale(), { month: "long", day: "numeric", year: "numeric" });
     titleWrap.createDiv({ cls: "bob-pl-title", text: `${startStr} \u2013 ${endStr}` });
     const nav = header.createDiv({ cls: "bob-pl-nav" });
     const mkBtn = (label, fn, cls = "") => {
@@ -36907,7 +36934,7 @@ Saved to ${file.path}`, 4e3);
       const colHead = col.createDiv({ cls: "bob-pl-day-head" });
       colHead.createDiv({
         cls: "bob-pl-weekday",
-        text: d.date.toLocaleDateString(void 0, { weekday: "short" }).toUpperCase()
+        text: d.date.toLocaleDateString(displayLocale(), { weekday: "short" }).toUpperCase()
       });
       colHead.createDiv({ cls: "bob-pl-daynum", text: String(d.date.getDate()) });
       const open = d.tasks.filter((l) => / \[ \] /.test(l)).length;
@@ -38609,6 +38636,18 @@ var BobSettingTab = class extends obsidian19.PluginSettingTab {
         });
       });
     });
+    new obsidian19.Setting(appPanel).setName("Date and number format").setDesc("Language tag for dates and numbers, such as en-GB, en-US or nl-BE. Leave empty to follow the system. An unrecognised tag is ignored.").addText((t) => {
+      t.setPlaceholder("System");
+      t.setValue(this.plugin.settings.locale || "");
+      t.onChange(async (v) => {
+        this.plugin.settings.locale = v.trim();
+        setDisplayLocale(this.plugin.settings.locale);
+        await this.plugin.saveSettings();
+        this.app.workspace.getLeavesOfType(VIEW_TYPE_BOB_APP).forEach((leaf) => {
+          if (leaf.view && typeof leaf.view.render === "function") leaf.view.render();
+        });
+      });
+    });
     new obsidian19.Setting(appPanel).setName("Week starts on").setDesc("First day of the week shown in the Planner tab.").addDropdown((d) => d.addOption("1", "Monday").addOption("0", "Sunday").setValue(String(this.plugin.settings.weekStartsOn)).onChange(async (v) => {
       this.plugin.settings.weekStartsOn = Number(v) === 0 ? 0 : 1;
       await this.plugin.saveSettings();
@@ -39821,6 +39860,7 @@ var BobPlugin = class extends obsidian21.Plugin {
       });
     }
     setCurrentCurrency(this.settings.currency);
+    setDisplayLocale(this.settings.locale);
     syncEntityFolders(this.settings);
   }
   async saveSettings() {
@@ -39836,6 +39876,7 @@ var BobPlugin = class extends obsidian21.Plugin {
       await saveWorkspaceConfig(this.app, JSON.stringify(workspaceConfig, null, 2), false);
     }
     setCurrentCurrency(this.settings.currency);
+    setDisplayLocale(this.settings.locale);
     syncEntityFolders(this.settings);
   }
   // Refresh WORKSPACE_CONFIG from disk, then re-overlay workspace-owned settings
@@ -39868,6 +39909,7 @@ var BobPlugin = class extends obsidian21.Plugin {
     this.settings = applyWorkspaceOwnedSettings(this.settings);
     this.migrateLegacyGroupModuleKeys();
     setCurrentCurrency(this.settings.currency);
+    setDisplayLocale(this.settings.locale);
     await reloadEntityConfiguration(this.app, this.settings);
   }
 };

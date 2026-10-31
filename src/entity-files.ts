@@ -5,7 +5,7 @@ import { ENTITIES, primaryFieldKey } from './entities';
 import { cloneConfig } from './nav';
 import { pluralizeEntityLabel } from './schemas';
 import { CURRENT_CURRENCY, entityFolder, humanizeProjectName, isIgnoredPath, normalizeProjectId, renderTemplateDocument } from './settings';
-import { isTemplatePath, startOfDay, ymd } from './utils';
+import { displayLocale, isTemplatePath, startOfDay, ymd } from './utils';
 import { WORKSPACE_CONFIG } from './workspace-config';
 import * as obsidian from 'obsidian';
 import type { App, CachedMetadata, TFile } from 'obsidian';
@@ -358,18 +358,20 @@ function baseSortCollator(): Intl.Collator {
   if (!_baseSortCollator) _baseSortCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
   return _baseSortCollator;
 }
-let _dateFormatter: Intl.DateTimeFormat | null = null;
+// Both formatters are cached per locale, so a `locale` setting change takes effect on the next render.
+let _dateFormatter: { locale: string | undefined; fmt: Intl.DateTimeFormat } | null = null;
 function dateFormatter(): Intl.DateTimeFormat {
-  if (!_dateFormatter) {
-    const locale = typeof navigator !== 'undefined' ? (navigator.language || undefined) : undefined;
-    _dateFormatter = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+  const locale = displayLocale() || (typeof navigator !== 'undefined' ? (navigator.language || undefined) : undefined);
+  if (!_dateFormatter || _dateFormatter.locale !== locale) {
+    _dateFormatter = { locale, fmt: new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }) };
   }
-  return _dateFormatter;
+  return _dateFormatter.fmt;
 }
-let _currencyFormatter: { currency: string; fmt: Intl.NumberFormat } | null = null;
+let _currencyFormatter: { currency: string; locale: string | undefined; fmt: Intl.NumberFormat } | null = null;
 function currencyFormatter(currency: string): Intl.NumberFormat {
-  if (!_currencyFormatter || _currencyFormatter.currency !== currency) {
-    _currencyFormatter = { currency, fmt: new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 0 }) };
+  const locale = displayLocale();
+  if (!_currencyFormatter || _currencyFormatter.currency !== currency || _currencyFormatter.locale !== locale) {
+    _currencyFormatter = { currency, locale, fmt: new Intl.NumberFormat(locale, { style: 'currency', currency, maximumFractionDigits: 0 }) };
   }
   return _currencyFormatter.fmt;
 }
@@ -464,6 +466,20 @@ export function formatStructuredValue(val: unknown, depth = 0, maxDepth = 2, max
   return String(val);
 }
 
+/* Display text for a wikilink-valued property. Link fields hold `[[target]]`,
+   `[[target|alias]]` or `[[folder/target#heading]]`; shown raw they read as
+   markup, e.g. a feedback row titled "[[chris_brennan]]". The alias wins, else
+   the target's file name without folder, `.md` or heading/block reference. A
+   value that is not one whole wikilink passes through unchanged. Display only:
+   editors, exports and filters keep reading the raw frontmatter value. */
+export function wikilinkDisplayText(value: string): string {
+  const m = /^\s*!?\[\[([^[\]|#^]+)(?:[#^][^[\]|]*)?(?:\|([^[\]]+))?\]\]\s*$/.exec(value);
+  if (!m) return value;
+  const alias = (m[2] || '').trim();
+  if (alias) return alias;
+  return m[1].trim().split('/').pop()!.replace(/\.md$/i, '');
+}
+
 export function fmtValue(val: unknown, type?: string): string {
   if (val == null || val === '') return '';
   if (isStructuredValue(val)) return formatStructuredValue(val);
@@ -488,11 +504,11 @@ export function fmtValue(val: unknown, type?: string): string {
   // Arrays of scalars keep their existing join; only arrays that actually carry
   // objects take the structured path, so nothing that rendered fine changes.
   if (Array.isArray(val)) {
-    return isStructuredValue(val) ? formatStructuredValue(val) : val.join(', ');
+    return isStructuredValue(val) ? formatStructuredValue(val) : val.map((item) => wikilinkDisplayText(String(item))).join(', ');
   }
   if (val instanceof Date) return dateFormatter().format(val);
   if (typeof val === 'object') return formatStructuredValue(val);
-  return String(val);
+  return wikilinkDisplayText(String(val));
 }
 
 /* Display text for a dashboard stat card (the top-row KPI tiles).
@@ -518,7 +534,7 @@ export function formatStatValue(value: unknown, opts: { metric?: string; format?
     return `${Math.round(n * 10) / 10}%`;
   }
   const rounded = Math.round(n * 10) / 10;
-  return rounded.toLocaleString(undefined, { maximumFractionDigits: 1 });
+  return rounded.toLocaleString(displayLocale(), { maximumFractionDigits: 1 });
 }
 
 export function resolveEntityFieldDefault(field: BobEntityField): JsonValue | undefined {

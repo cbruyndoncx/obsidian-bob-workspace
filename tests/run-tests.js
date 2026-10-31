@@ -27,6 +27,8 @@ require('./workspace-config.test');
 require('./plugin-load.test');
 require('./schema-type-key.test');
 require('./schema-nullable-type.test');
+require('./display-titles.test');
+require('./display-locale.test');
 require('./demo-vault-fixes.test');
 require('./build-freshness.test');
 // Print success only once the event loop drains — i.e. after async IIFE tests

@@ -13,8 +13,8 @@ const { loadMainFunctions } = require('./load-main-functions');
 (() => {
   const { formatStatValue } = loadMainFunctions([
     'formatStatValue', 'fmtValue', 'formatStructuredValue', 'objectIdentity',
-    'isStructuredValue', 'dateFormatter', 'currencyFormatter',
-  ], { CURRENT_CURRENCY: 'EUR', _currencyFormatter: null, _dateFormatter: null });
+    'isStructuredValue', 'dateFormatter', 'currencyFormatter', 'displayLocale', 'wikilinkDisplayText',
+  ], { CURRENT_CURRENCY: 'EUR', _currencyFormatter: null, _dateFormatter: null, DISPLAY_LOCALE: undefined });
   const eur = (n) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
 
   // the bug: weighted forecast is money, whatever the field type

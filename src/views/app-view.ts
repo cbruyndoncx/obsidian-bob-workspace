@@ -7,7 +7,7 @@ import { CANVAS_GENERATORS, buildAgentAuditCanvas, buildEntityContextCanvas, bui
 import { builtinDashboardDefaults, DASHBOARD_WIDGET_CATALOG, PURE_DASHBOARD_WIDGET_TYPES, type DashboardBlueprint, dashboardProviderRowValue, summarizeDashboardBlueprint } from '../dashboards';
 import { FIELD_HELP, HELP_TOPICS, SOURCE_SECTION_HELP, WIDGET_GUIDES, WIDGET_INTRO } from '../help-content';
 import { BUILT_SURFACES, ENTITIES, activityDate, activityTitle, dealLostStages, dealStageField, dealTerminalStages, dealValueField, dealWonStages, entityKeyFromFile, getDealStages, isOpenEntityRecord, primaryFieldKey } from '../entities';
-import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, formatStatValue, formatStructuredValue, listEntities, listEntityFiles, readEntity } from '../entity-files';
+import { compareEntitiesByBaseSort, entityPrimaryValue, entityValue, fmtValue, formatStatValue, formatStructuredValue, listEntities, listEntityFiles, readEntity, wikilinkDisplayText } from '../entity-files';
 import { BobReminderEditModal } from '../modals/capture';
 import { BobPromptModal, confirmModal } from '../modals/common';
 import { BobEntityCreateModal } from '../modals/entity-create';
@@ -24,7 +24,7 @@ import { reloadEntityConfiguration } from '../runtime-config';
 import { DEFAULT_SETTINGS, applyDashboardContext, entityFolder, isIgnoredPath } from '../settings';
 import { buildProductivitySnapshot, PER_DAY_WINDOW } from '../snapshots';
 import { createTaskNote, listTodayTaskNotes, toggleTaskNoteStatus } from '../task-notes';
-import { addDays, dailyNotePath, dateInfo, ensureFolderSync, greeting, isTemplatePath, pctBand, sameDay, startOfDay, startOfWeek, weekDates, ymd } from '../utils';
+import { addDays, dailyNotePath, dateInfo, displayLocale, ensureFolderSync, greeting, isTemplatePath, pctBand, sameDay, startOfDay, startOfWeek, weekDates, ymd } from '../utils';
 import { filterEntitiesByBaseConfig, normalizeWidgetSortSpec, normalizeWidgetSourceConfig, resolveWidgetSource } from '../widgets';
 import { exportEntitiesXLSX, selectedWorkbookEntityKeys, workbookExportFolder, workbookExportGroups } from '../workbook';
 import { WORKSPACE_CONFIG, WORKSPACE_HAS_NAVIGATION, configuredDashboardDefinition, configuredSurfaceActions, dashboardWidgetSchema, normalizeDashboardConfigShape, resolveSurfaceConfig, saveWorkspaceConfig, validateDashboardConfig, workspaceConfiguredEntityEntries, workspaceConfiguredEntityKeys, workspaceHasEntity } from '../workspace-config';
@@ -1702,7 +1702,7 @@ export class BobAppView extends obsidian.ItemView {
         sel.focus();
       } else if (fieldType === 'date') {
         const inp = td.createEl('input', { type: 'date', cls: 'bob-cell-input' });
-        inp.lang = navigator.language || '';
+        inp.lang = displayLocale() || navigator.language || '';
         if (currentVal) {
           const d = new Date(String(currentVal).slice(0, 10));
           if (!isNaN(d.getTime())) inp.value = d.toISOString().slice(0, 10);
@@ -4363,7 +4363,7 @@ export class BobAppView extends obsidian.ItemView {
       .slice(0, Math.max(1, Number(limit) || 6))
       .map((entity) => {
         const titleField = titleFields.find((field) => entityValue(entity, field, def));
-        const title = (titleField ? entityValue(entity, titleField, def) : '') || entity.basename;
+        const title = wikilinkDisplayText(String((titleField ? entityValue(entity, titleField, def) : '') || '')) || entity.basename;
         const meta = (metaFields || ['status']).map((field) => fmtValue(entityValue(entity, field, def), def?.fields?.find((f) => f.key === field)?.type)).filter(Boolean).join(' · ');
         return { title, meta: meta || 'No status', file: entity.file };
       });
@@ -4381,7 +4381,7 @@ export class BobAppView extends obsidian.ItemView {
       .map(({ entity, date }) => {
         const titleField = titleFields.find((field) => entityValue(entity, field, def));
         return {
-          title: (titleField ? entityValue(entity, titleField, def) : '') || entity.basename,
+          title: wikilinkDisplayText(String((titleField ? entityValue(entity, titleField, def) : '') || '')) || entity.basename,
           meta: `${fmtValue(date, 'date')} · ${entityValue(entity, 'status', def) || 'open'}`,
           file: entity.file,
         };
@@ -5909,7 +5909,7 @@ export class BobAppView extends obsidian.ItemView {
         sel.addEventListener('change', () => writeField(f.key, sel.value));
       } else if (fieldType === 'date') {
         const inp = row.createEl('input', { type: 'date', cls: 'bob-form-input' });
-        inp.lang = navigator.language || '';
+        inp.lang = displayLocale() || navigator.language || '';
         if (current) {
           const d = new Date(current);
           if (!isNaN(d.getTime())) inp.value = d.toISOString().slice(0, 10);
@@ -6257,7 +6257,7 @@ export class BobAppView extends obsidian.ItemView {
           await this._commitMilestones(file, items, flashSaved);
         });
         const dateInp = row.createEl('input', { type: 'date', cls: 'bob-pd-mile-date' });
-        dateInp.lang = navigator.language || '';
+        dateInp.lang = displayLocale() || navigator.language || '';
         if (m.date instanceof Date && !isNaN(m.date.getTime())) {
           dateInp.value = m.date.toISOString().slice(0, 10);
         }
@@ -6577,7 +6577,7 @@ export class BobAppView extends obsidian.ItemView {
   async renderHome(root: HTMLElement) {
     root.addClass('bob-home');
     const today = new Date();
-    const dateStr = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const dateStr = today.toLocaleDateString(displayLocale(), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     this._renderPageHeader(root, `${greeting()}.`, dateStr);
     await this.renderConfigDashboard('home', root, { skipHeader: true });
   }
@@ -7715,8 +7715,8 @@ export class BobAppView extends obsidian.ItemView {
     const header = root.createDiv({ cls: 'bob-pl-header' });
     const titleWrap = header.createDiv({ cls: 'bob-pl-title-wrap' });
     titleWrap.createDiv({ cls: 'bob-eyebrow', text: 'WEEK OF' });
-    const startStr = days[0].toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
-    const endStr   = days[6].toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+    const startStr = days[0].toLocaleDateString(displayLocale(), { month: 'long', day: 'numeric' });
+    const endStr   = days[6].toLocaleDateString(displayLocale(), { month: 'long', day: 'numeric', year: 'numeric' });
     titleWrap.createDiv({ cls: 'bob-pl-title', text: `${startStr} – ${endStr}` });
 
     const nav = header.createDiv({ cls: 'bob-pl-nav' });
@@ -7764,7 +7764,7 @@ export class BobAppView extends obsidian.ItemView {
       const colHead = col.createDiv({ cls: 'bob-pl-day-head' });
       colHead.createDiv({
         cls: 'bob-pl-weekday',
-        text: d.date.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase(),
+        text: d.date.toLocaleDateString(displayLocale(), { weekday: 'short' }).toUpperCase(),
       });
       colHead.createDiv({ cls: 'bob-pl-daynum', text: String(d.date.getDate()) });
       const open = d.tasks.filter((l) => / \[ \] /.test(l)).length;

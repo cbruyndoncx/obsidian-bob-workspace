@@ -204,6 +204,7 @@ export interface BobSettings {
   pinnedSurfaces: string[];
   dashboardState: Record<string, Record<string, JsonValue>>;
   currency: string;
+  locale: string;
   bobAppDark: boolean;
   taskProjectLinks: Record<string, string>;
   modules: Record<string, boolean>;

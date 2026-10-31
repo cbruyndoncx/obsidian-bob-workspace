@@ -14,7 +14,7 @@ import { reloadEntityConfiguration, workspaceConfigTemplate } from './runtime-co
 import { bootstrapCanonicalSchemaSources, regenerateSchemaOutputs } from './schema-designer';
 import { CURRENT_CURRENCY, DEFAULT_SETTINGS, syncEntityFolders } from './settings';
 import { BobSettingTab } from './settings-tab';
-import { sameDay, startOfDay, ymd } from './utils';
+import { sameDay, setDisplayLocale, startOfDay, ymd } from './utils';
 import { BobAppView } from './views/app-view';
 import { BobPlaybookRunnerView, PLAYBOOK_RUNNER_VIEW_TYPE } from './views/playbook-runner';
 import { exportAllEntitiesXLSX, promptImportWorkbook } from './workbook';
@@ -679,6 +679,7 @@ export class BobPlugin extends obsidian.Plugin {
       });
     }
     setCurrentCurrency(this.settings.currency);
+    setDisplayLocale(this.settings.locale);
     syncEntityFolders(this.settings);
   }
   async saveSettings() {
@@ -701,6 +702,7 @@ export class BobPlugin extends obsidian.Plugin {
       await saveWorkspaceConfig(this.app, JSON.stringify(workspaceConfig, null, 2), false);
     }
     setCurrentCurrency(this.settings.currency);
+    setDisplayLocale(this.settings.locale);
     syncEntityFolders(this.settings);
   }
 
@@ -735,6 +737,7 @@ export class BobPlugin extends obsidian.Plugin {
     this.settings = applyWorkspaceOwnedSettings(this.settings) as BobSettings;
     this.migrateLegacyGroupModuleKeys();
     setCurrentCurrency(this.settings.currency);
+    setDisplayLocale(this.settings.locale);
     await reloadEntityConfiguration(this.app, this.settings);
   }
 }

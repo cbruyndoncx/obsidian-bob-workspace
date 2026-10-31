@@ -36,6 +36,7 @@ export const DEFAULT_SETTINGS: BobSettings = {
   pinnedSurfaces: [], // [surfaceId]
   dashboardState: {}, // { [surfaceId]: { [controlKey]: value } }
   currency: 'USD',
+  locale: '', // BCP 47 tag for dates and numbers, e.g. 'en-GB'; '' = system locale
   bobAppDark: false,
   taskProjectLinks: {}, // { "dailyPath::taskText": "Cadence/Projects/X.md" }
   modules: { crm: false, 'client-work': false, prm: false, finance: false, procurement: false, planner: false, ai: false },

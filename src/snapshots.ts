@@ -5,7 +5,7 @@ import { parseSections } from './notes';
 import { readProjectMeta } from './project-notes';
 import { projectNameFromPath, reminderTimeStr } from './reminders';
 import { listAllTaskNotes, listHomeTodayTaskNotes } from './task-notes';
-import { addDays, dailyNotePath, startOfDay, startOfWeek, weekDates, ymd } from './utils';
+import { addDays, dailyNotePath, displayLocale, startOfDay, startOfWeek, weekDates, ymd } from './utils';
 import { WORKSPACE_CONFIG, workspaceConfiguredEntityKeys } from './workspace-config';
 import * as obsidian from 'obsidian';
 import type { App, TFile } from 'obsidian';
@@ -251,7 +251,7 @@ export async function buildProductivitySnapshot(app: App, settings: PartialSetti
       closed: wClosed,
       net: wCreated - wClosed,
       any: anyNote,
-      label: ws.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      label: ws.toLocaleDateString(displayLocale(), { month: 'short', day: 'numeric' }),
     });
   }
   const wsOn = settings.weekStartsOn;
@@ -357,7 +357,7 @@ export async function buildPlannerSnapshot(app: App, settings: PartialSettings =
     const open = tasks.filter((l) => / \[ \] /.test(l)).length;
     const done = tasks.filter((l) => / \[(x|X)\] /.test(l)).length;
     return {
-      title: date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+      title: date.toLocaleDateString(displayLocale(), { weekday: 'short', month: 'short', day: 'numeric' }),
       meta: file instanceof obsidian.TFile ? `${open} open · ${done} done${journal ? ` · journal ${journal.length} chars` : ''}` : 'no note',
       value: done,
       values: { done, open, total: open + done, journal: journal.length },

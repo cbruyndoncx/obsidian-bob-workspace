@@ -1002,9 +1002,9 @@
               "entity": "meeting",
               "source": "recent",
               "titleFields": [
-                "context",
+                "title",
                 "name",
-                "title"
+                "context"
               ],
               "metaFields": [
                 "date",

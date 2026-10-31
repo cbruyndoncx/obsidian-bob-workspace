@@ -4,6 +4,25 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [Unreleased]
+
+### Added
+
+- **Date and number format** (Settings → App, `locale` in `workspace.json`): a language tag such as
+  `en-GB` or `nl-BE` for every date and number BOB formats. Empty keeps the system locale, which in
+  Obsidian is the operating system's — a Dutch Windows showed "19 okt" and "US$ 967.000" whatever
+  language the vault uses. An unrecognised tag is ignored.
+
+### Fixed
+
+- Link-valued properties showed as raw markup, e.g. a Recent Feedback row titled
+  `[[chris_brennan]]`. Table cells, card meta lines and card row titles now show the link text
+  (the alias, else the file name). Editors and the Markdown export keep the raw link.
+- The Client Work **Recent Meetings** card titled rows by meeting type (`discovery`, `qbr`): the
+  BOB and Cadence templates listed `context` before `title` in its `titleFields`. Existing
+  workspaces keep their own `workspace.json`; change the card's `titleFields` to
+  `["title", "name", "context"]` there.
+
 ## [1.4.1] — 2026-10-31
 
 ### Fixed

@@ -163,7 +163,7 @@ Settings → BOB Workspace provides tabbed configuration for every layer of your
 6. **Modules** — enable or disable core modules (Planner, CRM, PRM, Client Work, Finance, Procurement) and configure entity folders.
 7. **Data model** — canonical schema designer, FileClass and JSON Schema generation, Bases folder setting, and the **Generate missing bases** action.
 8. **Planner** — configure daily note folder location, section headings (Tasks, Journal), checkbox formats, and TaskNotes behavior.
-9. **App** — startup behavior ("Open BOB Workspace on startup"), default surface, week start day, built-in theme override, reminder notifications, and currency symbol.
+9. **App** — startup behavior ("Open BOB Workspace on startup"), default surface, week start day, built-in theme override, reminder notifications, currency symbol, and the date and number format (a language tag such as `en-GB`; empty follows the system).
 10. **Exports** — define multi-sheet XLSX export groups.
 11. **Data** — import/export operations, CSV column mapping, and data integrity tools.
 

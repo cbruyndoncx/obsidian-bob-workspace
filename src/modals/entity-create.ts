@@ -3,6 +3,7 @@ import { FIELD_HELP } from '../help-content';
 import type { JsonValue } from '../types';
 import { ENTITIES, primaryFieldKey } from '../entities';
 import { listEntities, entityValue, resolveEntityFieldDefault } from '../entity-files';
+import { displayLocale } from '../utils';
 import * as obsidian from 'obsidian';
 import type { App } from 'obsidian';
 import type { BobEntityDef, BobEntityField } from '../entities';
@@ -69,7 +70,7 @@ export class BobEntityCreateModal extends obsidian.Modal {
         (fieldType === 'boolean' ? ['true', 'false'] : f.options || []).forEach((opt) => input.createEl('option', { value: opt, text: opt }));
       } else if (fieldType === 'date') {
         input = row.createEl('input', { type: 'date', cls: 'bob-create-input' });
-        input.lang = navigator.language || '';
+        input.lang = displayLocale() || navigator.language || '';
       } else if (fieldType === 'number' || fieldType === 'currency') {
         input = row.createEl('input', { type: 'number', cls: 'bob-create-input' });
         input.placeholder = '0';

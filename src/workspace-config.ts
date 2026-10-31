@@ -486,6 +486,7 @@ export function validateDashboardCard(card: DashboardCard, path: string): void {
 
 export const WORKSPACE_OWNED_SETTING_KEYS = [
   'currency',
+  'locale',
   'modules',
   'disabledSurfaces',
   'teamPersonCategories',
