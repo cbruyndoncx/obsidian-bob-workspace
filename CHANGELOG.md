@@ -4,6 +4,30 @@ All notable changes to BOB Workspace are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions match `manifest.json`
 (no `v` prefix). Min Obsidian version is 1.4.0 unless noted.
 
+## [1.4.1] — 2026-10-31
+
+### Fixed
+
+- The plugin failed to load (`(schemaType || "").toLowerCase is not a function`) in a vault
+  whose schemas declare a nullable field as a JSON Schema type list, such as
+  `estimated_cost_usd: type: [number, 'null']` in `ai-session-log.yaml`. A field type may now
+  be a list: BOB reads its first non-null name, keeps the list as written so the Data model
+  designer saves it back unchanged, accepts it in schema validation, and keeps a nullable field
+  nullable when its type is changed in the designer.
+- Dashboard stat cards printed raw numbers: the Pipeline "WEIGHTED" tile showed `502450`. Stats
+  now format money (`weightedForecast`, sums/averages of a `currency` field), percentages
+  (`winRate`, `captureRate`, `ratio`) and grouped counts; a stat's `format` overrides this.
+- The TaskNotes nav item showed "couldn't be embedded here" for `tasknotesTaskList` Base views.
+  A TaskNotes task list now renders as the native table with the view's filters, sort, grouping
+  and columns; **Open Base** still opens the TaskNotes view. Its own UI needs the TaskNotes plugin
+  and the inline-views toggle, so it cannot be shown inside BOB without them.
+- Home "TODAY" said "No tasks yet" while TaskNotes were in progress. It now follows the task
+  mode and lists TaskNotes in progress or due/scheduled today; the BOB template sets
+  `taskMode: hybrid`.
+- Apply the TaskNotes default view filters instead of reporting them as "not applied": bare
+  property checks (`recurrence`, `note.last_contact`) and
+  `list(prop).contains(today().format("YYYY-MM-DD"))` (also accepts the legacy `yyyy-MM-dd`).
+
 ## [1.4.0] — 2026-09-23
 
 ### Added
