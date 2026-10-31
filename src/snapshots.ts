@@ -583,7 +583,7 @@ export async function buildHomeSnapshot(app: App, settings: PartialSettings = {}
         const parsed = parseSections(content, settings);
         const openTasks = parsed.tasks.filter((l) => / \[ \] /.test(l)).length;
         if (openTasks > 0) {
-          items.push({ title: `${openTasks} open ${openTasks === 1 ? 'task' : 'tasks'} on today\\'s note`, meta: 'planner.today', tone: 'emerald', action: { surface: 'planner.today' } });
+          items.push({ title: `${openTasks} open ${openTasks === 1 ? 'task' : 'tasks'} on today's note`, meta: 'planner.today', tone: 'emerald', action: { surface: 'planner.today' } });
         }
       }
     } catch (_) { /* today's note missing or unreadable — the open-tasks hint is skipped */ }

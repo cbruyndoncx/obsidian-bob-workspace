@@ -4236,6 +4236,14 @@ export class BobAppView extends obsidian.ItemView {
       body.createDiv({ cls: 'bob-dash-card-sub', text: String(card.description || card.subtitle || '').trim() });
     }
     const chart = body.createDiv({ cls: 'bob-bar-chart bob-bar-chart-tall' });
+    // Bar values read like the stat tiles: money for sums/averages of a currency
+    // field, grouped counts otherwise. The label printed String(value), so the
+    // Pipeline Report showed "405000" under a bar whose tooltip said "$405,000".
+    // A deal's value field is money even where the schema types it as a plain number.
+    const barFieldType = def && entityKey === 'deal' && valueField === dealValueField(def)
+      ? 'currency'
+      : def?.fields?.find((f: EntityField) => f.key === valueField)?.type;
+    const barText = (value: unknown) => formatStatValue(value, { metric, format: card.format, fieldType: barFieldType });
     chartValues.forEach((entry) => {
       labels.set(entry.group.value, entry.group.label);
       const col = chart.createDiv({ cls: 'bob-bar-col' });
@@ -4250,9 +4258,9 @@ export class BobAppView extends obsidian.ItemView {
       bar.style.height = `${(Number(entry.value) / max) * 100}%`;
       const ratio = Number(entry.value) / max;
       bar.dataset.band = Number(entry.value) === 0 ? 'empty' : ratio < 0.34 ? 'low' : ratio < 0.67 ? 'mid' : 'high';
-      bar.title = `${entry.group.label} — ${fmtValue(entry.value, metric === 'sum' || metric === 'avg' ? 'currency' : 'number')}${entry.meta ? ` · ${entry.meta}` : ''}`;
+      bar.title = `${entry.group.label} — ${barText(entry.value)}${entry.meta ? ` · ${entry.meta}` : ''}`;
       col.createDiv({ cls: 'bob-bar-label', text: entry.group.label });
-      col.createDiv({ cls: 'bob-bar-value', text: String(entry.value) });
+      col.createDiv({ cls: 'bob-bar-value', text: barText(entry.value) });
       if (entry.items.length && entry.items[0]?.file) {
         col.addEventListener('click', () => {
           const first = entry.items[0];

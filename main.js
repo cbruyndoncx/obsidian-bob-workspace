@@ -29726,7 +29726,7 @@ async function buildHomeSnapshot(app, settings = {}) {
         const parsed = parseSections(content, settings);
         const openTasks = parsed.tasks.filter((l) => / \[ \] /.test(l)).length;
         if (openTasks > 0) {
-          items.push({ title: `${openTasks} open ${openTasks === 1 ? "task" : "tasks"} on today\\'s note`, meta: "planner.today", tone: "emerald", action: { surface: "planner.today" } });
+          items.push({ title: `${openTasks} open ${openTasks === 1 ? "task" : "tasks"} on today's note`, meta: "planner.today", tone: "emerald", action: { surface: "planner.today" } });
         }
       }
     } catch (_) {
@@ -33603,6 +33603,8 @@ ${snippet}` : "- No markdown content");
       body.createDiv({ cls: "bob-dash-card-sub", text: String(card.description || card.subtitle || "").trim() });
     }
     const chart = body.createDiv({ cls: "bob-bar-chart bob-bar-chart-tall" });
+    const barFieldType = def && entityKey === "deal" && valueField === dealValueField(def) ? "currency" : def?.fields?.find((f) => f.key === valueField)?.type;
+    const barText = (value) => formatStatValue(value, { metric, format: card.format, fieldType: barFieldType });
     chartValues.forEach((entry) => {
       labels.set(entry.group.value, entry.group.label);
       const col = chart.createDiv({ cls: "bob-bar-col" });
@@ -33611,9 +33613,9 @@ ${snippet}` : "- No markdown content");
       bar.style.height = `${Number(entry.value) / max * 100}%`;
       const ratio = Number(entry.value) / max;
       bar.dataset.band = Number(entry.value) === 0 ? "empty" : ratio < 0.34 ? "low" : ratio < 0.67 ? "mid" : "high";
-      bar.title = `${entry.group.label} \u2014 ${fmtValue(entry.value, metric === "sum" || metric === "avg" ? "currency" : "number")}${entry.meta ? ` \xB7 ${entry.meta}` : ""}`;
+      bar.title = `${entry.group.label} \u2014 ${barText(entry.value)}${entry.meta ? ` \xB7 ${entry.meta}` : ""}`;
       col.createDiv({ cls: "bob-bar-label", text: entry.group.label });
-      col.createDiv({ cls: "bob-bar-value", text: String(entry.value) });
+      col.createDiv({ cls: "bob-bar-value", text: barText(entry.value) });
       if (entry.items.length && entry.items[0]?.file) {
         col.addEventListener("click", () => {
           const first = entry.items[0];

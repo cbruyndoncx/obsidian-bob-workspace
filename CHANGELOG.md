@@ -27,6 +27,10 @@ All notable changes to BOB Workspace are documented here. Format follows
 - The BOB template now sets `dailyNoteFolder: 00-CORE/PeriodicNotes/Daily`, where the BOB data
   model files daily notes. Without it the plugin looked in `daily/`, so Planner Today and
   Calendar showed nothing in a BOB vault. Existing workspaces keep their own setting.
+- Home "Top of the day" read `2 open tasks on today\'s note` with a stray backslash.
+- Bar charts printed raw values under the bars (`405000`) while the tooltip formatted them;
+  both now format like the stat tiles (money for sums of a currency field or the deal value,
+  grouped counts otherwise).
 
 ## [1.4.1] — 2026-10-31
 

@@ -49,4 +49,21 @@ for (const file of fs.readdirSync(templatesDir).filter((f) => f.endsWith('.json'
 }
 assert.ok(meetingCards >= 2, `expected the bob and cadence meeting cards, found ${meetingCards}`);
 
+// --- No literal backslash before an apostrophe in UI text. `today\\'s` inside a
+// template literal printed "today\'s note" on Home (2026-07 and 2026-10 screenshots).
+const srcDir = path.join(__dirname, '..', 'src');
+const offenders = [];
+const scan = (dir) => {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, entry.name);
+    if (entry.isDirectory()) { scan(p); continue; }
+    if (!entry.name.endsWith('.ts')) continue;
+    fs.readFileSync(p, 'utf8').split('\n').forEach((line, i) => {
+      if (/\\\\'[a-z]/.test(line)) offenders.push(`${path.relative(srcDir, p)}:${i + 1}`);
+    });
+  }
+};
+scan(srcDir);
+assert.deepStrictEqual(offenders, [], `escaped apostrophe prints a backslash: ${offenders.join(', ')}`);
+
 console.log('display-titles.test.js: ok');
