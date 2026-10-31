@@ -928,6 +928,8 @@ select.bob-cell-input { padding: 5px 8px; }
   font-family: var(--font-monospace);
 }
 .bob-kanban-card-value { color: var(--text-normal); font-weight: 600; }
+/* The amount and the meta line are adjacent spans; without a separator a card read "$85,000lead". */
+.bob-kanban-card-value + .bob-kanban-card-company::before { content: ' · '; }
 
 /* ─────────── Empty state ─────────── */
 .bob-empty-state {

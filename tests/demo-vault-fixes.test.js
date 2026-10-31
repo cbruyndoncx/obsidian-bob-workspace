@@ -105,6 +105,9 @@ const { loadMainFunctions } = require('./load-main-functions');
 (() => {
   const tmpl = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'templates', 'workspace-bob.json'), 'utf8'));
   assert.strictEqual(tmpl.settings.taskMode, 'hybrid');
+  // Daily notes live where the BOB data model files them (periodic-note location_pattern),
+  // not the plugin default `daily/`; with the default, Today and Calendar read nothing.
+  assert.strictEqual(tmpl.settings.dailyNoteFolder, '00-CORE/PeriodicNotes/Daily');
 })();
 
 console.log('demo-vault-fixes.test.js: ok');

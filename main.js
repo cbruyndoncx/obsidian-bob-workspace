@@ -15327,7 +15327,8 @@ var workspace_bob_default = {
       planner: true,
       ai: true
     },
-    taskMode: "hybrid"
+    taskMode: "hybrid",
+    dailyNoteFolder: "00-CORE/PeriodicNotes/Daily"
   },
   bases: {
     task: {

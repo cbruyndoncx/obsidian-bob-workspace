@@ -22,6 +22,11 @@ All notable changes to BOB Workspace are documented here. Format follows
   BOB and Cadence templates listed `context` before `title` in its `titleFields`. Existing
   workspaces keep their own `workspace.json`; change the card's `titleFields` to
   `["title", "name", "context"]` there.
+- Pipeline cards printed the amount and the stage with no separator (`$85,000lead`); they now
+  read `$85,000 · lead`.
+- The BOB template now sets `dailyNoteFolder: 00-CORE/PeriodicNotes/Daily`, where the BOB data
+  model files daily notes. Without it the plugin looked in `daily/`, so Planner Today and
+  Calendar showed nothing in a BOB vault. Existing workspaces keep their own setting.
 
 ## [1.4.1] — 2026-10-31
 
