@@ -39,6 +39,8 @@ All notable changes to BOB Workspace are documented here. Format follows
   `openStatuses`; registrations keep `submitted` open.
 - Decisions never appeared: the built-in definition filtered on `type: decision-log`, while the
   canonical schema and vault decision notes use `type: decision`.
+- The embedded BOB schemas mark commission `amount` and deal `deal_value` as `bob_type: currency`
+  (canonical data model change of 2026-10-31), so commission rows read `$6,400`, not `6400`.
 
 ## [1.4.1] — 2026-10-31
 
