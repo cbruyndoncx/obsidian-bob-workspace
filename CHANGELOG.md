@@ -31,6 +31,9 @@ All notable changes to BOB Workspace are documented here. Format follows
 - Bar charts printed raw values under the bars (`405000`) while the tooltip formatted them;
   both now format like the stat tiles (money for sums of a currency field or the deal value,
   grouped counts otherwise).
+- The Partners overview's Pending Registrations and Open Commissions cards titled rows by fields
+  the schemas do not define (`deal_name`, `commission_id`), so rows showed file names. They now
+  use the schema fields `title` and `reference` first.
 
 ## [1.4.1] — 2026-10-31
 

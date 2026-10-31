@@ -14024,6 +14024,7 @@ var workspace_bob_default = {
             entity: "registration",
             source: "recent-open",
             titleFields: [
+              "title",
               "deal_name",
               "registration_id"
             ],
@@ -14039,6 +14040,7 @@ var workspace_bob_default = {
             entity: "commission",
             source: "recent-open",
             titleFields: [
+              "reference",
               "commission_id",
               "partner_ref"
             ],
@@ -19434,6 +19436,7 @@ var workspace_cadence_default = {
             entity: "registration",
             source: "recent-open",
             titleFields: [
+              "title",
               "deal_name",
               "registration_id"
             ],
@@ -19449,6 +19452,7 @@ var workspace_cadence_default = {
             entity: "commission",
             source: "recent-open",
             titleFields: [
+              "reference",
               "commission_id",
               "partner_ref"
             ],

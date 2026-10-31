@@ -2209,6 +2209,7 @@
             "entity": "registration",
             "source": "recent-open",
             "titleFields": [
+              "title",
               "deal_name",
               "registration_id"
             ],
@@ -2224,6 +2225,7 @@
             "entity": "commission",
             "source": "recent-open",
             "titleFields": [
+              "reference",
               "commission_id",
               "partner_ref"
             ],

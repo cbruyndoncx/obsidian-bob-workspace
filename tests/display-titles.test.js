@@ -42,6 +42,12 @@ const walk = (node, file) => {
     meetingCards++;
     assert.strictEqual(node.titleFields[0], 'title', `${file}: meeting card "${node.title}" must title rows by \`title\` first`);
   }
+  // Registration and commission cards named fields the schemas do not have
+  // (`deal_name`, `commission_id`), so rows fell back to file names.
+  const schemaTitle = { registration: 'title', commission: 'reference' }[node.entity];
+  if (schemaTitle && Array.isArray(node.titleFields)) {
+    assert.strictEqual(node.titleFields[0], schemaTitle, `${file}: ${node.entity} card "${node.title}" must title rows by \`${schemaTitle}\` first`);
+  }
   Object.values(node).forEach((value) => walk(value, file));
 };
 for (const file of fs.readdirSync(templatesDir).filter((f) => f.endsWith('.json'))) {
